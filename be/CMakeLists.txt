@@ -291,6 +291,9 @@ set_target_properties(aws-checksums PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DI
 add_library(aws-s2n STATIC IMPORTED)
 set_target_properties(aws-s2n PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib64/libs2n.a)
 
+add_library(cityhash STATIC IMPORTED)
+set_target_properties(cityhash PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/libcityhash.a)
+
 add_library(minzip STATIC IMPORTED)
 set_target_properties(minzip PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib64/libminizip.a)
 
@@ -458,6 +461,7 @@ set(DORIS_LINK_LIBS
     Webserver
     TestUtil
     Geo
+    Vec
     Plugin
     ${WL_END_GROUP}
 )
@@ -504,6 +508,7 @@ set(COMMON_THIRDPARTY
     brotlienc
     zstd
     arrow
+    cityhash
     parquet
     orc
     odbc
@@ -628,6 +633,7 @@ add_subdirectory(${SRC_DIR}/udf)
 add_subdirectory(${SRC_DIR}/tools)
 add_subdirectory(${SRC_DIR}/util)
 add_subdirectory(${SRC_DIR}/plugin)
+add_subdirectory(${SRC_DIR}/vec)
 
 # Utility CMake function to make specifying tests and benchmarks less verbose
 FUNCTION(ADD_BE_TEST TEST_NAME)
