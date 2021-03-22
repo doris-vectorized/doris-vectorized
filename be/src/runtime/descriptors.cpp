@@ -27,6 +27,8 @@
 #include "gen_cpp/PlanNodes_types.h"
 #include "gen_cpp/descriptors.pb.h"
 
+#include "vec/Core/ColumnsWithTypeAndName.h"
+
 namespace doris {
 using boost::algorithm::join;
 
@@ -80,6 +82,14 @@ void SlotDescriptor::to_protobuf(PSlotDescriptor* pslot) const {
     pslot->set_col_name(_col_name);
     pslot->set_slot_idx(_slot_idx);
     pslot->set_is_materialized(_is_materialized);
+}
+
+DB::MutableColumnPtr SlotDescriptor::get_empty_mutable_column() const {
+    return type().get_data_type_ptr()->createColumn();
+}
+
+DB::DataTypePtr SlotDescriptor::get_data_type_ptr() const {
+    return type().get_data_type_ptr();
 }
 
 std::string SlotDescriptor::debug_string() const {
