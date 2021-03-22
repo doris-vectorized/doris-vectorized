@@ -26,11 +26,11 @@
 #include "runtime/string_value.h"
 #include "runtime/tuple_row.h"
 //#include "runtime/mem_tracker.h"
+#include <vec/Columns/ColumnVector.h>
+#include <vec/Core/Block.h>
+
 #include "gen_cpp/Data_types.h"
 #include "gen_cpp/data.pb.h"
-
-#include <vec/Core/Block.h>
-#include <vec/Columns/ColumnVector.h>
 
 using std::vector;
 
@@ -528,31 +528,41 @@ void RowBatch::transfer_resource_ownership(RowBatch* dest) {
 
 DB::Block RowBatch::conver_to_vec_block() const {
     std::vector<DB::MutableColumnPtr> columns;
-    for (const auto tuple_desc : _row_desc.tuple_descriptors() ) {
+    for (const auto tuple_desc : _row_desc.tuple_descriptors()) {
         for (const auto slot_desc : tuple_desc->slots()) {
             columns.emplace_back(slot_desc->get_empty_mutable_column());
         }
     }
 
-    for (int i = 0; i < _num_rows; ++i) {
-        TupleRow* src_row = get_row(i);
-        auto n_column = 0;
-        for (int j = 0; j < _row_desc.tuple_descriptors().size() ; ++j) {
-            auto tuple = src_row->get_tuple(j);
-            auto tuple_desc = _row_desc.tuple_descriptors()[j];
-            for (int k = 0; k < tuple_desc->slots().size(); ++k) {
-                auto slot_desc = tuple_desc->slots()[k];
-                columns[n_column++]->insertData(static_cast<const char *>(tuple->get_slot(slot_desc->tuple_offset())), slot_desc->slot_size());
-            }
+    std::vector<SlotDescriptor*> slot_descs;
+    std::vector<int> tuple_idx;
+    int column_numbers = 0;
+    for (int i = 0; i < _row_desc.tuple_descriptors().size(); ++i) {
+        auto tuple_desc = _row_desc.tuple_descriptors()[i];
+        for (int j = 0; j < tuple_desc->slots().size(); ++j) {
+            slot_descs.push_back(tuple_desc->slots()[j]);
+            tuple_idx.push_back(i);
+        }
+        column_numbers += tuple_desc->slots().size();
+    }
+    for (int i = 0; i < column_numbers; ++i) {
+        auto slot_desc = slot_descs[i];
+        for (int j = 0; j < _num_rows; ++j) {
+            TupleRow* src_row = get_row(j);
+            auto tuple = src_row->get_tuple(tuple_idx[i]);
+            columns[i]->insertData(
+                    static_cast<const char*>(tuple->get_slot(slot_desc->tuple_offset())),
+                    slot_desc->slot_size());
         }
     }
-    
+
     DB::ColumnsWithTypeAndName columns_with_type_and_name;
     auto n_columns = 0;
-    for (const auto tuple_desc : _row_desc.tuple_descriptors() ) {
+    for (const auto tuple_desc : _row_desc.tuple_descriptors()) {
         for (const auto slot_desc : tuple_desc->slots()) {
-            columns_with_type_and_name.emplace_back(
-                    columns[n_columns++]->getPtr(), slot_desc->get_data_type_ptr(), slot_desc->col_name());
+            columns_with_type_and_name.emplace_back(columns[n_columns++]->getPtr(),
+                                                    slot_desc->get_data_type_ptr(),
+                                                    slot_desc->col_name());
         }
     }
 
