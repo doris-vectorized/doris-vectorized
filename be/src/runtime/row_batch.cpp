@@ -28,7 +28,9 @@
 //#include "runtime/mem_tracker.h"
 #include "gen_cpp/Data_types.h"
 #include "gen_cpp/data.pb.h"
-#include "util/debug_util.h"
+
+#include <vec/Core/Block.h>
+#include <vec/Columns/ColumnVector.h>
 
 using std::vector;
 
@@ -522,6 +524,39 @@ void RowBatch::transfer_resource_ownership(RowBatch* dest) {
         dest->mark_flush_resources();
     }
     reset();
+}
+
+DB::Block RowBatch::conver_to_vec_block() const {
+    std::vector<DB::MutableColumnPtr> columns;
+    for (const auto tuple_desc : _row_desc.tuple_descriptors() ) {
+        for (const auto slot_desc : tuple_desc->slots()) {
+            columns.emplace_back(slot_desc->get_empty_mutable_column());
+        }
+    }
+
+    for (int i = 0; i < _num_rows; ++i) {
+        TupleRow* src_row = get_row(i);
+        auto n_column = 0;
+        for (int j = 0; j < _row_desc.tuple_descriptors().size() ; ++j) {
+            auto tuple = src_row->get_tuple(j);
+            auto tuple_desc = _row_desc.tuple_descriptors()[j];
+            for (int k = 0; k < tuple_desc->slots().size(); ++k) {
+                auto slot_desc = tuple_desc->slots()[k];
+                columns[n_column++]->insertData(static_cast<const char *>(tuple->get_slot(slot_desc->tuple_offset())), slot_desc->slot_size());
+            }
+        }
+    }
+    
+    DB::ColumnsWithTypeAndName columns_with_type_and_name;
+    auto n_columns = 0;
+    for (const auto tuple_desc : _row_desc.tuple_descriptors() ) {
+        for (const auto slot_desc : tuple_desc->slots()) {
+            columns_with_type_and_name.emplace_back(
+                    columns[n_columns++]->getPtr(), slot_desc->get_data_type_ptr(), slot_desc->col_name());
+        }
+    }
+
+    return {columns_with_type_and_name};
 }
 
 int RowBatch::get_batch_size(const TRowBatch& batch) {
