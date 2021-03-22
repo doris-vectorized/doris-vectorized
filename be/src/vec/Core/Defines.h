@@ -18,7 +18,7 @@
 /** Which blocks by default read the data (by number of rows).
   * Smaller values give better cache locality, less consumption of RAM, but more overhead to process the query.
   */
-#define DEFAULT_BLOCK_SIZE 65536
+//#define DEFAULT_BLOCK_SIZE 65536
 
 /** Which blocks should be formed for insertion into the table, if we control the formation of blocks.
   * (Sometimes the blocks are inserted exactly such blocks that have been read / transmitted from the outside, and this parameter does not affect their size.)
