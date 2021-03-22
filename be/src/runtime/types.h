@@ -28,6 +28,8 @@
 #include "runtime/primitive_type.h"
 #include "thrift/protocol/TDebugProtocol.h"
 
+#include "vec/DataTypes/DataTypesNumber.h"
+
 namespace doris {
 
 // Describes a type. Includes the enum, children types, and any type-specific metadata
@@ -269,6 +271,33 @@ struct TypeDescriptor {
         }
         // For llvm complain
         return -1;
+    }
+
+    inline DB::DataTypePtr get_data_type_ptr() const {
+        switch (type) {
+        case TYPE_TINYINT:
+            return std::make_shared<DB::DataTypeInt8>();
+
+        case TYPE_SMALLINT:
+            return std::make_shared<DB::DataTypeInt16>();
+
+        case TYPE_INT:
+            return std::make_shared<DB::DataTypeInt32>();
+
+        case TYPE_FLOAT:
+            return std::make_shared<DB::DataTypeFloat32>();
+
+        case TYPE_BIGINT:
+            return std::make_shared<DB::DataTypeInt64>();
+        case TYPE_DOUBLE:
+            return std::make_shared<DB::DataTypeFloat64>();
+
+        case INVALID_TYPE:
+        default:
+            DCHECK(false);
+        }
+        // For llvm complain
+        return nullptr;
     }
 
     static inline int get_decimal_byte_size(int precision) {
