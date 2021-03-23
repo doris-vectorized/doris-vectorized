@@ -22,21 +22,26 @@
 #include <iostream>
 #include <string>
 
+#include "runtime/tuple_row.h"
 #include "runtime/row_batch.h"
 #include "exec/schema_scanner.h"
 
 namespace doris {
 
-TEST(ZipUtilTest, basic) {
-    SchemaScanner::ColumnDesc[] column_descs = {
+TEST(BlockTest, RowBatchCovertToBlock) {
+    SchemaScanner::ColumnDesc column_descs[] = {
                 {"k1", TYPE_SMALLINT, sizeof(int16_t), false},
-                {"k2", TYPE_INT,      sizeof(int32_T), false},
-                {"k3", TYPE_DOUBLE,    sizeof(double),   false} };
-
+                {"k2", TYPE_INT,      sizeof(int32_t), false},
+                {"k3", TYPE_DOUBLE,    sizeof(double),   false}};
     SchemaScanner schema_scanner(column_descs, 3);
-    auto tuple_desc = schema_scanner.tuple_desc();
+    ObjectPool object_pool;
+    SchemaScannerParam param;
+    schema_scanner.init(&param, &object_pool);
+
+    auto tuple_desc = const_cast<TupleDescriptor*>(schema_scanner.tuple_desc());
     RowDescriptor row_desc(tuple_desc, false);
-    RowBatch row_batch(row_desc, 1024, MemTracker::CreateTracker(-1, "BlockTest", null, false));
+    auto tracker_ptr = MemTracker::CreateTracker(-1, "BlockTest", nullptr, false);
+    RowBatch row_batch(row_desc, 1024, tracker_ptr.get());
 
     int16_t k1 = -100;
     int32_t k2 = 100000;
@@ -44,9 +49,9 @@ TEST(ZipUtilTest, basic) {
 
     for (int i = 0; i < 1024; ++i, k1++, k2++, k3 += 0.1) {
         auto idx = row_batch.add_row();
-        auto tuple_row = row_batch.get_row(idx);
+        TupleRow* tuple_row = row_batch.get_row(idx);
 
-        auto tuple = static_cast<Tuple*>(row_batch.tuple_data_pool()->allocate(tuple_desc->byte_size()));
+        auto tuple = (Tuple*)(row_batch.tuple_data_pool()->allocate(tuple_desc->byte_size()));
         auto slot_desc = tuple_desc->slots()[0];
         memcpy(tuple->get_slot(slot_desc->tuple_offset()), &k1, column_descs[0].size);
         slot_desc = tuple_desc->slots()[1];
@@ -55,6 +60,7 @@ TEST(ZipUtilTest, basic) {
         memcpy(tuple->get_slot(slot_desc->tuple_offset()), &k3, column_descs[2].size);
 
         tuple_row->set_tuple(0, tuple);
+        row_batch.commit_last_row();
     }
 
     auto block = row_batch.conver_to_vec_block();
@@ -68,7 +74,8 @@ TEST(ZipUtilTest, basic) {
 
         ASSERT_EQ(column1->getInt(i), k1++);
         ASSERT_EQ(column2->getInt(i), k2++);
-        ASSERT_EQ(column3->getFloat64(i), k3++);
+        ASSERT_EQ(column3->getFloat64(i), k3);
+        k3+=0.1;
     }
 }
 
