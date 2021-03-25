@@ -16,36 +16,7 @@
 # under the License.
 
 # where to put generated libraries
-set(LIBRARY_OUTPUT_PATH "${BUILD_DIR}/src/vec")
+set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/test/vec/Function")
 
-# where to put generated binaries
-set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/src/vec")
+ADD_BE_TEST(function_abs_test)
 
-set(VEC_FILES
-DataTypes/NestedUtils.cpp
-DataTypes/IDataType.cpp
-DataTypes/DataTypeNumberBase.cpp
-DataTypes/DataTypesNumber.cpp
-common/demangle.cpp
-Functions/abs.cpp
-Functions/IFunction.cpp
-Functions/FunctionHelpers.cpp
-Columns/ColumnNullable.cpp
-Columns/ColumnVector.cpp
-Columns/ColumnConst.cpp
-Columns/IColumn.cpp
-Columns/ColumnsCommon.cpp
-Core/Field.cpp
-Core/ColumnWithTypeAndName.cpp
-Core/BlockInfo.cpp
-Core/Block.cpp
-Common/PODArray.cpp
-Common/StringUtils/StringUtils.cpp
-Common/ErrorCodes.cpp
-Common/Exception.cpp
-AggregateFunctions/AggregateFunctionSum.cpp
-)
-
-add_library(Vec STATIC
-    ${VEC_FILES}
-)
