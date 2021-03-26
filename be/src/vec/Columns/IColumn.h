@@ -61,8 +61,7 @@ public:
     /// If size is less current size, then data is cut.
     /// If size is greater, than default values are appended.
     virtual MutablePtr cloneResized(size_t /*size*/) const {
-         throw std::exception();
-        // throw Exception("Cannot cloneResized() column " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+         throw Exception("Cannot cloneResized() column " + getName(), ErrorCodes::NOT_IMPLEMENTED);
     }
 
     /// Returns number of values in column.
@@ -94,16 +93,14 @@ public:
     /// Is used to optimize some computations (in aggregation, for example).
     virtual UInt64 get64(size_t /*n*/) const
     {
-        throw std::exception();
-        // throw Exception("Method get64 is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+         throw Exception("Method get64 is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
     }
 
     /// If column stores native numeric type, it returns n-th element casted to Float64
     /// Is used in regression methods to cast each features into uniform type
     virtual Float64 getFloat64(size_t /*n*/) const
     {
-        throw std::exception();
-        // throw Exception("Method getFloat64 is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+         throw Exception("Method getFloat64 is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
     }
 
     /** If column is numeric, return value of n-th element, casted to UInt64.
@@ -112,14 +109,12 @@ public:
       */
     virtual UInt64 getUInt(size_t /*n*/) const
     {
-        throw std::exception();
-        // throw Exception("Method getUInt is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+        throw Exception("Method getUInt is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
     }
 
     virtual Int64 getInt(size_t /*n*/) const
     {
-        throw std::exception();
-        // throw Exception("Method getInt is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+        throw Exception("Method getInt is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
     }
 
     virtual bool isDefaultAt(size_t n) const { return get64(n) == 0; }
@@ -131,8 +126,7 @@ public:
       */
     virtual bool getBool(size_t /*n*/) const
     {
-        throw std::exception();
-        // throw Exception("Method getBool is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+         throw Exception("Method getBool is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
     }
 
     /// Removes all elements outside of specified range.
