@@ -28,6 +28,7 @@
 #include "gen_cpp/descriptors.pb.h"
 
 #include "vec/Core/ColumnsWithTypeAndName.h"
+#include "vec/Columns/ColumnNullable.h"
 
 namespace doris {
 using boost::algorithm::join;
@@ -85,7 +86,11 @@ void SlotDescriptor::to_protobuf(PSlotDescriptor* pslot) const {
 }
 
 DB::MutableColumnPtr SlotDescriptor::get_empty_mutable_column() const {
-    return type().get_data_type_ptr()->createColumn();
+    auto data_column = type().get_data_type_ptr()->createColumn();
+    if (is_nullable()) {
+        return DB::ColumnNullable::create(std::move(data_column), DB::ColumnUInt8::create());
+    }
+    return data_column;
 }
 
 DB::DataTypePtr SlotDescriptor::get_data_type_ptr() const {

@@ -550,9 +550,14 @@ DB::Block RowBatch::conver_to_vec_block() const {
         for (int j = 0; j < _num_rows; ++j) {
             TupleRow* src_row = get_row(j);
             auto tuple = src_row->get_tuple(tuple_idx[i]);
-            columns[i]->insertData(
-                    static_cast<const char*>(tuple->get_slot(slot_desc->tuple_offset())),
-                    slot_desc->slot_size());
+            if (slot_desc->is_nullable() && tuple->is_null(slot_desc->null_indicator_offset())) {
+                columns[i]->insertData(nullptr, 0);
+            } else {
+                columns[i]->insertData(
+                        static_cast<const char *>(tuple->get_slot(slot_desc->tuple_offset())),
+                        slot_desc->slot_size());
+            }
+
         }
     }
 
