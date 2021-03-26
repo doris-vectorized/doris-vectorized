@@ -30,7 +30,7 @@ namespace doris {
 
 TEST(BlockTest, RowBatchCovertToBlock) {
     SchemaScanner::ColumnDesc column_descs[] = {
-                {"k1", TYPE_SMALLINT, sizeof(int16_t), false},
+                {"k1", TYPE_SMALLINT, sizeof(int16_t), true},
                 {"k2", TYPE_INT,      sizeof(int32_t), false},
                 {"k3", TYPE_DOUBLE,    sizeof(double),   false}};
     SchemaScanner schema_scanner(column_descs, 3);
@@ -53,7 +53,11 @@ TEST(BlockTest, RowBatchCovertToBlock) {
 
         auto tuple = (Tuple*)(row_batch.tuple_data_pool()->allocate(tuple_desc->byte_size()));
         auto slot_desc = tuple_desc->slots()[0];
-        memcpy(tuple->get_slot(slot_desc->tuple_offset()), &k1, column_descs[0].size);
+        if (i % 5 == 0) {
+            tuple->set_null(slot_desc->null_indicator_offset());
+        } else {
+            memcpy(tuple->get_slot(slot_desc->tuple_offset()), &k1, column_descs[0].size);
+        }
         slot_desc = tuple_desc->slots()[1];
         memcpy(tuple->get_slot(slot_desc->tuple_offset()), &k2, column_descs[1].size);
         slot_desc = tuple_desc->slots()[2];
@@ -72,9 +76,14 @@ TEST(BlockTest, RowBatchCovertToBlock) {
         DB::ColumnPtr column2 = block.getColumns()[1];
         DB::ColumnPtr column3 = block.getColumns()[2];
 
-        ASSERT_EQ(column1->getInt(i), k1++);
+        if (i % 5 != 0) {
+            ASSERT_EQ((int16_t)column1->get64(i), k1);
+        } else {
+            ASSERT_TRUE(column1->isNullAt(i));
+        }
         ASSERT_EQ(column2->getInt(i), k2++);
         ASSERT_EQ(column3->getFloat64(i), k3);
+        k1++;
         k3+=0.1;
     }
 }
