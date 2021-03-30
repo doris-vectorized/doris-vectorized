@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 #include <boost/noncopyable.hpp>
-#include <vec/common/likely.h>
+#include <common/compiler_util.h>
 #if __has_include(<sanitizer/asan_interface.h>)
 #   include <sanitizer/asan_interface.h>
 #endif
@@ -142,7 +142,7 @@ public:
     /// Get piece of memory, without alignment.
     char * alloc(size_t size)
     {
-        if (unlikely(head->pos + size > head->end))
+        if (UNLIKELY(head->pos + size > head->end))
             addChunk(size);
 
         char * res = head->pos;

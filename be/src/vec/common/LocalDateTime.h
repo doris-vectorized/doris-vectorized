@@ -31,7 +31,7 @@ private:
 
     void init(time_t time)
     {
-        if (unlikely(time > DATE_LUT_MAX || time == 0))
+        if (UNLIKELY(time > DATE_LUT_MAX || time == 0))
         {
             m_year = 0;
             m_month = 0;

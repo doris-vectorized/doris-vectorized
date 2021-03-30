@@ -14,10 +14,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
 # where to put generated libraries
 set(LIBRARY_OUTPUT_PATH "${BUILD_DIR}/src/vec")
-
 # where to put generated binaries
 set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/src/vec")
 
@@ -44,6 +42,12 @@ Common/StringUtils/StringUtils.cpp
 Common/ErrorCodes.cpp
 Common/Exception.cpp
 AggregateFunctions/AggregateFunctionSum.cpp
+           Columns/Collator.cpp
+   Columns/ColumnDecimal.cpp
+   Columns/ColumnString.cpp
+   Core/Field.cpp
+   DataTypes/DataTypesDecimal.cpp
+        DataTypes/DataTypeString.cpp
 )
 
 add_library(Vec STATIC
