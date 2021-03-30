@@ -2,7 +2,7 @@
 
 #include "Types.h"
 #include "DayNum.h"
-#include "likely.h"
+#include "common/compiler_util.h"
 #include <ctime>
 #include <string>
 
@@ -239,7 +239,7 @@ public:
     {
         DayNum index = findIndex(t);
 
-        if (unlikely(index == 0))
+        if (UNLIKELY(index == 0))
             return t + offset_at_start_of_epoch;
 
         time_t res = t - lut[index].date;
@@ -256,7 +256,7 @@ public:
 
         /// If it is not 1970 year (findIndex found nothing appropriate),
         ///  than limit number of hours to avoid insane results like 1970-01-01 89:28:15
-        if (unlikely(index == 0))
+        if (UNLIKELY(index == 0))
             return static_cast<unsigned>((t + offset_at_start_of_epoch) / 3600) % 24;
 
         time_t res = t - lut[index].date;
@@ -665,7 +665,7 @@ public:
     /// Create DayNum from year, month, day of month.
     inline DayNum makeDayNum(UInt16 year, UInt8 month, UInt8 day_of_month) const
     {
-        if (unlikely(year < DATE_LUT_MIN_YEAR || year > DATE_LUT_MAX_YEAR || month < 1 || month > 12 || day_of_month < 1 || day_of_month > 31))
+        if (UNLIKELY(year < DATE_LUT_MIN_YEAR || year > DATE_LUT_MAX_YEAR || month < 1 || month > 12 || day_of_month < 1 || day_of_month > 31))
             return DayNum(0);
 
         return DayNum(years_months_lut[(year - DATE_LUT_MIN_YEAR) * 12 + month - 1] + day_of_month - 1);
@@ -773,7 +773,7 @@ public:
 
     inline UInt8 saturateDayOfMonth(UInt16 year, UInt8 month, UInt8 day_of_month) const
     {
-        if (likely(day_of_month <= 28))
+        if (LIKELY(day_of_month <= 28))
             return day_of_month;
 
         UInt8 days_in_month = daysInMonth(year, month);
@@ -854,7 +854,7 @@ public:
         auto day_of_month = values.day_of_month;
 
         /// Saturation to 28 Feb can happen.
-        if (unlikely(day_of_month == 29 && month == 2))
+        if (UNLIKELY(day_of_month == 29 && month == 2))
             day_of_month = saturateDayOfMonth(year, month, day_of_month);
 
         return makeDayNum(year, month, day_of_month);
