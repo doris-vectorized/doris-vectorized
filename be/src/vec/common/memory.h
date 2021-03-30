@@ -1,7 +1,7 @@
 #pragma once
 
 #include <new>
-#include "likely.h"
+#include "common/compiler_util.h"
 
 #if __has_include(<vec/common/config_common.h>)
 #include <vec/common/config_common.h>
@@ -42,7 +42,7 @@ namespace Memory
 ALWAYS_INLINE void * newImpl(std::size_t size)
 {
     auto * ptr = malloc(size);
-    if (likely(ptr != nullptr))
+    if (LIKELY(ptr != nullptr))
         return ptr;
 
     /// @note no std::get_new_handler logic implemented
@@ -63,7 +63,7 @@ ALWAYS_INLINE void deleteImpl(void * ptr) noexcept
 
 ALWAYS_INLINE void deleteSized(void * ptr, std::size_t size) noexcept
 {
-    if (unlikely(ptr == nullptr))
+    if (UNLIKELY(ptr == nullptr))
         return;
 
     sdallocx(ptr, size, 0);

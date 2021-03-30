@@ -13,6 +13,7 @@
 //#include <vec/Core/UUID.h>
 #include <vec/common/DayNum.h>
 #include <vec/common/strong_typedef.h>
+#include <vec/Common/intExp.h>
 
 
 namespace DB

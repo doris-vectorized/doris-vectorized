@@ -30,6 +30,8 @@
 #include "thrift/protocol/TDebugProtocol.h"
 
 #include "vec/DataTypes/DataTypesNumber.h"
+#include "vec/DataTypes/DataTypeString.h"
+#include "vec/DataTypes/DataTypesDecimal.h"
 
 namespace doris {
 
@@ -274,8 +276,19 @@ struct TypeDescriptor {
 
         case TYPE_BIGINT:
             return std::make_shared<DB::DataTypeInt64>();
+
         case TYPE_DOUBLE:
             return std::make_shared<DB::DataTypeFloat64>();
+
+        case TYPE_CHAR:
+        case TYPE_VARCHAR:
+        case TYPE_HLL:
+        case TYPE_OBJECT:
+            return std::make_shared<DB::DataTypeString>();
+
+        case TYPE_DECIMALV2:
+        case TYPE_DECIMAL:
+            return std::make_shared<DB::DataTypeDecimal<DB::Decimal128>>(27, 9);
 
         case INVALID_TYPE:
         default:
