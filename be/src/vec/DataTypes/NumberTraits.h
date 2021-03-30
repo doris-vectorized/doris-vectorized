@@ -39,10 +39,10 @@ struct Construct
     using Type = Error;
 };
 
-template <> struct Construct<false, false, 1> { using Type = UInt8; };
-template <> struct Construct<false, false, 2> { using Type = UInt16; };
-template <> struct Construct<false, false, 4> { using Type = UInt32; };
-template <> struct Construct<false, false, 8> { using Type = UInt64; };
+template <> struct Construct<false, false, 1> { using Type = Int16; };
+template <> struct Construct<false, false, 2> { using Type = Int32; };
+template <> struct Construct<false, false, 4> { using Type = Int64; };
+template <> struct Construct<false, false, 8> { using Type = Int64; };
 template <> struct Construct<false, true, 1> { using Type = Float32; };
 template <> struct Construct<false, true, 2> { using Type = Float32; };
 template <> struct Construct<false, true, 4> { using Type = Float32; };
