@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/Functions/abs.cpp"
+#include "vec/Functions/abs.hpp"
 
 #include <gtest/gtest.h>
 

@@ -1,3 +1,4 @@
+#pragma once
 //#include <Functions/FunctionFactory.h>
 #include <vec/Functions/FunctionUnaryArithmetic.h>
 #include <vec/DataTypes/NumberTraits.h>

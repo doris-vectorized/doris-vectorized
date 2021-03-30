@@ -25,7 +25,6 @@ DataTypes/IDataType.cpp
 DataTypes/DataTypeNumberBase.cpp
 DataTypes/DataTypesNumber.cpp
 common/demangle.cpp
-Functions/abs.cpp
 Functions/IFunction.cpp
 Functions/FunctionHelpers.cpp
 Columns/ColumnNullable.cpp
@@ -48,6 +47,13 @@ AggregateFunctions/AggregateFunctionSum.cpp
    Core/Field.cpp
    DataTypes/DataTypesDecimal.cpp
         DataTypes/DataTypeString.cpp
+exprs/vectorized_fn_call.cpp
+exprs/vexpr.cpp
+exprs/vexpr_context.cpp
+exprs/vslot_ref.cpp
+
+DataTypes/DataTypeNullable.cpp
+DataTypes/DataTypeNothing.cpp
 )
 
 add_library(Vec STATIC
