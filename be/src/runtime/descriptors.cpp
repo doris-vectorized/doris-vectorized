@@ -29,6 +29,7 @@
 
 #include "vec/Core/ColumnsWithTypeAndName.h"
 #include "vec/Columns/ColumnNullable.h"
+#include "vec/DataTypes/DataTypeNullable.h"
 
 namespace doris {
 using boost::algorithm::join;
@@ -94,6 +95,9 @@ DB::MutableColumnPtr SlotDescriptor::get_empty_mutable_column() const {
 }
 
 DB::DataTypePtr SlotDescriptor::get_data_type_ptr() const {
+    if (is_nullable()) {
+        return std::make_shared<DB::DataTypeNullable>(type().get_data_type_ptr());
+    }
     return type().get_data_type_ptr();
 }
 
@@ -471,6 +475,20 @@ std::string RowDescriptor::debug_string() const {
     ss << "] ";
 
     return ss.str();
+}
+
+
+int RowDescriptor::get_column_id(int slot_id) const {
+    int column_id_counter = 0;
+    for(const auto tuple_desc:_tuple_desc_map) {
+        for(const auto slot:tuple_desc->slots()) {
+            if(slot->id() == slot_id) {
+                return column_id_counter;
+            }
+            column_id_counter++;
+        }
+    }
+    return -1;
 }
 
 Status DescriptorTbl::create(ObjectPool* pool, const TDescriptorTable& thrift_tbl,
