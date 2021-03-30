@@ -71,7 +71,7 @@ struct FloatCompareHelper
     {
         bool isnan_a = std::isnan(a);
         bool isnan_b = std::isnan(b);
-        if (unlikely(isnan_a || isnan_b))
+        if (UNLIKELY(isnan_a || isnan_b))
         {
             if (isnan_a && isnan_b)
                 return 0;

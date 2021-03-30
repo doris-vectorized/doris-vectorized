@@ -30,7 +30,7 @@
 #include <cstddef>
 #include <cstring>
 #include <type_traits>
-#include "likely.h"
+#include "common/compiler_util.h"
 
 using int128_t = __int128;
 using uint128_t = unsigned __int128;
@@ -375,7 +375,7 @@ static inline char * writeSIntText(int128_t x, char * pos)
 {
     static const int128_t min_int128 = int128_t(0x8000000000000000ll) << 64;
 
-    if (unlikely(x == min_int128))
+    if (UNLIKELY(x == min_int128))
     {
         memcpy(pos, "-170141183460469231731687303715884105728", 40);
         return pos + 40;
