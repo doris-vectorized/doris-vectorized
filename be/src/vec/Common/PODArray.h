@@ -9,7 +9,7 @@
 #include <boost/noncopyable.hpp>
 #include <boost/iterator_adaptors.hpp>
 
-#include <vec/common/likely.h>
+#include <common/compiler_util.h>
 #include <vec/common/strong_typedef.h>
 
 #include <vec/Common/Allocator.h>
@@ -226,7 +226,7 @@ public:
     template <typename ... TAllocatorParams>
     void push_back_raw(const char * ptr, TAllocatorParams &&... allocator_params)
     {
-        if (unlikely(c_end == c_end_of_storage))
+        if (UNLIKELY(c_end == c_end_of_storage))
             reserveForNextSize(std::forward<TAllocatorParams>(allocator_params)...);
 
         memcpy(c_end, ptr, ELEMENT_SIZE);
@@ -375,7 +375,7 @@ public:
     template <typename U, typename ... TAllocatorParams>
     void push_back(U && x, TAllocatorParams &&... allocator_params)
     {
-        if (unlikely(this->c_end == this->c_end_of_storage))
+        if (UNLIKELY(this->c_end == this->c_end_of_storage))
             this->reserveForNextSize(std::forward<TAllocatorParams>(allocator_params)...);
 
         new (t_end()) T(std::forward<U>(x));
@@ -388,7 +388,7 @@ public:
     template <typename... Args>
     void emplace_back(Args &&... args)
     {
-        if (unlikely(this->c_end == this->c_end_of_storage))
+        if (UNLIKELY(this->c_end == this->c_end_of_storage))
             this->reserveForNextSize();
 
         new (t_end()) T(std::forward<Args>(args)...);
@@ -436,7 +436,7 @@ public:
         size_t bytes_to_copy = this->byte_size(from_end - from_begin);
         size_t bytes_to_move = (end() - it) * sizeof(T);
 
-        if (unlikely(bytes_to_move))
+        if (UNLIKELY(bytes_to_move))
             memcpy(this->c_end + bytes_to_copy - bytes_to_move, this->c_end - bytes_to_move, bytes_to_move);
 
         memcpy(this->c_end - bytes_to_move, reinterpret_cast<const void *>(&*from_begin), bytes_to_copy);
