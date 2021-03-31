@@ -4,7 +4,7 @@
 #include "common/compiler_util.h"
 
 #if __has_include(<vec/common/config_common.h>)
-#include <vec/common/config_common.h>
+#include "vec/common/config_common.h"
 #endif
 
 #if USE_JEMALLOC

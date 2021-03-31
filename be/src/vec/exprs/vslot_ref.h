@@ -1,6 +1,6 @@
 #pragma once
 #include "runtime/runtime_state.h"
-#include "vec/Functions/IFunction.h"
+#include "vec/functions/function.h"
 #include "vec/exprs/vexpr.h"
 
 namespace DB {
