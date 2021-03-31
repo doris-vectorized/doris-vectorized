@@ -1,19 +1,36 @@
-#include <type_traits>
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/data_types/data_type_number_base.h"
-#include "vec/columns/column_vector.h"
+
+#include <type_traits>
+
 #include "vec/columns/column_const.h"
+#include "vec/columns/column_vector.h"
 // #include <IO/ReadHelpers.h>
 // #include <IO/WriteHelpers.h>
+#include "vec/common/assert_cast.h"
 #include "vec/common/nan_utils.h"
 #include "vec/common/typeid_cast.h"
-#include "vec/common/assert_cast.h"
 // #include <Formats/FormatSettings.h>
 // #include <Formats/ProtobufReader.h>
 // #include <Formats/ProtobufWriter.h>
 
-
-namespace DB
-{
+namespace doris::vectorized {
 
 // template <typename T>
 // void DataTypeNumberBase<T>::serializeText(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings &) const
@@ -60,7 +77,6 @@ namespace DB
 //         (void)x;
 //     }
 // }
-
 
 // template <typename T>
 // void DataTypeNumberBase<T>::serializeTextJSON(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings & settings) const
@@ -145,8 +161,7 @@ namespace DB
 // }
 
 template <typename T>
-Field DataTypeNumberBase<T>::getDefault() const
-{
+Field DataTypeNumberBase<T>::getDefault() const {
     return NearestFieldType<FieldType>();
 }
 
@@ -204,7 +219,6 @@ Field DataTypeNumberBase<T>::getDefault() const
 //     x.resize(initial_size + size / sizeof(typename ColumnVector<T>::value_type));
 // }
 
-
 // template <typename T>
 // void DataTypeNumberBase<T>::serializeProtobuf(const IColumn & column, size_t row_num, ProtobufWriter & protobuf, size_t & value_index) const
 // {
@@ -212,7 +226,6 @@ Field DataTypeNumberBase<T>::getDefault() const
 //         return;
 //     value_index = static_cast<bool>(protobuf.writeNumber(assert_cast<const ColumnVector<T> &>(column).getData()[row_num]));
 // }
-
 
 // template <typename T>
 // void DataTypeNumberBase<T>::deserializeProtobuf(IColumn & column, ProtobufReader & protobuf, bool allow_add_row, bool & row_added) const
@@ -232,25 +245,20 @@ Field DataTypeNumberBase<T>::getDefault() const
 //         container.back() = value;
 // }
 
-
 template <typename T>
-MutableColumnPtr DataTypeNumberBase<T>::createColumn() const
-{
+MutableColumnPtr DataTypeNumberBase<T>::createColumn() const {
     return ColumnVector<T>::create();
 }
 
 template <typename T>
-bool DataTypeNumberBase<T>::isValueRepresentedByInteger() const
-{
+bool DataTypeNumberBase<T>::isValueRepresentedByInteger() const {
     return std::is_integral_v<T>;
 }
 
 template <typename T>
-bool DataTypeNumberBase<T>::isValueRepresentedByUnsignedInteger() const
-{
+bool DataTypeNumberBase<T>::isValueRepresentedByUnsignedInteger() const {
     return std::is_integral_v<T> && std::is_unsigned_v<T>;
 }
-
 
 /// Explicit template instantiations - to avoid code bloat in headers.
 template class DataTypeNumberBase<UInt8>;
@@ -265,4 +273,4 @@ template class DataTypeNumberBase<Int64>;
 template class DataTypeNumberBase<Float32>;
 template class DataTypeNumberBase<Float64>;
 
-}
+} // namespace doris::vectorized

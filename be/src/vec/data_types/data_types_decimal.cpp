@@ -1,8 +1,27 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+#include "vec/data_types/data_types_decimal.h"
+
 #include <type_traits>
-#include "vec/common/typeid_cast.h"
+
 #include "vec/common/assert_cast.h"
 #include "vec/common/int_exp.h"
-#include "vec/data_types/data_types_decimal.h"
+#include "vec/common/typeid_cast.h"
 //#include <DataTypes/DataTypeFactory.h>
 //#include <Formats/ProtobufReader.h>
 //#include <Formats/ProtobufWriter.h>
@@ -13,36 +32,29 @@
 //#include <Parsers/ASTLiteral.h>
 //#include <Interpreters/Context.h>
 
+namespace doris::vectorized {
 
-namespace DB
-{
-
-namespace ErrorCodes
-{
-    extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-    extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-    extern const int ARGUMENT_OUT_OF_BOUND;
-}
-
+namespace ErrorCodes {
+extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
+extern const int ILLEGAL_TYPE_OF_ARGUMENT;
+extern const int ARGUMENT_OUT_OF_BOUND;
+} // namespace ErrorCodes
 
 //bool decimalCheckComparisonOverflow(const Context & context) { return context.getSettingsRef().decimal_check_overflow; }
 //bool decimalCheckArithmeticOverflow(const Context & context) { return context.getSettingsRef().decimal_check_overflow; }
 
-
 //
 
 template <typename T>
-std::string DataTypeDecimal<T>::doGetName() const
-{
+std::string DataTypeDecimal<T>::doGetName() const {
     std::stringstream ss;
     ss << "Decimal(" << precision << ", " << scale << ")";
     return ss.str();
 }
 
 template <typename T>
-bool DataTypeDecimal<T>::equals(const IDataType & rhs) const
-{
-    if (auto * ptype = typeid_cast<const DataTypeDecimal<T> *>(&rhs))
+bool DataTypeDecimal<T>::equals(const IDataType& rhs) const {
+    if (auto* ptype = typeid_cast<const DataTypeDecimal<T>*>(&rhs))
         return scale == ptype->getScale();
     return false;
 }
@@ -101,7 +113,6 @@ bool DataTypeDecimal<T>::equals(const IDataType & rhs) const
 //    return x;
 //}
 
-
 //template <typename T>
 //void DataTypeDecimal<T>::serializeBinary(const Field & field, WriteBuffer & ostr) const
 //{
@@ -129,7 +140,6 @@ bool DataTypeDecimal<T>::equals(const IDataType & rhs) const
 //    ostr.write(reinterpret_cast<const char *>(&x[offset]), sizeof(FieldType) * limit);
 //}
 
-
 //template <typename T>
 //void DataTypeDecimal<T>::deserializeBinary(Field & field, ReadBuffer & istr) const
 //{
@@ -155,7 +165,6 @@ bool DataTypeDecimal<T>::equals(const IDataType & rhs) const
 //    size_t size = istr.readBig(reinterpret_cast<char*>(&x[initial_size]), sizeof(FieldType) * limit);
 //    x.resize(initial_size + size / sizeof(FieldType));
 //}
-
 
 //template <typename T>
 //void DataTypeDecimal<T>::serializeProtobuf(const IColumn & column, size_t row_num, ProtobufWriter & protobuf, size_t & value_index) const
@@ -184,38 +193,32 @@ bool DataTypeDecimal<T>::equals(const IDataType & rhs) const
 //        container.back() = decimal;
 //}
 
-
 template <typename T>
-Field DataTypeDecimal<T>::getDefault() const
-{
+Field DataTypeDecimal<T>::getDefault() const {
     return DecimalField(T(0), scale);
 }
 
-
 template <typename T>
-DataTypePtr DataTypeDecimal<T>::promoteNumericType() const
-{
+DataTypePtr DataTypeDecimal<T>::promoteNumericType() const {
     using PromotedType = DataTypeDecimal<Decimal128>;
     return std::make_shared<PromotedType>(PromotedType::maxPrecision(), scale);
 }
 
-
 template <typename T>
-MutableColumnPtr DataTypeDecimal<T>::createColumn() const
-{
+MutableColumnPtr DataTypeDecimal<T>::createColumn() const {
     return ColumnType::create(0, scale);
 }
 
-
 //
 
-DataTypePtr createDecimal(UInt64 precision_value, UInt64 scale_value)
-{
-    if (precision_value < minDecimalPrecision() || precision_value > maxDecimalPrecision<Decimal128>())
+DataTypePtr createDecimal(UInt64 precision_value, UInt64 scale_value) {
+    if (precision_value < minDecimalPrecision() ||
+        precision_value > maxDecimalPrecision<Decimal128>())
         throw Exception("Wrong precision", ErrorCodes::ARGUMENT_OUT_OF_BOUND);
 
     if (static_cast<UInt64>(scale_value) > precision_value)
-        throw Exception("Negative scales and scales larger than precision are not supported", ErrorCodes::ARGUMENT_OUT_OF_BOUND);
+        throw Exception("Negative scales and scales larger than precision are not supported",
+                        ErrorCodes::ARGUMENT_OUT_OF_BOUND);
 
     if (precision_value <= maxDecimalPrecision<Decimal32>())
         return std::make_shared<DataTypeDecimal<Decimal32>>(precision_value, scale_value);
@@ -271,29 +274,24 @@ DataTypePtr createDecimal(UInt64 precision_value, UInt64 scale_value)
 //    factory.registerAlias("DEC", "Decimal", DataTypeFactory::CaseInsensitive);
 //}
 
-
 template <>
-Decimal32 DataTypeDecimal<Decimal32>::getScaleMultiplier(UInt32 scale_)
-{
+Decimal32 DataTypeDecimal<Decimal32>::getScaleMultiplier(UInt32 scale_) {
     return common::exp10_i32(scale_);
 }
 
 template <>
-Decimal64 DataTypeDecimal<Decimal64>::getScaleMultiplier(UInt32 scale_)
-{
+Decimal64 DataTypeDecimal<Decimal64>::getScaleMultiplier(UInt32 scale_) {
     return common::exp10_i64(scale_);
 }
 
 template <>
-Decimal128 DataTypeDecimal<Decimal128>::getScaleMultiplier(UInt32 scale_)
-{
+Decimal128 DataTypeDecimal<Decimal128>::getScaleMultiplier(UInt32 scale_) {
     return common::exp10_i128(scale_);
 }
-
 
 /// Explicit template instantiations.
 template class DataTypeDecimal<Decimal32>;
 template class DataTypeDecimal<Decimal64>;
 template class DataTypeDecimal<Decimal128>;
 
-}
+} // namespace doris::vectorized
