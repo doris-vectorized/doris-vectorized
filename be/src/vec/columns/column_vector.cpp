@@ -1,12 +1,30 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/columns/column_vector.h"
 
-#include <cstring>
 #include <cmath>
-#include "vec/common/unaligned.h"
-#include "vec/common/exception.h"
+#include <cstring>
+
 #include "vec/common/arena.h"
-#include "vec/common/sip_hash.h"
+#include "vec/common/exception.h"
 #include "vec/common/nan_utils.h"
+#include "vec/common/sip_hash.h"
+#include "vec/common/unaligned.h"
 //#include <vec/Common/RadixSort.h>
 //#include <vec/Common/assert_cast.h>
 //#include <IO/WriteBuffer.h>
@@ -17,58 +35,56 @@
 //#include <pdqsort.h>
 
 #ifdef __SSE2__
-    #include <emmintrin.h>
+#include <emmintrin.h>
 #endif
 
-namespace DB
-{
+namespace doris::vectorized {
 
-namespace ErrorCodes
-{
-    extern const int PARAMETER_OUT_OF_BOUND;
-    extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
-}
-
+namespace ErrorCodes {
+extern const int PARAMETER_OUT_OF_BOUND;
+extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
+} // namespace ErrorCodes
 
 template <typename T>
-StringRef ColumnVector<T>::serializeValueIntoArena(size_t n, Arena & arena, char const *& begin) const
-{
+StringRef ColumnVector<T>::serializeValueIntoArena(size_t n, Arena& arena,
+                                                   char const*& begin) const {
     auto pos = arena.allocContinue(sizeof(T), begin);
     unalignedStore<T>(pos, data[n]);
     return StringRef(pos, sizeof(T));
 }
 
 template <typename T>
-const char * ColumnVector<T>::deserializeAndInsertFromArena(const char * pos)
-{
+const char* ColumnVector<T>::deserializeAndInsertFromArena(const char* pos) {
     data.push_back(unalignedLoad<T>(pos));
     return pos + sizeof(T);
 }
 
 template <typename T>
-void ColumnVector<T>::updateHashWithValue(size_t n, SipHash & hash) const
-{
+void ColumnVector<T>::updateHashWithValue(size_t n, SipHash& hash) const {
     hash.update(data[n]);
 }
 
 template <typename T>
-struct ColumnVector<T>::less
-{
-    const Self & parent;
+struct ColumnVector<T>::less {
+    const Self& parent;
     int nan_direction_hint;
-    less(const Self & parent_, int nan_direction_hint_) : parent(parent_), nan_direction_hint(nan_direction_hint_) {}
-    bool operator()(size_t lhs, size_t rhs) const { return CompareHelper<T>::less(parent.data[lhs], parent.data[rhs], nan_direction_hint); }
+    less(const Self& parent_, int nan_direction_hint_)
+            : parent(parent_), nan_direction_hint(nan_direction_hint_) {}
+    bool operator()(size_t lhs, size_t rhs) const {
+        return CompareHelper<T>::less(parent.data[lhs], parent.data[rhs], nan_direction_hint);
+    }
 };
 
 template <typename T>
-struct ColumnVector<T>::greater
-{
-    const Self & parent;
+struct ColumnVector<T>::greater {
+    const Self& parent;
     int nan_direction_hint;
-    greater(const Self & parent_, int nan_direction_hint_) : parent(parent_), nan_direction_hint(nan_direction_hint_) {}
-    bool operator()(size_t lhs, size_t rhs) const { return CompareHelper<T>::greater(parent.data[lhs], parent.data[rhs], nan_direction_hint); }
+    greater(const Self& parent_, int nan_direction_hint_)
+            : parent(parent_), nan_direction_hint(nan_direction_hint_) {}
+    bool operator()(size_t lhs, size_t rhs) const {
+        return CompareHelper<T>::greater(parent.data[lhs], parent.data[rhs], nan_direction_hint);
+    }
 };
-
 
 //namespace
 //{
@@ -183,56 +199,51 @@ struct ColumnVector<T>::greater
 //    }
 //}
 
-
 template <typename T>
-const char * ColumnVector<T>::getFamilyName() const
-{
+const char* ColumnVector<T>::getFamilyName() const {
     return TypeName<T>::get();
 }
 
 template <typename T>
-MutableColumnPtr ColumnVector<T>::cloneResized(size_t size) const
-{
+MutableColumnPtr ColumnVector<T>::cloneResized(size_t size) const {
     auto res = this->create();
 
-    if (size > 0)
-    {
-        auto & new_col = static_cast<Self &>(*res);
+    if (size > 0) {
+        auto& new_col = static_cast<Self&>(*res);
         new_col.data.resize(size);
 
         size_t count = std::min(this->size(), size);
         memcpy(new_col.data.data(), data.data(), count * sizeof(data[0]));
 
         if (size > count)
-            memset(static_cast<void *>(&new_col.data[count]), static_cast<int>(value_type()), (size - count) * sizeof(value_type));
+            memset(static_cast<void*>(&new_col.data[count]), static_cast<int>(value_type()),
+                   (size - count) * sizeof(value_type));
     }
 
     return res;
 }
 
 template <typename T>
-UInt64 ColumnVector<T>::get64(size_t n) const
-{
+UInt64 ColumnVector<T>::get64(size_t n) const {
     return ext::bit_cast<UInt64>(data[n]);
 }
 
 template <typename T>
-Float64 ColumnVector<T>::getFloat64(size_t n) const
-{
+Float64 ColumnVector<T>::getFloat64(size_t n) const {
     return static_cast<Float64>(data[n]);
 }
 
 template <typename T>
-void ColumnVector<T>::insertRangeFrom(const IColumn & src, size_t start, size_t length)
-{
-    const ColumnVector & src_vec = dynamic_cast<const ColumnVector &>(src);
+void ColumnVector<T>::insertRangeFrom(const IColumn& src, size_t start, size_t length) {
+    const ColumnVector& src_vec = dynamic_cast<const ColumnVector&>(src);
 
     if (start + length > src_vec.data.size())
-        throw Exception("Parameters start = "
-            + std::to_string(start) + ", length = "
-            + std::to_string(length) + " are out of bound in ColumnVector<T>::insertRangeFrom method"
-            " (data.size() = " + std::to_string(src_vec.data.size()) + ").",
-            ErrorCodes::PARAMETER_OUT_OF_BOUND);
+        throw Exception("Parameters start = " + std::to_string(start) +
+                                ", length = " + std::to_string(length) +
+                                " are out of bound in ColumnVector<T>::insertRangeFrom method"
+                                " (data.size() = " +
+                                std::to_string(src_vec.data.size()) + ").",
+                        ErrorCodes::PARAMETER_OUT_OF_BOUND);
 
     size_t old_size = data.size();
     data.resize(old_size + length);
@@ -240,21 +251,20 @@ void ColumnVector<T>::insertRangeFrom(const IColumn & src, size_t start, size_t 
 }
 
 template <typename T>
-ColumnPtr ColumnVector<T>::filter(const IColumn::Filter & filt, ssize_t result_size_hint) const
-{
+ColumnPtr ColumnVector<T>::filter(const IColumn::Filter& filt, ssize_t result_size_hint) const {
     size_t size = data.size();
     if (size != filt.size())
-        throw Exception("Size of filter doesn't match size of column.", ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+        throw Exception("Size of filter doesn't match size of column.",
+                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
     auto res = this->create();
-    Container & res_data = res->getData();
+    Container& res_data = res->getData();
 
-    if (result_size_hint)
-        res_data.reserve(result_size_hint > 0 ? result_size_hint : size);
+    if (result_size_hint) res_data.reserve(result_size_hint > 0 ? result_size_hint : size);
 
-    const UInt8 * filt_pos = filt.data();
-    const UInt8 * filt_end = filt_pos + size;
-    const T * data_pos = data.data();
+    const UInt8* filt_pos = filt.data();
+    const UInt8* filt_end = filt_pos + size;
+    const T* data_pos = data.data();
 
 #ifdef __SSE2__
     /** A slightly more optimized version.
@@ -265,25 +275,19 @@ ColumnPtr ColumnVector<T>::filter(const IColumn::Filter & filt, ssize_t result_s
 
     static constexpr size_t SIMD_BYTES = 16;
     const __m128i zero16 = _mm_setzero_si128();
-    const UInt8 * filt_end_sse = filt_pos + size / SIMD_BYTES * SIMD_BYTES;
+    const UInt8* filt_end_sse = filt_pos + size / SIMD_BYTES * SIMD_BYTES;
 
-    while (filt_pos < filt_end_sse)
-    {
-        int mask = _mm_movemask_epi8(_mm_cmpgt_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i *>(filt_pos)), zero16));
+    while (filt_pos < filt_end_sse) {
+        int mask = _mm_movemask_epi8(_mm_cmpgt_epi8(
+                _mm_loadu_si128(reinterpret_cast<const __m128i*>(filt_pos)), zero16));
 
-        if (0 == mask)
-        {
+        if (0 == mask) {
             /// Nothing is inserted.
-        }
-        else if (0xFFFF == mask)
-        {
+        } else if (0xFFFF == mask) {
             res_data.insert(data_pos, data_pos + SIMD_BYTES);
-        }
-        else
-        {
+        } else {
             for (size_t i = 0; i < SIMD_BYTES; ++i)
-                if (filt_pos[i])
-                    res_data.push_back(data_pos[i]);
+                if (filt_pos[i]) res_data.push_back(data_pos[i]);
         }
 
         filt_pos += SIMD_BYTES;
@@ -291,10 +295,8 @@ ColumnPtr ColumnVector<T>::filter(const IColumn::Filter & filt, ssize_t result_s
     }
 #endif
 
-    while (filt_pos < filt_end)
-    {
-        if (*filt_pos)
-            res_data.push_back(*data_pos);
+    while (filt_pos < filt_end) {
+        if (*filt_pos) res_data.push_back(*data_pos);
 
         ++filt_pos;
         ++data_pos;
@@ -304,8 +306,7 @@ ColumnPtr ColumnVector<T>::filter(const IColumn::Filter & filt, ssize_t result_s
 }
 
 template <typename T>
-ColumnPtr ColumnVector<T>::permute(const IColumn::Permutation & perm, size_t limit) const
-{
+ColumnPtr ColumnVector<T>::permute(const IColumn::Permutation& perm, size_t limit) const {
     size_t size = data.size();
 
     if (limit == 0)
@@ -314,12 +315,12 @@ ColumnPtr ColumnVector<T>::permute(const IColumn::Permutation & perm, size_t lim
         limit = std::min(size, limit);
 
     if (perm.size() < limit)
-        throw Exception("Size of permutation is less than required.", ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+        throw Exception("Size of permutation is less than required.",
+                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
     auto res = this->create(limit);
-    typename Self::Container & res_data = res->getData();
-    for (size_t i = 0; i < limit; ++i)
-        res_data[i] = data[perm[i]];
+    typename Self::Container& res_data = res->getData();
+    for (size_t i = 0; i < limit; ++i) res_data[i] = data[perm[i]];
 
     return res;
 }
@@ -331,27 +332,24 @@ ColumnPtr ColumnVector<T>::permute(const IColumn::Permutation & perm, size_t lim
 //}
 
 template <typename T>
-ColumnPtr ColumnVector<T>::replicate(const IColumn::Offsets & offsets) const
-{
+ColumnPtr ColumnVector<T>::replicate(const IColumn::Offsets& offsets) const {
     size_t size = data.size();
     if (size != offsets.size())
-        throw Exception("Size of offsets doesn't match size of column.", ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+        throw Exception("Size of offsets doesn't match size of column.",
+                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
-    if (0 == size)
-        return this->create();
+    if (0 == size) return this->create();
 
     auto res = this->create();
-    typename Self::Container & res_data = res->getData();
+    typename Self::Container& res_data = res->getData();
     res_data.reserve(offsets.back());
 
     IColumn::Offset prev_offset = 0;
-    for (size_t i = 0; i < size; ++i)
-    {
+    for (size_t i = 0; i < size; ++i) {
         size_t size_to_replicate = offsets[i] - prev_offset;
         prev_offset = offsets[i];
 
-        for (size_t j = 0; j < size_to_replicate; ++j)
-            res_data.push_back(data[i]);
+        for (size_t j = 0; j < size_to_replicate; ++j) res_data.push_back(data[i]);
     }
 
     return res;
@@ -364,12 +362,10 @@ ColumnPtr ColumnVector<T>::replicate(const IColumn::Offsets & offsets) const
 //}
 
 template <typename T>
-void ColumnVector<T>::getExtremes(Field & min, Field & max) const
-{
+void ColumnVector<T>::getExtremes(Field& min, Field& max) const {
     size_t size = data.size();
 
-    if (size == 0)
-    {
+    if (size == 0) {
         min = T(0);
         max = T(0);
         return;
@@ -386,13 +382,10 @@ void ColumnVector<T>::getExtremes(Field & min, Field & max) const
     T cur_min = NaNOrZero<T>();
     T cur_max = NaNOrZero<T>();
 
-    for (const T x : data)
-    {
-        if (isNaN(x))
-            continue;
+    for (const T x : data) {
+        if (isNaN(x)) continue;
 
-        if (!has_value)
-        {
+        if (!has_value) {
             cur_min = x;
             cur_max = x;
             has_value = true;
@@ -422,4 +415,4 @@ template class ColumnVector<Int64>;
 template class ColumnVector<Int128>;
 template class ColumnVector<Float32>;
 template class ColumnVector<Float64>;
-}
+} // namespace doris::vectorized

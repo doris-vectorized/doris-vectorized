@@ -15,24 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/functions/abs.hpp"
-
 #include <gtest/gtest.h>
 
 #include <iostream>
 #include <string>
 
-#include "runtime/tuple_row.h"
-#include "runtime/row_batch.h"
 #include "exec/schema_scanner.h"
+#include "runtime/row_batch.h"
+#include "runtime/tuple_row.h"
+#include "vec/functions/abs.hpp"
 
 namespace doris {
 
 TEST(BlockTest, RowBatchCovertToBlock) {
-    SchemaScanner::ColumnDesc column_descs[] = {
-                {"k1", TYPE_SMALLINT, sizeof(int16_t), false},
-                {"k2", TYPE_INT,      sizeof(int32_t), false},
-                {"k3", TYPE_DOUBLE,    sizeof(double),   false}};
+    SchemaScanner::ColumnDesc column_descs[] = {{"k1", TYPE_SMALLINT, sizeof(int16_t), false},
+                                                {"k2", TYPE_INT, sizeof(int32_t), false},
+                                                {"k3", TYPE_DOUBLE, sizeof(double), false}};
     SchemaScanner schema_scanner(column_descs, 3);
     ObjectPool object_pool;
     SchemaScannerParam param;
@@ -63,22 +61,22 @@ TEST(BlockTest, RowBatchCovertToBlock) {
         row_batch.commit_last_row();
     }
 
-    DB::FunctionAbs function_abs;
-    std::shared_ptr<DB::IFunction> abs_function_ptr = function_abs.create();
+    vectorized::FunctionAbs function_abs;
+    std::shared_ptr<vectorized::IFunction> abs_function_ptr = function_abs.create();
     auto block = row_batch.conver_to_vec_block();
     // 1. build arguments
-    DB::ColumnNumbers arguments;
+    vectorized::ColumnNumbers arguments;
     arguments.emplace_back(block.getPositionByName("k1"));
 
     // 2. build result column
     size_t num_columns_without_result = block.columns();
-    block.insert({ nullptr, block.getByPosition(0).type, "abs(k1)"});
+    block.insert({nullptr, block.getByPosition(0).type, "abs(k1)"});
 
     abs_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
 
     k1 = -100;
     for (int i = 0; i < 1024; ++i) {
-        DB::ColumnPtr column = block.getColumns()[3];
+        vectorized::ColumnPtr column = block.getColumns()[3];
         ASSERT_EQ(column->getInt(i), std::abs(k1++));
     }
 }

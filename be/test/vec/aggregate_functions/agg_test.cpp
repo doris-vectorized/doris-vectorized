@@ -1,14 +1,14 @@
 #include <iostream>
 #include <string>
 
-#include "vec/aggregate_functions/aggregate_function_simple_factory.h"
-#include "vec/aggregate_functions/aggregate_function.h"
-#include "vec/columns/column_vector.h"
-#include "vec/data_types/data_types_number.h"
-#include "vec/data_types/data_type.h"
 #include "gtest/gtest.h"
+#include "vec/aggregate_functions/aggregate_function.h"
+#include "vec/aggregate_functions/aggregate_function_simple_factory.h"
+#include "vec/columns/column_vector.h"
+#include "vec/data_types/data_type.h"
+#include "vec/data_types/data_types_number.h"
 
-namespace DB {
+namespace doris::vectorized {
 // declare function
 void registerAggregateFunctionSum(AggregateFunctionSimpleFactory& factory);
 
@@ -37,7 +37,7 @@ TEST(AggTest, basic_test) {
     ASSERT_EQ(ans, *(int32_t*)place);
     agg_function->destroy(place);
 }
-} // namespace DB
+} // namespace doris::vectorized
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
