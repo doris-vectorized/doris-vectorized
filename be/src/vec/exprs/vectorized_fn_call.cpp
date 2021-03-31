@@ -1,8 +1,8 @@
 #include "vec/exprs/vectorized_fn_call.h"
 #include "fmt/format.h"
-#include "vec/Functions/SimpleFunctionFactory.h"
-#include "vec/DataTypes/DataTypesNumber.h"
-#include "vec/DataTypes/DataTypeNullable.h"
+#include "vec/functions/simple_function_factory.h"
+#include "vec/data_types/data_types_number.h"
+#include "vec/data_types/data_type_nullable.h"
 
 
 namespace DB {
