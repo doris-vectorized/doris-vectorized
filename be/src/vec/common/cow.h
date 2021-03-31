@@ -1,9 +1,25 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 #include <initializer_list>
-
 
 /** Copy-on-write shared ptr.
   * Allows to work with shared immutable objects and sometimes unshare and mutate you own unique copy.
@@ -73,45 +89,47 @@
   *   to use std::unique_ptr for it somehow.
   */
 template <typename Derived>
-class COW : public boost::intrusive_ref_counter<Derived>
-{
+class COW : public boost::intrusive_ref_counter<Derived> {
 private:
-    Derived * derived() { return static_cast<Derived *>(this); }
-    const Derived * derived() const { return static_cast<const Derived *>(this); }
+    Derived* derived() { return static_cast<Derived*>(this); }
+    const Derived* derived() const { return static_cast<const Derived*>(this); }
 
     template <typename T>
-    class IntrusivePtr : public boost::intrusive_ptr<T>
-    {
+    class IntrusivePtr : public boost::intrusive_ptr<T> {
     public:
         using boost::intrusive_ptr<T>::intrusive_ptr;
 
-        T & operator*() const & { return boost::intrusive_ptr<T>::operator*(); }
-        T && operator*() const && { return const_cast<typename std::remove_const<T>::type &&>(*boost::intrusive_ptr<T>::get()); }
+        T& operator*() const& { return boost::intrusive_ptr<T>::operator*(); }
+        T&& operator*() const&& {
+            return const_cast<typename std::remove_const<T>::type&&>(
+                    *boost::intrusive_ptr<T>::get());
+        }
     };
 
 protected:
     template <typename T>
-    class mutable_ptr : public IntrusivePtr<T>
-    {
+    class mutable_ptr : public IntrusivePtr<T> {
     private:
         using Base = IntrusivePtr<T>;
 
-        template <typename> friend class COW;
-        template <typename, typename> friend class COWHelper;
+        template <typename>
+        friend class COW;
+        template <typename, typename>
+        friend class COWHelper;
 
-        explicit mutable_ptr(T * ptr) : Base(ptr) {}
+        explicit mutable_ptr(T* ptr) : Base(ptr) {}
 
     public:
         /// Copy: not possible.
-        mutable_ptr(const mutable_ptr &) = delete;
+        mutable_ptr(const mutable_ptr&) = delete;
 
         /// Move: ok.
-        mutable_ptr(mutable_ptr &&) = default;
-        mutable_ptr & operator=(mutable_ptr &&) = default;
+        mutable_ptr(mutable_ptr&&) = default;
+        mutable_ptr& operator=(mutable_ptr&&) = default;
 
         /// Initializing from temporary of compatible type.
         template <typename U>
-        mutable_ptr(mutable_ptr<U> && other) : Base(std::move(other)) {}
+        mutable_ptr(mutable_ptr<U>&& other) : Base(std::move(other)) {}
 
         mutable_ptr() = default;
 
@@ -123,39 +141,40 @@ public:
 
 protected:
     template <typename T>
-    class immutable_ptr : public IntrusivePtr<const T>
-    {
+    class immutable_ptr : public IntrusivePtr<const T> {
     private:
         using Base = IntrusivePtr<const T>;
 
-        template <typename> friend class COW;
-        template <typename, typename> friend class COWHelper;
+        template <typename>
+        friend class COW;
+        template <typename, typename>
+        friend class COWHelper;
 
-        explicit immutable_ptr(const T * ptr) : Base(ptr) {}
+        explicit immutable_ptr(const T* ptr) : Base(ptr) {}
 
     public:
         /// Copy from immutable ptr: ok.
-        immutable_ptr(const immutable_ptr &) = default;
-        immutable_ptr & operator=(const immutable_ptr &) = default;
+        immutable_ptr(const immutable_ptr&) = default;
+        immutable_ptr& operator=(const immutable_ptr&) = default;
 
         template <typename U>
-        immutable_ptr(const immutable_ptr<U> & other) : Base(other) {}
+        immutable_ptr(const immutable_ptr<U>& other) : Base(other) {}
 
         /// Move: ok.
-        immutable_ptr(immutable_ptr &&) = default;
-        immutable_ptr & operator=(immutable_ptr &&) = default;
+        immutable_ptr(immutable_ptr&&) = default;
+        immutable_ptr& operator=(immutable_ptr&&) = default;
 
         /// Initializing from temporary of compatible type.
         template <typename U>
-        immutable_ptr(immutable_ptr<U> && other) : Base(std::move(other)) {}
+        immutable_ptr(immutable_ptr<U>&& other) : Base(std::move(other)) {}
 
         /// Move from mutable ptr: ok.
         template <typename U>
-        immutable_ptr(mutable_ptr<U> && other) : Base(std::move(other)) {}
+        immutable_ptr(mutable_ptr<U>&& other) : Base(std::move(other)) {}
 
         /// Copy from mutable ptr: not possible.
         template <typename U>
-        immutable_ptr(const mutable_ptr<U> &) = delete;
+        immutable_ptr(const mutable_ptr<U>&) = delete;
 
         immutable_ptr() = default;
 
@@ -166,18 +185,21 @@ public:
     using Ptr = immutable_ptr<Derived>;
 
     template <typename... Args>
-    static MutablePtr create(Args &&... args) { return MutablePtr(new Derived(std::forward<Args>(args)...)); }
+    static MutablePtr create(Args&&... args) {
+        return MutablePtr(new Derived(std::forward<Args>(args)...));
+    }
 
     template <typename T>
-    static MutablePtr create(std::initializer_list<T> && arg) { return create(std::forward<std::initializer_list<T>>(arg)); }
+    static MutablePtr create(std::initializer_list<T>&& arg) {
+        return create(std::forward<std::initializer_list<T>>(arg));
+    }
 
 public:
     Ptr getPtr() const { return static_cast<Ptr>(derived()); }
     MutablePtr getPtr() { return static_cast<MutablePtr>(derived()); }
 
 protected:
-    MutablePtr shallowMutate() const
-    {
+    MutablePtr shallowMutate() const {
         if (this->use_count() > 1)
             return derived()->clone();
         else
@@ -185,53 +207,44 @@ protected:
     }
 
 public:
-    MutablePtr mutate() const &&
-    {
-        return shallowMutate();
-    }
+    MutablePtr mutate() const&& { return shallowMutate(); }
 
-    MutablePtr assumeMutable() const
-    {
-        return const_cast<COW*>(this)->getPtr();
-    }
+    MutablePtr assumeMutable() const { return const_cast<COW*>(this)->getPtr(); }
 
-    Derived & assumeMutableRef() const
-    {
-        return const_cast<Derived &>(*derived());
-    }
+    Derived& assumeMutableRef() const { return const_cast<Derived&>(*derived()); }
 
 protected:
     /// It works as immutable_ptr if it is const and as mutable_ptr if it is non const.
     template <typename T>
-    class chameleon_ptr
-    {
+    class chameleon_ptr {
     private:
         immutable_ptr<T> value;
 
     public:
         template <typename... Args>
-        chameleon_ptr(Args &&... args) : value(std::forward<Args>(args)...) {}
+        chameleon_ptr(Args&&... args) : value(std::forward<Args>(args)...) {}
 
         template <typename U>
-        chameleon_ptr(std::initializer_list<U> && arg) : value(std::forward<std::initializer_list<U>>(arg)) {}
+        chameleon_ptr(std::initializer_list<U>&& arg)
+                : value(std::forward<std::initializer_list<U>>(arg)) {}
 
-        const T * get() const { return value.get(); }
-        T * get() { return &value->assumeMutableRef(); }
+        const T* get() const { return value.get(); }
+        T* get() { return &value->assumeMutableRef(); }
 
-        const T * operator->() const { return get(); }
-        T * operator->() { return get(); }
+        const T* operator->() const { return get(); }
+        T* operator->() { return get(); }
 
-        const T & operator*() const { return *value; }
-        T & operator*() { return value->assumeMutableRef(); }
+        const T& operator*() const { return *value; }
+        T& operator*() { return value->assumeMutableRef(); }
 
-        operator const immutable_ptr<T> & () const { return value; }
-        operator immutable_ptr<T> & () { return value; }
+        operator const immutable_ptr<T>&() const { return value; }
+        operator immutable_ptr<T>&() { return value; }
 
         operator bool() const { return value != nullptr; }
-        bool operator! () const { return value == nullptr; }
+        bool operator!() const { return value == nullptr; }
 
-        bool operator== (const chameleon_ptr & rhs) const { return value == rhs.value; }
-        bool operator!= (const chameleon_ptr & rhs) const { return value != rhs.value; }
+        bool operator==(const chameleon_ptr& rhs) const { return value == rhs.value; }
+        bool operator!=(const chameleon_ptr& rhs) const { return value != rhs.value; }
     };
 
 public:
@@ -250,7 +263,6 @@ public:
       */
     using WrappedPtr = chameleon_ptr<Derived>;
 };
-
 
 /** Helper class to support inheritance.
   * Example:
@@ -278,24 +290,31 @@ public:
   * See example in "cow_columns.cpp".
   */
 template <typename Base, typename Derived>
-class COWHelper : public Base
-{
+class COWHelper : public Base {
 private:
-    Derived * derived() { return static_cast<Derived *>(this); }
-    const Derived * derived() const { return static_cast<const Derived *>(this); }
+    Derived* derived() { return static_cast<Derived*>(this); }
+    const Derived* derived() const { return static_cast<const Derived*>(this); }
 
 public:
     using Ptr = typename Base::template immutable_ptr<Derived>;
     using MutablePtr = typename Base::template mutable_ptr<Derived>;
 
     template <typename... Args>
-    static MutablePtr create(Args &&... args) { return MutablePtr(new Derived(std::forward<Args>(args)...)); }
+    static MutablePtr create(Args&&... args) {
+        return MutablePtr(new Derived(std::forward<Args>(args)...));
+    }
 
     template <typename T>
-    static MutablePtr create(std::initializer_list<T> && arg) { return create(std::forward<std::initializer_list<T>>(arg)); }
+    static MutablePtr create(std::initializer_list<T>&& arg) {
+        return create(std::forward<std::initializer_list<T>>(arg));
+    }
 
-    typename Base::MutablePtr clone() const override { return typename Base::MutablePtr(new Derived(*derived())); }
+    typename Base::MutablePtr clone() const override {
+        return typename Base::MutablePtr(new Derived(*derived()));
+    }
 
 protected:
-    MutablePtr shallowMutate() const { return MutablePtr(static_cast<Derived *>(Base::shallowMutate().get())); }
+    MutablePtr shallowMutate() const {
+        return MutablePtr(static_cast<Derived*>(Base::shallowMutate().get()));
+    }
 };

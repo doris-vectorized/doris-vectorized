@@ -526,8 +526,8 @@ void RowBatch::transfer_resource_ownership(RowBatch* dest) {
     reset();
 }
 
-DB::Block RowBatch::conver_to_vec_block() const {
-    std::vector<DB::MutableColumnPtr> columns;
+vectorized::Block RowBatch::conver_to_vec_block() const {
+    std::vector<vectorized::MutableColumnPtr> columns;
     for (const auto tuple_desc : _row_desc.tuple_descriptors()) {
         for (const auto slot_desc : tuple_desc->slots()) {
             columns.emplace_back(slot_desc->get_empty_mutable_column());
@@ -563,7 +563,7 @@ DB::Block RowBatch::conver_to_vec_block() const {
         }
     }
 
-    DB::ColumnsWithTypeAndName columns_with_type_and_name;
+    doris::vectorized::ColumnsWithTypeAndName columns_with_type_and_name;
     auto n_columns = 0;
     for (const auto tuple_desc : _row_desc.tuple_descriptors()) {
         for (const auto slot_desc : tuple_desc->slots()) {

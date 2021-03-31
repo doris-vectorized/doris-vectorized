@@ -1,10 +1,25 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
 #include "vec/columns/column.h"
 
-
-namespace DB
-{
+namespace doris::vectorized {
 
 /** Allows to access internal array of ColumnVector or ColumnFixedString without cast to concrete type.
   * We will inherit ColumnVector and ColumnFixedString from this class instead of IColumn.
@@ -21,20 +36,21 @@ namespace DB
   * To allow functional tests to work under UBSan we have to separate some base class that will present the memory layout in explicit way,
   *  and we will do static_cast to this class.
   */
-class ColumnVectorHelper : public IColumn
-{
+class ColumnVectorHelper : public IColumn {
 public:
     template <size_t ELEMENT_SIZE>
-    const char * getRawDataBegin() const
-    {
-        return reinterpret_cast<const PODArrayBase<ELEMENT_SIZE, 4096, Allocator<false>, 15, 16> *>(reinterpret_cast<const char *>(this) + sizeof(*this))->raw_data();
+    const char* getRawDataBegin() const {
+        return reinterpret_cast<const PODArrayBase<ELEMENT_SIZE, 4096, Allocator<false>, 15, 16>*>(
+                       reinterpret_cast<const char*>(this) + sizeof(*this))
+                ->raw_data();
     }
 
     template <size_t ELEMENT_SIZE>
-    void insertRawData(const char * ptr)
-    {
-        return reinterpret_cast<PODArrayBase<ELEMENT_SIZE, 4096, Allocator<false>, 15, 16> *>(reinterpret_cast<char *>(this) + sizeof(*this))->push_back_raw(ptr);
+    void insertRawData(const char* ptr) {
+        return reinterpret_cast<PODArrayBase<ELEMENT_SIZE, 4096, Allocator<false>, 15, 16>*>(
+                       reinterpret_cast<char*>(this) + sizeof(*this))
+                ->push_back_raw(ptr);
     }
 };
 
-}
+} // namespace doris::vectorized

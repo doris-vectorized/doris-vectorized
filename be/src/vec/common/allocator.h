@@ -1,16 +1,34 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
 // TODO: Tracker
 // TODO: Readable
 
-#include <string.h>
-#include <exception>
 #include <fmt/format.h>
+#include <string.h>
+
+#include <exception>
 
 #ifdef NDEBUG
-    #define ALLOCATOR_ASLR 0
+#define ALLOCATOR_ASLR 0
 #else
-    #define ALLOCATOR_ASLR 1
+#define ALLOCATOR_ASLR 1
 #endif
 
 //#include <pcg_random.hpp>
@@ -20,14 +38,15 @@
 #include <malloc.h>
 #endif
 
-#include <cstdlib>
-#include <algorithm>
 #include <sys/mman.h>
+
+#include <algorithm>
+#include <cstdlib>
 
 #include "vec/core/defines.h"
 #ifdef THREAD_SANITIZER
-    /// Thread sanitizer does not intercept mremap. The usage of mremap will lead to false positives.
-    #define DISABLE_MREMAP 1
+/// Thread sanitizer does not intercept mremap. The usage of mremap will lead to false positives.
+#define DISABLE_MREMAP 1
 #endif
 #include "vec/common/mremap.h"
 
@@ -36,7 +55,6 @@
 // #include <vec/Common/formatReadable.h>
 
 #include "vec/common/allocator_fwd.h"
-
 
 /// Required for older Darwin builds, that lack definition of MAP_ANONYMOUS
 #ifndef MAP_ANONYMOUS
@@ -57,29 +75,27 @@
   * memory greater than 16 GB.
   */
 #ifdef NDEBUG
-    static constexpr size_t MMAP_THRESHOLD = 64 * (1ULL << 20);
+static constexpr size_t MMAP_THRESHOLD = 64 * (1ULL << 20);
 #else
-    /**
+/**
       * In debug build, use small mmap threshold to reproduce more memory
       * stomping bugs. Along with ASLR it will hopefully detect more issues than
       * ASan. The program may fail due to the limit on number of memory mappings.
       */
-    static constexpr size_t MMAP_THRESHOLD = 4096;
+static constexpr size_t MMAP_THRESHOLD = 4096;
 #endif
 
 static constexpr size_t MMAP_MIN_ALIGNMENT = 4096;
 static constexpr size_t MALLOC_MIN_ALIGNMENT = 8;
 
-namespace DB
-{
-namespace ErrorCodes
-{
-    extern const int BAD_ARGUMENTS;
-    extern const int CANNOT_ALLOCATE_MEMORY;
-    extern const int CANNOT_MUNMAP;
-    extern const int CANNOT_MREMAP;
-}
-}
+namespace doris::vectorized {
+namespace ErrorCodes {
+extern const int BAD_ARGUMENTS;
+extern const int CANNOT_ALLOCATE_MEMORY;
+extern const int CANNOT_MUNMAP;
+extern const int CANNOT_MREMAP;
+} // namespace ErrorCodes
+} // namespace doris::vectorized
 
 /** Responsible for allocating / freeing memory. Used, for example, in PODArray, Arena.
   * Also used in hash tables.
@@ -92,19 +108,16 @@ namespace ErrorCodes
   * - mmap_threshold for using mmap less or more
   */
 template <bool clear_memory_, bool mmap_populate>
-class Allocator
-{
+class Allocator {
 public:
     /// Allocate memory range.
-    void * alloc(size_t size, size_t alignment = 0)
-    {
+    void* alloc(size_t size, size_t alignment = 0) {
         // CurrentMemoryTracker::alloc(size);
         return allocNoTrack(size, alignment);
     }
 
     /// Free memory range.
-    void free(void * buf, size_t size)
-    {
+    void free(void* buf, size_t size) {
         freeNoTrack(buf, size);
         // CurrentMemoryTracker::free(size);
     }
@@ -113,56 +126,51 @@ public:
       * Data from old range is moved to the beginning of new range.
       * Address of memory range could change.
       */
-    void * realloc(void * buf, size_t old_size, size_t new_size, size_t alignment = 0)
-    {
-        if (old_size == new_size)
-        {
+    void* realloc(void* buf, size_t old_size, size_t new_size, size_t alignment = 0) {
+        if (old_size == new_size) {
             /// nothing to do.
             /// BTW, it's not possible to change alignment while doing realloc.
-        }
-        else if (old_size < MMAP_THRESHOLD && new_size < MMAP_THRESHOLD
-                 && alignment <= MALLOC_MIN_ALIGNMENT)
-        {
+        } else if (old_size < MMAP_THRESHOLD && new_size < MMAP_THRESHOLD &&
+                   alignment <= MALLOC_MIN_ALIGNMENT) {
             /// Resize malloc'd memory region with no special alignment requirement.
             // CurrentMemoryTracker::realloc(old_size, new_size);
 
-            void * new_buf = ::realloc(buf, new_size);
+            void* new_buf = ::realloc(buf, new_size);
             if (nullptr == new_buf)
-                DB::throwFromErrno("Allocator: Cannot realloc from " + std::to_string(old_size) + " to " + std::to_string(new_size) + ".", DB::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
+                doris::vectorized::throwFromErrno("Allocator: Cannot realloc from " + std::to_string(old_size) +
+                                           " to " + std::to_string(new_size) + ".",
+                                   doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
 
             buf = new_buf;
             if constexpr (clear_memory)
                 if (new_size > old_size)
-                    memset(reinterpret_cast<char *>(buf) + old_size, 0, new_size - old_size);
-        }
-        else if (old_size >= MMAP_THRESHOLD && new_size >= MMAP_THRESHOLD)
-        {
+                    memset(reinterpret_cast<char*>(buf) + old_size, 0, new_size - old_size);
+        } else if (old_size >= MMAP_THRESHOLD && new_size >= MMAP_THRESHOLD) {
             /// Resize mmap'd memory region.
             // CurrentMemoryTracker::realloc(old_size, new_size);
 
             // On apple and freebsd self-implemented mremap used (common/mremap.h)
-            buf = clickhouse_mremap(buf, old_size, new_size, MREMAP_MAYMOVE,
-                                    PROT_READ | PROT_WRITE, mmap_flags, -1, 0);
+            buf = clickhouse_mremap(buf, old_size, new_size, MREMAP_MAYMOVE, PROT_READ | PROT_WRITE,
+                                    mmap_flags, -1, 0);
             if (MAP_FAILED == buf)
-                DB::throwFromErrno("Allocator: Cannot mremap memory chunk from " + std::to_string(old_size) + " to " + std::to_string(new_size) + ".", DB::ErrorCodes::CANNOT_MREMAP);
+                doris::vectorized::throwFromErrno("Allocator: Cannot mremap memory chunk from " +
+                                           std::to_string(old_size) + " to " +
+                                           std::to_string(new_size) + ".",
+                                   doris::vectorized::ErrorCodes::CANNOT_MREMAP);
 
             /// No need for zero-fill, because mmap guarantees it.
-        }
-        else if (new_size < MMAP_THRESHOLD)
-        {
+        } else if (new_size < MMAP_THRESHOLD) {
             /// Small allocs that requires a copy. Assume there's enough memory in system. Call CurrentMemoryTracker once.
             // CurrentMemoryTracker::realloc(old_size, new_size);
 
-            void * new_buf = allocNoTrack(new_size, alignment);
+            void* new_buf = allocNoTrack(new_size, alignment);
             memcpy(new_buf, buf, std::min(old_size, new_size));
             freeNoTrack(buf, old_size);
             buf = new_buf;
-        }
-        else
-        {
+        } else {
             /// Big allocs that requires a copy. MemoryTracker is called inside 'alloc', 'free' methods.
 
-            void * new_buf = alloc(new_size, alignment);
+            void* new_buf = alloc(new_size, alignment);
             memcpy(new_buf, buf, std::min(old_size, new_size));
             free(buf, old_size);
             buf = new_buf;
@@ -172,10 +180,7 @@ public:
     }
 
 protected:
-    static constexpr size_t getStackThreshold()
-    {
-        return 0;
-    }
+    static constexpr size_t getStackThreshold() { return 0; }
 
     static constexpr bool clear_memory = clear_memory_;
 
@@ -188,71 +193,60 @@ protected:
     // It is only supported on Linux.
     static constexpr int mmap_flags = MAP_PRIVATE | MAP_ANONYMOUS
 #if defined(OS_LINUX)
-        | (mmap_populate ? MAP_POPULATE : 0)
+                                      | (mmap_populate ? MAP_POPULATE : 0)
 #endif
-        ;
+            ;
 
 private:
-    void * allocNoTrack(size_t size, size_t alignment)
-    {
-        void * buf;
+    void* allocNoTrack(size_t size, size_t alignment) {
+        void* buf;
 
-        if (size >= MMAP_THRESHOLD)
-        {
+        if (size >= MMAP_THRESHOLD) {
             if (alignment > MMAP_MIN_ALIGNMENT)
-                throw DB::Exception(
+                throw doris::vectorized::Exception(
                         fmt::format(
                                 "Too large alignment {}: more than page size when allocating {}.",
                                 alignment, size),
-                        DB::ErrorCodes::BAD_ARGUMENTS);
+                        doris::vectorized::ErrorCodes::BAD_ARGUMENTS);
 
-            buf = mmap(getMmapHint(), size, PROT_READ | PROT_WRITE,
-                       mmap_flags, -1, 0);
+            buf = mmap(getMmapHint(), size, PROT_READ | PROT_WRITE, mmap_flags, -1, 0);
             if (MAP_FAILED == buf)
-                // DB::throwFromErrno("Allocator: Cannot mmap " + std::to_string(size) + ".", DB::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
-                DB::throwFromErrno(fmt::format("Allocator: Cannot mmap {}.", size),
-                                   DB::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
+                // doris::vectorized::throwFromErrno("Allocator: Cannot mmap " + std::to_string(size) + ".", doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
+                doris::vectorized::throwFromErrno(fmt::format("Allocator: Cannot mmap {}.", size),
+                                   doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
 
             /// No need for zero-fill, because mmap guarantees it.
-        }
-        else
-        {
-            if (alignment <= MALLOC_MIN_ALIGNMENT)
-            {
+        } else {
+            if (alignment <= MALLOC_MIN_ALIGNMENT) {
                 if constexpr (clear_memory)
                     buf = ::calloc(size, 1);
                 else
                     buf = ::malloc(size);
 
                 if (nullptr == buf)
-                    DB::throwFromErrno(fmt::format("Allocator: Cannot malloc {}.", size),
-                                       DB::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
+                    doris::vectorized::throwFromErrno(fmt::format("Allocator: Cannot malloc {}.", size),
+                                       doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
             } else {
                 buf = nullptr;
                 int res = posix_memalign(&buf, alignment, size);
 
                 if (0 != res)
-                    DB::throwFromErrno(
+                    doris::vectorized::throwFromErrno(
                             fmt::format("Cannot allocate memory (posix_memalign) {}.", size),
-                            DB::ErrorCodes::CANNOT_ALLOCATE_MEMORY, res);
+                            doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY, res);
 
-                if constexpr (clear_memory)
-                    memset(buf, 0, size);
+                if constexpr (clear_memory) memset(buf, 0, size);
             }
         }
         return buf;
     }
 
-    void freeNoTrack(void * buf, size_t size)
-    {
-        if (size >= MMAP_THRESHOLD)
-        {
+    void freeNoTrack(void* buf, size_t size) {
+        if (size >= MMAP_THRESHOLD) {
             if (0 != munmap(buf, size))
-                DB::throwFromErrno(fmt::format("Allocator: Cannot munmap {}.", size),
-                                   DB::ErrorCodes::CANNOT_MUNMAP);
-        }
-        else
-        {
+                doris::vectorized::throwFromErrno(fmt::format("Allocator: Cannot munmap {}.", size),
+                                   doris::vectorized::ErrorCodes::CANNOT_MUNMAP);
+        } else {
             ::free(buf);
         }
     }
@@ -261,16 +255,12 @@ private:
     /// In debug builds, request mmap() at random addresses (a kind of ASLR), to
     /// reproduce more memory stomping bugs. Note that Linux doesn't do it by
     /// default. This may lead to worse TLB performance.
-    void * getMmapHint()
-    {
+    void* getMmapHint() {
         // return reinterpret_cast<void *>(std::uniform_int_distribution<intptr_t>(0x100000000000UL, 0x700000000000UL)(thread_local_rng));
         return nullptr;
     }
 #else
-    void * getMmapHint()
-    {
-        return nullptr;
-    }
+    void* getMmapHint() { return nullptr; }
 #endif
 };
 
@@ -286,8 +276,7 @@ private:
 /** Allocator with optimization to place small memory ranges in automatic memory.
   */
 template <typename Base, size_t N, size_t Alignment>
-class AllocatorWithStackMemory : private Base
-{
+class AllocatorWithStackMemory : private Base {
 private:
     alignas(Alignment) char stack_memory[N];
 
@@ -296,51 +285,39 @@ public:
     /// being inaccessible due to ambiguity, when derived classes are also
     /// noncopiable (-Winaccessible-base).
     AllocatorWithStackMemory(const AllocatorWithStackMemory&) = delete;
-    AllocatorWithStackMemory & operator = (const AllocatorWithStackMemory&) = delete;
+    AllocatorWithStackMemory& operator=(const AllocatorWithStackMemory&) = delete;
     AllocatorWithStackMemory() = default;
     ~AllocatorWithStackMemory() = default;
 
-    void * alloc(size_t size)
-    {
-        if (size <= N)
-        {
-            if constexpr (Base::clear_memory)
-                memset(stack_memory, 0, N);
+    void* alloc(size_t size) {
+        if (size <= N) {
+            if constexpr (Base::clear_memory) memset(stack_memory, 0, N);
             return stack_memory;
         }
 
         return Base::alloc(size, Alignment);
     }
 
-    void free(void * buf, size_t size)
-    {
-        if (size > N)
-            Base::free(buf, size);
+    void free(void* buf, size_t size) {
+        if (size > N) Base::free(buf, size);
     }
 
-    void * realloc(void * buf, size_t old_size, size_t new_size)
-    {
+    void* realloc(void* buf, size_t old_size, size_t new_size) {
         /// Was in stack_memory, will remain there.
-        if (new_size <= N)
-            return buf;
+        if (new_size <= N) return buf;
 
         /// Already was big enough to not fit in stack_memory.
-        if (old_size > N)
-            return Base::realloc(buf, old_size, new_size, Alignment);
+        if (old_size > N) return Base::realloc(buf, old_size, new_size, Alignment);
 
         /// Was in stack memory, but now will not fit there.
-        void * new_buf = Base::alloc(new_size, Alignment);
+        void* new_buf = Base::alloc(new_size, Alignment);
         memcpy(new_buf, buf, old_size);
         return new_buf;
     }
 
 protected:
-    static constexpr size_t getStackThreshold()
-    {
-        return N;
-    }
+    static constexpr size_t getStackThreshold() { return N; }
 };
-
 
 #if !__clang__
 #pragma GCC diagnostic pop

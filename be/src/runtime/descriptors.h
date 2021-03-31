@@ -32,7 +32,7 @@
 #include "gen_cpp/Types_types.h"
 #include "runtime/types.h"
 
-namespace DB {
+namespace doris::vectorized {
 class ColumnWithTypeAndName;
 }
 
@@ -101,9 +101,9 @@ public:
 
     std::string debug_string() const;
 
-    DB::MutableColumnPtr get_empty_mutable_column() const;
+    doris::vectorized::MutableColumnPtr get_empty_mutable_column() const;
 
-    DB::DataTypePtr get_data_type_ptr() const;
+    doris::vectorized::DataTypePtr get_data_type_ptr() const;
 private:
     friend class DescriptorTbl;
     friend class TupleDescriptor;

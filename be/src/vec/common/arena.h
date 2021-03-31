@@ -1,18 +1,35 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
+#include <common/compiler_util.h>
 #include <string.h>
+
+#include <boost/noncopyable.hpp>
 #include <memory>
 #include <vector>
-#include <boost/noncopyable.hpp>
-#include <common/compiler_util.h>
 #if __has_include(<sanitizer/asan_interface.h>)
-#   include <sanitizer/asan_interface.h>
+#include <sanitizer/asan_interface.h>
 #endif
-#include "vec/core/defines.h"
 #include "vec/common/memcpy_small.h"
+#include "vec/core/defines.h"
 //#include <vec/Common/ProfileEvents.h>
 #include "vec/common/allocator.h"
-
 
 //namespace ProfileEvents
 //{
@@ -20,9 +37,7 @@
 //    extern const Event ArenaAllocBytes;
 //}
 
-namespace DB
-{
-
+namespace doris::vectorized {
 
 /** Memory pool to append something. For example, short strings.
   * Usage scenario:
@@ -32,27 +47,25 @@ namespace DB
   * - memory is allocated and freed by large chunks;
   * - freeing parts of data is not possible (but look at ArenaWithFreeLists if you need);
   */
-class Arena : private boost::noncopyable
-{
+class Arena : private boost::noncopyable {
 private:
     /// Padding allows to use 'memcpySmallAllowReadWriteOverflow15' instead of 'memcpy'.
     static constexpr size_t pad_right = 15;
 
     /// Contiguous chunk of memory and pointer to free space inside it. Member of single-linked list.
-    struct alignas(16) Chunk : private Allocator<false>    /// empty base optimization
+    struct alignas(16) Chunk : private Allocator<false> /// empty base optimization
     {
-        char * begin;
-        char * pos;
-        char * end; /// does not include padding.
+        char* begin;
+        char* pos;
+        char* end; /// does not include padding.
 
-        Chunk * prev;
+        Chunk* prev;
 
-        Chunk(size_t size_, Chunk * prev_)
-        {
-//            ProfileEvents::increment(ProfileEvents::ArenaAllocChunks);
-//            ProfileEvents::increment(ProfileEvents::ArenaAllocBytes, size_);
+        Chunk(size_t size_, Chunk* prev_) {
+            //            ProfileEvents::increment(ProfileEvents::ArenaAllocChunks);
+            //            ProfileEvents::increment(ProfileEvents::ArenaAllocBytes, size_);
 
-            begin = reinterpret_cast<char *>(Allocator<false>::alloc(size_));
+            begin = reinterpret_cast<char*>(Allocator<false>::alloc(size_));
             pos = begin;
             end = begin + size_ - pad_right;
             prev = prev_;
@@ -60,8 +73,7 @@ private:
             ASAN_POISON_MEMORY_REGION(begin, size_);
         }
 
-        ~Chunk()
-        {
+        ~Chunk() {
             /// We must unpoison the memory before returning to the allocator,
             /// because the allocator might not have asan integration, and the
             /// memory would stay poisoned forever. If the allocator supports
@@ -70,8 +82,7 @@ private:
 
             Allocator<false>::free(begin, size());
 
-            if (prev)
-                delete prev;
+            if (prev) delete prev;
         }
 
         size_t size() const { return end + pad_right - begin; }
@@ -82,26 +93,19 @@ private:
     size_t linear_growth_threshold;
 
     /// Last contiguous chunk of memory.
-    Chunk * head;
+    Chunk* head;
     size_t size_in_bytes;
 
-    static size_t roundUpToPageSize(size_t s)
-    {
-        return (s + 4096 - 1) / 4096 * 4096;
-    }
+    static size_t roundUpToPageSize(size_t s) { return (s + 4096 - 1) / 4096 * 4096; }
 
     /// If chunks size is less than 'linear_growth_threshold', then use exponential growth, otherwise - linear growth
     ///  (to not allocate too much excessive memory).
-    size_t nextSize(size_t min_next_size) const
-    {
+    size_t nextSize(size_t min_next_size) const {
         size_t size_after_grow = 0;
 
-        if (head->size() < linear_growth_threshold)
-        {
+        if (head->size() < linear_growth_threshold) {
             size_after_grow = std::max(min_next_size, head->size() * growth_factor);
-        }
-        else
-        {
+        } else {
             // allocContinue() combined with linear growth results in quadratic
             // behavior: we append the data by small amounts, and when it
             // doesn't fit, we create a new chunk and copy all the previous data
@@ -109,8 +113,9 @@ private:
             // to the total size of data that is going to be serialized. To make
             // the copying happen less often, round the next size up to the
             // linear_growth_threshold.
-            size_after_grow = ((min_next_size + linear_growth_threshold - 1)
-                    / linear_growth_threshold) * linear_growth_threshold;
+            size_after_grow =
+                    ((min_next_size + linear_growth_threshold - 1) / linear_growth_threshold) *
+                    linear_growth_threshold;
         }
 
         assert(size_after_grow >= min_next_size);
@@ -118,51 +123,44 @@ private:
     }
 
     /// Add next contiguous chunk of memory with size not less than specified.
-    void NO_INLINE addChunk(size_t min_size)
-    {
+    void NO_INLINE addChunk(size_t min_size) {
         head = new Chunk(nextSize(min_size + pad_right), head);
         size_in_bytes += head->size();
     }
 
     friend class ArenaAllocator;
-    template <size_t> friend class AlignedArenaAllocator;
+    template <size_t>
+    friend class AlignedArenaAllocator;
 
 public:
-    Arena(size_t initial_size_ = 4096, size_t growth_factor_ = 2, size_t linear_growth_threshold_ = 128 * 1024 * 1024)
-        : growth_factor(growth_factor_), linear_growth_threshold(linear_growth_threshold_),
-        head(new Chunk(initial_size_, nullptr)), size_in_bytes(head->size())
-    {
-    }
+    Arena(size_t initial_size_ = 4096, size_t growth_factor_ = 2,
+          size_t linear_growth_threshold_ = 128 * 1024 * 1024)
+            : growth_factor(growth_factor_),
+              linear_growth_threshold(linear_growth_threshold_),
+              head(new Chunk(initial_size_, nullptr)),
+              size_in_bytes(head->size()) {}
 
-    ~Arena()
-    {
-        delete head;
-    }
+    ~Arena() { delete head; }
 
     /// Get piece of memory, without alignment.
-    char * alloc(size_t size)
-    {
-        if (UNLIKELY(head->pos + size > head->end))
-            addChunk(size);
+    char* alloc(size_t size) {
+        if (UNLIKELY(head->pos + size > head->end)) addChunk(size);
 
-        char * res = head->pos;
+        char* res = head->pos;
         head->pos += size;
         ASAN_UNPOISON_MEMORY_REGION(res, size + pad_right);
         return res;
     }
 
     /// Get peice of memory with alignment
-    char * alignedAlloc(size_t size, size_t alignment)
-    {
-        do
-        {
-            void * head_pos = head->pos;
+    char* alignedAlloc(size_t size, size_t alignment) {
+        do {
+            void* head_pos = head->pos;
             size_t space = head->end - head->pos;
 
-            auto res = static_cast<char *>(std::align(alignment, size, head_pos, space));
-            if (res)
-            {
-                head->pos = static_cast<char *>(head_pos);
+            auto res = static_cast<char*>(std::align(alignment, size, head_pos, space));
+            if (res) {
+                head->pos = static_cast<char*>(head_pos);
                 head->pos += size;
                 ASAN_UNPOISON_MEMORY_REGION(res, size + pad_right);
                 return res;
@@ -173,9 +171,8 @@ public:
     }
 
     template <typename T>
-    T * alloc()
-    {
-        return reinterpret_cast<T *>(alignedAlloc(sizeof(T), alignof(T)));
+    T* alloc() {
+        return reinterpret_cast<T*>(alignedAlloc(sizeof(T), alignof(T)));
     }
 
     /** Rollback just performed allocation.
@@ -183,8 +180,7 @@ public:
 	  * Return the resulting head pointer, so that the caller can assert that
 	  * the allocation it intended to roll back was indeed the last one.
       */
-    void * rollback(size_t size)
-    {
+    void* rollback(size_t size) {
         head->pos -= size;
         ASAN_POISON_MEMORY_REGION(head->pos, size + pad_right);
         return head->pos;
@@ -202,15 +198,12 @@ public:
       * NOTE This method is usable only for the last allocation made on this
       * Arena. For earlier allocations, see 'realloc' method.
       */
-    char * allocContinue(size_t additional_bytes, char const *& range_start,
-                         size_t start_alignment = 0)
-    {
-        if (!range_start)
-        {
+    char* allocContinue(size_t additional_bytes, char const*& range_start,
+                        size_t start_alignment = 0) {
+        if (!range_start) {
             // Start a new memory range.
-            char * result = start_alignment
-                ? alignedAlloc(additional_bytes, start_alignment)
-                : alloc(additional_bytes);
+            char* result = start_alignment ? alignedAlloc(additional_bytes, start_alignment)
+                                           : alloc(additional_bytes);
 
             range_start = result;
             return result;
@@ -223,8 +216,7 @@ public:
         // the current Chunk.
         assert(range_start >= head->begin && range_start < head->end);
 
-        if (head->pos + additional_bytes <= head->end)
-        {
+        if (head->pos + additional_bytes <= head->end) {
             // The new size fits into the last chunk, so just alloc the
             // additional size. We can alloc without alignment here, because it
             // only applies to the start of the range, and we don't change it.
@@ -242,11 +234,10 @@ public:
         // we can provide a proper realloc().
         const size_t existing_bytes = head->pos - range_start;
         const size_t new_bytes = existing_bytes + additional_bytes;
-        const char * old_range = range_start;
+        const char* old_range = range_start;
 
-        char * new_range = start_alignment
-            ? alignedAlloc(new_bytes, start_alignment)
-            : alloc(new_bytes);
+        char* new_range =
+                start_alignment ? alignedAlloc(new_bytes, start_alignment) : alloc(new_bytes);
 
         memcpy(new_range, old_range, existing_bytes);
 
@@ -255,22 +246,18 @@ public:
     }
 
     /// NOTE Old memory region is wasted.
-    char * realloc(const char * old_data, size_t old_size, size_t new_size)
-    {
-        char * res = alloc(new_size);
-        if (old_data)
-        {
+    char* realloc(const char* old_data, size_t old_size, size_t new_size) {
+        char* res = alloc(new_size);
+        if (old_data) {
             memcpy(res, old_data, old_size);
             ASAN_POISON_MEMORY_REGION(old_data, old_size);
         }
         return res;
     }
 
-    char * alignedRealloc(const char * old_data, size_t old_size, size_t new_size, size_t alignment)
-    {
-        char * res = alignedAlloc(new_size, alignment);
-        if (old_data)
-        {
+    char* alignedRealloc(const char* old_data, size_t old_size, size_t new_size, size_t alignment) {
+        char* res = alignedAlloc(new_size, alignment);
+        if (old_data) {
             memcpy(res, old_data, old_size);
             ASAN_POISON_MEMORY_REGION(old_data, old_size);
         }
@@ -278,34 +265,25 @@ public:
     }
 
     /// Insert string without alignment.
-    const char * insert(const char * data, size_t size)
-    {
-        char * res = alloc(size);
+    const char* insert(const char* data, size_t size) {
+        char* res = alloc(size);
         memcpy(res, data, size);
         return res;
     }
 
-    const char * alignedInsert(const char * data, size_t size, size_t alignment)
-    {
-        char * res = alignedAlloc(size, alignment);
+    const char* alignedInsert(const char* data, size_t size, size_t alignment) {
+        char* res = alignedAlloc(size, alignment);
         memcpy(res, data, size);
         return res;
     }
 
     /// Size of chunks in bytes.
-    size_t size() const
-    {
-        return size_in_bytes;
-    }
+    size_t size() const { return size_in_bytes; }
 
-    size_t remainingSpaceInCurrentChunk() const
-    {
-        return head->remaining();
-    }
+    size_t remainingSpaceInCurrentChunk() const { return head->remaining(); }
 };
 
 using ArenaPtr = std::shared_ptr<Arena>;
 using Arenas = std::vector<ArenaPtr>;
 
-
-}
+} // namespace doris::vectorized
