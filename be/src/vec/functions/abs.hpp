@@ -1,19 +1,34 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 //#include <Functions/FunctionFactory.h>
-#include "vec/functions/function_unary_arithmetic.h"
-#include "vec/data_types/number_traits.h"
 #include "vec/common/field_visitors.h"
+#include "vec/data_types/number_traits.h"
+#include "vec/functions/function_unary_arithmetic.h"
 
-namespace DB
-{
+namespace doris::vectorized {
 
 template <typename A>
-struct AbsImpl
-{
-    using ResultType = std::conditional_t<IsDecimalNumber<A>, A, typename NumberTraits::ResultOfAbs<A>::Type>;
+struct AbsImpl {
+    using ResultType =
+            std::conditional_t<IsDecimalNumber<A>, A, typename NumberTraits::ResultOfAbs<A>::Type>;
 
-    static inline NO_SANITIZE_UNDEFINED ResultType apply(A a)
-    {
+    static inline NO_SANITIZE_UNDEFINED ResultType apply(A a) {
         if constexpr (IsDecimalNumber<A>)
             return a < 0 ? A(-a) : a;
         else if constexpr (std::is_integral_v<A> && std::is_signed_v<A>)
@@ -29,7 +44,9 @@ struct AbsImpl
 #endif
 };
 
-struct NameAbs { static constexpr auto name = "abs"; };
+struct NameAbs {
+    static constexpr auto name = "abs";
+};
 using FunctionAbs = FunctionUnaryArithmetic<AbsImpl, NameAbs, false>;
 
 //template <> struct FunctionUnaryArithmeticMonotonicity<NameAbs>
@@ -52,4 +69,4 @@ using FunctionAbs = FunctionUnaryArithmetic<AbsImpl, NameAbs, false>;
 //    factory.registerFunction<FunctionAbs>(FunctionFactory::CaseInsensitive);
 //}
 
-}
+} // namespace doris::vectorized

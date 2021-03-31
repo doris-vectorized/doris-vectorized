@@ -1,57 +1,66 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
 #include <cmath>
 #include <limits>
 #include <type_traits>
 
-
 /// To be sure, that this function is zero-cost for non-floating point types.
 template <typename T>
-inline std::enable_if_t<std::is_floating_point_v<T>, bool> isNaN(T x)
-{
+inline std::enable_if_t<std::is_floating_point_v<T>, bool> isNaN(T x) {
     return std::isnan(x);
 }
 
 template <typename T>
-inline std::enable_if_t<!std::is_floating_point_v<T>, bool> isNaN(T)
-{
+inline std::enable_if_t<!std::is_floating_point_v<T>, bool> isNaN(T) {
     return false;
 }
 
 template <typename T>
-inline std::enable_if_t<std::is_floating_point_v<T>, bool> isFinite(T x)
-{
+inline std::enable_if_t<std::is_floating_point_v<T>, bool> isFinite(T x) {
     return std::isfinite(x);
 }
 
 template <typename T>
-inline std::enable_if_t<!std::is_floating_point_v<T>, bool> isFinite(T)
-{
+inline std::enable_if_t<!std::is_floating_point_v<T>, bool> isFinite(T) {
     return true;
 }
 
 template <typename T>
-std::enable_if_t<std::is_floating_point_v<T>, T> NaNOrZero()
-{
+std::enable_if_t<std::is_floating_point_v<T>, T> NaNOrZero() {
     return std::numeric_limits<T>::quiet_NaN();
 }
 
 template <typename T>
-std::enable_if_t<std::numeric_limits<T>::is_integer, T> NaNOrZero()
-{
+std::enable_if_t<std::numeric_limits<T>::is_integer, T> NaNOrZero() {
     return 0;
 }
 
 template <typename T>
-std::enable_if_t<std::is_class_v<T>, T> NaNOrZero()
-{
-    return T{};
+std::enable_if_t<std::is_class_v<T>, T> NaNOrZero() {
+    return T {};
 }
 
 #if 1 /// __int128
 template <typename T>
-std::enable_if_t<std::is_same_v<T, __int128> && !std::numeric_limits<T>::is_integer, __int128> NaNOrZero()
-{
+std::enable_if_t<std::is_same_v<T, __int128> && !std::numeric_limits<T>::is_integer, __int128>
+NaNOrZero() {
     return __int128(0);
 }
 #endif

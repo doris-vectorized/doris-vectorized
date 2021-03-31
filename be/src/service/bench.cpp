@@ -121,11 +121,11 @@ static void BM_ABS_VEC(benchmark::State& state) {
         row_batch.commit_last_row();
     }
     auto block = row_batch.conver_to_vec_block();
-    DB::FunctionAbs function_abs;
-    std::shared_ptr<DB::IFunction> abs_function_ptr = function_abs.create();
-    DB::ColumnNumbers arguments;
+    doris::vectorized::FunctionAbs function_abs;
+    std::shared_ptr<vectorized::IFunction> abs_function_ptr = function_abs.create();
+    doris::vectorized::ColumnNumbers arguments;
     arguments.emplace_back(block.getPositionByName("k2"));
-    DB::ColumnPtr column1 = block.getColumns()[0];
+    doris::vectorized::ColumnPtr column1 = block.getColumns()[0];
     size_t num_columns_without_result = block.columns();
     block.insert({ nullptr, block.getByPosition(0).type, "abs(k2)"});
     abs_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
@@ -190,8 +190,8 @@ static void BM_AGG_COUNST_SCALAR(benchmark::State& state) {
 }
 
 BENCHMARK(BM_AGG_COUNST_SCALAR);
-namespace DB{
-void registerAggregateFunctionSum(DB::AggregateFunctionSimpleFactory& factory);
+namespace doris::vectorized {
+void registerAggregateFunctionSum(vectorized::AggregateFunctionSimpleFactory& factory);
 }
 static void BM_AGG_COUNT_VEC(benchmark::State& state) {
     using namespace doris;
@@ -226,23 +226,23 @@ static void BM_AGG_COUNT_VEC(benchmark::State& state) {
         row_batch.commit_last_row();
     }
     auto block = row_batch.conver_to_vec_block();
-    DB::Columns columns =  block.getColumns();
-    DB::AggregateFunctionSimpleFactory factory;
+    doris::vectorized::Columns columns =  block.getColumns();
+    doris::vectorized::AggregateFunctionSimpleFactory factory;
     registerAggregateFunctionSum(factory);
-    DB::DataTypePtr data_type(std::make_shared<DB::DataTypeInt32>());
-    DB::DataTypes data_types = {data_type};
-    DB::Array array;
+    doris::vectorized::DataTypePtr data_type(std::make_shared<vectorized::DataTypeInt32>());
+    doris::vectorized::DataTypes data_types = {data_type};
+    doris::vectorized::Array array;
     auto agg_function = factory.get("sum", data_types, array);
-    DB::AggregateDataPtr place = (char*)malloc(sizeof(uint64_t) * 4096);
+    doris::vectorized::AggregateDataPtr place = (char*)malloc(sizeof(uint64_t) * 4096);
     agg_function->create(place);
-    const DB::IColumn* column[1] = {columns[1].get()};
+    const doris::vectorized::IColumn* column[1] = {columns[1].get()};
 
     // using ResultType = NearestFieldType<T>;
     // using AggregateDataType = AggregateFunctionSumData<ResultType>;
     // using Function = AggregateFunctionSum<T, ResultType, AggregateDataType>;
 
-    DB::AggregateFunctionSum<int32_t,int64_t,DB::AggregateFunctionSumData<int64_t>>* func = nullptr;
-    func = (DB::AggregateFunctionSum<int32_t,int64_t,DB::AggregateFunctionSumData<int64_t>>*)agg_function.get();
+    doris::vectorized::AggregateFunctionSum<int32_t,int64_t,vectorized::AggregateFunctionSumData<int64_t>>* func = nullptr;
+    func = (vectorized::AggregateFunctionSum<int32_t,int64_t,vectorized::AggregateFunctionSumData<int64_t>>*)agg_function.get();
     for (auto _ : state) {
         // agg_function->addBatchSinglePlace(4096,place,column,nullptr);
         for (int i = 0; i < 4096; i++) {

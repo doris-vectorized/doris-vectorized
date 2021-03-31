@@ -1,10 +1,26 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
-#include <map>
-#include <tuple>
-#include <mutex>
 #include <ext/function_traits.h>
-
+#include <map>
+#include <mutex>
+#include <tuple>
 
 /** The simplest cache for a free function.
   * You can also pass a static class method or lambda without captures.
@@ -19,8 +35,7 @@
   * std::cerr << func_cached(args...);
   */
 template <typename F, F* f>
-class SimpleCache
-{
+class SimpleCache {
 private:
     using Key = typename function_traits<F>::arguments_decay;
     using Result = typename function_traits<F>::result;
@@ -30,16 +45,14 @@ private:
 
 public:
     template <typename... Args>
-    Result operator() (Args &&... args)
-    {
+    Result operator()(Args&&... args) {
         {
             std::lock_guard lock(mutex);
 
-            Key key{std::forward<Args>(args)...};
+            Key key {std::forward<Args>(args)...};
             auto it = cache.find(key);
 
-            if (cache.end() != it)
-                return it->second;
+            if (cache.end() != it) return it->second;
         }
 
         /// The calculations themselves are not done under mutex.
@@ -55,25 +68,22 @@ public:
     }
 
     template <typename... Args>
-    void update(Args &&... args)
-    {
+    void update(Args&&... args) {
         Result res = f(std::forward<Args>(args)...);
         {
             std::lock_guard lock(mutex);
 
-            Key key{std::forward<Args>(args)...};
+            Key key {std::forward<Args>(args)...};
             cache[key] = std::move(res);
         }
     }
 
-    size_t size() const
-    {
+    size_t size() const {
         std::lock_guard lock(mutex);
         return cache.size();
     }
 
-    void drop()
-    {
+    void drop() {
         std::lock_guard lock(mutex);
         cache.clear();
     }
