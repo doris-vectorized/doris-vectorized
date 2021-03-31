@@ -22,15 +22,14 @@
 #include "udf/udf_internal.h"
 #include "exprs/aggregate_functions.h"
 
-#include "vec/AggregateFunctions/AggregateFunctionSimpleFactory.h"
-#include "vec/AggregateFunctions/IAggregateFunction.h"
-#include "vec/AggregateFunctions/IAggregateFunction.h"
-#include "vec/Columns/ColumnVector.h"
-#include "vec/DataTypes/DataTypesNumber.h"
-#include "vec/DataTypes/IDataType.h"
-
-#include "vec/AggregateFunctions/AggregateFunctionSum.h"
-
+#include "vec/core/block.h"
+#include "vec/functions/abs.cpp"
+#include "vec/aggregate_functions/aggregate_function_simple_factory.h"
+#include "vec/aggregate_functions/aggregate_function.h"
+#include "vec/columns/column_vector.h"
+#include "vec/data_types/data_types_number.h"
+#include "vec/data_types/data_type.h"
+#include "vec/aggregate_functions/aggregate_function_sum.h"
 
 static void BM_ABS_SCALAR(benchmark::State& state) {
     using namespace doris;
@@ -75,7 +74,7 @@ static void BM_ABS_SCALAR(benchmark::State& state) {
     Expr::create_expr_tree(&pool, exprx, &ctx);
     ctx->prepare(&runtime_stat,row_desc,tracker);
     ctx->open(&runtime_stat);
-    
+
     void *res_ary[1024];
     for (auto _ : state) {
         for(int i = 0;i < 1024;++i) {
@@ -196,7 +195,7 @@ void registerAggregateFunctionSum(DB::AggregateFunctionSimpleFactory& factory);
 }
 static void BM_AGG_COUNT_VEC(benchmark::State& state) {
     using namespace doris;
-    
+
     SchemaScanner::ColumnDesc column_descs[] = {{"k1", TYPE_SMALLINT, sizeof(int16_t), false},
                                                 {"k2", TYPE_INT, sizeof(int32_t), false},
                                                 {"k3", TYPE_DOUBLE, sizeof(double), false}};
