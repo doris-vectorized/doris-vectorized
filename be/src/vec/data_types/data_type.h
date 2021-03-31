@@ -1,14 +1,30 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
-#include <memory>
-#include "vec/common/cow.h"
 #include <boost/noncopyable.hpp>
+#include <memory>
+
+#include "vec/common/cow.h"
 #include "vec/core/types.h"
 // #include <vec/DataTypes/DataTypeCustom.h>
 
-
-namespace DB
-{
+namespace doris::vectorized {
 
 // class ReadBuffer;
 // class WriteBuffer;
@@ -28,7 +44,6 @@ using DataTypes = std::vector<DataTypePtr>;
 class ProtobufReader;
 class ProtobufWriter;
 
-
 /** Properties of data type.
   * Contains methods for serialization/deserialization.
   * Implementations of this interface represent a data type (example: UInt8)
@@ -36,8 +51,7 @@ class ProtobufWriter;
   *
   * DataType is totally immutable object. You can always share them.
   */
-class IDataType : private boost::noncopyable
-{
+class IDataType : private boost::noncopyable {
 public:
     IDataType();
     virtual ~IDataType();
@@ -52,7 +66,7 @@ public:
     String getName() const;
 
     /// Name of data type family (example: FixedString, Array).
-    virtual const char * getFamilyName() const = 0;
+    virtual const char* getFamilyName() const = 0;
 
     /// Data type id. It's used for runtime type checks.
     virtual TypeIndex getTypeId() const = 0;
@@ -290,7 +304,7 @@ public:
 
     /** Create ColumnConst for corresponding type, with specified size and value.
       */
-    ColumnPtr createColumnConst(size_t size, const Field & field) const;
+    ColumnPtr createColumnConst(size_t size, const Field& field) const;
     ColumnPtr createColumnConstWithDefaultValue(size_t size) const;
 
     /** Get default value of data type.
@@ -310,11 +324,10 @@ public:
     /** Directly insert default value into a column. Default implementation use method IColumn::insertDefault.
       * This should be overriden if data type default value differs from column default value (example: Enum data types).
       */
-    virtual void insertDefaultInto(IColumn & column) const;
+    virtual void insertDefaultInto(IColumn& column) const;
 
     /// Checks that two instances belong to the same type
-    virtual bool equals(const IDataType & rhs) const = 0;
-
+    virtual bool equals(const IDataType& rhs) const = 0;
 
     /// Various properties on behaviour of data type.
 
@@ -400,8 +413,7 @@ public:
       */
     virtual bool isValueUnambiguouslyRepresentedInContiguousMemoryRegion() const { return false; }
 
-    virtual bool isValueUnambiguouslyRepresentedInFixedSizeContiguousMemoryRegion() const
-    {
+    virtual bool isValueUnambiguouslyRepresentedInFixedSizeContiguousMemoryRegion() const {
         return isValueRepresentedByNumber();
     }
 
@@ -439,7 +451,7 @@ public:
     virtual bool canBeInsideLowCardinality() const { return false; }
 
     /// Updates avg_value_size_hint for newly read column. Uses to optimize deserialization. Zero expected for first column.
-    static void updateAvgValueSizeHint(const IColumn & column, double & avg_value_size_hint);
+    static void updateAvgValueSizeHint(const IColumn& column, double& avg_value_size_hint);
 
     // static String getFileNameForStream(const String & column_name, const SubstreamPath & path);
 
@@ -459,34 +471,26 @@ public:
     // const IDataTypeCustomName * getCustomName() const { return custom_name.get(); }
 };
 
-
 /// Some sugar to check data type of IDataType
-struct WhichDataType
-{
+struct WhichDataType {
     TypeIndex idx;
 
-    WhichDataType(TypeIndex idx_ = TypeIndex::Nothing)
-        : idx(idx_)
-    {}
+    WhichDataType(TypeIndex idx_ = TypeIndex::Nothing) : idx(idx_) {}
 
-    WhichDataType(const IDataType & data_type)
-        : idx(data_type.getTypeId())
-    {}
+    WhichDataType(const IDataType& data_type) : idx(data_type.getTypeId()) {}
 
-    WhichDataType(const IDataType * data_type)
-        : idx(data_type->getTypeId())
-    {}
+    WhichDataType(const IDataType* data_type) : idx(data_type->getTypeId()) {}
 
-    WhichDataType(const DataTypePtr & data_type)
-        : idx(data_type->getTypeId())
-    {}
+    WhichDataType(const DataTypePtr& data_type) : idx(data_type->getTypeId()) {}
 
     bool isUInt8() const { return idx == TypeIndex::UInt8; }
     bool isUInt16() const { return idx == TypeIndex::UInt16; }
     bool isUInt32() const { return idx == TypeIndex::UInt32; }
     bool isUInt64() const { return idx == TypeIndex::UInt64; }
     bool isUInt128() const { return idx == TypeIndex::UInt128; }
-    bool isUInt() const { return isUInt8() || isUInt16() || isUInt32() || isUInt64() || isUInt128(); }
+    bool isUInt() const {
+        return isUInt8() || isUInt16() || isUInt32() || isUInt64() || isUInt128();
+    }
     bool isNativeUInt() const { return isUInt8() || isUInt16() || isUInt32() || isUInt64(); }
 
     bool isInt8() const { return idx == TypeIndex::Int8; }
@@ -532,90 +536,88 @@ struct WhichDataType
 
 /// IDataType helpers (alternative for IDataType virtual methods with single point of truth)
 
-inline bool isDate(const DataTypePtr & data_type) { return WhichDataType(data_type).isDate(); }
-inline bool isDateOrDateTime(const DataTypePtr & data_type) { return WhichDataType(data_type).isDateOrDateTime(); }
-inline bool isEnum(const DataTypePtr & data_type) { return WhichDataType(data_type).isEnum(); }
-inline bool isDecimal(const DataTypePtr & data_type) { return WhichDataType(data_type).isDecimal(); }
-inline bool isTuple(const DataTypePtr & data_type) { return WhichDataType(data_type).isTuple(); }
-inline bool isArray(const DataTypePtr & data_type) { return WhichDataType(data_type).isArray(); }
+inline bool isDate(const DataTypePtr& data_type) {
+    return WhichDataType(data_type).isDate();
+}
+inline bool isDateOrDateTime(const DataTypePtr& data_type) {
+    return WhichDataType(data_type).isDateOrDateTime();
+}
+inline bool isEnum(const DataTypePtr& data_type) {
+    return WhichDataType(data_type).isEnum();
+}
+inline bool isDecimal(const DataTypePtr& data_type) {
+    return WhichDataType(data_type).isDecimal();
+}
+inline bool isTuple(const DataTypePtr& data_type) {
+    return WhichDataType(data_type).isTuple();
+}
+inline bool isArray(const DataTypePtr& data_type) {
+    return WhichDataType(data_type).isArray();
+}
 
 template <typename T>
-inline bool isUInt8(const T & data_type)
-{
+inline bool isUInt8(const T& data_type) {
     return WhichDataType(data_type).isUInt8();
 }
 
 template <typename T>
-inline bool isUnsignedInteger(const T & data_type)
-{
+inline bool isUnsignedInteger(const T& data_type) {
     return WhichDataType(data_type).isUInt();
 }
 
 template <typename T>
-inline bool isInteger(const T & data_type)
-{
+inline bool isInteger(const T& data_type) {
     WhichDataType which(data_type);
     return which.isInt() || which.isUInt();
 }
 
 template <typename T>
-inline bool isFloat(const T & data_type)
-{
+inline bool isFloat(const T& data_type) {
     WhichDataType which(data_type);
     return which.isFloat();
 }
 
 template <typename T>
-inline bool isNativeNumber(const T & data_type)
-{
+inline bool isNativeNumber(const T& data_type) {
     WhichDataType which(data_type);
     return which.isNativeInt() || which.isNativeUInt() || which.isFloat();
 }
 
 template <typename T>
-inline bool isNumber(const T & data_type)
-{
+inline bool isNumber(const T& data_type) {
     WhichDataType which(data_type);
     return which.isInt() || which.isUInt() || which.isFloat() || which.isDecimal();
 }
 
 template <typename T>
-inline bool isColumnedAsNumber(const T & data_type)
-{
+inline bool isColumnedAsNumber(const T& data_type) {
     WhichDataType which(data_type);
-    return which.isInt() || which.isUInt() || which.isFloat() || which.isDateOrDateTime() || which.isUUID();
+    return which.isInt() || which.isUInt() || which.isFloat() || which.isDateOrDateTime() ||
+           which.isUUID();
 }
 
 template <typename T>
-inline bool isString(const T & data_type)
-{
+inline bool isString(const T& data_type) {
     return WhichDataType(data_type).isString();
 }
 
 template <typename T>
-inline bool isFixedString(const T & data_type)
-{
+inline bool isFixedString(const T& data_type) {
     return WhichDataType(data_type).isFixedString();
 }
 
 template <typename T>
-inline bool isStringOrFixedString(const T & data_type)
-{
+inline bool isStringOrFixedString(const T& data_type) {
     return WhichDataType(data_type).isStringOrFixedString();
 }
 
-
-inline bool isNotDecimalButComparableToDecimal(const DataTypePtr & data_type)
-{
+inline bool isNotDecimalButComparableToDecimal(const DataTypePtr& data_type) {
     WhichDataType which(data_type);
     return which.isInt() || which.isUInt();
 }
 
-inline bool isCompilableType(const DataTypePtr & data_type)
-{
+inline bool isCompilableType(const DataTypePtr& data_type) {
     return data_type->isValueRepresentedByNumber() && !isDecimal(data_type);
 }
 
-
-}
-
+} // namespace doris::vectorized

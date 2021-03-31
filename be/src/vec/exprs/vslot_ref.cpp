@@ -1,9 +1,26 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/exprs/vslot_ref.h"
 
 #include "fmt/format.h"
 #include "runtime/descriptors.h"
 
-namespace DB {
+namespace doris::vectorized {
 using doris::Status;
 using doris::SlotDescriptor;
 VSlotRef::VSlotRef(const doris::TExprNode& node)
@@ -24,10 +41,10 @@ Status VSlotRef::prepare(doris::RuntimeState* state, const doris::RowDescriptor&
     return Status::OK();
 }
 
-doris::Status VSlotRef::execute(DB::Block* block, int* result_column_id) {
+Status VSlotRef::execute(Block* block, int* result_column_id) {
     DCHECK_GE(_column_id , 0);
     *result_column_id = _column_id;
     return Status::OK();
 }
 
-} // namespace DB
+} // namespace doris::vectorized

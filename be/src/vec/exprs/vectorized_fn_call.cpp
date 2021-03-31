@@ -1,11 +1,28 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/exprs/vectorized_fn_call.h"
+
 #include "fmt/format.h"
-#include "vec/functions/simple_function_factory.h"
-#include "vec/data_types/data_types_number.h"
 #include "vec/data_types/data_type_nullable.h"
+#include "vec/data_types/data_types_number.h"
+#include "vec/functions/simple_function_factory.h"
 
-
-namespace DB {
+namespace doris::vectorized {
 using doris::Status;
 
 VectorizedFnCall::VectorizedFnCall(const doris::TExprNode& node) : VExpr(node) {}
@@ -15,7 +32,8 @@ doris::Status VectorizedFnCall::prepare(doris::RuntimeState* state,
     RETURN_IF_ERROR(VExpr::prepare(state, desc, context));
     _function = SimpleFunctionFactory::instance().get(_fn.name.function_name);
     if (_function == nullptr) {
-        return Status::InternalError(fmt::format("Function {} is not implemented", _fn.name.function_name));
+        return Status::InternalError(
+                fmt::format("Function {} is not implemented", _fn.name.function_name));
     }
     if (!_data_type->isNullable()) {
         _data_type = std::make_shared<DataTypeNullable>(_data_type);
@@ -30,10 +48,10 @@ void VectorizedFnCall::close(doris::RuntimeState* state, VExprContext* context) 
     VExpr::close(state, context);
 }
 
-Status VectorizedFnCall::execute(DB::Block* block, int* result_column_id) {
+Status VectorizedFnCall::execute(doris::vectorized::Block* block, int* result_column_id) {
     // for each child call execute
-    DB::ColumnNumbers arguments;
-    for(int i = 0;i < _children.size();++i) {
+    doris::vectorized::ColumnNumbers arguments;
+    for (int i = 0; i < _children.size(); ++i) {
         int column_id = -1;
         _children[i]->execute(block, &column_id);
         arguments.emplace_back(column_id);
@@ -47,4 +65,4 @@ Status VectorizedFnCall::execute(DB::Block* block, int* result_column_id) {
     return Status::OK();
 }
 
-} // namespace DB
+} // namespace doris::vectorized
