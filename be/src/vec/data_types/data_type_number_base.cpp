@@ -270,6 +270,7 @@ template class DataTypeNumberBase<Int8>;
 template class DataTypeNumberBase<Int16>;
 template class DataTypeNumberBase<Int32>;
 template class DataTypeNumberBase<Int64>;
+template class DataTypeNumberBase<Int128>;
 template class DataTypeNumberBase<Float32>;
 template class DataTypeNumberBase<Float64>;
 

@@ -49,6 +49,7 @@ using DataTypeInt8 = DataTypeNumber<Int8>;
 using DataTypeInt16 = DataTypeNumber<Int16>;
 using DataTypeInt32 = DataTypeNumber<Int32>;
 using DataTypeInt64 = DataTypeNumber<Int64>;
+using DataTypeInt128 = DataTypeNumber<Int128>;
 using DataTypeFloat32 = DataTypeNumber<Float32>;
 using DataTypeFloat64 = DataTypeNumber<Float64>;
 
@@ -70,6 +71,8 @@ template <>
 inline constexpr bool IsDataTypeNumber<DataTypeNumber<Int32>> = true;
 template <>
 inline constexpr bool IsDataTypeNumber<DataTypeNumber<Int64>> = true;
+template <>
+inline constexpr bool IsDataTypeNumber<DataTypeNumber<Int128>> = true;
 template <>
 inline constexpr bool IsDataTypeNumber<DataTypeNumber<Float32>> = true;
 template <>
