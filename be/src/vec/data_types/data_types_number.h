@@ -1,17 +1,32 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
 #include <type_traits>
+
 #include "vec/core/field.h"
 #include "vec/data_types/data_type_number_base.h"
 
-
-namespace DB
-{
+namespace doris::vectorized {
 
 template <typename T>
-class DataTypeNumber final : public DataTypeNumberBase<T>
-{
-    bool equals(const IDataType & rhs) const override { return typeid(rhs) == typeid(*this); }
+class DataTypeNumber final : public DataTypeNumberBase<T> {
+    bool equals(const IDataType& rhs) const override { return typeid(rhs) == typeid(*this); }
 
     bool canBeUsedAsVersion() const override { return true; }
     bool isSummable() const override { return true; }
@@ -20,8 +35,7 @@ class DataTypeNumber final : public DataTypeNumberBase<T>
     bool canBeInsideNullable() const override { return true; }
 
     bool canBePromoted() const override { return true; }
-    DataTypePtr promoteNumericType() const override
-    {
+    DataTypePtr promoteNumericType() const override {
         using PromotedType = DataTypeNumber<NearestFieldType<T>>;
         return std::make_shared<PromotedType>();
     }
@@ -38,16 +52,27 @@ using DataTypeInt64 = DataTypeNumber<Int64>;
 using DataTypeFloat32 = DataTypeNumber<Float32>;
 using DataTypeFloat64 = DataTypeNumber<Float64>;
 
-template <typename DataType> constexpr bool IsDataTypeNumber = false;
-template <> inline constexpr bool IsDataTypeNumber<DataTypeNumber<UInt8>> = true;
-template <> inline constexpr bool IsDataTypeNumber<DataTypeNumber<UInt16>> = true;
-template <> inline constexpr bool IsDataTypeNumber<DataTypeNumber<UInt32>> = true;
-template <> inline constexpr bool IsDataTypeNumber<DataTypeNumber<UInt64>> = true;
-template <> inline constexpr bool IsDataTypeNumber<DataTypeNumber<Int8>> = true;
-template <> inline constexpr bool IsDataTypeNumber<DataTypeNumber<Int16>> = true;
-template <> inline constexpr bool IsDataTypeNumber<DataTypeNumber<Int32>> = true;
-template <> inline constexpr bool IsDataTypeNumber<DataTypeNumber<Int64>> = true;
-template <> inline constexpr bool IsDataTypeNumber<DataTypeNumber<Float32>> = true;
-template <> inline constexpr bool IsDataTypeNumber<DataTypeNumber<Float64>> = true;
+template <typename DataType>
+constexpr bool IsDataTypeNumber = false;
+template <>
+inline constexpr bool IsDataTypeNumber<DataTypeNumber<UInt8>> = true;
+template <>
+inline constexpr bool IsDataTypeNumber<DataTypeNumber<UInt16>> = true;
+template <>
+inline constexpr bool IsDataTypeNumber<DataTypeNumber<UInt32>> = true;
+template <>
+inline constexpr bool IsDataTypeNumber<DataTypeNumber<UInt64>> = true;
+template <>
+inline constexpr bool IsDataTypeNumber<DataTypeNumber<Int8>> = true;
+template <>
+inline constexpr bool IsDataTypeNumber<DataTypeNumber<Int16>> = true;
+template <>
+inline constexpr bool IsDataTypeNumber<DataTypeNumber<Int32>> = true;
+template <>
+inline constexpr bool IsDataTypeNumber<DataTypeNumber<Int64>> = true;
+template <>
+inline constexpr bool IsDataTypeNumber<DataTypeNumber<Float32>> = true;
+template <>
+inline constexpr bool IsDataTypeNumber<DataTypeNumber<Float64>> = true;
 
-}
+} // namespace doris::vectorized

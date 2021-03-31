@@ -22,21 +22,22 @@
 #include <iostream>
 #include <string>
 
-#include "runtime/tuple_row.h"
-#include "runtime/row_batch.h"
 #include "exec/schema_scanner.h"
+#include "runtime/row_batch.h"
+#include "runtime/tuple_row.h"
 
 namespace doris {
 
 TEST(BlockTest, RowBatchCovertToBlock) {
     SchemaScanner::ColumnDesc column_descs[] = {
-                {"k1", TYPE_SMALLINT, sizeof(int16_t), true},
-                {"k2", TYPE_INT,      sizeof(int32_t), false},
-                {"k3", TYPE_DOUBLE,    sizeof(double),   false},
-                {"k4", TYPE_VARCHAR,    sizeof(StringValue),   false},
-                {"k5", TYPE_DECIMALV2,    sizeof(DecimalV2Value),   false}};
+            {"k1", TYPE_SMALLINT, sizeof(int16_t), true},
+            {"k2", TYPE_INT, sizeof(int32_t), false},
+            {"k3", TYPE_DOUBLE, sizeof(double), false},
+            {"k4", TYPE_VARCHAR, sizeof(StringValue), false},
+            {"k5", TYPE_DECIMALV2, sizeof(DecimalV2Value), false}};
 
-    SchemaScanner schema_scanner(column_descs, sizeof(column_descs) / sizeof(SchemaScanner::ColumnDesc));
+    SchemaScanner schema_scanner(column_descs,
+                                 sizeof(column_descs) / sizeof(SchemaScanner::ColumnDesc));
     ObjectPool object_pool;
     SchemaScannerParam param;
     schema_scanner.init(&param, &object_pool);
@@ -76,7 +77,7 @@ TEST(BlockTest, RowBatchCovertToBlock) {
 
         slot_desc = tuple_desc->slots()[4];
         DecimalV2Value decimalv2_num(std::to_string(k3));
-        memcpy(tuple->get_slot(slot_desc->tuple_offset()), &decimalv2_num ,column_descs[4].size);
+        memcpy(tuple->get_slot(slot_desc->tuple_offset()), &decimalv2_num, column_descs[4].size);
 
         tuple_row->set_tuple(0, tuple);
         row_batch.commit_last_row();
@@ -87,11 +88,11 @@ TEST(BlockTest, RowBatchCovertToBlock) {
     k2 = 100000;
     k3 = 7.7;
     for (int i = 0; i < 1024; ++i) {
-        DB::ColumnPtr column1 = block.getColumns()[0];
-        DB::ColumnPtr column2 = block.getColumns()[1];
-        DB::ColumnPtr column3 = block.getColumns()[2];
-        DB::ColumnPtr column4 = block.getColumns()[3];
-        DB::ColumnPtr column5 = block.getColumns()[4];
+        vectorized::ColumnPtr column1 = block.getColumns()[0];
+        vectorized::ColumnPtr column2 = block.getColumns()[1];
+        vectorized::ColumnPtr column3 = block.getColumns()[2];
+        vectorized::ColumnPtr column4 = block.getColumns()[3];
+        vectorized::ColumnPtr column5 = block.getColumns()[4];
 
         if (i % 5 != 0) {
             ASSERT_EQ((int16_t)column1->get64(i), k1);
@@ -101,11 +102,12 @@ TEST(BlockTest, RowBatchCovertToBlock) {
         ASSERT_EQ(column2->getInt(i), k2++);
         ASSERT_EQ(column3->getFloat64(i), k3);
         ASSERT_STREQ(column4->getDataAt(i).data, std::to_string(k1).c_str());
-        auto decimal_field = column5->operator[](i).get<DB::DecimalField<DB::Decimal128>>();
+        auto decimal_field = column5->operator[](i)
+                                     .get<vectorized::DecimalField<vectorized::Decimal128>>();
         DecimalV2Value decimalv2_num(std::to_string(k3));
         ASSERT_EQ(DecimalV2Value(decimal_field.getValue()), decimalv2_num);
         k1++;
-        k3+=0.1;
+        k3 += 0.1;
     }
 }
 

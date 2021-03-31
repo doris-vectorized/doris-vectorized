@@ -1,4 +1,22 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/data_types/data_type_nullable.h"
+
 #include "vec/data_types/data_type_nothing.h"
 #include "vec/data_types/data_types_number.h"
 // #include <vec/DataTypes/DataTypeFactory.h>
@@ -11,33 +29,27 @@
 // #include <vec/IO/WriteHelpers.h>
 // #include <vec/IO/ConcatReadBuffer.h>
 // #include <vec/Parsers/IAST.h>
-#include "vec/common/typeid_cast.h"
 #include "vec/common/assert_cast.h"
+#include "vec/common/typeid_cast.h"
 
+namespace doris::vectorized {
 
-namespace DB
-{
+namespace ErrorCodes {
+extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
+extern const int ILLEGAL_TYPE_OF_ARGUMENT;
+} // namespace ErrorCodes
 
-namespace ErrorCodes
-{
-    extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-    extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-}
-
-
-DataTypeNullable::DataTypeNullable(const DataTypePtr & nested_data_type_)
-    : nested_data_type{nested_data_type_}
-{
+DataTypeNullable::DataTypeNullable(const DataTypePtr& nested_data_type_)
+        : nested_data_type {nested_data_type_} {
     if (!nested_data_type->canBeInsideNullable())
-        throw Exception("Nested type " + nested_data_type->getName() + " cannot be inside Nullable type", ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        throw Exception(
+                "Nested type " + nested_data_type->getName() + " cannot be inside Nullable type",
+                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 }
 
-
-bool DataTypeNullable::onlyNull() const
-{
-    return typeid_cast<const DataTypeNothing *>(nested_data_type.get());
+bool DataTypeNullable::onlyNull() const {
+    return typeid_cast<const DataTypeNothing*>(nested_data_type.get());
 }
-
 
 // void DataTypeNullable::enumerateStreams(const StreamCallback & callback, SubstreamPath & path) const
 // {
@@ -48,7 +60,6 @@ bool DataTypeNullable::onlyNull() const
 //     path.pop_back();
 // }
 
-
 // void DataTypeNullable::serializeBinaryBulkStatePrefix(
 //         SerializeBinaryBulkSettings & settings,
 //         SerializeBinaryBulkStatePtr & state) const
@@ -57,7 +68,6 @@ bool DataTypeNullable::onlyNull() const
 //     nested_data_type->serializeBinaryBulkStatePrefix(settings, state);
 //     settings.path.pop_back();
 // }
-
 
 // void DataTypeNullable::serializeBinaryBulkStateSuffix(
 //     SerializeBinaryBulkSettings & settings,
@@ -68,7 +78,6 @@ bool DataTypeNullable::onlyNull() const
 //     settings.path.pop_back();
 // }
 
-
 // void DataTypeNullable::deserializeBinaryBulkStatePrefix(
 //     DeserializeBinaryBulkSettings & settings,
 //     DeserializeBinaryBulkStatePtr & state) const
@@ -77,7 +86,6 @@ bool DataTypeNullable::onlyNull() const
 //     nested_data_type->deserializeBinaryBulkStatePrefix(settings, state);
 //     settings.path.pop_back();
 // }
-
 
 // void DataTypeNullable::serializeBinaryBulkWithMultipleStreams(
 //     const IColumn & column,
@@ -100,7 +108,6 @@ bool DataTypeNullable::onlyNull() const
 //     settings.path.pop_back();
 // }
 
-
 // void DataTypeNullable::deserializeBinaryBulkWithMultipleStreams(
 //     IColumn & column,
 //     size_t limit,
@@ -117,7 +124,6 @@ bool DataTypeNullable::onlyNull() const
 //     nested_data_type->deserializeBinaryBulkWithMultipleStreams(col.getNestedColumn(), limit, settings, state);
 //     settings.path.pop_back();
 // }
-
 
 // void DataTypeNullable::serializeBinary(const Field & field, WriteBuffer & ostr) const
 // {
@@ -201,14 +207,12 @@ bool DataTypeNullable::onlyNull() const
 //     return !insert_default;
 // }
 
-
 // void DataTypeNullable::deserializeBinary(IColumn & column, ReadBuffer & istr) const
 // {
 //     safeDeserialize(column, *nested_data_type,
 //         [&istr] { bool is_null = 0; readBinary(is_null, istr); return is_null; },
 //         [this, &istr] (IColumn & nested) { nested_data_type->deserializeBinary(nested, istr); });
 // }
-
 
 // void DataTypeNullable::serializeTextEscaped(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings & settings) const
 // {
@@ -219,7 +223,6 @@ bool DataTypeNullable::onlyNull() const
 //     else
 //         nested_data_type->serializeAsTextEscaped(col.getNestedColumn(), row_num, ostr, settings);
 // }
-
 
 // void DataTypeNullable::deserializeTextEscaped(IColumn & column, ReadBuffer & istr, const FormatSettings & settings) const
 // {
@@ -295,7 +298,6 @@ bool DataTypeNullable::onlyNull() const
 //         nested_data_type->serializeAsTextQuoted(col.getNestedColumn(), row_num, ostr, settings);
 // }
 
-
 // void DataTypeNullable::deserializeTextQuoted(IColumn & column, ReadBuffer & istr, const FormatSettings & settings) const
 // {
 //     deserializeTextQuoted<void>(column, istr, settings, nested_data_type);
@@ -310,14 +312,12 @@ bool DataTypeNullable::onlyNull() const
 //         [&nested_data_type, &istr, &settings] (IColumn & nested) { nested_data_type->deserializeAsTextQuoted(nested, istr, settings); });
 // }
 
-
 // void DataTypeNullable::deserializeWholeText(IColumn & column, ReadBuffer & istr, const FormatSettings & settings) const
 // {
 //     safeDeserialize(column, *nested_data_type,
 //         [&istr] { return checkStringByFirstCharacterAndAssertTheRestCaseInsensitive("NULL", istr); },
 //         [this, &istr, &settings] (IColumn & nested) { nested_data_type->deserializeAsWholeText(nested, istr, settings); });
 // }
-
 
 // void DataTypeNullable::serializeTextCSV(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings & settings) const
 // {
@@ -326,7 +326,7 @@ bool DataTypeNullable::onlyNull() const
 //     if (col.isNullAt(row_num))
 //         writeCString("\\N", ostr);
 //     else
-        // nested_data_type->serializeAsTextCSV(col.getNestedColumn(), row_num, ostr, settings);
+// nested_data_type->serializeAsTextCSV(col.getNestedColumn(), row_num, ostr, settings);
 // }
 
 // void DataTypeNullable::deserializeTextCSV(IColumn & column, ReadBuffer & istr, const FormatSettings & settings) const
@@ -389,11 +389,11 @@ bool DataTypeNullable::onlyNull() const
 //                 /// or if someone uses 'U' or 'L' as delimiter in CSV.
 //                 /// In the first case we cannot continue reading anyway. The second case seems to be unlikely.
 //                 if (settings.csv.delimiter == 'U' || settings.csv.delimiter == 'L')
-//                     throw DB::Exception("Enabled setting input_format_csv_unquoted_null_literal_as_null may not work correctly "
+//                     throw doris::vectorized::Exception("Enabled setting input_format_csv_unquoted_null_literal_as_null may not work correctly "
 //                                         "with format_csv_delimiter = 'U' or 'L' for large input.", ErrorCodes::CANNOT_READ_ALL_DATA);
 //                 WriteBufferFromOwnString parsed_value;
 //                 nested_data_type->serializeAsTextCSV(nested, nested.size() - 1, parsed_value, settings);
-//                 throw DB::Exception("Error while parsing \"" + std::string(null_literal, null_prefix_len)
+//                 throw doris::vectorized::Exception("Error while parsing \"" + std::string(null_literal, null_prefix_len)
 //                                     + std::string(istr.position(), std::min(size_t{10}, istr.available())) + "\" as Nullable(" + nested_data_type->getName()
 //                                     + ") at position " + std::to_string(istr.count()) + ": expected \"NULL\" or " + nested_data_type->getName()
 //                                     + ", got \"" + std::string(null_literal, buf.count()) + "\", which was deserialized as \""
@@ -483,27 +483,23 @@ bool DataTypeNullable::onlyNull() const
 //     }
 // }
 
-MutableColumnPtr DataTypeNullable::createColumn() const
-{
+MutableColumnPtr DataTypeNullable::createColumn() const {
     return ColumnNullable::create(nested_data_type->createColumn(), ColumnUInt8::create());
 }
 
-Field DataTypeNullable::getDefault() const
-{
+Field DataTypeNullable::getDefault() const {
     return Null();
 }
 
-size_t DataTypeNullable::getSizeOfValueInMemory() const
-{
-    throw Exception("Value of type " + getName() + " in memory is not of fixed size.", ErrorCodes::LOGICAL_ERROR);
+size_t DataTypeNullable::getSizeOfValueInMemory() const {
+    throw Exception("Value of type " + getName() + " in memory is not of fixed size.",
+                    ErrorCodes::LOGICAL_ERROR);
 }
 
-
-bool DataTypeNullable::equals(const IDataType & rhs) const
-{
-    return rhs.isNullable() && nested_data_type->equals(*static_cast<const DataTypeNullable &>(rhs).nested_data_type);
+bool DataTypeNullable::equals(const IDataType& rhs) const {
+    return rhs.isNullable() &&
+           nested_data_type->equals(*static_cast<const DataTypeNullable&>(rhs).nested_data_type);
 }
-
 
 // static DataTypePtr create(const ASTPtr & arguments)
 // {
@@ -515,31 +511,24 @@ bool DataTypeNullable::equals(const IDataType & rhs) const
 //     return std::make_shared<DataTypeNullable>(nested_type);
 // }
 
-
 // void registerDataTypeNullable(DataTypeFactory & factory)
 // {
 //     factory.registerDataType("Nullable", create);
 // }
 
-
-DataTypePtr makeNullable(const DataTypePtr & type)
-{
-    if (type->isNullable())
-        return type;
+DataTypePtr makeNullable(const DataTypePtr& type) {
+    if (type->isNullable()) return type;
     return std::make_shared<DataTypeNullable>(type);
 }
 
-DataTypePtr removeNullable(const DataTypePtr & type)
-{
-    if (type->isNullable())
-        return static_cast<const DataTypeNullable &>(*type).getNestedType();
+DataTypePtr removeNullable(const DataTypePtr& type) {
+    if (type->isNullable()) return static_cast<const DataTypeNullable&>(*type).getNestedType();
     return type;
 }
-
 
 // template bool DataTypeNullable::deserializeTextEscaped<bool>(IColumn & column, ReadBuffer & istr, const FormatSettings & settings, const DataTypePtr & nested);
 // template bool DataTypeNullable::deserializeTextQuoted<bool>(IColumn & column, ReadBuffer & istr, const FormatSettings &, const DataTypePtr & nested);
 // template bool DataTypeNullable::deserializeTextCSV<bool>(IColumn & column, ReadBuffer & istr, const FormatSettings & settings, const DataTypePtr & nested);
 // template bool DataTypeNullable::deserializeTextJSON<bool>(IColumn & column, ReadBuffer & istr, const FormatSettings &, const DataTypePtr & nested);
 
-}
+} // namespace doris::vectorized

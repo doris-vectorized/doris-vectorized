@@ -1,3 +1,20 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
 #define DBMS_DEFAULT_HOST "localhost"
@@ -79,50 +96,50 @@
 // more aliases: https://mailman.videolan.org/pipermail/x264-devel/2014-May/010660.html
 
 #if defined(_MSC_VER)
-    #define ALWAYS_INLINE __forceinline
-    #define NO_INLINE static __declspec(noinline)
-    #define MAY_ALIAS
+#define ALWAYS_INLINE __forceinline
+#define NO_INLINE static __declspec(noinline)
+#define MAY_ALIAS
 #else
-    #define ALWAYS_INLINE __attribute__((__always_inline__))
-    #define NO_INLINE __attribute__((__noinline__))
-    #define MAY_ALIAS __attribute__((__may_alias__))
+#define ALWAYS_INLINE __attribute__((__always_inline__))
+#define NO_INLINE __attribute__((__noinline__))
+#define MAY_ALIAS __attribute__((__may_alias__))
 #endif
 
-
-#define PLATFORM_NOT_SUPPORTED "The only supported platforms are x86_64 and AArch64, PowerPC (work in progress)"
+#define PLATFORM_NOT_SUPPORTED \
+    "The only supported platforms are x86_64 and AArch64, PowerPC (work in progress)"
 
 #if !defined(__x86_64__) && !defined(__aarch64__) && !defined(__PPC__)
-    #error PLATFORM_NOT_SUPPORTED
+#error PLATFORM_NOT_SUPPORTED
 #endif
 
 /// Check for presence of address sanitizer
 #if !defined(ADDRESS_SANITIZER)
 #if defined(__has_feature)
-    #if __has_feature(address_sanitizer)
-        #define ADDRESS_SANITIZER 1
-    #endif
+#if __has_feature(address_sanitizer)
+#define ADDRESS_SANITIZER 1
+#endif
 #elif defined(__SANITIZE_ADDRESS__)
-    #define ADDRESS_SANITIZER 1
+#define ADDRESS_SANITIZER 1
 #endif
 #endif
 
 #if !defined(THREAD_SANITIZER)
 #if defined(__has_feature)
-    #if __has_feature(thread_sanitizer)
-        #define THREAD_SANITIZER 1
-    #endif
+#if __has_feature(thread_sanitizer)
+#define THREAD_SANITIZER 1
+#endif
 #elif defined(__SANITIZE_THREAD__)
-    #define THREAD_SANITIZER 1
+#define THREAD_SANITIZER 1
 #endif
 #endif
 
 #if !defined(MEMORY_SANITIZER)
 #if defined(__has_feature)
-    #if __has_feature(memory_sanitizer)
-        #define MEMORY_SANITIZER 1
-    #endif
+#if __has_feature(memory_sanitizer)
+#define MEMORY_SANITIZER 1
+#endif
 #elif defined(__MEMORY_SANITIZER__)
-    #define MEMORY_SANITIZER 1
+#define MEMORY_SANITIZER 1
 #endif
 #endif
 
@@ -132,20 +149,20 @@
 /// It is useful in case when compiler cannot see (and exploit) it, but UBSan can.
 /// Example: multiplication of signed integers with possibility of overflow when both sides are from user input.
 #if defined(__clang__)
-    #define NO_SANITIZE_UNDEFINED __attribute__((__no_sanitize__("undefined")))
-    #define NO_SANITIZE_ADDRESS __attribute__((__no_sanitize__("address")))
-    #define NO_SANITIZE_THREAD __attribute__((__no_sanitize__("thread")))
+#define NO_SANITIZE_UNDEFINED __attribute__((__no_sanitize__("undefined")))
+#define NO_SANITIZE_ADDRESS __attribute__((__no_sanitize__("address")))
+#define NO_SANITIZE_THREAD __attribute__((__no_sanitize__("thread")))
 #else
-    /// It does not work in GCC. GCC 7 cannot recognize this attribute and GCC 8 simply ignores it.
-    #define NO_SANITIZE_UNDEFINED
-    #define NO_SANITIZE_ADDRESS
-    #define NO_SANITIZE_THREAD
+/// It does not work in GCC. GCC 7 cannot recognize this attribute and GCC 8 simply ignores it.
+#define NO_SANITIZE_UNDEFINED
+#define NO_SANITIZE_ADDRESS
+#define NO_SANITIZE_THREAD
 #endif
 
 #if defined __GNUC__ && !defined __clang__
-    #define OPTIMIZE(x) __attribute__((__optimize__(x)))
+#define OPTIMIZE(x) __attribute__((__optimize__(x)))
 #else
-    #define OPTIMIZE(x)
+#define OPTIMIZE(x)
 #endif
 
 /// This number is only used for distributed version compatible.
@@ -153,8 +170,8 @@
 #define DBMS_DISTRIBUTED_SENDS_MAGIC_NUMBER 0xCAFECABE
 
 #if !__has_include(<sanitizer/asan_interface.h>)
-#   define ASAN_UNPOISON_MEMORY_REGION(a, b)
-#   define ASAN_POISON_MEMORY_REGION(a, b)
+#define ASAN_UNPOISON_MEMORY_REGION(a, b)
+#define ASAN_POISON_MEMORY_REGION(a, b)
 #endif
 
 /// A macro for suppressing warnings about unused variables or function results.

@@ -1,34 +1,46 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
 #include "vec/common/cow.h"
-#include "vec/common/pod_array_fwd.h"
-#include "vec/core/types.h"
 #include "vec/common/exception.h"
-#include "vec/common/typeid_cast.h"
+#include "vec/common/pod_array_fwd.h"
 #include "vec/common/string_ref.h"
+#include "vec/common/typeid_cast.h"
 #include "vec/core/field.h"
-
+#include "vec/core/types.h"
 
 class SipHash;
 
+namespace doris::vectorized {
 
-namespace DB
-{
-
-namespace ErrorCodes
-{
-    extern const int CANNOT_GET_SIZE_OF_FIELD;
-    extern const int NOT_IMPLEMENTED;
-    extern const int SIZES_OF_COLUMNS_DOESNT_MATCH ;
-}
+namespace ErrorCodes {
+extern const int CANNOT_GET_SIZE_OF_FIELD;
+extern const int NOT_IMPLEMENTED;
+extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
+} // namespace ErrorCodes
 
 class Arena;
 class ColumnGathererStream;
 class Field;
 
 /// Declares interface to store columns in memory.
-class IColumn : public COW<IColumn>
-{
+class IColumn : public COW<IColumn> {
 private:
     friend class COW<IColumn>;
 
@@ -43,7 +55,7 @@ public:
     virtual std::string getName() const { return getFamilyName(); }
 
     /// Name of a Column kind, without parameters (example: FixedString, Array).
-    virtual const char * getFamilyName() const = 0;
+    virtual const char* getFamilyName() const = 0;
 
     /** If column isn't constant, returns nullptr (or itself).
       * If column is constant, transforms constant to full column (if column type allows such transform) and return it.
@@ -61,7 +73,7 @@ public:
     /// If size is less current size, then data is cut.
     /// If size is greater, than default values are appended.
     virtual MutablePtr cloneResized(size_t /*size*/) const {
-         throw Exception("Cannot cloneResized() column " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+        throw Exception("Cannot cloneResized() column " + getName(), ErrorCodes::NOT_IMPLEMENTED);
     }
 
     /// Returns number of values in column.
@@ -75,7 +87,7 @@ public:
     virtual Field operator[](size_t n) const = 0;
 
     /// Like the previous one, but avoids extra copying if Field is in a container, for example.
-    virtual void get(size_t n, Field & res) const = 0;
+    virtual void get(size_t n, Field& res) const = 0;
 
     /// If possible, returns pointer to memory chunk which contains n-th element (if it isn't possible, throws an exception)
     /// Is used to optimize some computations (in aggregation, for example).
@@ -83,38 +95,35 @@ public:
 
     /// Like getData, but has special behavior for columns that contain variable-length strings.
     /// Returns zero-ending memory chunk (i.e. its size is 1 byte longer).
-    virtual StringRef getDataAtWithTerminatingZero(size_t n) const
-    {
-        return getDataAt(n);
-    }
+    virtual StringRef getDataAtWithTerminatingZero(size_t n) const { return getDataAt(n); }
 
     /// If column stores integers, it returns n-th element transformed to UInt64 using static_cast.
     /// If column stores floating point numbers, bits of n-th elements are copied to lower bits of UInt64, the remaining bits are zeros.
     /// Is used to optimize some computations (in aggregation, for example).
-    virtual UInt64 get64(size_t /*n*/) const
-    {
-         throw Exception("Method get64 is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+    virtual UInt64 get64(size_t /*n*/) const {
+        throw Exception("Method get64 is not supported for " + getName(),
+                        ErrorCodes::NOT_IMPLEMENTED);
     }
 
     /// If column stores native numeric type, it returns n-th element casted to Float64
     /// Is used in regression methods to cast each features into uniform type
-    virtual Float64 getFloat64(size_t /*n*/) const
-    {
-         throw Exception("Method getFloat64 is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+    virtual Float64 getFloat64(size_t /*n*/) const {
+        throw Exception("Method getFloat64 is not supported for " + getName(),
+                        ErrorCodes::NOT_IMPLEMENTED);
     }
 
     /** If column is numeric, return value of n-th element, casted to UInt64.
       * For NULL values of Nullable column it is allowed to return arbitrary value.
       * Otherwise throw an exception.
       */
-    virtual UInt64 getUInt(size_t /*n*/) const
-    {
-        throw Exception("Method getUInt is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+    virtual UInt64 getUInt(size_t /*n*/) const {
+        throw Exception("Method getUInt is not supported for " + getName(),
+                        ErrorCodes::NOT_IMPLEMENTED);
     }
 
-    virtual Int64 getInt(size_t /*n*/) const
-    {
-        throw Exception("Method getInt is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+    virtual Int64 getInt(size_t /*n*/) const {
+        throw Exception("Method getInt is not supported for " + getName(),
+                        ErrorCodes::NOT_IMPLEMENTED);
     }
 
     virtual bool isDefaultAt(size_t n) const { return get64(n) == 0; }
@@ -124,15 +133,14 @@ public:
       * For NULL values of Nullable column returns false.
       * Otherwise throw an exception.
       */
-    virtual bool getBool(size_t /*n*/) const
-    {
-         throw Exception("Method getBool is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+    virtual bool getBool(size_t /*n*/) const {
+        throw Exception("Method getBool is not supported for " + getName(),
+                        ErrorCodes::NOT_IMPLEMENTED);
     }
 
     /// Removes all elements outside of specified range.
     /// Is used in LIMIT operation, for example.
-    virtual Ptr cut(size_t start, size_t length) const
-    {
+    virtual Ptr cut(size_t start, size_t length) const {
         MutablePtr res = cloneEmpty();
         res->insertRangeFrom(*this, start, length);
         return res;
@@ -140,28 +148,26 @@ public:
 
     /// Appends new value at the end of column (column's size is increased by 1).
     /// Is used to transform raw strings to Blocks (for example, inside input format parsers)
-    virtual void insert(const Field & x) = 0;
+    virtual void insert(const Field& x) = 0;
 
     /// Appends n-th element from other column with the same type.
     /// Is used in merge-sort and merges. It could be implemented in inherited classes more optimally than default implementation.
-    virtual void insertFrom(const IColumn & src, size_t n);
+    virtual void insertFrom(const IColumn& src, size_t n);
 
     /// Appends range of elements from other column with the same type.
     /// Could be used to concatenate columns.
-    virtual void insertRangeFrom(const IColumn & src, size_t start, size_t length) = 0;
+    virtual void insertRangeFrom(const IColumn& src, size_t start, size_t length) = 0;
 
     /// Appends one element from other column with the same type multiple times.
-    virtual void insertManyFrom(const IColumn & src, size_t position, size_t length)
-    {
-        for (size_t i = 0; i < length; ++i)
-            insertFrom(src, position);
+    virtual void insertManyFrom(const IColumn& src, size_t position, size_t length) {
+        for (size_t i = 0; i < length; ++i) insertFrom(src, position);
     }
 
     /// Appends data located in specified memory chunk if it is possible (throws an exception if it cannot be implemented).
     /// Is used to optimize some computations (in aggregation, for example).
     /// Parameter length could be ignored if column values have fixed size.
     /// All data will be inserted as single element
-    virtual void insertData(const char * pos, size_t length) = 0;
+    virtual void insertData(const char* pos, size_t length) = 0;
 
     /// Appends "default value".
     /// Is used when there are need to increase column size, but inserting value doesn't make sense.
@@ -169,10 +175,8 @@ public:
     virtual void insertDefault() = 0;
 
     /// Appends "default value" multiple times.
-    virtual void insertManyDefaults(size_t length)
-    {
-        for (size_t i = 0; i < length; ++i)
-            insertDefault();
+    virtual void insertManyDefaults(size_t length) {
+        for (size_t i = 0; i < length; ++i) insertDefault();
     }
 
     /** Removes last n elements.
@@ -188,16 +192,16 @@ public:
       *  For example, to obtain unambiguous representation of Array of strings, strings data should be interleaved with their sizes.
       * Parameter begin should be used with Arena::allocContinue.
       */
-    virtual StringRef serializeValueIntoArena(size_t n, Arena & arena, char const *& begin) const = 0;
+    virtual StringRef serializeValueIntoArena(size_t n, Arena& arena, char const*& begin) const = 0;
 
     /// Deserializes a value that was serialized using IColumn::serializeValueIntoArena method.
     /// Returns pointer to the position after the read data.
-    virtual const char * deserializeAndInsertFromArena(const char * pos) = 0;
+    virtual const char* deserializeAndInsertFromArena(const char* pos) = 0;
 
     /// Update state of hash function with value of n-th element.
     /// On subsequent calls of this method for sequence of column values of arbitrary types,
     ///  passed bytes to hash must identify sequence of values unambiguously.
-    virtual void updateHashWithValue(size_t n, SipHash & hash) const = 0;
+    virtual void updateHashWithValue(size_t n, SipHash& hash) const = 0;
 
     /** Removes elements that don't match the filter.
       * Is used in WHERE and HAVING operations.
@@ -206,16 +210,16 @@ public:
       *  otherwise (i.e. < 0), makes reserve() using size of source column.
       */
     using Filter = PaddedPODArray<UInt8>;
-    virtual Ptr filter(const Filter & filt, ssize_t result_size_hint) const = 0;
+    virtual Ptr filter(const Filter& filt, ssize_t result_size_hint) const = 0;
 
     /// Permutes elements using specified permutation. Is used in sortings.
     /// limit - if it isn't 0, puts only first limit elements in the result.
     using Permutation = PaddedPODArray<size_t>;
-    virtual Ptr permute(const Permutation & perm, size_t limit) const = 0;
+    virtual Ptr permute(const Permutation& perm, size_t limit) const = 0;
 
     /// Creates new column with values column[indexes[:limit]]. If limit is 0, all indexes are used.
     /// Indexes must be one of the ColumnUInt. For default implementation, see selectIndexImpl from ColumnsCommon.h
-//    virtual Ptr index(const IColumn & indexes, size_t limit) const = 0;
+    //    virtual Ptr index(const IColumn & indexes, size_t limit) const = 0;
 
     /** Compares (*this)[n] and rhs[m]. Column rhs should have the same type.
       * Returns negative number, 0, or positive number (*this)[n] is less, equal, greater than rhs[m] respectively.
@@ -228,7 +232,7 @@ public:
       *
       * For non Nullable and non floating point types, nan_direction_hint is ignored.
       */
-    virtual int compareAt(size_t n, size_t m, const IColumn & rhs, int nan_direction_hint) const = 0;
+    virtual int compareAt(size_t n, size_t m, const IColumn& rhs, int nan_direction_hint) const = 0;
 
     /** Returns a permutation that sorts elements of this column,
       *  i.e. perm[i]-th element of source column should be i-th element of sorted column.
@@ -236,7 +240,7 @@ public:
       * limit - if isn't 0, then only first limit elements of the result column could be sorted.
       * nan_direction_hint - see above.
       */
-//    virtual void getPermutation(bool reverse, size_t limit, int nan_direction_hint, Permutation & res) const = 0;
+    //    virtual void getPermutation(bool reverse, size_t limit, int nan_direction_hint, Permutation & res) const = 0;
 
     /** Copies each element according offsets parameter.
       * (i-th element should be copied offsets[i] - offsets[i - 1] times.)
@@ -244,7 +248,7 @@ public:
       */
     using Offset = UInt64;
     using Offsets = PaddedPODArray<Offset>;
-    virtual Ptr replicate(const Offsets & offsets) const = 0;
+    virtual Ptr replicate(const Offsets& offsets) const = 0;
 
     /** Split column to smaller columns. Each value goes to column index, selected by corresponding element of 'selector'.
       * Selector must contain values from 0 to num_columns - 1.
@@ -252,13 +256,14 @@ public:
       */
     using ColumnIndex = UInt64;
     using Selector = PaddedPODArray<ColumnIndex>;
-    virtual std::vector<MutablePtr> scatter(ColumnIndex num_columns, const Selector & selector) const = 0;
+    virtual std::vector<MutablePtr> scatter(ColumnIndex num_columns,
+                                            const Selector& selector) const = 0;
 
     /// Insert data from several other columns according to source mask (used in vertical merge).
     /// For now it is a helper to de-virtualize calls to insert*() functions inside gather loop
     /// (descendants should call gatherer_stream.gather(*this) to implement this function.)
     /// TODO: interface decoupled from ColumnGathererStream that allows non-generic specializations.
-//    virtual void gather(ColumnGathererStream & gatherer_stream) = 0;
+    //    virtual void gather(ColumnGathererStream & gatherer_stream) = 0;
 
     /** Computes minimum and maximum element of the column.
       * In addition to numeric types, the function is completely implemented for Date and DateTime.
@@ -266,7 +271,7 @@ public:
       *  (except for constant columns; they should return value of the constant).
       * If column is empty function should return default value.
       */
-    virtual void getExtremes(Field & min, Field & max) const = 0;
+    virtual void getExtremes(Field& min, Field& max) const = 0;
 
     /// Reserves memory for specified amount of elements. If reservation isn't possible, does nothing.
     /// It affects performance only (not correctness).
@@ -291,20 +296,17 @@ public:
 
     /// Columns have equal structure.
     /// If true - you can use "compareAt", "insertFrom", etc. methods.
-    virtual bool structureEquals(const IColumn &) const
-    {
+    virtual bool structureEquals(const IColumn&) const {
         throw std::exception();
         // throw Exception("Method structureEquals is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
     }
 
-
-    MutablePtr mutate() const &&
-    {
+    MutablePtr mutate() const&& {
         MutablePtr res = shallowMutate();
-        res->forEachSubcolumn([](WrappedPtr & subcolumn) { subcolumn = std::move(*subcolumn).mutate(); });
+        res->forEachSubcolumn(
+                [](WrappedPtr& subcolumn) { subcolumn = std::move(*subcolumn).mutate(); });
         return res;
     }
-
 
     /** Some columns can contain another columns inside.
       * So, we have a tree of columns. But not all combinations are possible.
@@ -346,12 +348,14 @@ public:
     virtual bool isFixedAndContiguous() const { return false; }
 
     /// If isFixedAndContiguous, returns the underlying data array, otherwise throws an exception.
-    virtual StringRef getRawData() const { // throw Exception("Column " + getName() + " is not a contiguous block of memory", ErrorCodes::NOT_IMPLEMENTED);
+    virtual StringRef getRawData()
+            const { // throw Exception("Column " + getName() + " is not a contiguous block of memory", ErrorCodes::NOT_IMPLEMENTED);
         throw std::exception();
     }
 
     /// If valuesHaveFixedSize, returns size of value, otherwise throw an exception.
-    virtual size_t sizeOfValueIfFixed() const { // throw Exception("Values of column " + getName() + " are not fixed size.", ErrorCodes::CANNOT_GET_SIZE_OF_FIELD);
+    virtual size_t sizeOfValueIfFixed()
+            const { // throw Exception("Values of column " + getName() + " are not fixed size.", ErrorCodes::CANNOT_GET_SIZE_OF_FIELD);
         throw std::exception();
     }
 
@@ -368,21 +372,19 @@ public:
 
     virtual bool lowCardinality() const { return false; }
 
-
     virtual ~IColumn() = default;
     IColumn() = default;
-    IColumn(const IColumn &) = default;
+    IColumn(const IColumn&) = default;
 
     /** Print column name, size, and recursively print all subcolumns.
       */
     String dumpStructure() const;
 
 protected:
-
     /// Template is to devirtualize calls to insertFrom method.
     /// In derived classes (that use final keyword), implement scatter method as call to scatterImpl.
     template <typename Derived>
-    std::vector<MutablePtr> scatterImpl(ColumnIndex num_columns, const Selector & selector) const;
+    std::vector<MutablePtr> scatterImpl(ColumnIndex num_columns, const Selector& selector) const;
 };
 
 using ColumnPtr = IColumn::Ptr;
@@ -390,50 +392,47 @@ using MutableColumnPtr = IColumn::MutablePtr;
 using Columns = std::vector<ColumnPtr>;
 using MutableColumns = std::vector<MutableColumnPtr>;
 
-using ColumnRawPtrs = std::vector<const IColumn *>;
+using ColumnRawPtrs = std::vector<const IColumn*>;
 //using MutableColumnRawPtrs = std::vector<IColumn *>;
 
-template <typename ... Args>
+template <typename... Args>
 struct IsMutableColumns;
 
-template <typename Arg, typename ... Args>
-struct IsMutableColumns<Arg, Args ...>
-{
-    static const bool value = std::is_assignable<MutableColumnPtr &&, Arg>::value && IsMutableColumns<Args ...>::value;
+template <typename Arg, typename... Args>
+struct IsMutableColumns<Arg, Args...> {
+    static const bool value =
+            std::is_assignable<MutableColumnPtr&&, Arg>::value && IsMutableColumns<Args...>::value;
 };
 
 template <>
-struct IsMutableColumns<> { static const bool value = true; };
-
+struct IsMutableColumns<> {
+    static const bool value = true;
+};
 
 template <typename Type>
-const Type * checkAndGetColumn(const IColumn & column)
-{
-    return typeid_cast<const Type *>(&column);
+const Type* checkAndGetColumn(const IColumn& column) {
+    return typeid_cast<const Type*>(&column);
 }
 
 template <typename Type>
-const Type * checkAndGetColumn(const IColumn * column)
-{
-    return typeid_cast<const Type *>(column);
+const Type* checkAndGetColumn(const IColumn* column) {
+    return typeid_cast<const Type*>(column);
 }
 
 template <typename Type>
-bool checkColumn(const IColumn & column)
-{
+bool checkColumn(const IColumn& column) {
     return checkAndGetColumn<Type>(&column);
 }
 
 template <typename Type>
-bool checkColumn(const IColumn * column)
-{
+bool checkColumn(const IColumn* column) {
     return checkAndGetColumn<Type>(column);
 }
 
 /// True if column's an ColumnConst instance. It's just a syntax sugar for type check.
-bool isColumnConst(const IColumn & column);
+bool isColumnConst(const IColumn& column);
 
 /// True if column's an ColumnNullable instance. It's just a syntax sugar for type check.
-bool isColumnNullable(const IColumn & column);
+bool isColumnNullable(const IColumn& column);
 
-}
+} // namespace doris::vectorized
