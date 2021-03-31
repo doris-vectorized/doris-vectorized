@@ -28,9 +28,9 @@
 #include "runtime/primitive_type.h"
 #include "thrift/protocol/TDebugProtocol.h"
 
-#include "vec/DataTypes/DataTypesNumber.h"
-#include "vec/DataTypes/DataTypeString.h"
-#include "vec/DataTypes/DataTypesDecimal.h"
+#include "vec/data_types/data_types_number.h"
+#include "vec/data_types/data_type_string.h"
+#include "vec/data_types/data_types_decimal.h"
 
 namespace doris {
 

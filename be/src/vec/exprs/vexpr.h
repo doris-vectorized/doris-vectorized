@@ -6,7 +6,7 @@
 #include "gen_cpp/Exprs_types.h"
 #include "runtime/types.h"
 #include "vec/exprs/vexpr_context.h"
-#include "vec/DataTypes/IDataType.h"
+#include "vec/data_types/data_type.h"
 
 namespace DB {
 

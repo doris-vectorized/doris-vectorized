@@ -6,8 +6,8 @@
 #include <Poco/Logger.h>
 #include <Poco/Message.h>
 #include <Poco/Version.h>
-#include <vec/Core/SettingsCommon.h>
-#include <vec/Common/CurrentThread.h>
+#include "vec/core/settings_common.h"
+#include "vec/common/current_thread.h"
 
 #ifndef QUERY_PREVIEW_LENGTH
 #define QUERY_PREVIEW_LENGTH 160
