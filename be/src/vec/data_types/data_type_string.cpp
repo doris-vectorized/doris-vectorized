@@ -1,12 +1,26 @@
-#include "vec/core/defines.h"
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 
+#include "vec/columns/column_const.h"
 #include "vec/columns/column_string.h"
 #include "vec/columns/columns_number.h"
-#include "vec/columns/column_const.h"
-
-#include "vec/common/typeid_cast.h"
 #include "vec/common/assert_cast.h"
-
+#include "vec/common/typeid_cast.h"
+#include "vec/core/defines.h"
 #include "vec/core/field.h"
 
 //#include <Formats/FormatSettings.h>
@@ -20,12 +34,10 @@
 //#include <IO/VarInt.h>
 
 #ifdef __SSE2__
-    #include <emmintrin.h>
+#include <emmintrin.h>
 #endif
 
-
-namespace DB
-{
+namespace doris::vectorized {
 
 //void DataTypeString::serializeBinary(const Field & field, WriteBuffer & ostr) const
 //{
@@ -223,29 +235,23 @@ namespace DB
 //    writeEscapedString(assert_cast<const ColumnString &>(column).getDataAt(row_num), ostr);
 //}
 
-
 template <typename Reader>
-static inline void read(IColumn & column, Reader && reader)
-{
-    ColumnString & column_string = assert_cast<ColumnString &>(column);
-    ColumnString::Chars & data = column_string.getChars();
-    ColumnString::Offsets & offsets = column_string.getOffsets();
+static inline void read(IColumn& column, Reader&& reader) {
+    ColumnString& column_string = assert_cast<ColumnString&>(column);
+    ColumnString::Chars& data = column_string.getChars();
+    ColumnString::Offsets& offsets = column_string.getOffsets();
     size_t old_chars_size = data.size();
     size_t old_offsets_size = offsets.size();
-    try
-    {
+    try {
         reader(data);
         data.push_back(0);
         offsets.push_back(data.size());
-    }
-    catch (...)
-    {
+    } catch (...) {
         offsets.resize_assume_reserved(old_offsets_size);
         data.resize_assume_reserved(old_chars_size);
         throw;
     }
 }
-
 
 //void DataTypeString::deserializeWholeText(IColumn & column, ReadBuffer & istr, const FormatSettings &) const
 //{
@@ -350,22 +356,17 @@ static inline void read(IColumn & column, Reader && reader)
 //    }
 //}
 
-Field DataTypeString::getDefault() const
-{
+Field DataTypeString::getDefault() const {
     return String();
 }
 
-MutableColumnPtr DataTypeString::createColumn() const
-{
+MutableColumnPtr DataTypeString::createColumn() const {
     return ColumnString::create();
 }
 
-
-bool DataTypeString::equals(const IDataType & rhs) const
-{
+bool DataTypeString::equals(const IDataType& rhs) const {
     return typeid(rhs) == typeid(*this);
 }
-
 
 //void registerDataTypeString(DataTypeFactory & factory)
 //{
@@ -387,4 +388,4 @@ bool DataTypeString::equals(const IDataType & rhs) const
 //    factory.registerAlias("LONGBLOB", "String", DataTypeFactory::CaseInsensitive);
 //}
 
-}
+} // namespace doris::vectorized

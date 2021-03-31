@@ -1,3 +1,20 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
 #include <boost/exception/all.hpp>
@@ -211,7 +228,7 @@ POCO_DECLARE_EXCEPTION("Foundation_API", BadCastException, RuntimeException)
 
 } // namespace Poco
 
-namespace DB {
+namespace doris::vectorized {
 
 namespace ErrorCodes {
 extern const int POCO_EXCEPTION;
@@ -233,7 +250,7 @@ public:
 
     Exception* clone() const override { return new Exception(*this); }
     void rethrow() const override { throw *this; }
-    const char* name() const throw() override { return "DB::Exception"; }
+    const char* name() const throw() override { return "doris::vectorized::Exception"; }
     const char* what() const throw() override { return message().data(); }
 
     /// Add something to the existing message.
@@ -246,7 +263,7 @@ private:
     //StackTrace trace;
     stacktrace trace;
 
-    const char* className() const throw() override { return "DB::Exception"; }
+    const char* className() const throw() override { return "doris::vectorized::Exception"; }
 };
 
 /// Contains an additional member `saved_errno`. See the throwFromErrno function.
@@ -266,8 +283,8 @@ private:
     int saved_errno;
     std::optional<std::string> path;
 
-    const char* name() const throw() override { return "DB::ErrnoException"; }
-    const char* className() const throw() override { return "DB::ErrnoException"; }
+    const char* name() const throw() override { return "doris::vectorized::ErrnoException"; }
+    const char* className() const throw() override { return "doris::vectorized::ErrnoException"; }
 };
 
 using Exceptions = std::vector<std::exception_ptr>;
@@ -284,8 +301,8 @@ void tryLogCurrentException(const char* log_name, const std::string& start_of_me
 // void tryLogCurrentException(Poco::Logger* logger, const std::string& start_of_message = "");
 
 /** Prints current exception in canonical format.
-  * with_stacktrace - prints stack trace for DB::Exception.
-  * check_embedded_stacktrace - if DB::Exception has embedded stacktrace then
+  * with_stacktrace - prints stack trace for doris::vectorized::Exception.
+  * check_embedded_stacktrace - if doris::vectorized::Exception has embedded stacktrace then
   *  only this stack trace will be printed.
   */
 std::string getCurrentExceptionMessage(bool with_stacktrace, bool check_embedded_stacktrace = false,
@@ -334,4 +351,4 @@ std::enable_if_t<std::is_pointer_v<T>, T> exception_cast(std::exception_ptr e) {
     }
 }
 
-} // namespace DB
+} // namespace doris::vectorized

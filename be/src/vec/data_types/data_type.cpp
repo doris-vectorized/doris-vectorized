@@ -1,6 +1,22 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/columns/column.h"
 #include "vec/columns/column_const.h"
-
 #include "vec/common/exception.h"
 // #include <vec/Common/escapeForFileName.h>
 
@@ -12,41 +28,30 @@
 // #include <vec/DataTypes/DataTypeCustom.h>
 #include "vec/data_types/nested_utils.h"
 
+namespace doris::vectorized {
 
-namespace DB
-{
+namespace ErrorCodes {
+extern const int MULTIPLE_STREAMS_REQUIRED;
+extern const int LOGICAL_ERROR;
+extern const int DATA_TYPE_CANNOT_BE_PROMOTED;
+} // namespace ErrorCodes
 
-namespace ErrorCodes
-{
-    extern const int MULTIPLE_STREAMS_REQUIRED;
-    extern const int LOGICAL_ERROR;
-    extern const int DATA_TYPE_CANNOT_BE_PROMOTED;
-}
+IDataType::IDataType() {}
 
-IDataType::IDataType()
-{
-}
+IDataType::~IDataType() {}
 
-IDataType::~IDataType()
-{
-}
-
-String IDataType::getName() const
-{
+String IDataType::getName() const {
     return doGetName();
 }
 
-String IDataType::doGetName() const
-{
+String IDataType::doGetName() const {
     return getFamilyName();
 }
 
-void IDataType::updateAvgValueSizeHint(const IColumn & column, double & avg_value_size_hint)
-{
+void IDataType::updateAvgValueSizeHint(const IColumn& column, double& avg_value_size_hint) {
     /// Update the average value size hint if amount of read rows isn't too small
     size_t column_size = column.size();
-    if (column_size > 10)
-    {
+    if (column_size > 10) {
         double current_avg_value_size = static_cast<double>(column.byteSize()) / column_size;
 
         /// Heuristic is chosen so that avg_value_size_hint increases rapidly but decreases slowly.
@@ -57,22 +62,19 @@ void IDataType::updateAvgValueSizeHint(const IColumn & column, double & avg_valu
     }
 }
 
-ColumnPtr IDataType::createColumnConst(size_t size, const Field & field) const
-{
+ColumnPtr IDataType::createColumnConst(size_t size, const Field& field) const {
     auto column = createColumn();
     column->insert(field);
     return ColumnConst::create(std::move(column), size);
 }
 
-
-ColumnPtr IDataType::createColumnConstWithDefaultValue(size_t size) const
-{
+ColumnPtr IDataType::createColumnConstWithDefaultValue(size_t size) const {
     return createColumnConst(size, getDefault());
 }
 
-DataTypePtr IDataType::promoteNumericType() const
-{
-    throw Exception("Data type " + getName() + " can't be promoted.", ErrorCodes::DATA_TYPE_CANNOT_BE_PROMOTED);
+DataTypePtr IDataType::promoteNumericType() const {
+    throw Exception("Data type " + getName() + " can't be promoted.",
+                    ErrorCodes::DATA_TYPE_CANNOT_BE_PROMOTED);
 }
 
 // void IDataType::serializeBinaryBulk(const IColumn &, WriteBuffer &, size_t, size_t) const
@@ -85,11 +87,10 @@ DataTypePtr IDataType::promoteNumericType() const
 //     throw Exception("Data type " + getName() + " must be deserialized with multiple streams", ErrorCodes::MULTIPLE_STREAMS_REQUIRED);
 // }
 
-size_t IDataType::getSizeOfValueInMemory() const
-{
-    throw Exception("Value of type " + getName() + " in memory is not of fixed size.", ErrorCodes::LOGICAL_ERROR);
+size_t IDataType::getSizeOfValueInMemory() const {
+    throw Exception("Value of type " + getName() + " in memory is not of fixed size.",
+                    ErrorCodes::LOGICAL_ERROR);
 }
-
 
 // String IDataType::getFileNameForStream(const String & column_name, const IDataType::SubstreamPath & path)
 // {
@@ -126,9 +127,7 @@ size_t IDataType::getSizeOfValueInMemory() const
 //     return stream_name;
 // }
 
-
-void IDataType::insertDefaultInto(IColumn & column) const
-{
+void IDataType::insertDefaultInto(IColumn& column) const {
     column.insertDefault();
 }
 /*
@@ -230,4 +229,4 @@ void IDataType::setCustomization(DataTypeCustomDescPtr custom_desc_) const
         custom_text_serialization = std::move(custom_desc_->text_serialization);
 }*/
 
-}
+} // namespace doris::vectorized

@@ -1,26 +1,37 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
-#include <cstdint>
 #include <algorithm>
+#include <cstdint>
 
 #include "vec/core/defines.h"
 
-
-namespace detail
-{
+namespace detail {
 
 template <typename T>
-inline int cmp(T a, T b)
-{
-    if (a < b)
-        return -1;
-    if (a > b)
-        return 1;
+inline int cmp(T a, T b) {
+    if (a < b) return -1;
+    if (a > b) return 1;
     return 0;
 }
 
-}
-
+} // namespace detail
 
 /// We can process uninitialized memory in the functions below.
 /// Results don't depend on the values inside uninitialized memory but Memory Sanitizer cannot see it.
@@ -28,7 +39,6 @@ inline int cmp(T a, T b)
 
 #if defined(__SSE2__) && !defined(MEMORY_SANITIZER)
 #include <emmintrin.h>
-
 
 /** All functions works under the following assumptions:
   * - it's possible to read up to 15 excessive bytes after end of 'a' and 'b' region;
@@ -38,23 +48,19 @@ inline int cmp(T a, T b)
 /** Variant when memory regions may have different sizes.
   */
 template <typename Char>
-inline int memcmpSmallAllowOverflow15(const Char * a, size_t a_size, const Char * b, size_t b_size)
-{
+inline int memcmpSmallAllowOverflow15(const Char* a, size_t a_size, const Char* b, size_t b_size) {
     size_t min_size = std::min(a_size, b_size);
 
-    for (size_t offset = 0; offset < min_size; offset += 16)
-    {
-        uint16_t mask = _mm_movemask_epi8(_mm_cmpeq_epi8(
-            _mm_loadu_si128(reinterpret_cast<const __m128i *>(a + offset)),
-            _mm_loadu_si128(reinterpret_cast<const __m128i *>(b + offset))));
+    for (size_t offset = 0; offset < min_size; offset += 16) {
+        uint16_t mask = _mm_movemask_epi8(
+                _mm_cmpeq_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(a + offset)),
+                               _mm_loadu_si128(reinterpret_cast<const __m128i*>(b + offset))));
         mask = ~mask;
 
-        if (mask)
-        {
+        if (mask) {
             offset += __builtin_ctz(mask);
 
-            if (offset >= min_size)
-                break;
+            if (offset >= min_size) break;
 
             return detail::cmp(a[offset], b[offset]);
         }
@@ -63,26 +69,21 @@ inline int memcmpSmallAllowOverflow15(const Char * a, size_t a_size, const Char 
     return detail::cmp(a_size, b_size);
 }
 
-
 /** Variant when memory regions have same size.
   * TODO Check if the compiler can optimize previous function when the caller pass identical sizes.
   */
 template <typename Char>
-inline int memcmpSmallAllowOverflow15(const Char * a, const Char * b, size_t size)
-{
-    for (size_t offset = 0; offset < size; offset += 16)
-    {
-        uint16_t mask = _mm_movemask_epi8(_mm_cmpeq_epi8(
-            _mm_loadu_si128(reinterpret_cast<const __m128i *>(a + offset)),
-            _mm_loadu_si128(reinterpret_cast<const __m128i *>(b + offset))));
+inline int memcmpSmallAllowOverflow15(const Char* a, const Char* b, size_t size) {
+    for (size_t offset = 0; offset < size; offset += 16) {
+        uint16_t mask = _mm_movemask_epi8(
+                _mm_cmpeq_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(a + offset)),
+                               _mm_loadu_si128(reinterpret_cast<const __m128i*>(b + offset))));
         mask = ~mask;
 
-        if (mask)
-        {
+        if (mask) {
             offset += __builtin_ctz(mask);
 
-            if (offset >= size)
-                return 0;
+            if (offset >= size) return 0;
 
             return detail::cmp(a[offset], b[offset]);
         }
@@ -91,24 +92,20 @@ inline int memcmpSmallAllowOverflow15(const Char * a, const Char * b, size_t siz
     return 0;
 }
 
-
 /** Compare memory regions for equality.
   */
 template <typename Char>
-inline bool memequalSmallAllowOverflow15(const Char * a, size_t a_size, const Char * b, size_t b_size)
-{
-    if (a_size != b_size)
-        return false;
+inline bool memequalSmallAllowOverflow15(const Char* a, size_t a_size, const Char* b,
+                                         size_t b_size) {
+    if (a_size != b_size) return false;
 
-    for (size_t offset = 0; offset < a_size; offset += 16)
-    {
-        uint16_t mask = _mm_movemask_epi8(_mm_cmpeq_epi8(
-            _mm_loadu_si128(reinterpret_cast<const __m128i *>(a + offset)),
-            _mm_loadu_si128(reinterpret_cast<const __m128i *>(b + offset))));
+    for (size_t offset = 0; offset < a_size; offset += 16) {
+        uint16_t mask = _mm_movemask_epi8(
+                _mm_cmpeq_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(a + offset)),
+                               _mm_loadu_si128(reinterpret_cast<const __m128i*>(b + offset))));
         mask = ~mask;
 
-        if (mask)
-        {
+        if (mask) {
             offset += __builtin_ctz(mask);
             return offset >= a_size;
         }
@@ -117,21 +114,17 @@ inline bool memequalSmallAllowOverflow15(const Char * a, size_t a_size, const Ch
     return true;
 }
 
-
 /** Variant when the caller know in advance that the size is a multiple of 16.
   */
 template <typename Char>
-inline int memcmpSmallMultipleOf16(const Char * a, const Char * b, size_t size)
-{
-    for (size_t offset = 0; offset < size; offset += 16)
-    {
-        uint16_t mask = _mm_movemask_epi8(_mm_cmpeq_epi8(
-            _mm_loadu_si128(reinterpret_cast<const __m128i *>(a + offset)),
-            _mm_loadu_si128(reinterpret_cast<const __m128i *>(b + offset))));
+inline int memcmpSmallMultipleOf16(const Char* a, const Char* b, size_t size) {
+    for (size_t offset = 0; offset < size; offset += 16) {
+        uint16_t mask = _mm_movemask_epi8(
+                _mm_cmpeq_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(a + offset)),
+                               _mm_loadu_si128(reinterpret_cast<const __m128i*>(b + offset))));
         mask = ~mask;
 
-        if (mask)
-        {
+        if (mask) {
             offset += __builtin_ctz(mask);
             return detail::cmp(a[offset], b[offset]);
         }
@@ -140,19 +133,16 @@ inline int memcmpSmallMultipleOf16(const Char * a, const Char * b, size_t size)
     return 0;
 }
 
-
 /** Variant when the size is 16 exactly.
   */
 template <typename Char>
-inline int memcmp16(const Char * a, const Char * b)
-{
-    uint16_t mask = _mm_movemask_epi8(_mm_cmpeq_epi8(
-        _mm_loadu_si128(reinterpret_cast<const __m128i *>(a)),
-        _mm_loadu_si128(reinterpret_cast<const __m128i *>(b))));
+inline int memcmp16(const Char* a, const Char* b) {
+    uint16_t mask =
+            _mm_movemask_epi8(_mm_cmpeq_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(a)),
+                                             _mm_loadu_si128(reinterpret_cast<const __m128i*>(b))));
     mask = ~mask;
 
-    if (mask)
-    {
+    if (mask) {
         auto offset = __builtin_ctz(mask);
         return detail::cmp(a[offset], b[offset]);
     }
@@ -160,30 +150,25 @@ inline int memcmp16(const Char * a, const Char * b)
     return 0;
 }
 
-
 /** Variant when the size is 16 exactly.
   */
-inline bool memequal16(const void * a, const void * b)
-{
-    return 0xFFFF == _mm_movemask_epi8(_mm_cmpeq_epi8(
-        _mm_loadu_si128(reinterpret_cast<const __m128i *>(a)),
-        _mm_loadu_si128(reinterpret_cast<const __m128i *>(b))));
+inline bool memequal16(const void* a, const void* b) {
+    return 0xFFFF ==
+           _mm_movemask_epi8(_mm_cmpeq_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(a)),
+                                            _mm_loadu_si128(reinterpret_cast<const __m128i*>(b))));
 }
 
-
 /** Compare memory region to zero */
-inline bool memoryIsZeroSmallAllowOverflow15(const void * data, size_t size)
-{
+inline bool memoryIsZeroSmallAllowOverflow15(const void* data, size_t size) {
     const __m128i zero16 = _mm_setzero_si128();
 
-    for (size_t offset = 0; offset < size; offset += 16)
-    {
-        uint16_t mask = _mm_movemask_epi8(_mm_cmpeq_epi8(zero16,
-            _mm_loadu_si128(reinterpret_cast<const __m128i *>(reinterpret_cast<const char *>(data) + offset))));
+    for (size_t offset = 0; offset < size; offset += 16) {
+        uint16_t mask = _mm_movemask_epi8(
+                _mm_cmpeq_epi8(zero16, _mm_loadu_si128(reinterpret_cast<const __m128i*>(
+                                               reinterpret_cast<const char*>(data) + offset))));
         mask = ~mask;
 
-        if (mask)
-        {
+        if (mask) {
             offset += __builtin_ctz(mask);
             return offset >= size;
         }
@@ -192,14 +177,12 @@ inline bool memoryIsZeroSmallAllowOverflow15(const void * data, size_t size)
     return true;
 }
 
-
 #else
 
 #include <cstring>
 
 template <typename Char>
-inline int memcmpSmallAllowOverflow15(const Char * a, size_t a_size, const Char * b, size_t b_size)
-{
+inline int memcmpSmallAllowOverflow15(const Char* a, size_t a_size, const Char* b, size_t b_size) {
     if (auto res = memcmp(a, b, std::min(a_size, b_size)))
         return res;
     else
@@ -207,42 +190,36 @@ inline int memcmpSmallAllowOverflow15(const Char * a, size_t a_size, const Char 
 }
 
 template <typename Char>
-inline int memcmpSmallAllowOverflow15(const Char * a, const Char * b, size_t size)
-{
+inline int memcmpSmallAllowOverflow15(const Char* a, const Char* b, size_t size) {
     return memcmp(a, b, size);
 }
 
 template <typename Char>
-inline bool memequalSmallAllowOverflow15(const Char * a, size_t a_size, const Char * b, size_t b_size)
-{
+inline bool memequalSmallAllowOverflow15(const Char* a, size_t a_size, const Char* b,
+                                         size_t b_size) {
     return a_size == b_size && 0 == memcmp(a, b, a_size);
 }
 
 template <typename Char>
-inline int memcmpSmallMultipleOf16(const Char * a, const Char * b, size_t size)
-{
+inline int memcmpSmallMultipleOf16(const Char* a, const Char* b, size_t size) {
     return memcmp(a, b, size);
 }
 
 template <typename Char>
-inline int memcmp16(const Char * a, const Char * b)
-{
+inline int memcmp16(const Char* a, const Char* b) {
     return memcmp(a, b, 16);
 }
 
-inline bool memequal16(const void * a, const void * b)
-{
+inline bool memequal16(const void* a, const void* b) {
     return 0 == memcmp(a, b, 16);
 }
 
-inline bool memoryIsZeroSmallAllowOverflow15(const void * data, size_t size)
-{
-    const char * pos = reinterpret_cast<const char *>(data);
-    const char * end = pos + size;
+inline bool memoryIsZeroSmallAllowOverflow15(const void* data, size_t size) {
+    const char* pos = reinterpret_cast<const char*>(data);
+    const char* end = pos + size;
 
     for (; pos < end; ++pos)
-        if (*pos)
-            return false;
+        if (*pos) return false;
 
     return true;
 }
