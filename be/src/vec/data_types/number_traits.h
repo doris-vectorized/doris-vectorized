@@ -66,6 +66,10 @@ struct Construct<false, false, 8> {
     using Type = Int64;
 };
 template <>
+struct Construct<false, false, 16> {
+    using Type = Int128;
+};
+template <>
 struct Construct<false, true, 1> {
     using Type = Float32;
 };
@@ -96,6 +100,10 @@ struct Construct<true, false, 4> {
 template <>
 struct Construct<true, false, 8> {
     using Type = Int64;
+};
+template <>
+struct Construct<true, false, 16> {
+    using Type = Int128;
 };
 template <>
 struct Construct<true, true, 1> {
