@@ -17,6 +17,9 @@ doris::Status VectorizedFnCall::prepare(doris::RuntimeState* state,
     if (_function == nullptr) {
         return Status::InternalError(fmt::format("Function {} is not implemented", _fn.name.function_name));
     }
+    if (!_data_type->isNullable()) {
+        _data_type = std::make_shared<DataTypeNullable>(_data_type);
+    }
     return Status::OK();
 }
 doris::Status VectorizedFnCall::open(doris::RuntimeState* state, VExprContext* context) {
@@ -38,7 +41,7 @@ Status VectorizedFnCall::execute(DB::Block* block, int* result_column_id) {
     // call function
     size_t num_columns_without_result = block->columns();
     // todo spec column name
-    block->insert({ nullptr, std::make_shared<DataTypeNullable>(_data_type), fmt::format("{}()",_fn.name.function_name)});
+    block->insert({ nullptr, _data_type, fmt::format("{}()",_fn.name.function_name)});
     _function->execute(*block, arguments, num_columns_without_result, block->rows(), false);
     *result_column_id = num_columns_without_result;
     return Status::OK();

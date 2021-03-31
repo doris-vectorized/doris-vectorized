@@ -25,6 +25,7 @@ Status VSlotRef::prepare(doris::RuntimeState* state, const doris::RowDescriptor&
 }
 
 doris::Status VSlotRef::execute(DB::Block* block, int* result_column_id) {
+    DCHECK_GE(_column_id , 0);
     *result_column_id = _column_id;
     return Status::OK();
 }
