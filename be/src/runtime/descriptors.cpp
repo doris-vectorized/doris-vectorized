@@ -25,9 +25,9 @@
 #include "gen_cpp/Descriptors_types.h"
 #include "gen_cpp/descriptors.pb.h"
 
-#include "vec/Core/ColumnsWithTypeAndName.h"
-#include "vec/Columns/ColumnNullable.h"
-#include "vec/DataTypes/DataTypeNullable.h"
+#include "vec/core/columns_with_type_and_name.h"
+#include "vec/columns/column_nullable.h"
+#include "vec/data_types/data_type_nullable.h"
 
 namespace doris {
 using boost::algorithm::join;

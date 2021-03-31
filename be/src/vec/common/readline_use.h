@@ -1,7 +1,7 @@
 #pragma once
 
 #if __has_include(<vec/common/config_common.h>)
-#include <vec/common/config_common.h>
+#include "vec/common/config_common.h"
 #endif
 
 /// Different line editing libraries can be used depending on the environment.

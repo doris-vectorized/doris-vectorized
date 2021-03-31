@@ -29,9 +29,8 @@
 #include "gen_cpp/data.pb.h"
 #include "runtime/collection_value.h"
 
-#include <vec/Columns/ColumnVector.h>
-#include <vec/Core/Block.h>
-
+#include "vec/columns/column_vector.h"
+#include "vec/core/block.h"
 
 using std::vector;
 
