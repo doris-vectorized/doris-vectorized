@@ -275,35 +275,35 @@ struct TypeDescriptor {
         return -1;
     }
 
-    inline DB::DataTypePtr get_data_type_ptr() const {
+    inline doris::vectorized::DataTypePtr get_data_type_ptr() const {
         switch (type) {
         case TYPE_TINYINT:
-            return std::make_shared<DB::DataTypeInt8>();
+            return std::make_shared<vectorized::DataTypeInt8>();
 
         case TYPE_SMALLINT:
-            return std::make_shared<DB::DataTypeInt16>();
+            return std::make_shared<vectorized::DataTypeInt16>();
 
         case TYPE_INT:
-            return std::make_shared<DB::DataTypeInt32>();
+            return std::make_shared<vectorized::DataTypeInt32>();
 
         case TYPE_FLOAT:
-            return std::make_shared<DB::DataTypeFloat32>();
+            return std::make_shared<vectorized::DataTypeFloat32>();
 
         case TYPE_BIGINT:
-            return std::make_shared<DB::DataTypeInt64>();
+            return std::make_shared<vectorized::DataTypeInt64>();
 
         case TYPE_DOUBLE:
-            return std::make_shared<DB::DataTypeFloat64>();
+            return std::make_shared<vectorized::DataTypeFloat64>();
 
         case TYPE_CHAR:
         case TYPE_VARCHAR:
         case TYPE_HLL:
         case TYPE_OBJECT:
-            return std::make_shared<DB::DataTypeString>();
+            return std::make_shared<vectorized::DataTypeString>();
 
         case TYPE_DECIMALV2:
         case TYPE_DECIMAL:
-            return std::make_shared<DB::DataTypeDecimal<DB::Decimal128>>(27, 9);
+            return std::make_shared<vectorized::DataTypeDecimal<vectorized::Decimal128>>(27, 9);
 
         case INVALID_TYPE:
         default:

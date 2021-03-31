@@ -1,11 +1,28 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
-#include <string>
-#include <iomanip>
 #include <exception>
+#include <iomanip>
+#include <string>
+
 #include "vec/common/date_lut.h"
 #include "vec/common/local_date.h"
-
 
 /** Stores calendar date and time in broken-down form.
   * Could be initialized from date and time in text form like '2011-01-01 00:00:00' or from time_t.
@@ -15,8 +32,7 @@
   * When local time was shifted backwards (due to daylight saving time or whatever reason)
   *  - then to resolve the ambiguity of transforming to time_t, lowest of two possible values is selected.
   */
-class LocalDateTime
-{
+class LocalDateTime {
 private:
     unsigned short m_year;
     unsigned char m_month;
@@ -29,10 +45,8 @@ private:
     /// NOTE We may use attribute packed instead, but it is less portable.
     unsigned char pad = 0;
 
-    void init(time_t time)
-    {
-        if (UNLIKELY(time > DATE_LUT_MAX || time == 0))
-        {
+    void init(time_t time) {
+        if (UNLIKELY(time > DATE_LUT_MAX || time == 0)) {
             m_year = 0;
             m_month = 0;
             m_day = 0;
@@ -43,8 +57,8 @@ private:
             return;
         }
 
-        const auto & date_lut = DateLUT::instance();
-        const auto & values = date_lut.getValues(time);
+        const auto& date_lut = DateLUT::instance();
+        const auto& values = date_lut.getValues(time);
 
         m_year = values.year;
         m_month = values.month;
@@ -53,11 +67,10 @@ private:
         m_minute = date_lut.toMinute(time);
         m_second = date_lut.toSecond(time);
 
-        (void)pad;  /// Suppress unused private field warning.
+        (void)pad; /// Suppress unused private field warning.
     }
 
-    void init(const char * s, size_t length)
-    {
+    void init(const char* s, size_t length) {
         if (length < 19)
             throw std::runtime_error("Cannot parse LocalDateTime: " + std::string(s, length));
 
@@ -73,48 +86,39 @@ private:
     }
 
 public:
-    explicit LocalDateTime(time_t time)
-    {
-        init(time);
-    }
+    explicit LocalDateTime(time_t time) { init(time); }
 
     LocalDateTime(unsigned short year_, unsigned char month_, unsigned char day_,
-        unsigned char hour_, unsigned char minute_, unsigned char second_)
-        : m_year(year_), m_month(month_), m_day(day_), m_hour(hour_), m_minute(minute_), m_second(second_)
-    {
-    }
+                  unsigned char hour_, unsigned char minute_, unsigned char second_)
+            : m_year(year_),
+              m_month(month_),
+              m_day(day_),
+              m_hour(hour_),
+              m_minute(minute_),
+              m_second(second_) {}
 
-    explicit LocalDateTime(const std::string & s)
-    {
-        if (s.size() < 19)
-            throw std::runtime_error("Cannot parse LocalDateTime: " + s);
+    explicit LocalDateTime(const std::string& s) {
+        if (s.size() < 19) throw std::runtime_error("Cannot parse LocalDateTime: " + s);
 
         init(s.data(), s.size());
     }
 
-    LocalDateTime() : m_year(0), m_month(0), m_day(0), m_hour(0), m_minute(0), m_second(0)
-    {
-    }
+    LocalDateTime() : m_year(0), m_month(0), m_day(0), m_hour(0), m_minute(0), m_second(0) {}
 
-    LocalDateTime(const char * data, size_t length)
-    {
-        init(data, length);
-    }
+    LocalDateTime(const char* data, size_t length) { init(data, length); }
 
-    LocalDateTime(const LocalDateTime &) noexcept = default;
-    LocalDateTime & operator= (const LocalDateTime &) noexcept = default;
+    LocalDateTime(const LocalDateTime&) noexcept = default;
+    LocalDateTime& operator=(const LocalDateTime&) noexcept = default;
 
-    LocalDateTime & operator= (time_t time)
-    {
+    LocalDateTime& operator=(time_t time) {
         init(time);
         return *this;
     }
 
-    operator time_t() const
-    {
-        return m_year == 0
-            ? 0
-            : DateLUT::instance().makeDateTime(m_year, m_month, m_day, m_hour, m_minute, m_second);
+    operator time_t() const {
+        return m_year == 0 ? 0
+                           : DateLUT::instance().makeDateTime(m_year, m_month, m_day, m_hour,
+                                                              m_minute, m_second);
     }
 
     unsigned short year() const { return m_year; }
@@ -135,60 +139,46 @@ public:
 
     LocalDateTime toStartOfDate() { return LocalDateTime(m_year, m_month, m_day, 0, 0, 0); }
 
-    bool operator< (const LocalDateTime & other) const
-    {
+    bool operator<(const LocalDateTime& other) const {
         return 0 > memcmp(this, &other, sizeof(*this));
     }
 
-    bool operator> (const LocalDateTime & other) const
-    {
+    bool operator>(const LocalDateTime& other) const {
         return 0 < memcmp(this, &other, sizeof(*this));
     }
 
-    bool operator<= (const LocalDateTime & other) const
-    {
+    bool operator<=(const LocalDateTime& other) const {
         return 0 >= memcmp(this, &other, sizeof(*this));
     }
 
-    bool operator>= (const LocalDateTime & other) const
-    {
+    bool operator>=(const LocalDateTime& other) const {
         return 0 <= memcmp(this, &other, sizeof(*this));
     }
 
-    bool operator== (const LocalDateTime & other) const
-    {
+    bool operator==(const LocalDateTime& other) const {
         return 0 == memcmp(this, &other, sizeof(*this));
     }
 
-    bool operator!= (const LocalDateTime & other) const
-    {
-        return !(*this == other);
-    }
+    bool operator!=(const LocalDateTime& other) const { return !(*this == other); }
 };
 
 static_assert(sizeof(LocalDateTime) == 8);
 
-
-inline std::ostream & operator<< (std::ostream & ostr, const LocalDateTime & datetime)
-{
+inline std::ostream& operator<<(std::ostream& ostr, const LocalDateTime& datetime) {
     ostr << std::setfill('0') << std::setw(4) << datetime.year();
 
-    ostr << '-' << (datetime.month() / 10) << (datetime.month() % 10)
-        << '-' << (datetime.day() / 10) << (datetime.day() % 10)
-        << ' ' << (datetime.hour() / 10) << (datetime.hour() % 10)
-        << ':' << (datetime.minute() / 10) << (datetime.minute() % 10)
-        << ':' << (datetime.second() / 10) << (datetime.second() % 10);
+    ostr << '-' << (datetime.month() / 10) << (datetime.month() % 10) << '-'
+         << (datetime.day() / 10) << (datetime.day() % 10) << ' ' << (datetime.hour() / 10)
+         << (datetime.hour() % 10) << ':' << (datetime.minute() / 10) << (datetime.minute() % 10)
+         << ':' << (datetime.second() / 10) << (datetime.second() % 10);
 
     return ostr;
 }
 
-
-namespace std
-{
-inline string to_string(const LocalDateTime & datetime)
-{
+namespace std {
+inline string to_string(const LocalDateTime& datetime) {
     stringstream str;
     str << datetime;
     return str.str();
 }
-}
+} // namespace std

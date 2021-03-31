@@ -1,7 +1,25 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/common/exception.h"
 
-#include <string.h>
 #include <cxxabi.h>
+#include <string.h>
+
 #include <iostream>
 // #include <Poco/String.h>
 // #include <vec/common/logger_useful.h>
@@ -13,119 +31,80 @@
 // #include <vec/Common/formatReadable.h>
 // #include <vec/Common/DiskSpaceMonitor.h>
 #include <filesystem>
-
 #include <string>
 #include <typeinfo>
 
-
 namespace Poco {
 
+Exception::Exception(int code) : _pNested(0), _code(code) {}
 
-Exception::Exception(int code): _pNested(0), _code(code)
-{
+Exception::Exception(const std::string& msg, int code) : _msg(msg), _pNested(0), _code(code) {}
+
+Exception::Exception(const std::string& msg, const std::string& arg, int code)
+        : _msg(msg), _pNested(0), _code(code) {
+    if (!arg.empty()) {
+        _msg.append(": ");
+        _msg.append(arg);
+    }
 }
 
+Exception::Exception(const std::string& msg, const Exception& nested, int code)
+        : _msg(msg), _pNested(nested.clone()), _code(code) {}
 
-Exception::Exception(const std::string& msg, int code): _msg(msg), _pNested(0), _code(code)
-{
+Exception::Exception(const Exception& exc) : std::exception(exc), _msg(exc._msg), _code(exc._code) {
+    _pNested = exc._pNested ? exc._pNested->clone() : 0;
 }
 
-
-Exception::Exception(const std::string& msg, const std::string& arg, int code): _msg(msg), _pNested(0), _code(code)
-{
-	if (!arg.empty())
-	{
-		_msg.append(": ");
-		_msg.append(arg);
-	}
+Exception::~Exception() throw() {
+    delete _pNested;
 }
 
-
-Exception::Exception(const std::string& msg, const Exception& nested, int code): _msg(msg), _pNested(nested.clone()), _code(code)
-{
+Exception& Exception::operator=(const Exception& exc) {
+    if (&exc != this) {
+        Exception* newPNested = exc._pNested ? exc._pNested->clone() : 0;
+        delete _pNested;
+        _msg = exc._msg;
+        _pNested = newPNested;
+        _code = exc._code;
+    }
+    return *this;
 }
 
-
-Exception::Exception(const Exception& exc):
-	std::exception(exc),
-	_msg(exc._msg),
-	_code(exc._code)
-{
-	_pNested = exc._pNested ? exc._pNested->clone() : 0;
+const char* Exception::name() const throw() {
+    return "Exception";
 }
 
-	
-Exception::~Exception() throw()
-{
-	delete _pNested;
+const char* Exception::className() const throw() {
+    return typeid(*this).name();
 }
 
-
-Exception& Exception::operator = (const Exception& exc)
-{
-	if (&exc != this)
-	{
-		Exception* newPNested = exc._pNested ? exc._pNested->clone() : 0;
-		delete _pNested;
-		_msg     = exc._msg;
-		_pNested = newPNested;
-		_code    = exc._code;
-	}
-	return *this;
+const char* Exception::what() const throw() {
+    return name();
 }
 
-
-const char* Exception::name() const throw()
-{
-	return "Exception";
+std::string Exception::displayText() const {
+    std::string txt = name();
+    if (!_msg.empty()) {
+        txt.append(": ");
+        txt.append(_msg);
+    }
+    return txt;
 }
 
-
-const char* Exception::className() const throw()
-{
-	return typeid(*this).name();
+void Exception::extendedMessage(const std::string& arg) {
+    if (!arg.empty()) {
+        if (!_msg.empty()) _msg.append(": ");
+        _msg.append(arg);
+    }
 }
 
-	
-const char* Exception::what() const throw()
-{
-	return name();
+Exception* Exception::clone() const {
+    return new Exception(*this);
 }
 
-	
-std::string Exception::displayText() const
-{
-	std::string txt = name();
-	if (!_msg.empty())
-	{
-		txt.append(": ");
-		txt.append(_msg);
-	}
-	return txt;
+void Exception::rethrow() const {
+    throw *this;
 }
-
-
-void Exception::extendedMessage(const std::string& arg)
-{
-	if (!arg.empty())
-	{
-		if (!_msg.empty()) _msg.append(": ");
-		_msg.append(arg);
-	}
-}
-
-
-Exception* Exception::clone() const
-{
-	return new Exception(*this);
-}
-
-
-void Exception::rethrow() const
-{
-	throw *this;
-}
-
 
 POCO_IMPLEMENT_EXCEPTION(LogicException, Exception, "Logic exception")
 POCO_IMPLEMENT_EXCEPTION(AssertionViolationException, LogicException, "Assertion violation")
@@ -145,7 +124,8 @@ POCO_IMPLEMENT_EXCEPTION(NotFoundException, RuntimeException, "Not found")
 POCO_IMPLEMENT_EXCEPTION(ExistsException, RuntimeException, "Exists")
 POCO_IMPLEMENT_EXCEPTION(TimeoutException, RuntimeException, "Timeout")
 POCO_IMPLEMENT_EXCEPTION(SystemException, RuntimeException, "System exception")
-POCO_IMPLEMENT_EXCEPTION(RegularExpressionException, RuntimeException, "Error in regular expression")
+POCO_IMPLEMENT_EXCEPTION(RegularExpressionException, RuntimeException,
+                         "Error in regular expression")
 POCO_IMPLEMENT_EXCEPTION(LibraryLoadException, RuntimeException, "Cannot load library")
 POCO_IMPLEMENT_EXCEPTION(LibraryAlreadyLoadedException, RuntimeException, "Library already loaded")
 POCO_IMPLEMENT_EXCEPTION(NoThreadAvailableException, RuntimeException, "No thread available")
@@ -179,42 +159,36 @@ POCO_IMPLEMENT_EXCEPTION(URISyntaxException, SyntaxException, "Bad URI syntax")
 POCO_IMPLEMENT_EXCEPTION(ApplicationException, Exception, "Application exception")
 POCO_IMPLEMENT_EXCEPTION(BadCastException, RuntimeException, "Bad cast exception")
 
-
 } // namespace Poco
 
+namespace doris::vectorized {
 
-namespace DB
-{
-
-namespace ErrorCodes
-{
-    extern const int POCO_EXCEPTION;
-    extern const int STD_EXCEPTION;
-    extern const int UNKNOWN_EXCEPTION;
-    extern const int CANNOT_TRUNCATE_FILE;
-    extern const int NOT_IMPLEMENTED;
-}
+namespace ErrorCodes {
+extern const int POCO_EXCEPTION;
+extern const int STD_EXCEPTION;
+extern const int UNKNOWN_EXCEPTION;
+extern const int CANNOT_TRUNCATE_FILE;
+extern const int NOT_IMPLEMENTED;
+} // namespace ErrorCodes
 
 //TODO: use fmt
-std::string errnoToString(int code, int e)
-{
+std::string errnoToString(int code, int e) {
     const size_t buf_size = 128;
     char buf[buf_size];
-    return "errno: " + std::to_string(e) + ", strerror: " + std::string(strerror_r(e, buf, sizeof(buf)));
+    return "errno: " + std::to_string(e) +
+           ", strerror: " + std::string(strerror_r(e, buf, sizeof(buf)));
 }
 
-void throwFromErrno(const std::string & s, int code, int e)
-{
+void throwFromErrno(const std::string& s, int code, int e) {
     throw ErrnoException(s + ", " + errnoToString(code, e), code, e);
 }
 
-void throwFromErrnoWithPath(const std::string & s, const std::string & path, int code, int the_errno)
-{
+void throwFromErrnoWithPath(const std::string& s, const std::string& path, int code,
+                            int the_errno) {
     throw ErrnoException(s + ", " + errnoToString(code, the_errno), code, the_errno, path);
 }
 
-void tryLogCurrentException(const char * log_name, const std::string & start_of_message)
-{
+void tryLogCurrentException(const char* log_name, const std::string& start_of_message) {
     // tryLogCurrentException(&Logger::get(log_name), start_of_message);
     std::cout << "[TODO] should use glog here :" << start_of_message << std::endl;
 }
@@ -251,8 +225,7 @@ void tryLogCurrentException(const char * log_name, const std::string & start_of_
 // #endif
 // }
 
-std::string getExtraExceptionInfo(const std::exception & e)
-{
+std::string getExtraExceptionInfo(const std::exception& e) {
     std::string msg;
     // try
     // {
@@ -261,7 +234,7 @@ std::string getExtraExceptionInfo(const std::exception & e)
     //         if (file_exception->code() == ENOSPC)
     //             getNoSpaceLeftInfoMessage(file_exception->message(), msg);
     //     }
-    //     else if (auto errno_exception = dynamic_cast<const DB::ErrnoException *>(&e))
+    //     else if (auto errno_exception = dynamic_cast<const doris::vectorized::ErrnoException *>(&e))
     //     {
     //         if (errno_exception->getErrno() == ENOSPC && errno_exception->getPath())
     //             getNoSpaceLeftInfoMessage(errno_exception->getPath().value(), msg);
@@ -275,35 +248,30 @@ std::string getExtraExceptionInfo(const std::exception & e)
     return msg;
 }
 
-std::string getCurrentExceptionMessage(bool with_stacktrace, bool check_embedded_stacktrace /*= false*/, bool with_extra_info /*= true*/)
-{
+std::string getCurrentExceptionMessage(bool with_stacktrace,
+                                       bool check_embedded_stacktrace /*= false*/,
+                                       bool with_extra_info /*= true*/) {
     std::stringstream stream;
 
-    try
-    {
+    try {
         throw;
-    }
-    catch (const Exception & e)
-    {
+    } catch (const Exception& e) {
         stream << getExceptionMessage(e, with_stacktrace, check_embedded_stacktrace)
-               << (with_extra_info ? getExtraExceptionInfo(e) : "")
-               << " (version " << "VERSION_STRING" << "VERSION_OFFICIAL" << ")";
-    }
-    catch (const Poco::Exception & e)
-    {
-        try
-        {
-            stream << "Poco::Exception. Code: " << ErrorCodes::POCO_EXCEPTION << ", e.code() = " << e.code()
-                << ", e.displayText() = " << e.displayText()
-                << (with_extra_info ? getExtraExceptionInfo(e) : "")
-                << " (version " << "VERSION_STRING" << "VERSION_OFFICIAL";
+               << (with_extra_info ? getExtraExceptionInfo(e) : "") << " (version "
+               << "VERSION_STRING"
+               << "VERSION_OFFICIAL"
+               << ")";
+    } catch (const Poco::Exception& e) {
+        try {
+            stream << "Poco::Exception. Code: " << ErrorCodes::POCO_EXCEPTION
+                   << ", e.code() = " << e.code() << ", e.displayText() = " << e.displayText()
+                   << (with_extra_info ? getExtraExceptionInfo(e) : "") << " (version "
+                   << "VERSION_STRING"
+                   << "VERSION_OFFICIAL";
+        } catch (...) {
         }
-        catch (...) {}
-    }
-    catch (const std::exception & e)
-    {
-        try
-        {
+    } catch (const std::exception& e) {
+        try {
             // int status = 0;
             // auto name = demangle(typeid(e).name(), status);
 
@@ -313,13 +281,10 @@ std::string getCurrentExceptionMessage(bool with_stacktrace, bool check_embedded
             // stream << "std::exception. Code: " << ErrorCodes::STD_EXCEPTION << ", type: " << name << ", e.what() = " << e.what()
             //        << (with_extra_info ? getExtraExceptionInfo(e) : "")
             //        << ", version = " << "VERSION_STRING" << "VERSION_OFFICIAL";
+        } catch (...) {
         }
-        catch (...) {}
-    }
-    catch (...)
-    {
-        try
-        {
+    } catch (...) {
+        try {
             // int status = 0;
             // auto name = demangle(abi::__cxa_current_exception_type()->name(), status);
 
@@ -327,13 +292,12 @@ std::string getCurrentExceptionMessage(bool with_stacktrace, bool check_embedded
             //     name += " (demangling status: " + std::to_string(status) + ")";
 
             // stream << "Unknown exception. Code: " << ErrorCodes::UNKNOWN_EXCEPTION << ", type: " << name << " (version " << "VERSION_STRING" << "VERSION_OFFICIAL" << ")";
+        } catch (...) {
         }
-        catch (...) {}
     }
 
     return stream.str();
 }
-
 
 // int getCurrentExceptionCode()
 // {
@@ -359,14 +323,12 @@ std::string getCurrentExceptionMessage(bool with_stacktrace, bool check_embedded
 //     }
 // }
 
-
 // void rethrowFirstException(const Exceptions & exceptions)
 // {
 //     for (size_t i = 0, size = exceptions.size(); i < size; ++i)
 //         if (exceptions[i])
 //             std::rethrow_exception(exceptions[i]);
 // }
-
 
 // void tryLogException(std::exception_ptr e, const char * log_name, const std::string & start_of_message)
 // {
@@ -392,21 +354,18 @@ std::string getCurrentExceptionMessage(bool with_stacktrace, bool check_embedded
 //     }
 // }
 
-std::string getExceptionMessage(const Exception & e, bool with_stacktrace, bool check_embedded_stacktrace)
-{
+std::string getExceptionMessage(const Exception& e, bool with_stacktrace,
+                                bool check_embedded_stacktrace) {
     std::stringstream stream;
 
-    try
-    {
+    try {
         std::string text = e.displayText();
 
         bool has_embedded_stack_trace = false;
-        if (check_embedded_stacktrace)
-        {
+        if (check_embedded_stacktrace) {
             auto embedded_stack_trace_pos = text.find("Stack trace");
             has_embedded_stack_trace = embedded_stack_trace_pos != std::string::npos;
-            if (!with_stacktrace && has_embedded_stack_trace)
-            {
+            if (!with_stacktrace && has_embedded_stack_trace) {
                 text.resize(embedded_stack_trace_pos);
                 // Poco::trimRightInPlace(text);
             }
@@ -416,24 +375,19 @@ std::string getExceptionMessage(const Exception & e, bool with_stacktrace, bool 
 
         if (with_stacktrace && !has_embedded_stack_trace)
             stream << ", Stack trace:\n\n" << e.getStackTrace().value();
+    } catch (...) {
     }
-    catch (...) {}
 
     return stream.str();
 }
 
-std::string getExceptionMessage(std::exception_ptr e, bool with_stacktrace)
-{
-    try
-    {
+std::string getExceptionMessage(std::exception_ptr e, bool with_stacktrace) {
+    try {
         std::rethrow_exception(std::move(e));
-    }
-    catch (...)
-    {
+    } catch (...) {
         return getCurrentExceptionMessage(with_stacktrace);
     }
 }
-
 
 // std::string ExecutionStatus::serializeText() const
 // {
@@ -468,5 +422,4 @@ std::string getExceptionMessage(std::exception_ptr e, bool with_stacktrace)
 //     return ExecutionStatus(getCurrentExceptionCode(), msg);
 // }
 
-
-}
+} // namespace  doris::vectorized

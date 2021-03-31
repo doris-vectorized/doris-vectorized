@@ -32,7 +32,7 @@
 #include "runtime/mem_pool.h"
 #include "runtime/row_batch_interface.hpp"
 
-namespace DB {
+namespace doris::vectorized {
 class Block;
 }
 
@@ -311,7 +311,7 @@ public:
     // we firstly update dest resource, and then reset current resource
     void transfer_resource_ownership(RowBatch* dest);
 
-    DB::Block conver_to_vec_block() const;
+    doris::vectorized::Block conver_to_vec_block() const;
 
     void copy_row(TupleRow* src, TupleRow* dest) {
         memcpy(dest, src, _num_tuples_per_row * sizeof(Tuple*));

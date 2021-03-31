@@ -1,20 +1,34 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
-#include <vector>
-#include <list>
-#include <set>
-#include <map>
 #include <initializer_list>
+#include <list>
+#include <map>
+#include <set>
+#include <vector>
 
 #include "vec/core/block_info.h"
-#include "vec/core/names_and_types.h"
 #include "vec/core/column_with_type_and_name.h"
 #include "vec/core/columns_with_type_and_name.h"
+#include "vec/core/names_and_types.h"
 
-
-
-namespace DB
-{
+namespace doris::vectorized {
 
 /** Container for set of columns for bunch of rows in memory.
   * This is unit of data processing.
@@ -25,8 +39,7 @@ namespace DB
 
 class Context;
 
-class Block
-{
+class Block {
 private:
     using Container = ColumnsWithTypeAndName;
     using IndexByName = std::map<String, size_t>;
@@ -39,34 +52,34 @@ public:
 
     Block() = default;
     Block(std::initializer_list<ColumnWithTypeAndName> il);
-    Block(const ColumnsWithTypeAndName & data_);
+    Block(const ColumnsWithTypeAndName& data_);
 
     /// insert the column at the specified position
-    void insert(size_t position, const ColumnWithTypeAndName & elem);
-    void insert(size_t position, ColumnWithTypeAndName && elem);
+    void insert(size_t position, const ColumnWithTypeAndName& elem);
+    void insert(size_t position, ColumnWithTypeAndName&& elem);
     /// insert the column to the end
-    void insert(const ColumnWithTypeAndName & elem);
-    void insert(ColumnWithTypeAndName && elem);
+    void insert(const ColumnWithTypeAndName& elem);
+    void insert(ColumnWithTypeAndName&& elem);
     /// insert the column to the end, if there is no column with that name yet
-    void insertUnique(const ColumnWithTypeAndName & elem);
-    void insertUnique(ColumnWithTypeAndName && elem);
+    void insertUnique(const ColumnWithTypeAndName& elem);
+    void insertUnique(ColumnWithTypeAndName&& elem);
     /// remove the column at the specified position
     void erase(size_t position);
     /// remove the columns at the specified positions
-    void erase(const std::set<size_t> & positions);
+    void erase(const std::set<size_t>& positions);
     /// remove the column with the specified name
-    void erase(const String & name);
+    void erase(const String& name);
 
     /// References are invalidated after calling functions above.
 
-    ColumnWithTypeAndName & getByPosition(size_t position) { return data[position]; }
-    const ColumnWithTypeAndName & getByPosition(size_t position) const { return data[position]; }
+    ColumnWithTypeAndName& getByPosition(size_t position) { return data[position]; }
+    const ColumnWithTypeAndName& getByPosition(size_t position) const { return data[position]; }
 
-    ColumnWithTypeAndName & safeGetByPosition(size_t position);
-    const ColumnWithTypeAndName & safeGetByPosition(size_t position) const;
+    ColumnWithTypeAndName& safeGetByPosition(size_t position);
+    const ColumnWithTypeAndName& safeGetByPosition(size_t position) const;
 
-    ColumnWithTypeAndName & getByName(const std::string & name);
-    const ColumnWithTypeAndName & getByName(const std::string & name) const;
+    ColumnWithTypeAndName& getByName(const std::string& name);
+    const ColumnWithTypeAndName& getByName(const std::string& name) const;
 
     Container::iterator begin() { return data.begin(); }
     Container::iterator end() { return data.end(); }
@@ -75,11 +88,11 @@ public:
     Container::const_iterator cbegin() const { return data.cbegin(); }
     Container::const_iterator cend() const { return data.cend(); }
 
-    bool has(const std::string & name) const;
+    bool has(const std::string& name) const;
 
-    size_t getPositionByName(const std::string & name) const;
+    size_t getPositionByName(const std::string& name) const;
 
-    const ColumnsWithTypeAndName & getColumnsWithTypeAndName() const;
+    const ColumnsWithTypeAndName& getColumnsWithTypeAndName() const;
     NamesAndTypesList getNamesAndTypesList() const;
     Names getNames() const;
     DataTypes getDataTypes() const;
@@ -104,15 +117,15 @@ public:
     /** Get a list of column names separated by commas. */
     std::string dumpNames() const;
 
-     /** List of names, types and lengths of columns. Designed for debugging. */
+    /** List of names, types and lengths of columns. Designed for debugging. */
     // std::string dumpStructure() const;
 
     /** Get the same block, but empty. */
     Block cloneEmpty() const;
 
     Columns getColumns() const;
-    void setColumns(const Columns & columns);
-    Block cloneWithColumns(const Columns & columns) const;
+    void setColumns(const Columns& columns);
+    Block cloneWithColumns(const Columns& columns) const;
     Block cloneWithoutColumns() const;
 
     /** Get empty columns with the same types as in block. */
@@ -122,20 +135,20 @@ public:
     MutableColumns mutateColumns();
 
     /** Replace columns in a block */
-    void setColumns(MutableColumns && columns);
-    Block cloneWithColumns(MutableColumns && columns) const;
+    void setColumns(MutableColumns&& columns);
+    Block cloneWithColumns(MutableColumns&& columns) const;
 
     /** Get a block with columns that have been rearranged in the order of their names. */
     Block sortColumns() const;
 
     void clear();
-    void swap(Block & other) noexcept;
+    void swap(Block& other) noexcept;
 
     /** Updates SipHash of the Block, using update method of columns.
       * Returns hash for block, that could be used to differentiate blocks
       *  with same structure, but different data.
       */
-    void updateHash(SipHash & hash) const;
+    void updateHash(SipHash& hash) const;
 
 private:
     void eraseImpl(size_t position);
@@ -156,4 +169,4 @@ using BlocksPtrs = std::shared_ptr<std::vector<BlocksPtr>>;
 /// Calculate difference in structure of blocks and write description into output strings. NOTE It doesn't compare values of constant columns.
 // void getBlocksDifference(const Block & lhs, const Block & rhs, std::string & out_lhs_diff, std::string & out_rhs_diff);
 
-}
+} // namespace doris::vectorized

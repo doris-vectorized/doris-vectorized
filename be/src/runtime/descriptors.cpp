@@ -86,17 +86,17 @@ void SlotDescriptor::to_protobuf(PSlotDescriptor* pslot) const {
     pslot->set_is_materialized(_is_materialized);
 }
 
-DB::MutableColumnPtr SlotDescriptor::get_empty_mutable_column() const {
+vectorized::MutableColumnPtr SlotDescriptor::get_empty_mutable_column() const {
     auto data_column = type().get_data_type_ptr()->createColumn();
     if (is_nullable()) {
-        return DB::ColumnNullable::create(std::move(data_column), DB::ColumnUInt8::create());
+        return doris::vectorized::ColumnNullable::create(std::move(data_column), doris::vectorized::ColumnUInt8::create());
     }
     return data_column;
 }
 
-DB::DataTypePtr SlotDescriptor::get_data_type_ptr() const {
+vectorized::DataTypePtr SlotDescriptor::get_data_type_ptr() const {
     if (is_nullable()) {
-        return std::make_shared<DB::DataTypeNullable>(type().get_data_type_ptr());
+        return std::make_shared<vectorized::DataTypeNullable>(type().get_data_type_ptr());
     }
     return type().get_data_type_ptr();
 }
