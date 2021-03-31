@@ -20,40 +20,39 @@ set(LIBRARY_OUTPUT_PATH "${BUILD_DIR}/src/vec")
 set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/src/vec")
 
 set(VEC_FILES
-DataTypes/NestedUtils.cpp
-DataTypes/IDataType.cpp
-DataTypes/DataTypeNumberBase.cpp
-DataTypes/DataTypesNumber.cpp
-common/demangle.cpp
-Functions/IFunction.cpp
-Functions/FunctionHelpers.cpp
-Columns/ColumnNullable.cpp
-Columns/ColumnVector.cpp
-Columns/ColumnConst.cpp
-Columns/IColumn.cpp
-Columns/ColumnsCommon.cpp
-Core/Field.cpp
-Core/ColumnWithTypeAndName.cpp
-Core/BlockInfo.cpp
-Core/Block.cpp
-Common/PODArray.cpp
-Common/StringUtils/StringUtils.cpp
-Common/ErrorCodes.cpp
-Common/Exception.cpp
-AggregateFunctions/AggregateFunctionSum.cpp
-           Columns/Collator.cpp
-   Columns/ColumnDecimal.cpp
-   Columns/ColumnString.cpp
-   Core/Field.cpp
-   DataTypes/DataTypesDecimal.cpp
-        DataTypes/DataTypeString.cpp
-exprs/vectorized_fn_call.cpp
-exprs/vexpr.cpp
-exprs/vexpr_context.cpp
-exprs/vslot_ref.cpp
-
-DataTypes/DataTypeNullable.cpp
-DataTypes/DataTypeNothing.cpp
+  data_types/nested_utils.cpp
+  data_types/data_type.cpp
+  data_types/data_type_number_base.cpp
+  data_types/data_types_number.cpp
+  common/demangle.cpp
+  functions/function.cpp
+  functions/function_helpers.cpp
+  columns/column_nullable.cpp
+  columns/column_vector.cpp
+  columns/column_const.cpp
+  columns/column.cpp
+  columns/columns_common.cpp
+  core/field.cpp
+  core/column_with_type_and_name.cpp
+  core/block_info.cpp
+  core/block.cpp
+  common/pod_array.cpp
+  common/string_utils/string_utils.cpp
+  common/error_codes.cpp
+  common/exception.cpp
+  aggregate_functions/aggregate_function_sum.cpp
+  columns/collator.cpp
+  columns/column_decimal.cpp
+  columns/column_string.cpp
+  core/field.cpp
+  data_types/data_types_decimal.cpp
+  data_types/data_type_string.cpp
+  exprs/vectorized_fn_call.cpp
+  exprs/vexpr.cpp
+  exprs/vexpr_context.cpp
+  exprs/vslot_ref.cpp
+  data_types/data_type_nullable.cpp
+  data_types/data_type_nothing.cpp
 )
 
 add_library(Vec STATIC

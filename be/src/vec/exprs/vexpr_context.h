@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vec/Core/Block.h"
+#include "vec/core/block.h"
 #include "common/status.h"
 #include "runtime/runtime_state.h"
 

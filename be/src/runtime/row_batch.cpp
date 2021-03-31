@@ -26,8 +26,8 @@
 #include "runtime/string_value.h"
 #include "runtime/tuple_row.h"
 //#include "runtime/mem_tracker.h"
-#include <vec/Columns/ColumnVector.h>
-#include <vec/Core/Block.h>
+#include "vec/columns/column_vector.h"
+#include "vec/core/block.h"
 
 #include "gen_cpp/Data_types.h"
 #include "gen_cpp/data.pb.h"
