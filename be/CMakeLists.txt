@@ -690,6 +690,7 @@ if (${MAKE_TEST} STREQUAL "ON")
     add_subdirectory(${TEST_DIR}/util)
     add_subdirectory(${TEST_DIR}/vec/core)
     add_subdirectory(${TEST_DIR}/vec/function)
+    add_subdirectory(${TEST_DIR}/vec/exprs)
     add_subdirectory(${TEST_DIR}/vec/aggregate_functions)
     add_subdirectory(${TEST_DIR}/plugin)
     add_subdirectory(${TEST_DIR}/plugin/example)
@@ -713,3 +714,8 @@ install(FILES
     ${BASE_DIR}/../conf/odbcinst.ini
     DESTINATION ${OUTPUT_DIR}/conf)
 
+
+get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+foreach(dir ${dirs})
+  message(STATUS "dir='${dir}'")
+  endforeach()
