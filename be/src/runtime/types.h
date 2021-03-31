@@ -292,6 +292,11 @@ struct TypeDescriptor {
         case TYPE_BIGINT:
             return std::make_shared<vectorized::DataTypeInt64>();
 
+        case TYPE_LARGEINT:
+        case TYPE_DATE:
+        case TYPE_DATETIME:
+            return std::make_shared<vectorized::DataTypeInt128>();
+
         case TYPE_DOUBLE:
             return std::make_shared<vectorized::DataTypeFloat64>();
 

@@ -30,14 +30,15 @@ namespace doris {
 
 TEST(BlockTest, RowBatchCovertToBlock) {
     SchemaScanner::ColumnDesc column_descs[] = {
-            {"k1", TYPE_SMALLINT, sizeof(int16_t), true},
-            {"k2", TYPE_INT, sizeof(int32_t), false},
-            {"k3", TYPE_DOUBLE, sizeof(double), false},
-            {"k4", TYPE_VARCHAR, sizeof(StringValue), false},
-            {"k5", TYPE_DECIMALV2, sizeof(DecimalV2Value), false}};
+                {"k1", TYPE_SMALLINT, sizeof(int16_t), true},
+                {"k2", TYPE_INT,      sizeof(int32_t), false},
+                {"k3", TYPE_DOUBLE,    sizeof(double),   false},
+                {"k4", TYPE_VARCHAR,    sizeof(StringValue),   false},
+                {"k5", TYPE_DECIMALV2,    sizeof(DecimalV2Value),   false},
+                {"k6", TYPE_LARGEINT,    sizeof(__int128),   false},
+                {"k7", TYPE_DATETIME,    sizeof(__int128),   false}};
 
-    SchemaScanner schema_scanner(column_descs,
-                                 sizeof(column_descs) / sizeof(SchemaScanner::ColumnDesc));
+    SchemaScanner schema_scanner(column_descs, sizeof(column_descs) / sizeof(SchemaScanner::ColumnDesc));
     ObjectPool object_pool;
     SchemaScannerParam param;
     schema_scanner.init(&param, &object_pool);
@@ -79,6 +80,18 @@ TEST(BlockTest, RowBatchCovertToBlock) {
         DecimalV2Value decimalv2_num(std::to_string(k3));
         memcpy(tuple->get_slot(slot_desc->tuple_offset()), &decimalv2_num, column_descs[4].size);
 
+        slot_desc = tuple_desc->slots()[5];
+        int128_t k6 = k1;
+        memcpy(tuple->get_slot(slot_desc->tuple_offset()), &k6 ,column_descs[5].size);
+
+        slot_desc = tuple_desc->slots()[6];
+        DateTimeValue k7;
+        std::string now_time("2020-12-02");
+        k7.from_date_str(now_time.c_str(), now_time.size());
+        TimeInterval time_interval(TimeUnit::DAY, k1, false);
+        k7.date_add_interval(time_interval, TimeUnit::DAY);
+        memcpy(tuple->get_slot(slot_desc->tuple_offset()), &k7 ,column_descs[6].size);
+
         tuple_row->set_tuple(0, tuple);
         row_batch.commit_last_row();
     }
@@ -93,6 +106,8 @@ TEST(BlockTest, RowBatchCovertToBlock) {
         vectorized::ColumnPtr column3 = block.getColumns()[2];
         vectorized::ColumnPtr column4 = block.getColumns()[3];
         vectorized::ColumnPtr column5 = block.getColumns()[4];
+        vectorized::ColumnPtr column6 = block.getColumns()[5];
+        vectorized::ColumnPtr column7 = block.getColumns()[6];
 
         if (i % 5 != 0) {
             ASSERT_EQ((int16_t)column1->get64(i), k1);
@@ -106,6 +121,21 @@ TEST(BlockTest, RowBatchCovertToBlock) {
                                      .get<vectorized::DecimalField<vectorized::Decimal128>>();
         DecimalV2Value decimalv2_num(std::to_string(k3));
         ASSERT_EQ(DecimalV2Value(decimal_field.getValue()), decimalv2_num);
+
+        int128_t larget_int = k1;
+        ASSERT_EQ(column6->operator[](i).get<vectorized::Int128>(), k1);
+
+        larget_int = column7->operator[](i).get<vectorized::Int128>();
+        DateTimeValue k7;
+        memcpy(&k7, &larget_int ,column_descs[6].size);
+        DateTimeValue date_time_value;
+        std::string now_time("2020-12-02");
+        date_time_value.from_date_str(now_time.c_str(), now_time.size());
+        TimeInterval time_interval(TimeUnit::DAY, k1, false);
+        date_time_value.date_add_interval(time_interval, TimeUnit::DAY);
+
+        ASSERT_EQ(k7, date_time_value);
+
         k1++;
         k3 += 0.1;
     }
