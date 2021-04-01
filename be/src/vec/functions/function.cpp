@@ -25,7 +25,8 @@
 //#include <vec/Columns/ColumnArray.h>
 //#include <vec/Columns/ColumnTuple.h>
 //#include <vec/Columns/ColumnLowCardinality.h>
-//#include <vec/DataTypes/DataTypeNothing.h>
+#include "vec/data_types/data_type_nothing.h"
+#include "vec/data_types/data_type_nullable.h"
 //#include <vec/DataTypes/DataTypeNullable.h>
 //#include <vec/DataTypes/DataTypeTuple.h>
 //#include <vec/DataTypes/Native.h>
@@ -488,22 +489,27 @@ DataTypePtr FunctionBuilderImpl::getReturnTypeWithoutLowCardinality(
         const ColumnsWithTypeAndName& arguments) const {
     checkNumberOfArguments(arguments.size());
 
-    //    if (!arguments.empty() && useDefaultImplementationForNulls())
-    //    {
-    //        NullPresence null_presence = getNullPresense(arguments);
-    //
-    //        if (null_presence.has_null_constant)
-    //        {
-    //            return makeNullable(std::make_shared<DataTypeNothing>());
-    //        }
-    //        if (null_presence.has_nullable)
-    //        {
-    //            Block nested_block = createBlockWithNestedColumns(Block(arguments), ext::collection_cast<ColumnNumbers>(ext::range(0, arguments.size())));
-    //            auto return_type = getReturnTypeImpl(ColumnsWithTypeAndName(nested_block.begin(), nested_block.end()));
-    //            return makeNullable(return_type);
-    //
-    //        }
-    //    }
+   if (!arguments.empty() && useDefaultImplementationForNulls())
+   {
+       NullPresence null_presence = getNullPresense(arguments);
+
+       if (null_presence.has_null_constant)
+       {
+           return makeNullable(std::make_shared<DataTypeNothing>());
+       }
+       if (null_presence.has_nullable)
+       {
+            ColumnNumbers numbers(arguments.size());
+            for (int i = 0; i < arguments.size(); i++)
+            {
+                numbers[i] = i;
+            }
+           Block nested_block = createBlockWithNestedColumns(Block(arguments), numbers);
+           auto return_type = getReturnTypeImpl(ColumnsWithTypeAndName(nested_block.begin(), nested_block.end()));
+           return makeNullable(return_type);
+
+       }
+   }
 
     return getReturnTypeImpl(arguments);
 }
