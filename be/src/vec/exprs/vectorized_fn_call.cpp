@@ -59,11 +59,11 @@ void VectorizedFnCall::close(doris::RuntimeState* state, VExprContext* context) 
 
 Status VectorizedFnCall::execute(doris::vectorized::Block* block, int* result_column_id) {
     // for each child call execute
-    doris::vectorized::ColumnNumbers arguments;
+    doris::vectorized::ColumnNumbers arguments(_children.size());
     for (int i = 0; i < _children.size(); ++i) {
         int column_id = -1;
         _children[i]->execute(block, &column_id);
-        arguments.emplace_back(column_id);
+        arguments[i] = column_id;
     }
     // call function
     size_t num_columns_without_result = block->columns();
