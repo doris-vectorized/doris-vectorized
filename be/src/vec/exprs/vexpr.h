@@ -49,7 +49,17 @@ public:
     static Status create_expr_trees(ObjectPool* pool, const std::vector<TExpr>& texprs,
                                     std::vector<VExprContext*>* ctxs);
 
-    bool is_nullable() { return _data_type->isNullable(); }
+    static Status prepare(const std::vector<VExprContext*>& ctxs, RuntimeState* state,
+                          const RowDescriptor& row_desc,
+                          const std::shared_ptr<MemTracker>& tracker);
+
+    static Status open(const std::vector<VExprContext*>& ctxs, RuntimeState* state);
+
+    static void close(const std::vector<VExprContext*>& ctxs, RuntimeState* state);
+
+    bool is_nullable() const { return _data_type->isNullable(); }
+
+    PrimitiveType result_type() const { return _type.type; }
 
     static Status create_expr(ObjectPool* pool, const TExprNode& texpr_node, VExpr** expr);
 
