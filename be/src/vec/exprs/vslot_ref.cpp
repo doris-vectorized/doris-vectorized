@@ -24,7 +24,11 @@ namespace doris::vectorized {
 using doris::Status;
 using doris::SlotDescriptor;
 VSlotRef::VSlotRef(const doris::TExprNode& node)
-        : VExpr(node), _slot_id(node.slot_ref.slot_id), _column_id(-1), _is_nullable(false) {}
+        : VExpr(node),
+          _slot_id(node.slot_ref.slot_id),
+          _column_id(-1),
+          _is_nullable(false),
+          _column_name(nullptr) {}
 
 Status VSlotRef::prepare(doris::RuntimeState* state, const doris::RowDescriptor& desc,
                          VExprContext* context) {
@@ -38,13 +42,18 @@ Status VSlotRef::prepare(doris::RuntimeState* state, const doris::RowDescriptor&
     }
     _is_nullable = slot_desc->is_nullable();
     _column_id = desc.get_column_id(_slot_id);
+    _column_name = &slot_desc->col_name();
     return Status::OK();
 }
 
 Status VSlotRef::execute(Block* block, int* result_column_id) {
-    DCHECK_GE(_column_id , 0);
+    DCHECK_GE(_column_id, 0);
     *result_column_id = _column_id;
     return Status::OK();
+}
+
+const std::string& VSlotRef::expr_name() const {
+    return *_column_name;
 }
 
 } // namespace doris::vectorized

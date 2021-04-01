@@ -17,7 +17,9 @@
 
 #include "vec/exprs/vectorized_fn_call.h"
 
+#include <string_view>
 #include "fmt/format.h"
+#include "fmt/ranges.h"
 #include "vec/data_types/data_type_nullable.h"
 #include "vec/data_types/data_types_number.h"
 #include "vec/functions/simple_function_factory.h"
@@ -35,9 +37,16 @@ doris::Status VectorizedFnCall::prepare(doris::RuntimeState* state,
         return Status::InternalError(
                 fmt::format("Function {} is not implemented", _fn.name.function_name));
     }
-    if (!_data_type->isNullable()) {
-        _data_type = std::make_shared<DataTypeNullable>(_data_type);
+    ColumnsWithTypeAndName argument_template;
+    argument_template.reserve(_children.size());
+    std::vector<std::string_view> child_expr_name;
+    for (auto child : _children) {
+        auto column = child->data_type()->createColumn();
+        argument_template.emplace_back(std::move(column), child->data_type(), child->expr_name());
+        child_expr_name.emplace_back(child->expr_name());
     }
+    _data_type = _function->getReturnType(argument_template);
+    _expr_name = fmt::format("{}({})", _fn.name.function_name, child_expr_name);
     return Status::OK();
 }
 doris::Status VectorizedFnCall::open(doris::RuntimeState* state, VExprContext* context) {
@@ -58,11 +67,14 @@ Status VectorizedFnCall::execute(doris::vectorized::Block* block, int* result_co
     }
     // call function
     size_t num_columns_without_result = block->columns();
-    // todo spec column name
-    block->insert({ nullptr, _data_type, fmt::format("{}()",_fn.name.function_name)});
+    // prepare a column to save result
+    block->insert({nullptr, _data_type, _expr_name});
     _function->execute(*block, arguments, num_columns_without_result, block->rows(), false);
     *result_column_id = num_columns_without_result;
     return Status::OK();
 }
 
+const std::string& VectorizedFnCall::expr_name() const {
+    return _expr_name;
+}
 } // namespace doris::vectorized
