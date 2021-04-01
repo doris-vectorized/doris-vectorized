@@ -31,10 +31,13 @@ public:
         return pool->add(new VSlotRef(*this));
     }
 
+    virtual const std::string &expr_name() const override;
+
 private:
     FunctionPtr _function;
     int _slot_id;
     int _column_id;
     bool _is_nullable;
+    const std::string *_column_name;
 };
 } // namespace doris::vectorized
