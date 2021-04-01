@@ -35,7 +35,7 @@ public:
     virtual const std::string& expr_name() const = 0;
     // VExpr(const VExpr& expr);
     virtual Status prepare(RuntimeState* state, const RowDescriptor& row_desc,
-                                  VExprContext* context);
+                           VExprContext* context);
     virtual void close(RuntimeState* state, VExprContext* context);
     virtual Status open(RuntimeState* state, VExprContext* context);
     virtual Status execute(vectorized::Block* block, int* result_column_id) = 0;
@@ -44,18 +44,18 @@ public:
 
     void add_child(VExpr* expr) { _children.push_back(expr); }
 
-    static Status create_expr_tree(ObjectPool* pool, const TExpr& texpr,
-                                          VExprContext** ctx);
+    static Status create_expr_tree(ObjectPool* pool, const TExpr& texpr, VExprContext** ctx);
+
+    static Status create_expr_trees(ObjectPool* pool, const std::vector<TExpr>& texprs,
+                                    std::vector<VExprContext*>* ctxs);
 
     bool is_nullable() { return _data_type->isNullable(); }
 
-    static Status create_expr(ObjectPool* pool, const TExprNode& texpr_node,
-                                     VExpr** expr);
+    static Status create_expr(ObjectPool* pool, const TExprNode& texpr_node, VExpr** expr);
 
-    static Status create_tree_from_thrift(ObjectPool* pool,
-                                                 const std::vector<TExprNode>& nodes,
-                                                 VExpr* parent, int* node_idx, VExpr** root_expr,
-                                                 VExprContext** ctx);
+    static Status create_tree_from_thrift(ObjectPool* pool, const std::vector<TExprNode>& nodes,
+                                          VExpr* parent, int* node_idx, VExpr** root_expr,
+                                          VExprContext** ctx);
 
 protected:
     TExprNodeType::type _node_type;
