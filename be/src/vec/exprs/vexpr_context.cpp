@@ -35,4 +35,9 @@ doris::Status VExprContext::prepare(doris::RuntimeState* state,
 doris::Status VExprContext::open(doris::RuntimeState* state) {
     return _root->open(state, this);
 }
+
+void VExprContext::close(doris::RuntimeState* state) {
+    return _root->close(state, this);
+}
+
 } // namespace doris::vectorized
