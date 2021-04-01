@@ -31,12 +31,16 @@ class VExpr {
 public:
     VExpr(const TExprNode& node);
     virtual VExpr* clone(ObjectPool* pool) const = 0;
+
+    virtual const std::string& expr_name() const = 0;
     // VExpr(const VExpr& expr);
     virtual Status prepare(RuntimeState* state, const RowDescriptor& row_desc,
                                   VExprContext* context);
     virtual void close(RuntimeState* state, VExprContext* context);
     virtual Status open(RuntimeState* state, VExprContext* context);
     virtual Status execute(vectorized::Block* block, int* result_column_id) = 0;
+
+    DataTypePtr& data_type() { return _data_type; }
 
     void add_child(VExpr* expr) { _children.push_back(expr); }
 

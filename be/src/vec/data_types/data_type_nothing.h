@@ -19,6 +19,7 @@
 
 // #include <vec/DataTypes/IDataTypeDummy.h>
 #include "vec/data_types/data_type.h"
+#include "vec/core/field.h"
 
 namespace doris::vectorized {
 
@@ -46,6 +47,19 @@ public:
     bool haveMaximumSizeOfValue() const override { return true; }
     size_t getSizeOfValueInMemory() const override { return 0; }
     bool canBeInsideNullable() const override { return true; }
+
+    Field getDefault() const override
+    {
+        throw Exception("Method getDefault() is not implemented for data type " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+    }
+
+    void insertDefaultInto(IColumn &) const override
+    {
+        throw Exception("Method insertDefaultInto() is not implemented for data type " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+    }
+
+    bool haveSubtypes() const override { return false; }
+    bool cannotBeStoredInTables() const override { return true; }
 };
 
 } // namespace doris::vectorized
