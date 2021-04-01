@@ -128,4 +128,15 @@ Status VExpr::create_expr_tree(doris::ObjectPool* pool, const doris::TExpr& texp
     return Status::OK();
 }
 
+Status VExpr::create_expr_trees(ObjectPool* pool, const std::vector<doris::TExpr>& texprs,
+                               std::vector<VExprContext*>* ctxs) {
+    ctxs->clear();
+    for (int i = 0; i < texprs.size(); ++i) {
+        VExprContext* ctx = nullptr;
+        RETURN_IF_ERROR(create_expr_tree(pool, texprs[i], &ctx));
+        ctxs->push_back(ctx);
+    }
+    return Status::OK();
+}
+
 } // namespace doris::vectorized
