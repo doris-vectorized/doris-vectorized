@@ -32,8 +32,10 @@ public:
     virtual VExpr* clone(doris::ObjectPool* pool) const override {
         return pool->add(new VectorizedFnCall(*this));
     }
+    virtual const std::string& expr_name() const override;
 
 private:
     FunctionPtr _function;
+    std::string _expr_name;
 };
 } // namespace doris::vectorized
