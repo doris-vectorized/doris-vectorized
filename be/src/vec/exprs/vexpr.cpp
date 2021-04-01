@@ -139,4 +139,25 @@ Status VExpr::create_expr_trees(ObjectPool* pool, const std::vector<doris::TExpr
     return Status::OK();
 }
 
+Status VExpr::prepare(const std::vector<VExprContext*>& ctxs, RuntimeState* state,
+                     const RowDescriptor& row_desc, const std::shared_ptr<MemTracker>& tracker) {
+    for (int i = 0; i < ctxs.size(); ++i) {
+        RETURN_IF_ERROR(ctxs[i]->prepare(state, row_desc, tracker));
+    }
+    return Status::OK();
+}
+
+void VExpr::close(const std::vector<VExprContext*>& ctxs, RuntimeState* state) {
+    for (int i = 0; i < ctxs.size(); ++i) {
+        ctxs[i]->close(state);
+    }
+}
+
+Status VExpr::open(const std::vector<VExprContext*>& ctxs, RuntimeState* state) {
+    for (int i = 0; i < ctxs.size(); ++i) {
+        RETURN_IF_ERROR(ctxs[i]->open(state));
+    }
+    return Status::OK();
+}
+
 } // namespace doris::vectorized
