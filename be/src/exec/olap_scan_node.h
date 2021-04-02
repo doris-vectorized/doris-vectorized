@@ -146,7 +146,7 @@ protected:
     Status normalize_conjuncts();
     Status build_olap_filters();
     Status build_scan_key();
-    Status start_scan_thread(RuntimeState* state);
+    virtual Status start_scan_thread(RuntimeState* state);
 
     template <class T>
     Status normalize_predicate(ColumnValueRange<T>& range, SlotDescriptor* slot);
@@ -172,7 +172,6 @@ protected:
     // Write debug string of this into out.
     virtual void debug_string(int indentation_level, std::stringstream* out) const;
 
-private:
     void _init_counter(RuntimeState* state);
     // OLAP_SCAN_NODE profile layering: OLAP_SCAN_NODE, OlapScanner, and SegmentIterator
     // according to the calling relationship
@@ -185,6 +184,12 @@ private:
     template <typename T, typename ChangeFixedValueRangeFunc>
     static Status change_fixed_value_range(ColumnValueRange <T> &range, PrimitiveType type, void *value,
                                                const ChangeFixedValueRangeFunc& func);
+
+    static Status get_hints(const TPaloScanRange& scan_range, int block_row_count,
+                        bool is_begin_include, bool is_end_include,
+                        const std::vector<std::unique_ptr<OlapScanRange>>& scan_key_range,
+                        std::vector<std::unique_ptr<OlapScanRange>>* sub_scan_range,
+                        RuntimeProfile* profile);
 
     friend class OlapScanner;
 

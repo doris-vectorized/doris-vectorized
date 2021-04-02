@@ -1,19 +1,36 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/sink/mysql_result_writer.h"
 
+#include "runtime/buffer_control_block.h"
 #include "runtime/runtime_state.h"
 #include "util/mysql_row_buffer.h"
-#include "vec/exprs/vexpr_context.h"
-#include "vec/exprs/vexpr.h"
-#include "vec/columns/column_vector.h"
 #include "vec/columns/column_nullable.h"
+#include "vec/columns/column_vector.h"
 #include "vec/common/assert_cast.h"
-#include "runtime/buffer_control_block.h"
+#include "vec/exprs/vexpr.h"
+#include "vec/exprs/vexpr_context.h"
 
 namespace doris {
 namespace vectorized {
-MysqlResultWriter::MysqlResultWriter(
-        BufferControlBlock* sinker, const std::vector<VExprContext*>& output_vexpr_ctxs,
-        RuntimeProfile* parent_profile)
+MysqlResultWriter::MysqlResultWriter(BufferControlBlock* sinker,
+                                     const std::vector<VExprContext*>& output_vexpr_ctxs,
+                                     RuntimeProfile* parent_profile)
         : VResultWriter(!output_vexpr_ctxs.empty()),
           _sinker(sinker),
           _output_vexpr_ctxs(output_vexpr_ctxs),
@@ -72,48 +89,38 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
 
         if constexpr (type == TYPE_TINYINT) {
             buf_ret = _vec_buffers[i]->push_tinyint(
-                    assert_cast<const ColumnVector<Int8>&>(*column)
-                            .getData()[i]);
+                    assert_cast<const ColumnVector<Int8>&>(*column).getData()[i]);
         }
         if constexpr (type == TYPE_SMALLINT) {
             buf_ret = _vec_buffers[i]->push_smallint(
-                    assert_cast<const ColumnVector<Int16>&>(*column)
-                            .getData()[i]);
+                    assert_cast<const ColumnVector<Int16>&>(*column).getData()[i]);
         }
         if constexpr (type == TYPE_INT) {
             buf_ret = _vec_buffers[i]->push_int(
-                    assert_cast<const ColumnVector<Int32>&>(*column)
-                            .getData()[i]);
+                    assert_cast<const ColumnVector<Int32>&>(*column).getData()[i]);
         }
         if constexpr (type == TYPE_BIGINT) {
             buf_ret = _vec_buffers[i]->push_bigint(
-                    assert_cast<const ColumnVector<Int64>&>(*column)
-                            .getData()[i]);
+                    assert_cast<const ColumnVector<Int64>&>(*column).getData()[i]);
         }
         if constexpr (type == TYPE_LARGEINT) {
             char buf[48];
             int len = 48;
             char* v = LargeIntValue::to_string(
-                    assert_cast<const ColumnVector<Int128>&>(*column)
-                            .getData()[i],
-                    buf, &len);
+                    assert_cast<const ColumnVector<Int128>&>(*column).getData()[i], buf, &len);
             buf_ret = _vec_buffers[i]->push_string(v, len);
         }
         if constexpr (type == TYPE_FLOAT) {
             buf_ret = _vec_buffers[i]->push_float(
-                    assert_cast<const ColumnVector<Float32>&>(*column)
-                            .getData()[i]);
+                    assert_cast<const ColumnVector<Float32>&>(*column).getData()[i]);
         }
         if constexpr (type == TYPE_DOUBLE) {
             buf_ret = _vec_buffers[i]->push_double(
-                    assert_cast<const ColumnVector<Float64>&>(*column)
-                            .getData()[i]);
+                    assert_cast<const ColumnVector<Float64>&>(*column).getData()[i]);
         }
         if constexpr (type == TYPE_DATETIME) {
             char buf[64];
-            auto time_num =
-                    assert_cast<const ColumnVector<Int128>&>(*column)
-                            .getData()[i];
+            auto time_num = assert_cast<const ColumnVector<Int128>&>(*column).getData()[i];
             DateTimeValue time_val;
             memcpy(&time_val, &time_num, sizeof(Int128));
             // TODO(zhaochun), this function has core risk
@@ -141,8 +148,7 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
         }
         if constexpr (type == TYPE_DECIMALV2) {
             DecimalV2Value decimal_val(
-                    assert_cast<const ColumnDecimal<Decimal128>&>(*column)
-                            .getData()[i]);
+                    assert_cast<const ColumnDecimal<Decimal128>&>(*column).getData()[i]);
             std::string decimal_str;
             //            int output_scale = _output_expr_ctxs[i]->root()->output_scale();
             //
@@ -303,7 +309,6 @@ Status MysqlResultWriter::append_block(Block& block) {
             break;
         }
     }
-
     if (status) {
         SCOPED_TIMER(_result_send_timer);
         // push this batch to back

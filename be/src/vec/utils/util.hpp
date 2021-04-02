@@ -1,8 +1,9 @@
+#include <thrift/protocol/TJSONProtocol.h>
+
+#include <boost/shared_ptr.hpp>
+
 #include "runtime/descriptors.h"
 #include "vec/core/block.h"
-
-#include <thrift/protocol/TJSONProtocol.h>
-#include <boost/shared_ptr.hpp>
 
 namespace doris::vectorized {
 class VectorizedUtils {
@@ -19,18 +20,19 @@ public:
         return columns_with_type_and_name;
     }
 };
-} // namespace dois::vectorized
+} // namespace doris::vectorized
 
 namespace apache::thrift {
-    template<typename ThriftStruct>
-    ThriftStruct from_json_string(const std::string &json_val) {
-        using namespace apache::thrift::transport;
-        using namespace apache::thrift::protocol;
-        ThriftStruct ts;
-        TMemoryBuffer *buffer = new TMemoryBuffer((uint8_t *) json_val.c_str(), (uint32_t) json_val.size());
-        boost::shared_ptr <TTransport> trans(buffer);
-        TJSONProtocol protocol(trans);
-        ts.read(&protocol);
-        return ts;
-    }
+template <typename ThriftStruct>
+ThriftStruct from_json_string(const std::string& json_val) {
+    using namespace apache::thrift::transport;
+    using namespace apache::thrift::protocol;
+    ThriftStruct ts;
+    TMemoryBuffer* buffer =
+            new TMemoryBuffer((uint8_t*)json_val.c_str(), (uint32_t)json_val.size());
+    boost::shared_ptr<TTransport> trans(buffer);
+    TJSONProtocol protocol(trans);
+    ts.read(&protocol);
+    return ts;
 }
+} // namespace apache::thrift

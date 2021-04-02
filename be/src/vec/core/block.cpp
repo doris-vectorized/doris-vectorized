@@ -247,18 +247,25 @@ std::string Block::dumpNames() const {
     return out.str();
 }
 
-/*std::string Block::dumpStructure() const*/
-//{
-//// WriteBufferFromOwnString out;
-//std::stringstream out;
-//for (auto it = data.begin(); it != data.end(); ++it)
-//{
-//if (it != data.begin())
-//out << ", ";
-//out << it->dumpStructure();
-//}
-//return out.str();
-//}
+std::string Block::dumpData() const {
+    // WriteBufferFromOwnString out;
+    std::stringstream out;
+    for (auto it = data.begin(); it != data.end(); ++it) {
+        if (it != data.begin()) out << ", ";
+        out << it->name;
+    }
+    return out.str();
+}
+
+std::string Block::dumpStructure() const {
+    // WriteBufferFromOwnString out;
+    std::stringstream out;
+    for (auto it = data.begin(); it != data.end(); ++it) {
+        if (it != data.begin()) out << ", ";
+        out << it->dumpStructure();
+    }
+    return out.str();
+}
 
 Block Block::cloneEmpty() const {
     Block res;

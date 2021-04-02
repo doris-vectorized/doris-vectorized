@@ -65,8 +65,7 @@ using FunctionAbs = FunctionUnaryArithmetic<AbsImpl, NameAbs, false>;
 //    }
 //};
 
-void registerFunctionAbs(SimpleFunctionFactory & factory)
-{
+void registerFunctionAbs(SimpleFunctionFactory& factory) {
     factory.registerFunction<FunctionAbs>();
 }
 
