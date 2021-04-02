@@ -50,7 +50,9 @@ set(VEC_FILES
   exprs/vectorized_fn_call.cpp
   exprs/vexpr.cpp
   exprs/vexpr_context.cpp
+  exprs/vectorized_agg_fn.cpp
   exprs/vslot_ref.cpp
+  exec/aggregation_node.cpp
   data_types/data_type_nullable.cpp
   data_types/data_type_nothing.cpp
 )
