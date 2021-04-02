@@ -68,7 +68,7 @@ Status DataSink::create_data_sink(ObjectPool* pool, const TDataSink& thrift_sink
         }
 
         // TODO: figure out good buffer size based on size of output row
-        tmp_sink = new ResultSink(row_desc, output_exprs, thrift_sink.result_sink, 1024);
+        tmp_sink = new ResultSink(row_desc, output_exprs, thrift_sink.result_sink, 1024, config::is_vec);
         sink->reset(tmp_sink);
         break;
     case TDataSinkType::MEMORY_SCRATCH_SINK:
