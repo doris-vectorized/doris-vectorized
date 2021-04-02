@@ -16,14 +16,36 @@
 // under the License.
 
 #pragma once
-#include "exec/data_sink.h"
-#include "vec/core/block.h"
+
+#include "exec/olap_scanner.h"
 
 namespace doris {
+class OlapScanNode;
+class OLAPReader;
+class RuntimeProfile;
+class Field;
+class RowBatch;
 namespace vectorized {
-class VDataSink : public DataSink {
+class VOlapScanNode;
+
+class VOlapScanner : public OlapScanner {
 public:
-    virtual Status send(RuntimeState* state, Block* block) = 0;
+    VOlapScanner(RuntimeState* runtime_state, VOlapScanNode* parent, bool aggregation,
+                 bool need_agg_finalize, const TPaloScanRange& scan_range,
+                 const std::vector<OlapScanRange*>& key_ranges);
+
+    ~VOlapScanner();
+    Status get_block(RuntimeState* state, vectorized::Block* block, bool* eof);
+    Status get_batch(RuntimeState* state, RowBatch* row_batch, bool* eos) {
+        return Status::NotSupported("Not Implemented VOlapScanNode Node::get_next scalar");
+    }
+
+private:
+    void _convert_row_to_block(std::vector<vectorized::MutableColumnPtr>* columns);
+
+    RuntimeState* _runtime_state;
+    OlapScanNode* _parent;
+    RuntimeProfile* _profile;
 };
 } // namespace vectorized
 } // namespace doris

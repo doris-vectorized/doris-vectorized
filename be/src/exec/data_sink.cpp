@@ -35,6 +35,7 @@
 #include "runtime/result_sink.h"
 #include "runtime/runtime_state.h"
 #include "util/logging.h"
+#include "vec/sink/result_sink.h"
 
 namespace doris {
 
@@ -69,6 +70,15 @@ Status DataSink::create_data_sink(ObjectPool* pool, const TDataSink& thrift_sink
 
         // TODO: figure out good buffer size based on size of output row
         tmp_sink = new ResultSink(row_desc, output_exprs, thrift_sink.result_sink, 1024, config::is_vec);
+        sink->reset(tmp_sink);
+        break;
+    case TDataSinkType::VRESULT_SINK:
+        if (!thrift_sink.__isset.result_sink) {
+            return Status::InternalError("Missing data buffer sink.");
+        }
+
+        // TODO: figure out good buffer size based on size of output row
+        tmp_sink = new doris::vectorized::ResultSink(row_desc, output_exprs, thrift_sink.result_sink, 1024);
         sink->reset(tmp_sink);
         break;
     case TDataSinkType::MEMORY_SCRATCH_SINK:

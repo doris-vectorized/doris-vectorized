@@ -179,7 +179,9 @@ public:
 
     Int64 getInt(size_t n) const override { return Int64(data[n]); }
 
-    void insert(const Field& x) override { data.push_back(doris::vectorized::get<NearestFieldType<T>>(x)); }
+    void insert(const Field& x) override {
+        data.push_back(doris::vectorized::get<NearestFieldType<T>>(x));
+    }
 
     void insertRangeFrom(const IColumn& src, size_t start, size_t length) override;
 

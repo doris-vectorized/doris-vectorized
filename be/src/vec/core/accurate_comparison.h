@@ -56,8 +56,10 @@ constexpr bool is_safe_conversion = (std::is_floating_point_v<A> && std::is_floa
                                      !(std::is_signed_v<A> ^ std::is_signed_v<B>)) ||
                                     (std::is_same_v<A, doris::vectorized::Int128> &&
                                      std::is_same_v<B, doris::vectorized::Int128>) ||
-                                    (std::is_integral_v<A> && std::is_same_v<B, doris::vectorized::Int128>) ||
-                                    (std::is_same_v<A, doris::vectorized::Int128> && std::is_integral_v<B>);
+                                    (std::is_integral_v<A> &&
+                                     std::is_same_v<B, doris::vectorized::Int128>) ||
+                                    (std::is_same_v<A, doris::vectorized::Int128> &&
+                                     std::is_integral_v<B>);
 template <typename A, typename B>
 using bool_if_safe_conversion = std::enable_if_t<is_safe_conversion<A, B>, bool>;
 template <typename A, typename B>
@@ -173,82 +175,100 @@ inline bool_if_safe_conversion<A, B> greaterOp(A a, B b) {
 constexpr doris::vectorized::Int64 MAX_INT64_WITH_EXACT_FLOAT64_REPR = 9007199254740992LL; // 2^53
 
 template <>
-inline bool greaterOp<doris::vectorized::Float64, doris::vectorized::Int64>(doris::vectorized::Float64 f, doris::vectorized::Int64 i) {
+inline bool greaterOp<doris::vectorized::Float64, doris::vectorized::Int64>(
+        doris::vectorized::Float64 f, doris::vectorized::Int64 i) {
     if (-MAX_INT64_WITH_EXACT_FLOAT64_REPR <= i && i <= MAX_INT64_WITH_EXACT_FLOAT64_REPR)
         return f > static_cast<doris::vectorized::Float64>(i);
 
     return (f >= static_cast<doris::vectorized::Float64>(
-                         std::numeric_limits<doris::vectorized::Int64>::max())) // rhs is 2**63 (not 2^63 - 1)
-           || (f > static_cast<doris::vectorized::Float64>(std::numeric_limits<doris::vectorized::Int64>::min()) &&
+                         std::numeric_limits<
+                                 doris::vectorized::Int64>::max())) // rhs is 2**63 (not 2^63 - 1)
+           || (f > static_cast<doris::vectorized::Float64>(
+                           std::numeric_limits<doris::vectorized::Int64>::min()) &&
                static_cast<doris::vectorized::Int64>(f) > i);
 }
 
 template <>
-inline bool greaterOp<doris::vectorized::Int64, doris::vectorized::Float64>(doris::vectorized::Int64 i, doris::vectorized::Float64 f) {
+inline bool greaterOp<doris::vectorized::Int64, doris::vectorized::Float64>(
+        doris::vectorized::Int64 i, doris::vectorized::Float64 f) {
     if (-MAX_INT64_WITH_EXACT_FLOAT64_REPR <= i && i <= MAX_INT64_WITH_EXACT_FLOAT64_REPR)
         return f < static_cast<doris::vectorized::Float64>(i);
 
-    return (f < static_cast<doris::vectorized::Float64>(std::numeric_limits<doris::vectorized::Int64>::min())) ||
-           (f < static_cast<doris::vectorized::Float64>(std::numeric_limits<doris::vectorized::Int64>::max()) &&
+    return (f < static_cast<doris::vectorized::Float64>(
+                        std::numeric_limits<doris::vectorized::Int64>::min())) ||
+           (f < static_cast<doris::vectorized::Float64>(
+                        std::numeric_limits<doris::vectorized::Int64>::max()) &&
             i > static_cast<doris::vectorized::Int64>(f));
 }
 
 template <>
-inline bool greaterOp<doris::vectorized::Float64, doris::vectorized::UInt64>(doris::vectorized::Float64 f, doris::vectorized::UInt64 u) {
+inline bool greaterOp<doris::vectorized::Float64, doris::vectorized::UInt64>(
+        doris::vectorized::Float64 f, doris::vectorized::UInt64 u) {
     if (u <= static_cast<doris::vectorized::UInt64>(MAX_INT64_WITH_EXACT_FLOAT64_REPR))
         return f > static_cast<doris::vectorized::Float64>(u);
 
-    return (f >= static_cast<doris::vectorized::Float64>(std::numeric_limits<doris::vectorized::UInt64>::max())) ||
+    return (f >= static_cast<doris::vectorized::Float64>(
+                         std::numeric_limits<doris::vectorized::UInt64>::max())) ||
            (f >= 0 && static_cast<doris::vectorized::UInt64>(f) > u);
 }
 
 template <>
-inline bool greaterOp<doris::vectorized::UInt64, doris::vectorized::Float64>(doris::vectorized::UInt64 u, doris::vectorized::Float64 f) {
+inline bool greaterOp<doris::vectorized::UInt64, doris::vectorized::Float64>(
+        doris::vectorized::UInt64 u, doris::vectorized::Float64 f) {
     if (u <= static_cast<doris::vectorized::UInt64>(MAX_INT64_WITH_EXACT_FLOAT64_REPR))
         return static_cast<doris::vectorized::Float64>(u) > f;
 
-    return (f < 0) || (f < static_cast<doris::vectorized::Float64>(std::numeric_limits<doris::vectorized::UInt64>::max()) &&
+    return (f < 0) || (f < static_cast<doris::vectorized::Float64>(
+                                   std::numeric_limits<doris::vectorized::UInt64>::max()) &&
                        u > static_cast<UInt64>(f));
 }
 
 // Case 3b for float32
 template <>
-inline bool greaterOp<doris::vectorized::Float32, doris::vectorized::Int64>(doris::vectorized::Float32 f, doris::vectorized::Int64 i) {
+inline bool greaterOp<doris::vectorized::Float32, doris::vectorized::Int64>(
+        doris::vectorized::Float32 f, doris::vectorized::Int64 i) {
     return greaterOp(static_cast<doris::vectorized::Float64>(f), i);
 }
 
 template <>
-inline bool greaterOp<doris::vectorized::Int64, doris::vectorized::Float32>(doris::vectorized::Int64 i, doris::vectorized::Float32 f) {
+inline bool greaterOp<doris::vectorized::Int64, doris::vectorized::Float32>(
+        doris::vectorized::Int64 i, doris::vectorized::Float32 f) {
     return greaterOp(i, static_cast<doris::vectorized::Float64>(f));
 }
 
 template <>
-inline bool greaterOp<doris::vectorized::Float32, doris::vectorized::UInt64>(doris::vectorized::Float32 f, doris::vectorized::UInt64 u) {
+inline bool greaterOp<doris::vectorized::Float32, doris::vectorized::UInt64>(
+        doris::vectorized::Float32 f, doris::vectorized::UInt64 u) {
     return greaterOp(static_cast<doris::vectorized::Float64>(f), u);
 }
 
 template <>
-inline bool greaterOp<doris::vectorized::UInt64, doris::vectorized::Float32>(doris::vectorized::UInt64 u, doris::vectorized::Float32 f) {
+inline bool greaterOp<doris::vectorized::UInt64, doris::vectorized::Float32>(
+        doris::vectorized::UInt64 u, doris::vectorized::Float32 f) {
     return greaterOp(u, static_cast<doris::vectorized::Float64>(f));
 }
 
 template <>
-inline bool greaterOp<doris::vectorized::Float64, doris::vectorized::UInt128>(doris::vectorized::Float64 f, doris::vectorized::UInt128 u) {
+inline bool greaterOp<doris::vectorized::Float64, doris::vectorized::UInt128>(
+        doris::vectorized::Float64 f, doris::vectorized::UInt128 u) {
     return u.low == 0 && greaterOp(f, u.high);
 }
 
 template <>
-inline bool greaterOp<doris::vectorized::UInt128, doris::vectorized::Float64>(doris::vectorized::UInt128 u, doris::vectorized::Float64 f) {
+inline bool greaterOp<doris::vectorized::UInt128, doris::vectorized::Float64>(
+        doris::vectorized::UInt128 u, doris::vectorized::Float64 f) {
     return u.low != 0 || greaterOp(u.high, f);
 }
 
 template <>
-inline bool greaterOp<doris::vectorized::Float32, doris::vectorized::UInt128>(doris::vectorized::Float32 f, doris::vectorized::UInt128 u) {
+inline bool greaterOp<doris::vectorized::Float32, doris::vectorized::UInt128>(
+        doris::vectorized::Float32 f, doris::vectorized::UInt128 u) {
     return greaterOp(static_cast<doris::vectorized::Float64>(f), u);
 }
 
 template <>
-inline bool greaterOp<doris::vectorized::UInt128, doris::vectorized::Float32>(doris::vectorized::UInt128 u, doris::vectorized::Float32 f) {
+inline bool greaterOp<doris::vectorized::UInt128, doris::vectorized::Float32>(
+        doris::vectorized::UInt128 u, doris::vectorized::Float32 f) {
     return greaterOp(u, static_cast<doris::vectorized::Float64>(f));
 }
 
@@ -264,66 +284,87 @@ inline bool_if_safe_conversion<A, B> equalsOp(A a, B b) {
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Float64, doris::vectorized::UInt64>(doris::vectorized::Float64 f, doris::vectorized::UInt64 u) {
-    return static_cast<doris::vectorized::UInt64>(f) == u && f == static_cast<doris::vectorized::Float64>(u);
+inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Float64, doris::vectorized::UInt64>(
+        doris::vectorized::Float64 f, doris::vectorized::UInt64 u) {
+    return static_cast<doris::vectorized::UInt64>(f) == u &&
+           f == static_cast<doris::vectorized::Float64>(u);
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::UInt64, doris::vectorized::Float64>(doris::vectorized::UInt64 u, doris::vectorized::Float64 f) {
-    return u == static_cast<doris::vectorized::UInt64>(f) && static_cast<doris::vectorized::Float64>(u) == f;
+inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::UInt64, doris::vectorized::Float64>(
+        doris::vectorized::UInt64 u, doris::vectorized::Float64 f) {
+    return u == static_cast<doris::vectorized::UInt64>(f) &&
+           static_cast<doris::vectorized::Float64>(u) == f;
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Float64, doris::vectorized::Int64>(doris::vectorized::Float64 f, doris::vectorized::Int64 u) {
-    return static_cast<doris::vectorized::Int64>(f) == u && f == static_cast<doris::vectorized::Float64>(u);
+inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Float64, doris::vectorized::Int64>(
+        doris::vectorized::Float64 f, doris::vectorized::Int64 u) {
+    return static_cast<doris::vectorized::Int64>(f) == u &&
+           f == static_cast<doris::vectorized::Float64>(u);
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Int64, doris::vectorized::Float64>(doris::vectorized::Int64 u, doris::vectorized::Float64 f) {
-    return u == static_cast<doris::vectorized::Int64>(f) && static_cast<doris::vectorized::Float64>(u) == f;
+inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Int64, doris::vectorized::Float64>(
+        doris::vectorized::Int64 u, doris::vectorized::Float64 f) {
+    return u == static_cast<doris::vectorized::Int64>(f) &&
+           static_cast<doris::vectorized::Float64>(u) == f;
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Float32, doris::vectorized::UInt64>(doris::vectorized::Float32 f, doris::vectorized::UInt64 u) {
-    return static_cast<doris::vectorized::UInt64>(f) == u && f == static_cast<doris::vectorized::Float32>(u);
+inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Float32, doris::vectorized::UInt64>(
+        doris::vectorized::Float32 f, doris::vectorized::UInt64 u) {
+    return static_cast<doris::vectorized::UInt64>(f) == u &&
+           f == static_cast<doris::vectorized::Float32>(u);
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::UInt64, doris::vectorized::Float32>(doris::vectorized::UInt64 u, doris::vectorized::Float32 f) {
-    return u == static_cast<doris::vectorized::UInt64>(f) && static_cast<doris::vectorized::Float32>(u) == f;
+inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::UInt64, doris::vectorized::Float32>(
+        doris::vectorized::UInt64 u, doris::vectorized::Float32 f) {
+    return u == static_cast<doris::vectorized::UInt64>(f) &&
+           static_cast<doris::vectorized::Float32>(u) == f;
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Float32, doris::vectorized::Int64>(doris::vectorized::Float32 f, doris::vectorized::Int64 u) {
-    return static_cast<doris::vectorized::Int64>(f) == u && f == static_cast<doris::vectorized::Float32>(u);
+inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Float32, doris::vectorized::Int64>(
+        doris::vectorized::Float32 f, doris::vectorized::Int64 u) {
+    return static_cast<doris::vectorized::Int64>(f) == u &&
+           f == static_cast<doris::vectorized::Float32>(u);
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Int64, doris::vectorized::Float32>(doris::vectorized::Int64 u, doris::vectorized::Float32 f) {
-    return u == static_cast<doris::vectorized::Int64>(f) && static_cast<doris::vectorized::Float32>(u) == f;
+inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Int64, doris::vectorized::Float32>(
+        doris::vectorized::Int64 u, doris::vectorized::Float32 f) {
+    return u == static_cast<doris::vectorized::Int64>(f) &&
+           static_cast<doris::vectorized::Float32>(u) == f;
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::UInt128, doris::vectorized::Float64>(doris::vectorized::UInt128 u, doris::vectorized::Float64 f) {
+inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::UInt128, doris::vectorized::Float64>(
+        doris::vectorized::UInt128 u, doris::vectorized::Float64 f) {
     return u.low == 0 && equalsOp(static_cast<UInt64>(u.high), f);
 }
 
 template <>
-inline bool equalsOp<doris::vectorized::UInt128, doris::vectorized::Float32>(doris::vectorized::UInt128 u, doris::vectorized::Float32 f) {
+inline bool equalsOp<doris::vectorized::UInt128, doris::vectorized::Float32>(
+        doris::vectorized::UInt128 u, doris::vectorized::Float32 f) {
     return equalsOp(u, static_cast<doris::vectorized::Float64>(f));
 }
 
 template <>
-inline bool equalsOp<doris::vectorized::Float64, doris::vectorized::UInt128>(doris::vectorized::Float64 f, doris::vectorized::UInt128 u) {
+inline bool equalsOp<doris::vectorized::Float64, doris::vectorized::UInt128>(
+        doris::vectorized::Float64 f, doris::vectorized::UInt128 u) {
     return equalsOp(u, f);
 }
 
 template <>
-inline bool equalsOp<doris::vectorized::Float32, doris::vectorized::UInt128>(doris::vectorized::Float32 f, doris::vectorized::UInt128 u) {
+inline bool equalsOp<doris::vectorized::Float32, doris::vectorized::UInt128>(
+        doris::vectorized::Float32 f, doris::vectorized::UInt128 u) {
     return equalsOp(static_cast<doris::vectorized::Float64>(f), u);
 }
 
-inline bool NO_SANITIZE_UNDEFINED greaterOp(doris::vectorized::Int128 i, doris::vectorized::Float64 f) {
+inline bool NO_SANITIZE_UNDEFINED greaterOp(doris::vectorized::Int128 i,
+                                            doris::vectorized::Float64 f) {
     static constexpr __int128 min_int128 = __int128(0x8000000000000000ll) << 64;
     static constexpr __int128 max_int128 =
             (__int128(0x7fffffffffffffffll) << 64) + 0xffffffffffffffffll;
@@ -332,10 +373,12 @@ inline bool NO_SANITIZE_UNDEFINED greaterOp(doris::vectorized::Int128 i, doris::
         return static_cast<doris::vectorized::Float64>(i) > f;
 
     return (f < static_cast<doris::vectorized::Float64>(min_int128)) ||
-           (f < static_cast<doris::vectorized::Float64>(max_int128) && i > static_cast<doris::vectorized::Int128>(f));
+           (f < static_cast<doris::vectorized::Float64>(max_int128) &&
+            i > static_cast<doris::vectorized::Int128>(f));
 }
 
-inline bool NO_SANITIZE_UNDEFINED greaterOp(doris::vectorized::Float64 f, doris::vectorized::Int128 i) {
+inline bool NO_SANITIZE_UNDEFINED greaterOp(doris::vectorized::Float64 f,
+                                            doris::vectorized::Int128 i) {
     static constexpr __int128 min_int128 = __int128(0x8000000000000000ll) << 64;
     static constexpr __int128 max_int128 =
             (__int128(0x7fffffffffffffffll) << 64) + 0xffffffffffffffffll;
@@ -344,7 +387,8 @@ inline bool NO_SANITIZE_UNDEFINED greaterOp(doris::vectorized::Float64 f, doris:
         return f > static_cast<doris::vectorized::Float64>(i);
 
     return (f >= static_cast<doris::vectorized::Float64>(max_int128)) ||
-           (f > static_cast<doris::vectorized::Float64>(min_int128) && static_cast<doris::vectorized::Int128>(f) > i);
+           (f > static_cast<doris::vectorized::Float64>(min_int128) &&
+            static_cast<doris::vectorized::Int128>(f) > i);
 }
 
 inline bool greaterOp(doris::vectorized::Int128 i, doris::vectorized::Float32 f) {
@@ -354,11 +398,15 @@ inline bool greaterOp(doris::vectorized::Float32 f, doris::vectorized::Int128 i)
     return greaterOp(static_cast<doris::vectorized::Float64>(f), i);
 }
 
-inline bool NO_SANITIZE_UNDEFINED equalsOp(doris::vectorized::Int128 i, doris::vectorized::Float64 f) {
-    return i == static_cast<doris::vectorized::Int128>(f) && static_cast<doris::vectorized::Float64>(i) == f;
+inline bool NO_SANITIZE_UNDEFINED equalsOp(doris::vectorized::Int128 i,
+                                           doris::vectorized::Float64 f) {
+    return i == static_cast<doris::vectorized::Int128>(f) &&
+           static_cast<doris::vectorized::Float64>(i) == f;
 }
-inline bool NO_SANITIZE_UNDEFINED equalsOp(doris::vectorized::Int128 i, doris::vectorized::Float32 f) {
-    return i == static_cast<doris::vectorized::Int128>(f) && static_cast<doris::vectorized::Float32>(i) == f;
+inline bool NO_SANITIZE_UNDEFINED equalsOp(doris::vectorized::Int128 i,
+                                           doris::vectorized::Float32 f) {
+    return i == static_cast<doris::vectorized::Int128>(f) &&
+           static_cast<doris::vectorized::Float32>(i) == f;
 }
 inline bool equalsOp(doris::vectorized::Float64 f, doris::vectorized::Int128 i) {
     return equalsOp(i, f);

@@ -21,8 +21,8 @@
 
 #include "gen_cpp/Exprs_types.h"
 #include "vec/exprs/vectorized_fn_call.h"
-#include "vec/exprs/vslot_ref.h"
 #include "vec/exprs/vliteral.h"
+#include "vec/exprs/vslot_ref.h"
 
 namespace doris::vectorized {
 using doris::Status;
