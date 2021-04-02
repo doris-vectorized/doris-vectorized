@@ -143,8 +143,10 @@ public class SessionVariable implements Serializable, Writable {
 
     public static final String EXTRACT_WIDE_RANGE_EXPR = "extract_wide_range_expr";
 
-    public static final long DEFAULT_INSERT_VISIBLE_TIMEOUT_MS = 10_000;
+    public static final long DEFAULT_INSERT_VISIBLE_TIMEOUT_MS = 10000;
     public static final long MIN_INSERT_VISIBLE_TIMEOUT_MS = 1000; // If user set a very small value, use this value instead.
+
+    public static final String ENABLE_VECTORIZED_ENGINE = "enable_vectorized_engine";
 
     // session origin value
     public Map<Field, String> sessionOriginValue = new HashMap<Field, String>();
@@ -354,6 +356,9 @@ public class SessionVariable implements Serializable, Writable {
     private int runtimeFilterType = 1;
     @VariableMgr.VarAttr(name = RUNTIME_FILTER_MAX_IN_NUM)
     private int runtimeFilterMaxInNum = 1024;
+
+    @VariableMgr.VarAttr(name = ENABLE_VECTORIZED_ENGINE)
+    private boolean enableVectorizedEngine = false;
 
     public long getMaxExecMemByte() {
         return maxExecMemByte;
@@ -699,6 +704,14 @@ public class SessionVariable implements Serializable, Writable {
         this.runtimeFilterMaxInNum = runtimeFilterMaxInNum;
     }
 
+    public boolean enableVectorizedEngine() {
+        return enableVectorizedEngine;
+    }
+
+    public void setEnableVectorizedEngine(boolean enableVectorizedEngine) {
+        this.enableVectorizedEngine = enableVectorizedEngine;
+    }
+
     public long getInsertVisibleTimeoutMs() {
         if (insertVisibleTimeoutMs < MIN_INSERT_VISIBLE_TIMEOUT_MS) {
             return MIN_INSERT_VISIBLE_TIMEOUT_MS;
@@ -758,6 +771,7 @@ public class SessionVariable implements Serializable, Writable {
         tResult.setQueryTimeout(queryTimeoutS);
         tResult.setIsReportSuccess(isReportSucc);
         tResult.setCodegenLevel(codegenLevel);
+        tResult.setEnableVectorizedEngine(enableVectorizedEngine);
 
         tResult.setBatchSize(batchSize);
         tResult.setDisableStreamPreaggregations(disableStreamPreaggregations);

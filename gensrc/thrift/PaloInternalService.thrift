@@ -144,8 +144,13 @@ struct TQueryOptions {
   // Time in ms to wait until runtime filters are delivered.
   33: optional i32 runtime_filter_wait_time_ms = 1000
 
-  // if the right table is greater than this value in the hash join,  we will ignore IN filter
-  34: optional i32 runtime_filter_max_in_num = 1024;
+  // Runtime filter type used, For testing, Corresponds to TRuntimeFilterType
+  39: optional i32 runtime_filter_type = 1;
+
+  40: optional i32 runtime_filter_max_in_num = 1024;
+
+  // whether enable vectorized engine 
+  41: optional bool enable_vectorized_engine = false
 }
     
 
@@ -306,7 +311,7 @@ struct TExecPlanFragmentParams {
   14: optional TLoadErrorHubInfo load_error_hub_info
 
   // The total number of fragments on same BE host
-  15: optional i32 fragment_num_on_host;
+  15: optional i32 fragment_num_on_host
 
   // If true, all @Common components is unset and should be got from BE's cache
   // If this field is unset or it set to false, all @Common components is set.

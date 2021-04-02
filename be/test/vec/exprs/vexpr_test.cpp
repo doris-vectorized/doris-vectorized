@@ -22,7 +22,6 @@
 #include "vec/exprs/vliteral.h"
 #include "vec/utils/util.hpp"
 
-
 TEST(TEST_VEXPR, ABSTEST) {
     doris::ChunkAllocator::init_instance(4096);
     doris::ObjectPool object_pool;

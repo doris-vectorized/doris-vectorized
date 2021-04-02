@@ -1,8 +1,25 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/exec/aggregation_node.h"
 
-#include "runtime/row_batch.h"
 #include "exec/exec_node.h"
 #include "runtime/mem_pool.h"
+#include "runtime/row_batch.h"
 #include "vec/core/block.h"
 #include "vec/exprs/vexpr.h"
 #include "vec/exprs/vexpr_context.h"
@@ -13,7 +30,7 @@
 namespace doris::vectorized {
 AggregationNode::AggregationNode(ObjectPool* pool, const TPlanNode& tnode,
                                  const DescriptorTbl& descs)
-        : VExecNode(pool, tnode, descs),
+        : ExecNode(pool, tnode, descs),
           _intermediate_tuple_id(tnode.agg_node.intermediate_tuple_id),
           _intermediate_tuple_desc(NULL),
           _output_tuple_id(tnode.agg_node.output_tuple_id),
@@ -33,7 +50,8 @@ Status AggregationNode::init(const TPlanNode& tnode, RuntimeState* state) {
     _aggregate_evaluators.reserve(tnode.agg_node.aggregate_functions.size());
     for (int i = 0; i < tnode.agg_node.aggregate_functions.size(); ++i) {
         AggFnEvaluator* evaluator = nullptr;
-        RETURN_IF_ERROR(AggFnEvaluator::create(_pool, tnode.agg_node.aggregate_functions[i], &evaluator));
+        RETURN_IF_ERROR(
+                AggFnEvaluator::create(_pool, tnode.agg_node.aggregate_functions[i], &evaluator));
         _aggregate_evaluators.push_back(evaluator);
     }
     return Status::OK();
@@ -94,7 +112,7 @@ Status AggregationNode::prepare(RuntimeState* state) {
 }
 
 Status AggregationNode::open(RuntimeState* state) {
-    RETURN_IF_ERROR(VExecNode::open(state));
+    RETURN_IF_ERROR(ExecNode::open(state));
     RETURN_IF_ERROR(VExpr::open(_probe_expr_ctxs, state));
     RETURN_IF_ERROR(VExpr::open(_build_expr_ctxs, state));
 
@@ -105,13 +123,10 @@ Status AggregationNode::open(RuntimeState* state) {
     RETURN_IF_ERROR(_children[0]->open(state));
     // TODO: get child(0) data
     bool eos = false;
-    Block block;
-    RowBatch batch(child(0)->row_desc(), state->batch_size(), mem_tracker().get());
     while (!eos) {
-        batch.clear();
+        Block block;
         RETURN_IF_CANCELLED(state);
-        RETURN_IF_ERROR(_children[0]->get_next(state, &batch, &eos));
-        block = batch.convert_to_vec_block();
+        RETURN_IF_ERROR(_children[0]->get_next(state, &block, &eos));
         // RETURN_IF_ERROR(static_cast<VExecNode*>(_children[0])->get_next(state, &block, &eos));
         // process no grouping
         for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
@@ -124,8 +139,7 @@ Status AggregationNode::open(RuntimeState* state) {
 }
 
 Status AggregationNode::get_next(RuntimeState* state, RowBatch* row_batch, bool* eos) {
-    throw Exception("Not Implemented Aggregation Node::get_next scalar",
-                    ErrorCodes::NOT_IMPLEMENTED);
+    return Status::NotSupported("Not Implemented Aggregation Node::get_next scalar");
 }
 
 Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
@@ -138,10 +152,11 @@ Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         auto columns = _single_output_block->mutateColumns();
         for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
             auto column = columns[i].get();
-            _aggregate_evaluators[i]->insert_result_info(_single_data_ptr + _single_data_offset[i], column);
+            _aggregate_evaluators[i]->insert_result_info(_single_data_ptr + _single_data_offset[i],
+                                                         column);
         }
         block->setColumns(std::move(columns));
-        
+
         *eos = true;
     }
 
