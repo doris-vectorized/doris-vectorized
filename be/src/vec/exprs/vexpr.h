@@ -25,11 +25,15 @@
 #include "vec/data_types/data_type.h"
 #include "vec/exprs/vexpr_context.h"
 
-namespace doris::vectorized {
+namespace doris {
+namespace vectorized {
 
 class VExpr {
 public:
     VExpr(const TExprNode& node);
+    VExpr(const TypeDescriptor& type, bool is_slotref);
+    virtual ~VExpr() = default;
+
     virtual VExpr* clone(ObjectPool* pool) const = 0;
 
     virtual const std::string& expr_name() const = 0;
@@ -44,6 +48,10 @@ public:
 
     void add_child(VExpr* expr) { _children.push_back(expr); }
 
+    bool is_nullable() const { return _data_type->isNullable(); }
+
+    PrimitiveType result_type() const { return _type.type; }
+
     static Status create_expr_tree(ObjectPool* pool, const TExpr& texpr, VExprContext** ctx);
 
     static Status create_expr_trees(ObjectPool* pool, const std::vector<TExpr>& texprs,
@@ -56,10 +64,6 @@ public:
     static Status open(const std::vector<VExprContext*>& ctxs, RuntimeState* state);
 
     static void close(const std::vector<VExprContext*>& ctxs, RuntimeState* state);
-
-    bool is_nullable() const { return _data_type->isNullable(); }
-
-    PrimitiveType result_type() const { return _type.type; }
 
     static Status create_expr(ObjectPool* pool, const TExprNode& texpr_node, VExpr** expr);
 
@@ -75,4 +79,5 @@ protected:
     TFunction _fn;
 };
 
-} // namespace doris::vectorized
+} // namespace vectorized
+} // namespace doris
