@@ -94,7 +94,11 @@ public:
 
     std::vector<bool>* mutable_runtime_filter_marks() { return &_runtime_filter_marks; }
 
-private:
+    const std::vector<SlotDescriptor*>& get_query_slots() const {
+        return _query_slots;
+    }
+
+protected:
     Status _init_params(const std::vector<OlapScanRange*>& key_ranges,
                         const std::vector<TCondition>& filters,
                         const std::vector<std::pair<string, std::shared_ptr<IBloomFilterFuncBase>>>&

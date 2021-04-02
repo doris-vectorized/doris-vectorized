@@ -489,26 +489,23 @@ DataTypePtr FunctionBuilderImpl::getReturnTypeWithoutLowCardinality(
         const ColumnsWithTypeAndName& arguments) const {
     checkNumberOfArguments(arguments.size());
 
-   if (!arguments.empty() && useDefaultImplementationForNulls())
-   {
-       NullPresence null_presence = getNullPresense(arguments);
+    if (!arguments.empty() && useDefaultImplementationForNulls()) {
+        NullPresence null_presence = getNullPresense(arguments);
 
-       if (null_presence.has_null_constant)
-       {
-           return makeNullable(std::make_shared<DataTypeNothing>());
-       }
-       if (null_presence.has_nullable)
-       {
+        if (null_presence.has_null_constant) {
+            return makeNullable(std::make_shared<DataTypeNothing>());
+        }
+        if (null_presence.has_nullable) {
             ColumnNumbers numbers(arguments.size());
-            for (int i = 0; i < arguments.size(); i++)
-            {
+            for (int i = 0; i < arguments.size(); i++) {
                 numbers[i] = i;
             }
-           Block nested_block = createBlockWithNestedColumns(Block(arguments), numbers);
-           auto return_type = getReturnTypeImpl(ColumnsWithTypeAndName(nested_block.begin(), nested_block.end()));
-           return makeNullable(return_type);
-       }
-   }
+            Block nested_block = createBlockWithNestedColumns(Block(arguments), numbers);
+            auto return_type = getReturnTypeImpl(
+                    ColumnsWithTypeAndName(nested_block.begin(), nested_block.end()));
+            return makeNullable(return_type);
+        }
+    }
 
     return getReturnTypeImpl(arguments);
 }

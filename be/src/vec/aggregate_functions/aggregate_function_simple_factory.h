@@ -17,10 +17,10 @@
 
 #pragma once
 
-#include <mutex>
 #include <functional>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <unordered_map>
 
 #include "vec/aggregate_functions/aggregate_function.h"
@@ -31,7 +31,7 @@ namespace doris::vectorized {
 
 class AggregateFunctionSimpleFactory;
 void registerAggregateFunctionSum(AggregateFunctionSimpleFactory& factory);
-void registerAggregateFunctionCombinatorNull(AggregateFunctionSimpleFactory & factory);
+void registerAggregateFunctionCombinatorNull(AggregateFunctionSimpleFactory& factory);
 
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
@@ -76,8 +76,8 @@ public:
     static AggregateFunctionSimpleFactory& instance() {
         static std::once_flag oc;
         static AggregateFunctionSimpleFactory instance;
-        std::call_once(oc, [&]() { 
-            registerAggregateFunctionSum(instance); 
+        std::call_once(oc, [&]() {
+            registerAggregateFunctionSum(instance);
             registerAggregateFunctionCombinatorNull(instance);
         });
         return instance;

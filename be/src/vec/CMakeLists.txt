@@ -20,52 +20,54 @@ set(LIBRARY_OUTPUT_PATH "${BUILD_DIR}/src/vec")
 set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/src/vec")
 
 set(VEC_FILES
-  data_types/nested_utils.cpp
-  data_types/data_type.cpp
-  data_types/data_type_number_base.cpp
-  data_types/data_types_number.cpp
-  common/demangle.cpp
-  functions/function.cpp
-  functions/function_helpers.cpp
-  columns/column_nullable.cpp
-  columns/column_vector.cpp
-  columns/column_const.cpp
-  columns/column.cpp
-  columns/columns_common.cpp
-  core/field.cpp
-  core/column_with_type_and_name.cpp
-  core/block_info.cpp
-  core/block.cpp
-  common/pod_array.cpp
-  common/string_utils/string_utils.cpp
-  common/error_codes.cpp
-  common/exception.cpp
-  aggregate_functions/aggregate_function_sum.cpp
   aggregate_functions/aggregate_function_count.cpp
   aggregate_functions/aggregate_function_null.cpp
+  aggregate_functions/aggregate_function_sum.cpp
   columns/collator.cpp
+  columns/column.cpp
+  columns/column_const.cpp
   columns/column_decimal.cpp
+  columns/column_nullable.cpp
   columns/column_string.cpp
+  columns/column_vector.cpp
+  columns/columns_common.cpp
+  common/demangle.cpp
+  common/error_codes.cpp
+  common/exception.cpp
+  common/pod_array.cpp
+  common/string_utils/string_utils.cpp
+  core/block.cpp
+  core/block_info.cpp
+  core/column_with_type_and_name.cpp
   core/field.cpp
-  data_types/data_types_decimal.cpp
-  data_types/data_type_string.cpp
-  data_types/get_least_supertype.cpp
-  data_types/data_type_nullable.cpp
+  core/field.cpp
+  data_types/data_type.cpp
   data_types/data_type_nothing.cpp
+  data_types/data_type_nothing.cpp
+  data_types/data_type_nullable.cpp
+  data_types/data_type_nullable.cpp
+  data_types/data_type_number_base.cpp
+  data_types/data_type_string.cpp
+  data_types/data_types_decimal.cpp
+  data_types/data_types_number.cpp
+  data_types/get_least_supertype.cpp
+  data_types/nested_utils.cpp
+  exec/aggregation_node.cpp
+  exec/olap_scan_node.cpp
+  exec/olap_scanner.cpp
+  exprs/vectorized_agg_fn.cpp
   exprs/vectorized_fn_call.cpp
   exprs/vexpr.cpp
   exprs/vexpr_context.cpp
-  exprs/vectorized_agg_fn.cpp
-  exprs/vslot_ref.cpp
   exprs/vliteral.cpp
-  exec/aggregation_node.cpp
-  data_types/data_type_nullable.cpp
-  data_types/data_type_nothing.cpp
-  sink/result_sink.cpp
-  sink/mysql_result_writer.cpp
-  functions/functions_logical.cpp
+  exprs/vslot_ref.cpp
   functions/abs.cpp
   functions/comparison.cpp
+  functions/function.cpp
+  functions/function_helpers.cpp
+  functions/functions_logical.cpp
+  sink/mysql_result_writer.cpp
+  sink/result_sink.cpp
 )
 
 add_library(Vec STATIC
