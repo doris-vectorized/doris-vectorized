@@ -18,6 +18,7 @@
 #include "vec/exprs/vectorized_fn_call.h"
 
 #include <string_view>
+
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "vec/data_types/data_type_nullable.h"
