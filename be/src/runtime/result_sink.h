@@ -36,13 +36,17 @@ class ResultWriter;
 class MemTracker;
 class ResultFileOptions;
 
+namespace vectorized {
+    class VExprContext;
+}
+
 class ResultSink : public DataSink {
 public:
     // construct a buffer for the result need send to coordinator.
     // row_desc used for convert RowBatch to TRowBatch
     // buffer_size is the buffer size allocated to each query
     ResultSink(const RowDescriptor& row_desc, const std::vector<TExpr>& select_exprs,
-               const TResultSink& sink, int buffer_size);
+               const TResultSink& sink, int buffer_size, bool is_vec = false);
     virtual ~ResultSink();
     virtual Status prepare(RuntimeState* state);
     virtual Status open(RuntimeState* state);
@@ -69,11 +73,14 @@ private:
     // Owned by the RuntimeState.
     const std::vector<TExpr>& _t_output_expr;
     std::vector<ExprContext*> _output_expr_ctxs;
+    std::vector<vectorized::VExprContext*> _output_vexpr_ctxs;
 
     boost::shared_ptr<BufferControlBlock> _sender;
     boost::shared_ptr<ResultWriter> _writer;
     RuntimeProfile* _profile; // Allocated from _pool
     int _buf_size;            // Allocated from _pool
+
+    bool _is_vec;
 };
 
 } // namespace doris
