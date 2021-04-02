@@ -187,6 +187,7 @@ static void BM_ABS_VECIMPL(benchmark::State& state) {
     int ts = -1;
 
     for (auto _ : state) {
+        block = row_batch.conver_to_vec_block();
         context->execute(&block, &ts);
         block.erase(ts);
     }
@@ -308,7 +309,7 @@ static void BM_AGG_COUNT_VEC(benchmark::State& state) {
     func = (vectorized::AggregateFunctionSum<
             int32_t, int64_t, vectorized::AggregateFunctionSumData<int64_t>>*)agg_function.get();
     for (auto _ : state) {
-        // agg_function->addBatchSinglePlace(4096,place,column,nullptr);
+        agg_function->addBatchSinglePlace(4096,place,column,nullptr);
         for (int i = 0; i < 4096; i++) {
             // agg_function->add(place, column, i, nullptr);
             func->add(place, column, i, nullptr);
