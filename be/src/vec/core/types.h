@@ -392,7 +392,8 @@ template <>
 struct hash<doris::vectorized::Decimal128> {
     size_t operator()(const doris::vectorized::Decimal128& x) const {
         return std::hash<doris::vectorized::Int64>()(x.value >> 64) ^
-               std::hash<doris::vectorized::Int64>()(x.value & std::numeric_limits<doris::vectorized::UInt64>::max());
+               std::hash<doris::vectorized::Int64>()(
+                       x.value & std::numeric_limits<doris::vectorized::UInt64>::max());
     }
 };
 } // namespace std

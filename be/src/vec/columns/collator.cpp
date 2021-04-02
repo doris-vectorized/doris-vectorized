@@ -47,8 +47,9 @@ Collator::Collator(const std::string& locale_) : locale(boost::algorithm::to_low
     collator = ucol_open(locale.c_str(), &status);
     if (status != U_ZERO_ERROR) {
         ucol_close(collator);
-        throw doris::vectorized::Exception("Unsupported collation locale: " + locale,
-                            doris::vectorized::ErrorCodes::UNSUPPORTED_COLLATION_LOCALE);
+        throw doris::vectorized::Exception(
+                "Unsupported collation locale: " + locale,
+                doris::vectorized::ErrorCodes::UNSUPPORTED_COLLATION_LOCALE);
     }
 #else
     throw doris::vectorized::Exception(
@@ -74,7 +75,8 @@ int Collator::compare(const char* str1, size_t length1, const char* str2, size_t
 
     if (status != U_ZERO_ERROR)
         throw doris::vectorized::Exception(
-                "ICU collation comparison failed with error code: " + doris::vectorized::toString<int>(status),
+                "ICU collation comparison failed with error code: " +
+                        doris::vectorized::toString<int>(status),
                 doris::vectorized::ErrorCodes::COLLATION_COMPARISON_FAILED);
 
     /** Values of enum UCollationResult are equals to what exactly we need:

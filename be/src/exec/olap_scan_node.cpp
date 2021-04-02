@@ -587,7 +587,7 @@ Status OlapScanNode::build_scan_key() {
     return Status::OK();
 }
 
-static Status get_hints(const TPaloScanRange& scan_range, int block_row_count,
+Status OlapScanNode::get_hints(const TPaloScanRange& scan_range, int block_row_count,
                         bool is_begin_include, bool is_end_include,
                         const std::vector<std::unique_ptr<OlapScanRange>>& scan_key_range,
                         std::vector<std::unique_ptr<OlapScanRange>>* sub_scan_range,
