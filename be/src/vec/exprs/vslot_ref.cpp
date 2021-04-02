@@ -19,6 +19,7 @@
 
 #include "fmt/format.h"
 #include "runtime/descriptors.h"
+#include "vec/data_types/data_type_nullable.h"
 
 namespace doris::vectorized {
 using doris::Status;
@@ -26,6 +27,13 @@ using doris::SlotDescriptor;
 VSlotRef::VSlotRef(const doris::TExprNode& node)
         : VExpr(node),
           _slot_id(node.slot_ref.slot_id),
+          _column_id(-1),
+          _is_nullable(false),
+          _column_name(nullptr) {}
+
+VSlotRef::VSlotRef(const SlotDescriptor* desc)
+        : VExpr(desc->type(), true),
+          _slot_id(desc->id()),
           _column_id(-1),
           _is_nullable(false),
           _column_name(nullptr) {}
@@ -43,6 +51,9 @@ Status VSlotRef::prepare(doris::RuntimeState* state, const doris::RowDescriptor&
     _is_nullable = slot_desc->is_nullable();
     _column_id = desc.get_column_id(_slot_id);
     _column_name = &slot_desc->col_name();
+    if (_is_nullable) {
+        _data_type = std::make_shared<DataTypeNullable>(_data_type);
+    }
     return Status::OK();
 }
 

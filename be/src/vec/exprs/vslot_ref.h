@@ -20,10 +20,13 @@
 #include "vec/exprs/vexpr.h"
 #include "vec/functions/function.h"
 
-namespace doris::vectorized {
+namespace doris {
+class SlotDescriptor;
+namespace vectorized {
 class VSlotRef final : public VExpr {
 public:
     VSlotRef(const doris::TExprNode& node);
+    VSlotRef(const SlotDescriptor* desc);
     virtual doris::Status execute(doris::vectorized::Block* block, int* result_column_id);
     virtual doris::Status prepare(doris::RuntimeState* state, const doris::RowDescriptor& desc,
                                   VExprContext* context);
@@ -31,13 +34,14 @@ public:
         return pool->add(new VSlotRef(*this));
     }
 
-    virtual const std::string &expr_name() const override;
+    virtual const std::string& expr_name() const override;
 
 private:
     FunctionPtr _function;
     int _slot_id;
     int _column_id;
     bool _is_nullable;
-    const std::string *_column_name;
+    const std::string* _column_name;
 };
-} // namespace doris::vectorized
+} // namespace vectorized
+} // namespace doris
