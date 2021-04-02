@@ -598,6 +598,7 @@ CONF_mInt32(zone_map_row_num_threshold, "20");
 //    Trace = 6
 CONF_Int32(aws_log_level, "3");
 
+CONF_mBool(is_vec, "true");
 } // namespace config
 
 } // namespace doris

@@ -104,15 +104,15 @@ public:
             using DataType = std::decay_t<decltype(type)>;
             using T0 = typename DataType::FieldType;
 
-            //            if constexpr (IsDataTypeDecimal<DataType>)
-            //            {
-            //                if constexpr (!allow_decimal)
-            //                    return false;
-            //                result = std::make_shared<DataType>(type.getPrecision(), type.getScale());
-            //            }
-            //            else
-            result = std::make_shared<DataTypeNumber<typename Op<T0>::ResultType>>();
-            return true;
+            if constexpr (IsDataTypeDecimal<DataType>)
+            {
+                if constexpr (!allow_decimal)
+                    return false;
+                result = std::make_shared<DataType>(type.getPrecision(), type.getScale());
+            } else {
+                result = std::make_shared<DataTypeNumber<typename Op<T0>::ResultType>>();
+                return true;
+            }
         });
         if (!valid)
             throw Exception("Illegal type " + arguments[0]->getName() +
