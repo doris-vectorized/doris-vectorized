@@ -48,10 +48,6 @@ public:
 
     void add_child(VExpr* expr) { _children.push_back(expr); }
 
-    bool is_nullable() const { return _data_type->isNullable(); }
-
-    PrimitiveType result_type() const { return _type.type; }
-
     static Status create_expr_tree(ObjectPool* pool, const TExpr& texpr, VExprContext** ctx);
 
     static Status create_expr_trees(ObjectPool* pool, const std::vector<TExpr>& texprs,
@@ -64,6 +60,10 @@ public:
     static Status open(const std::vector<VExprContext*>& ctxs, RuntimeState* state);
 
     static void close(const std::vector<VExprContext*>& ctxs, RuntimeState* state);
+
+    bool is_nullable() const { return _data_type->isNullable(); }
+
+    PrimitiveType result_type() const { return _type.type; }
 
     static Status create_expr(ObjectPool* pool, const TExprNode& texpr_node, VExpr** expr);
 

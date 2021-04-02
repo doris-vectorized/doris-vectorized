@@ -63,7 +63,7 @@ struct Construct<false, false, 4> {
 };
 template <>
 struct Construct<false, false, 8> {
-    using Type = Int64;
+    using Type = Int128;
 };
 template <>
 struct Construct<false, false, 16> {

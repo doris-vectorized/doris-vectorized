@@ -29,11 +29,13 @@
 #include "runtime/runtime_state.h"
 #include "util/uid_util.h"
 
+#include "vec/exprs/vexpr.h"
+
 namespace doris {
 
 ResultSink::ResultSink(const RowDescriptor& row_desc, const std::vector<TExpr>& t_output_expr,
-                       const TResultSink& sink, int buffer_size)
-        : _row_desc(row_desc), _t_output_expr(t_output_expr), _buf_size(buffer_size) {
+                       const TResultSink& sink, int buffer_size, bool is_vec)
+        : _row_desc(row_desc), _t_output_expr(t_output_expr), _buf_size(buffer_size), _is_vec(is_vec) {
     if (!sink.__isset.type || sink.type == TResultSinkType::MYSQL_PROTOCAL) {
         _sink_type = TResultSinkType::MYSQL_PROTOCAL;
     } else {
@@ -51,10 +53,17 @@ ResultSink::ResultSink(const RowDescriptor& row_desc, const std::vector<TExpr>& 
 ResultSink::~ResultSink() {}
 
 Status ResultSink::prepare_exprs(RuntimeState* state) {
-    // From the thrift expressions create the real exprs.
-    RETURN_IF_ERROR(Expr::create_expr_trees(state->obj_pool(), _t_output_expr, &_output_expr_ctxs));
-    // Prepare the exprs to run.
-    RETURN_IF_ERROR(Expr::prepare(_output_expr_ctxs, state, _row_desc, _expr_mem_tracker));
+    if (_is_vec) {
+        // From the thrift expressions create the real exprs.
+        RETURN_IF_ERROR(vectorized::VExpr::create_expr_trees(state->obj_pool(), _t_output_expr, &_output_vexpr_ctxs));
+        // Prepare the exprs to run.
+        RETURN_IF_ERROR(vectorized::VExpr::prepare(_output_vexpr_ctxs, state, _row_desc, _expr_mem_tracker));
+    } else {
+        // From the thrift expressions create the real exprs.
+        RETURN_IF_ERROR(Expr::create_expr_trees(state->obj_pool(), _t_output_expr, &_output_expr_ctxs));
+        // Prepare the exprs to run.
+        RETURN_IF_ERROR(Expr::prepare(_output_expr_ctxs, state, _row_desc, _expr_mem_tracker));
+    }
     return Status::OK();
 }
 
@@ -76,7 +85,7 @@ Status ResultSink::prepare(RuntimeState* state) {
     switch (_sink_type) {
     case TResultSinkType::MYSQL_PROTOCAL:
         _writer.reset(new (std::nothrow)
-                              MysqlResultWriter(_sender.get(), _output_expr_ctxs, _profile));
+                              MysqlResultWriter(_sender.get(), _output_expr_ctxs, _output_vexpr_ctxs, _profile));
         break;
     case TResultSinkType::FILE:
         CHECK(_file_opts.get() != nullptr);
@@ -92,6 +101,9 @@ Status ResultSink::prepare(RuntimeState* state) {
 }
 
 Status ResultSink::open(RuntimeState* state) {
+    if (_is_vec) {
+        return vectorized::VExpr::open(_output_vexpr_ctxs, state);
+    }
     return Expr::open(_output_expr_ctxs, state);
 }
 
@@ -122,7 +134,12 @@ Status ResultSink::close(RuntimeState* state, Status exec_status) {
     state->exec_env()->result_mgr()->cancel_at_time(
             time(NULL) + config::result_buffer_cancelled_interval_time,
             state->fragment_instance_id());
-    Expr::close(_output_expr_ctxs, state);
+
+    if (_is_vec) {
+        vectorized::VExpr::close(_output_vexpr_ctxs, state);
+    } else {
+        Expr::close(_output_expr_ctxs, state);
+    }
 
     _closed = true;
     return Status::OK();
