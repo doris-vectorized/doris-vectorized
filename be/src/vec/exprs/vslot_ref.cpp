@@ -17,8 +17,9 @@
 
 #include "vec/exprs/vslot_ref.h"
 
-#include "fmt/format.h"
+#include <fmt/format.h>
 #include "runtime/descriptors.h"
+
 #include "vec/data_types/data_type_nullable.h"
 
 namespace doris::vectorized {

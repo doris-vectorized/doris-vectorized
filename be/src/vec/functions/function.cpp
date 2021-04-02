@@ -507,7 +507,6 @@ DataTypePtr FunctionBuilderImpl::getReturnTypeWithoutLowCardinality(
            Block nested_block = createBlockWithNestedColumns(Block(arguments), numbers);
            auto return_type = getReturnTypeImpl(ColumnsWithTypeAndName(nested_block.begin(), nested_block.end()));
            return makeNullable(return_type);
-
        }
    }
 

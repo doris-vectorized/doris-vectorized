@@ -27,15 +27,23 @@ class RowBatch;
 class RuntimeState;
 class TypeDescriptor;
 
+namespace vectorized {
+    class Block;
+}
+
 // abstract class of the result writer
 class ResultWriter {
 public:
-    ResultWriter(){};
+    ResultWriter(bool is_vec = false):_is_vec(is_vec) {};
     ~ResultWriter(){};
 
     virtual Status init(RuntimeState* state) = 0;
     // convert and write one row batch
     virtual Status append_row_batch(const RowBatch* batch) = 0;
+
+    virtual Status append_block(const vectorized::Block& block) {
+        return Status::InternalError("Not support append vec block now.");
+    }
 
     virtual Status close() = 0;
 
@@ -45,6 +53,7 @@ public:
 
 protected:
     int64_t _written_rows = 0; // number of rows written
+    bool _is_vec;
 };
 
 } // namespace doris
