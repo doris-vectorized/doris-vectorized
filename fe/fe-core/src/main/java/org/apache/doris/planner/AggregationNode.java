@@ -23,6 +23,7 @@ import org.apache.doris.analysis.Expr;
 import org.apache.doris.analysis.FunctionCallExpr;
 import org.apache.doris.analysis.SlotId;
 import org.apache.doris.common.UserException;
+import org.apache.doris.qe.ConnectContext;
 import org.apache.doris.thrift.TAggregationNode;
 import org.apache.doris.thrift.TExplainLevel;
 import org.apache.doris.thrift.TExpr;
@@ -205,6 +206,9 @@ public class AggregationNode extends PlanNode {
 
     private void updateplanNodeName() {
         StringBuilder sb = new StringBuilder();
+        if (ConnectContext.get().getSessionVariable().enableVectorizedEngine()) {
+            sb.append("V");
+        }
         sb.append("AGGREGATE");
         sb.append(" (");
         if (aggInfo.isMerge()) {
@@ -229,8 +233,8 @@ public class AggregationNode extends PlanNode {
 
     @Override
     protected void toThrift(TPlanNode msg) {
-        msg.node_type = TPlanNodeType.AGGREGATION_NODE;
-
+        msg.node_type = ConnectContext.get().getSessionVariable().enableVectorizedEngine() ?
+                TPlanNodeType.VAGGREGATION_NODE : TPlanNodeType.AGGREGATION_NODE;
         List<TExpr> aggregateFunctions = Lists.newArrayList();
         // only serialize agg exprs that are being materialized
         for (FunctionCallExpr e: aggInfo.getMaterializedAggregateExprs()) {

@@ -48,9 +48,9 @@ To assert_cast(From&& from) {
         throw doris::vectorized::Exception(e.what(), doris::vectorized::ErrorCodes::BAD_CAST);
     }
 
-    throw doris::vectorized::Exception("Bad cast from type " + demangle(typeid(from).name()) + " to " +
-                                demangle(typeid(To).name()),
-                        doris::vectorized::ErrorCodes::BAD_CAST);
+    throw doris::vectorized::Exception("Bad cast from type " + demangle(typeid(from).name()) +
+                                               " to " + demangle(typeid(To).name()),
+                                       doris::vectorized::ErrorCodes::BAD_CAST);
 #else
     return static_cast<To>(from);
 #endif

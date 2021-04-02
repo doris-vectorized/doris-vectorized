@@ -61,8 +61,8 @@ TEST(ABSTest, ABSTest) {
         row_batch.commit_last_row();
     }
 
-    std::shared_ptr<vectorized::IFunction> abs_function_ptr
-        = doris::vectorized::SimpleFunctionFactory::instance().get("abs");
+    std::shared_ptr<vectorized::IFunction> abs_function_ptr =
+            doris::vectorized::SimpleFunctionFactory::instance().get("abs");
 
     auto block = row_batch.convert_to_vec_block();
     // 1. build arguments
