@@ -18,6 +18,7 @@
 package org.apache.doris.planner;
 
 import org.apache.doris.analysis.OutFileClause;
+import org.apache.doris.qe.ConnectContext;
 import org.apache.doris.thrift.TDataSink;
 import org.apache.doris.thrift.TDataSinkType;
 import org.apache.doris.thrift.TExplainLevel;
@@ -49,13 +50,18 @@ public class ResultSink extends DataSink {
     @Override
     public String getExplainString(String prefix, TExplainLevel explainLevel) {
         StringBuilder strBuilder = new StringBuilder();
-        strBuilder.append(prefix + "RESULT SINK\n");
+        strBuilder.append(prefix);
+        if (ConnectContext.get().getSessionVariable().enableVectorizedEngine()) {
+            strBuilder.append("V");
+        }
+        strBuilder.append("RESULT SINK\n");
         return strBuilder.toString();
     }
 
     @Override
     protected TDataSink toThrift() {
-        TDataSink result = new TDataSink(TDataSinkType.RESULT_SINK);
+        TDataSink result = new TDataSink(ConnectContext.get().getSessionVariable().enableVectorizedEngine() ?
+                TDataSinkType.VRESULT_SINK : TDataSinkType.RESULT_SINK);
         TResultSink tResultSink = new TResultSink();
         tResultSink.setType(sinkType);
         if (fileSinkOptions != null) {
