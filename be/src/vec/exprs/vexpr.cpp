@@ -38,6 +38,13 @@ VExpr::VExpr(const doris::TExprNode& node)
     }
 }
 
+VExpr::VExpr(const TypeDescriptor& type, bool is_slotref)
+        : _type(type), _data_type(_type.get_data_type_ptr()) {
+    if (is_slotref) {
+        _node_type = TExprNodeType::SLOT_REF;
+    }
+}
+
 Status VExpr::prepare(RuntimeState* state, const RowDescriptor& row_desc, VExprContext* context) {
     for (int i = 0; i < _children.size(); ++i) {
         RETURN_IF_ERROR(_children[i]->prepare(state, row_desc, context));
@@ -129,7 +136,7 @@ Status VExpr::create_expr_tree(doris::ObjectPool* pool, const doris::TExpr& texp
 }
 
 Status VExpr::create_expr_trees(ObjectPool* pool, const std::vector<doris::TExpr>& texprs,
-                               std::vector<VExprContext*>* ctxs) {
+                                std::vector<VExprContext*>* ctxs) {
     ctxs->clear();
     for (int i = 0; i < texprs.size(); ++i) {
         VExprContext* ctx = nullptr;
@@ -140,7 +147,7 @@ Status VExpr::create_expr_trees(ObjectPool* pool, const std::vector<doris::TExpr
 }
 
 Status VExpr::prepare(const std::vector<VExprContext*>& ctxs, RuntimeState* state,
-                     const RowDescriptor& row_desc, const std::shared_ptr<MemTracker>& tracker) {
+                      const RowDescriptor& row_desc, const std::shared_ptr<MemTracker>& tracker) {
     for (int i = 0; i < ctxs.size(); ++i) {
         RETURN_IF_ERROR(ctxs[i]->prepare(state, row_desc, tracker));
     }
