@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <mutex>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -27,10 +28,15 @@
 #include "vec/data_types/data_type.h"
 
 namespace doris::vectorized {
+
+class AggregateFunctionSimpleFactory;
+void registerAggregateFunctionSum(AggregateFunctionSimpleFactory& factory);
+
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
 using AggregateFunctionCreator =
         std::function<AggregateFunctionPtr(const std::string&, const DataTypes&, const Array&)>;
+
 class AggregateFunctionSimpleFactory {
 public:
     using Creator = AggregateFunctionCreator;
@@ -48,6 +54,15 @@ public:
     AggregateFunctionPtr get(const std::string& name, const DataTypes& argument_types,
                              const Array& parameters) {
         return aggregate_functions[name](name, argument_types, parameters);
+    }
+public:
+    static AggregateFunctionSimpleFactory& instance() {
+        static std::once_flag oc;
+        static AggregateFunctionSimpleFactory instance;
+        std::call_once(oc, [&]() { 
+            registerAggregateFunctionSum(instance);
+        });
+        return instance;
     }
 };
 }; // namespace doris::vectorized
