@@ -87,8 +87,11 @@ public:
         return _watcher.elapsed_time();
     }
 
+    const std::vector<SlotDescriptor*>& get_query_slots() const {
+        return _query_slots;
+    }
 
-private:
+protected:
     Status _init_params(const std::vector<OlapScanRange*>& key_ranges,
                         const std::vector<TCondition>& filters);
     Status _init_return_columns();
@@ -96,8 +99,6 @@ private:
 
     // Update profile that need to be reported in realtime.
     void _update_realtime_counter();
-
-private:
 
     RuntimeState* _runtime_state;
     OlapScanNode* _parent;

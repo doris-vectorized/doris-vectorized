@@ -137,9 +137,10 @@ public:
 
             void* new_buf = ::realloc(buf, new_size);
             if (nullptr == new_buf)
-                doris::vectorized::throwFromErrno("Allocator: Cannot realloc from " + std::to_string(old_size) +
-                                           " to " + std::to_string(new_size) + ".",
-                                   doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
+                doris::vectorized::throwFromErrno(
+                        "Allocator: Cannot realloc from " + std::to_string(old_size) + " to " +
+                                std::to_string(new_size) + ".",
+                        doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
 
             buf = new_buf;
             if constexpr (clear_memory)
@@ -154,9 +155,9 @@ public:
                                     mmap_flags, -1, 0);
             if (MAP_FAILED == buf)
                 doris::vectorized::throwFromErrno("Allocator: Cannot mremap memory chunk from " +
-                                           std::to_string(old_size) + " to " +
-                                           std::to_string(new_size) + ".",
-                                   doris::vectorized::ErrorCodes::CANNOT_MREMAP);
+                                                          std::to_string(old_size) + " to " +
+                                                          std::to_string(new_size) + ".",
+                                                  doris::vectorized::ErrorCodes::CANNOT_MREMAP);
 
             /// No need for zero-fill, because mmap guarantees it.
         } else if (new_size < MMAP_THRESHOLD) {
@@ -212,8 +213,9 @@ private:
             buf = mmap(getMmapHint(), size, PROT_READ | PROT_WRITE, mmap_flags, -1, 0);
             if (MAP_FAILED == buf)
                 // doris::vectorized::throwFromErrno("Allocator: Cannot mmap " + std::to_string(size) + ".", doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
-                doris::vectorized::throwFromErrno(fmt::format("Allocator: Cannot mmap {}.", size),
-                                   doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
+                doris::vectorized::throwFromErrno(
+                        fmt::format("Allocator: Cannot mmap {}.", size),
+                        doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
 
             /// No need for zero-fill, because mmap guarantees it.
         } else {
@@ -224,8 +226,9 @@ private:
                     buf = ::malloc(size);
 
                 if (nullptr == buf)
-                    doris::vectorized::throwFromErrno(fmt::format("Allocator: Cannot malloc {}.", size),
-                                       doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
+                    doris::vectorized::throwFromErrno(
+                            fmt::format("Allocator: Cannot malloc {}.", size),
+                            doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
             } else {
                 buf = nullptr;
                 int res = posix_memalign(&buf, alignment, size);
@@ -245,7 +248,7 @@ private:
         if (size >= MMAP_THRESHOLD) {
             if (0 != munmap(buf, size))
                 doris::vectorized::throwFromErrno(fmt::format("Allocator: Cannot munmap {}.", size),
-                                   doris::vectorized::ErrorCodes::CANNOT_MUNMAP);
+                                                  doris::vectorized::ErrorCodes::CANNOT_MUNMAP);
         } else {
             ::free(buf);
         }

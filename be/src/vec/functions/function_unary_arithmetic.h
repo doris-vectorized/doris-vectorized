@@ -17,11 +17,11 @@
 
 #pragma once
 
-#include "vec/data_types/data_types_number.h"
 #include "vec/data_types/data_types_decimal.h"
+#include "vec/data_types/data_types_number.h"
 //#include <vec/DataTypes/Native.h>
-#include "vec/columns/column_vector.h"
 #include "vec/columns/column_decimal.h"
+#include "vec/columns/column_vector.h"
 #include "vec/functions/cast_type_to_either.h"
 #include "vec/functions/function.h"
 #include "vec/functions/function_helpers.h"
@@ -45,7 +45,8 @@ template <typename A, typename Op>
 struct UnaryOperationImpl {
     using ResultType = typename Op::ResultType;
     using ColVecA = std::conditional_t<IsDecimalNumber<A>, ColumnDecimal<A>, ColumnVector<A>>;
-    using ColVecC = std::conditional_t<IsDecimalNumber<ResultType>, ColumnDecimal<ResultType>, ColumnVector<ResultType>>;
+    using ColVecC = std::conditional_t<IsDecimalNumber<ResultType>, ColumnDecimal<ResultType>,
+                                       ColumnVector<ResultType>>;
     using ArrayA = typename ColVecA::Container;
     using ArrayC = typename ColVecC::Container;
 
@@ -75,13 +76,12 @@ class FunctionUnaryArithmetic : public IFunction {
 
     template <typename F>
     static bool castType(const IDataType* type, F&& f) {
-        return castTypeToEither<DataTypeUInt8, DataTypeUInt16, DataTypeUInt32, DataTypeUInt64,
-                                DataTypeInt8, DataTypeInt16, DataTypeInt32, DataTypeInt64,
-                                DataTypeFloat32, DataTypeFloat64,
-//                                            DataTypeDecimal<Decimal32>,
-//                                            DataTypeDecimal<Decimal64>,
-                                            DataTypeDecimal<Decimal128>
-                                >(type, std::forward<F>(f));
+        return castTypeToEither<
+                DataTypeUInt8, DataTypeUInt16, DataTypeUInt32, DataTypeUInt64, DataTypeInt8,
+                DataTypeInt16, DataTypeInt32, DataTypeInt64, DataTypeFloat32, DataTypeFloat64,
+                //                                            DataTypeDecimal<Decimal32>,
+                //                                            DataTypeDecimal<Decimal64>,
+                DataTypeDecimal<Decimal128>>(type, std::forward<F>(f));
     }
 
 public:
@@ -102,10 +102,8 @@ public:
             using DataType = std::decay_t<decltype(type)>;
             using T0 = typename DataType::FieldType;
 
-            if constexpr (IsDataTypeDecimal<DataType>)
-            {
-                if constexpr (!allow_decimal)
-                    return false;
+            if constexpr (IsDataTypeDecimal<DataType>) {
+                if constexpr (!allow_decimal) return false;
                 result = std::make_shared<DataType>(type.getPrecision(), type.getScale());
             } else {
                 result = std::make_shared<DataTypeNumber<typename Op<T0>::ResultType>>();
@@ -125,14 +123,13 @@ public:
             using DataType = std::decay_t<decltype(type)>;
             using T0 = typename DataType::FieldType;
 
-            if constexpr (IsDataTypeDecimal<DataType>)
-            {
-                if constexpr (allow_decimal)
-                {
-                    if (auto col = checkAndGetColumn<ColumnDecimal<T0>>(block.getByPosition(arguments[0]).column.get()))
-                    {
-                        auto col_res = ColumnDecimal<typename Op<T0>::ResultType>::create(0, type.getScale());
-                        auto & vec_res = col_res->getData();
+            if constexpr (IsDataTypeDecimal<DataType>) {
+                if constexpr (allow_decimal) {
+                    if (auto col = checkAndGetColumn<ColumnDecimal<T0>>(
+                                block.getByPosition(arguments[0]).column.get())) {
+                        auto col_res = ColumnDecimal<typename Op<T0>::ResultType>::create(
+                                0, type.getScale());
+                        auto& vec_res = col_res->getData();
                         vec_res.resize(col->getData().size());
                         UnaryOperationImpl<T0, Op<T0>>::vector(col->getData(), vec_res);
                         block.getByPosition(result).column = std::move(col_res);

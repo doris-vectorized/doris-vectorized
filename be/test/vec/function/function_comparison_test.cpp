@@ -93,15 +93,15 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
 
     k2 = 100;
     k3 = 7.7;
-    for (int i = 0; i < 1024; ++i, k3+=0.1, k2--) {
+    for (int i = 0; i < 1024; ++i, k3 += 0.1, k2--) {
         doris::vectorized::ColumnPtr column = block.getColumns()[4];
         ASSERT_EQ(column->getBool(i), k2 <= k3);
     }
 
     num_columns_without_result = block.columns();
-    block.insert({nullptr, std::make_shared<doris::vectorized::DataTypeUInt8>(), "k1 > k2 and k2 <= k3"});
-    auto and_function_ptr =
-            doris::vectorized::SimpleFunctionFactory::instance().get("and");
+    block.insert({nullptr, std::make_shared<doris::vectorized::DataTypeUInt8>(),
+                  "k1 > k2 and k2 <= k3"});
+    auto and_function_ptr = doris::vectorized::SimpleFunctionFactory::instance().get("and");
     arguments[0] = 3;
     arguments[1] = 4;
     and_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
@@ -109,15 +109,15 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
     k1 = -100;
     k2 = 100;
     k3 = 7.7;
-    for (int i = 0; i < 1024; ++i, k1++, k3+=0.1, k2--) {
+    for (int i = 0; i < 1024; ++i, k1++, k3 += 0.1, k2--) {
         doris::vectorized::ColumnPtr column = block.getColumns()[5];
         ASSERT_EQ(column->getBool(i), k1 > k2 and k2 <= k3);
     }
 
     num_columns_without_result = block.columns();
-    block.insert({nullptr, std::make_shared<doris::vectorized::DataTypeUInt8>(), "k1 > k2 or k2 <= k3"});
-    auto or_function_ptr =
-            doris::vectorized::SimpleFunctionFactory::instance().get("or");
+    block.insert(
+            {nullptr, std::make_shared<doris::vectorized::DataTypeUInt8>(), "k1 > k2 or k2 <= k3"});
+    auto or_function_ptr = doris::vectorized::SimpleFunctionFactory::instance().get("or");
     arguments[0] = 3;
     arguments[1] = 4;
     or_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
@@ -125,7 +125,7 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
     k1 = -100;
     k2 = 100;
     k3 = 7.7;
-    for (int i = 0; i < 1024; ++i, k1++, k3+=0.1, k2--) {
+    for (int i = 0; i < 1024; ++i, k1++, k3 += 0.1, k2--) {
         doris::vectorized::ColumnPtr column = block.getColumns()[6];
         ASSERT_EQ(column->getBool(i), k1 > k2 or k2 <= k3);
     }
@@ -137,4 +137,3 @@ int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
-

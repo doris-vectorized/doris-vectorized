@@ -118,7 +118,7 @@ public:
     std::string dumpNames() const;
 
     /** List of names, types and lengths of columns. Designed for debugging. */
-    // std::string dumpStructure() const;
+    std::string dumpStructure() const;
 
     /** Get the same block, but empty. */
     Block cloneEmpty() const;
@@ -149,6 +149,9 @@ public:
       *  with same structure, but different data.
       */
     void updateHash(SipHash& hash) const;
+
+    /** Get block data in string. */
+    std::string dumpData() const;
 
 private:
     void eraseImpl(size_t position);

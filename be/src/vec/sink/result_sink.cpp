@@ -1,13 +1,30 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/sink/result_sink.h"
 
 #include "runtime/buffer_control_block.h"
 #include "runtime/exec_env.h"
 #include "runtime/file_result_writer.h"
-#include "vec/sink/mysql_result_writer.h"
 #include "runtime/result_buffer_mgr.h"
 #include "runtime/runtime_state.h"
 #include "vec/exprs/vexpr.h"
 #include "vec/exprs/vexpr_context.h"
+#include "vec/sink/mysql_result_writer.h"
 
 namespace doris {
 namespace vectorized {
@@ -32,11 +49,10 @@ ResultSink::~ResultSink() {}
 
 Status ResultSink::prepare_exprs(RuntimeState* state) {
     // From the thrift expressions create the real exprs.
-    RETURN_IF_ERROR(VExpr::create_expr_trees(state->obj_pool(), _t_output_expr,
-                                                         &_output_vexpr_ctxs));
-    // Prepare the exprs to run.
     RETURN_IF_ERROR(
-            VExpr::prepare(_output_vexpr_ctxs, state, _row_desc, _expr_mem_tracker));
+            VExpr::create_expr_trees(state->obj_pool(), _t_output_expr, &_output_vexpr_ctxs));
+    // Prepare the exprs to run.
+    RETURN_IF_ERROR(VExpr::prepare(_output_vexpr_ctxs, state, _row_desc, _expr_mem_tracker));
     return Status::OK();
 }
 Status ResultSink::prepare(RuntimeState* state) {
