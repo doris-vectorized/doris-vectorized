@@ -46,6 +46,8 @@ public:
 
     DataTypePtr& data_type() { return _data_type; }
 
+    TypeDescriptor type() { return _type; }
+
     void add_child(VExpr* expr) { _children.push_back(expr); }
 
     static Status create_expr_tree(ObjectPool* pool, const TExpr& texpr, VExprContext** ctx);
