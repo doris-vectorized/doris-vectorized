@@ -41,6 +41,8 @@ set(VEC_FILES
   common/error_codes.cpp
   common/exception.cpp
   aggregate_functions/aggregate_function_sum.cpp
+  aggregate_functions/aggregate_function_count.cpp
+  aggregate_functions/aggregate_function_null.cpp
   columns/collator.cpp
   columns/column_decimal.cpp
   columns/column_string.cpp
@@ -55,6 +57,8 @@ set(VEC_FILES
   exec/aggregation_node.cpp
   data_types/data_type_nullable.cpp
   data_types/data_type_nothing.cpp
+  sink/result_sink.cpp
+  sink/mysql_result_writer.cpp
 )
 
 add_library(Vec STATIC

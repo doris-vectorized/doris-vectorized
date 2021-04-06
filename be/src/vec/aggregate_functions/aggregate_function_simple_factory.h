@@ -31,6 +31,7 @@ namespace doris::vectorized {
 
 class AggregateFunctionSimpleFactory;
 void registerAggregateFunctionSum(AggregateFunctionSimpleFactory& factory);
+void registerAggregateFunctionCombinatorNull(AggregateFunctionSimpleFactory & factory);
 
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
@@ -45,22 +46,39 @@ private:
     using AggregateFunctions = std::unordered_map<std::string, Creator>;
 
     AggregateFunctions aggregate_functions;
+    AggregateFunctions nullable_aggregate_functions;
 
 public:
-    void registerFunction(const std::string& name, Creator creator) {
-        aggregate_functions[name] = creator;
+    void registerFunction(const std::string& name, Creator creator, bool nullable = false) {
+        if (nullable) {
+            nullable_aggregate_functions[name] = creator;
+        } else {
+            aggregate_functions[name] = creator;
+        }
     }
 
     AggregateFunctionPtr get(const std::string& name, const DataTypes& argument_types,
                              const Array& parameters) {
-        return aggregate_functions[name](name, argument_types, parameters);
+        bool nullable = false;
+        for (const auto& type : argument_types) {
+            if (type->isNullable()) {
+                nullable = true;
+            }
+        }
+        if (nullable) {
+            return nullable_aggregate_functions[name](name, argument_types, parameters);
+        } else {
+            return aggregate_functions[name](name, argument_types, parameters);
+        }
     }
+
 public:
     static AggregateFunctionSimpleFactory& instance() {
         static std::once_flag oc;
         static AggregateFunctionSimpleFactory instance;
         std::call_once(oc, [&]() { 
-            registerAggregateFunctionSum(instance);
+            registerAggregateFunctionSum(instance); 
+            registerAggregateFunctionCombinatorNull(instance);
         });
         return instance;
     }
