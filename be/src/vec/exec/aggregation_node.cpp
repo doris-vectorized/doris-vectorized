@@ -1,5 +1,6 @@
 #include "vec/exec/aggregation_node.h"
 
+#include "runtime/row_batch.h"
 #include "exec/exec_node.h"
 #include "runtime/mem_pool.h"
 #include "vec/core/block.h"
@@ -31,8 +32,8 @@ Status AggregationNode::init(const TPlanNode& tnode, RuntimeState* state) {
     // init aggregate functions
     _aggregate_evaluators.reserve(tnode.agg_node.aggregate_functions.size());
     for (int i = 0; i < tnode.agg_node.aggregate_functions.size(); ++i) {
-        AggFnEvaluator* evaluator = NULL;
-        AggFnEvaluator::create(_pool, tnode.agg_node.aggregate_functions[i], &evaluator);
+        AggFnEvaluator* evaluator = nullptr;
+        RETURN_IF_ERROR(AggFnEvaluator::create(_pool, tnode.agg_node.aggregate_functions[i], &evaluator));
         _aggregate_evaluators.push_back(evaluator);
     }
     return Status::OK();
@@ -40,6 +41,7 @@ Status AggregationNode::init(const TPlanNode& tnode, RuntimeState* state) {
 
 Status AggregationNode::prepare(RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::prepare(state));
+
     _intermediate_tuple_desc = state->desc_tbl().get_tuple_descriptor(_intermediate_tuple_id);
     _output_tuple_desc = state->desc_tbl().get_tuple_descriptor(_output_tuple_id);
     DCHECK_EQ(_intermediate_tuple_desc->slots().size(), _output_tuple_desc->slots().size());
@@ -104,9 +106,13 @@ Status AggregationNode::open(RuntimeState* state) {
     // TODO: get child(0) data
     bool eos = false;
     Block block;
+    RowBatch batch(child(0)->row_desc(), state->batch_size(), mem_tracker().get());
     while (!eos) {
+        batch.clear();
         RETURN_IF_CANCELLED(state);
-        RETURN_IF_ERROR(static_cast<VExecNode*>(_children[0])->get_next(state, &block, &eos));
+        RETURN_IF_ERROR(_children[0]->get_next(state, &batch, &eos));
+        block = batch.conver_to_vec_block();
+        // RETURN_IF_ERROR(static_cast<VExecNode*>(_children[0])->get_next(state, &block, &eos));
         // process no grouping
         for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
             _aggregate_evaluators[i]->execute_single_add(&block,
@@ -124,15 +130,18 @@ Status AggregationNode::get_next(RuntimeState* state, RowBatch* row_batch, bool*
 
 Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     block->clear();
-    Block tmp(VectorizedUtils::create_empty_columnswithtypename(row_desc()));
-    block->swap(tmp);
+    // Block tmp(VectorizedUtils::create_empty_columnswithtypename(row_desc()));
+    // block->swap(tmp);
     // procsess no group by
     if (_single_output_block) {
+        *block = _single_output_block->cloneEmpty();
         auto columns = _single_output_block->mutateColumns();
         for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
             auto column = columns[i].get();
             _aggregate_evaluators[i]->insert_result_info(_single_data_ptr + _single_data_offset[i], column);
         }
+        block->setColumns(std::move(columns));
+        
         *eos = true;
     }
 
