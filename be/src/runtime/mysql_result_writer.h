@@ -49,7 +49,7 @@ public:
     // append this batch to the result sink
     virtual Status append_row_batch(const RowBatch* batch) override;
 
-    virtual Status append_block(const vectorized::Block& block) override;
+    virtual Status append_block(const vectorized::Block& block);
 
     virtual Status close() override;
 

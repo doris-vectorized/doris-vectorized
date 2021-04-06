@@ -40,9 +40,9 @@ public:
     // convert and write one row batch
     virtual Status append_row_batch(const RowBatch* batch) = 0;
 
-    virtual Status append_block(const vectorized::Block& block) {
-        return Status::InternalError("Not support append vec block now.");
-    }
+    // virtual Status append_block(const vectorized::Block& block) {
+    //     return Status::InternalError("Not support append vec block now.");
+    // }
 
     virtual Status close() = 0;
 
