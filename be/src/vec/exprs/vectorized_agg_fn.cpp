@@ -65,6 +65,10 @@ Status AggFnEvaluator::prepare(RuntimeState* state, const RowDescriptor& desc, M
     return Status::OK();
 }
 
+Status AggFnEvaluator::open(RuntimeState* state) {
+    return VExpr::open(_input_exprs_ctxs, state);
+}
+
 void AggFnEvaluator::close(RuntimeState* state) {
     VExpr::close(_input_exprs_ctxs, state);
 }
