@@ -20,6 +20,7 @@
 // #include <vec/DataTypes/IDataTypeDummy.h>
 #include "vec/data_types/data_type.h"
 #include "vec/core/field.h"
+#include <vec/common/exception.h>
 
 namespace doris::vectorized {
 
