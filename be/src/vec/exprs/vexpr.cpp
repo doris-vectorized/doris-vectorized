@@ -22,6 +22,7 @@
 #include "gen_cpp/Exprs_types.h"
 #include "vec/exprs/vectorized_fn_call.h"
 #include "vec/exprs/vslot_ref.h"
+#include "vec/exprs/vliteral.h"
 
 namespace doris::vectorized {
 using doris::Status;
@@ -68,6 +69,15 @@ void VExpr::close(doris::RuntimeState* state, VExprContext* context) {
 Status VExpr::create_expr(doris::ObjectPool* pool, const doris::TExprNode& texpr_node,
                           VExpr** expr) {
     switch (texpr_node.node_type) {
+    case TExprNodeType::BOOL_LITERAL:
+    case TExprNodeType::INT_LITERAL:
+    case TExprNodeType::LARGE_INT_LITERAL:
+    case TExprNodeType::FLOAT_LITERAL:
+    case TExprNodeType::DECIMAL_LITERAL:
+    case TExprNodeType::DATE_LITERAL:
+    case TExprNodeType::STRING_LITERAL:
+        *expr = pool->add(new VLiteral(texpr_node));
+        return Status::OK();
     case doris::TExprNodeType::SLOT_REF: {
         *expr = pool->add(new VSlotRef(texpr_node));
         break;
