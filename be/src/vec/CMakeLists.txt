@@ -27,7 +27,6 @@ set(VEC_FILES
   common/demangle.cpp
   functions/function.cpp
   functions/function_helpers.cpp
-  functions/functions_logical.cpp
   columns/column_nullable.cpp
   columns/column_vector.cpp
   columns/column_const.cpp
@@ -64,6 +63,9 @@ set(VEC_FILES
   data_types/data_type_nothing.cpp
   sink/result_sink.cpp
   sink/mysql_result_writer.cpp
+  functions/functions_logical.cpp
+  functions/abs.cpp
+  functions/comparison.cpp
 )
 
 add_library(Vec STATIC

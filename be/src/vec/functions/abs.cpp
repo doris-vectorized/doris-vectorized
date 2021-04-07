@@ -20,6 +20,7 @@
 #include "vec/common/field_visitors.h"
 #include "vec/data_types/number_traits.h"
 #include "vec/functions/function_unary_arithmetic.h"
+#include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
 
@@ -64,9 +65,9 @@ using FunctionAbs = FunctionUnaryArithmetic<AbsImpl, NameAbs, false>;
 //    }
 //};
 
-//void registerFunctionAbs(FunctionFactory & factory)
-//{
-//    factory.registerFunction<FunctionAbs>(FunctionFactory::CaseInsensitive);
-//}
+void registerFunctionAbs(SimpleFunctionFactory & factory)
+{
+    factory.registerFunction<FunctionAbs>();
+}
 
 } // namespace doris::vectorized
