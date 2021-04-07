@@ -111,7 +111,7 @@ Status AggregationNode::open(RuntimeState* state) {
         batch.clear();
         RETURN_IF_CANCELLED(state);
         RETURN_IF_ERROR(_children[0]->get_next(state, &batch, &eos));
-        block = batch.conver_to_vec_block();
+        block = batch.convert_to_vec_block();
         // RETURN_IF_ERROR(static_cast<VExecNode*>(_children[0])->get_next(state, &block, &eos));
         // process no grouping
         for (int i = 0; i < _aggregate_evaluators.size(); ++i) {

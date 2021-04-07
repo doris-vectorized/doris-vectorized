@@ -23,11 +23,12 @@
 #include "exec/schema_scanner.h"
 #include "runtime/row_batch.h"
 #include "runtime/tuple_row.h"
-#include "vec/functions/abs.hpp"
+#include "vec/functions/comparison.hpp"
+//#include "vec/functions/functions_logical.h"
 
 namespace doris {
 
-TEST(ABSTest, ABSTest) {
+TEST(ComparisonTest, ComparisonFunctionTest) {
     SchemaScanner::ColumnDesc column_descs[] = {{"k1", TYPE_SMALLINT, sizeof(int16_t), false},
                                                 {"k2", TYPE_INT, sizeof(int32_t), false},
                                                 {"k3", TYPE_DOUBLE, sizeof(double), false}};
@@ -42,10 +43,10 @@ TEST(ABSTest, ABSTest) {
     RowBatch row_batch(row_desc, 1024, tracker_ptr.get());
 
     int16_t k1 = -100;
-    int32_t k2 = 100000;
+    int32_t k2 = 100;
     double k3 = 7.7;
 
-    for (int i = 0; i < 1024; ++i, k1++, k2++, k3 += 0.1) {
+    for (int i = 0; i < 1024; ++i, k1++, k2--, k3 += 0.1) {
         auto idx = row_batch.add_row();
         TupleRow* tuple_row = row_batch.get_row(idx);
 
@@ -61,23 +62,42 @@ TEST(ABSTest, ABSTest) {
         row_batch.commit_last_row();
     }
 
-    vectorized::FunctionAbs function_abs;
-    std::shared_ptr<vectorized::IFunction> abs_function_ptr = function_abs.create();
-    auto block = row_batch.convert_to_vec_block();
+    doris::vectorized::FunctionGreater function_greater;
+    std::shared_ptr<doris::vectorized::IFunction> greater_function_ptr = function_greater.create();
+    doris::vectorized::Block block = row_batch.convert_to_vec_block();
     // 1. build arguments
-    vectorized::ColumnNumbers arguments;
+    doris::vectorized::ColumnNumbers arguments;
     arguments.emplace_back(block.getPositionByName("k1"));
+    arguments.emplace_back(block.getPositionByName("k2"));
 
     // 2. build result column
     size_t num_columns_without_result = block.columns();
-    block.insert({nullptr, block.getByPosition(0).type, "abs(k1)"});
-
-    abs_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
+    block.insert({nullptr, std::make_shared<doris::vectorized::DataTypeUInt8>(), "k1 > k2"});
+    greater_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
 
     k1 = -100;
-    for (int i = 0; i < 1024; ++i) {
-        vectorized::ColumnPtr column = block.getColumns()[3];
-        ASSERT_EQ(column->getInt(i), std::abs(k1++));
+    k2 = 100;
+    for (int i = 0; i < 1024; ++i, k1++, k2--) {
+        doris::vectorized::ColumnPtr column = block.getColumns()[3];
+        ASSERT_EQ(column->getBool(i), k1 > k2);
+    }
+
+    // 2. build result column
+    num_columns_without_result = block.columns();
+    block.insert({nullptr, std::make_shared<doris::vectorized::DataTypeUInt8>(), "k2 <= k3"});
+
+    doris::vectorized::FunctionLessOrEquals function_less_or_equals;
+    auto less_or_equals_function_ptr = function_less_or_equals.create();
+
+    arguments[0] = 1;
+    arguments[1] = 2;
+    less_or_equals_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
+
+    k2 = 100;
+    k3 = 7.7;
+    for (int i = 0; i < 1024; ++i, k3+=0.1, k2--) {
+        doris::vectorized::ColumnPtr column = block.getColumns()[4];
+        ASSERT_EQ(column->getBool(i), k2 <= k3);
     }
 }
 
@@ -87,3 +107,4 @@ int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
+

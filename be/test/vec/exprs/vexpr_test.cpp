@@ -20,6 +20,8 @@
 #include "runtime/tuple_row.h"
 #include "testutil/desc_tbl_builder.h"
 #include "vec/exprs/vliteral.h"
+#include "vec/utils/util.hpp"
+
 
 TEST(TEST_VEXPR, ABSTEST) {
     doris::ChunkAllocator::init_instance(4096);
@@ -58,7 +60,7 @@ TEST(TEST_VEXPR, ABSTEST) {
     context->prepare(&runtime_stat, row_desc, tracker);
     context->open(&runtime_stat);
 
-    auto block = row_batch.conver_to_vec_block();
+    auto block = row_batch.convert_to_vec_block();
     int ts = -1;
     context->execute(&block, &ts);
 }
@@ -103,7 +105,7 @@ TEST(TEST_VEXPR, ABSTEST2) {
     context->prepare(&runtime_stat, row_desc, tracker);
     context->open(&runtime_stat);
 
-    auto block = row_batch.conver_to_vec_block();
+    auto block = row_batch.convert_to_vec_block();
     int ts = -1;
     context->execute(&block, &ts);
 }
