@@ -526,7 +526,7 @@ void RowBatch::transfer_resource_ownership(RowBatch* dest) {
     reset();
 }
 
-vectorized::Block RowBatch::conver_to_vec_block() const {
+vectorized::Block RowBatch::convert_to_vec_block() const {
     std::vector<vectorized::MutableColumnPtr> columns;
     for (const auto tuple_desc : _row_desc.tuple_descriptors()) {
         for (const auto slot_desc : tuple_desc->slots()) {
