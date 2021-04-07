@@ -11,6 +11,7 @@
 #include "vec/data_types/data_type_nullable.h"
 #include "vec/data_types/data_types_number.h"
 #include "vec/functions/function_helpers.h"
+#include "vec/functions/simple_function_factory.h"
 
 #include <algorithm>
 
@@ -588,6 +589,13 @@ void FunctionUnaryLogical<Impl, Name>::executeImpl(Block & block, const ColumnNu
        throw Exception("Illegal column " + block.getByPosition(arguments[0]).column->getName()
             + " of argument of function " + getName(),
             ErrorCodes::ILLEGAL_COLUMN);
+}
+
+void registerFunctionLogical(SimpleFunctionFactory& instance) {
+    instance.registerFunction<FunctionAnd>();
+    instance.registerFunction<FunctionOr>();
+    instance.registerFunction<FunctionXor>();
+    instance.registerFunction<FunctionNot>();
 }
 
 }
