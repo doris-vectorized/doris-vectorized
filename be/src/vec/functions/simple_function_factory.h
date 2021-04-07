@@ -19,12 +19,16 @@
 #include <mutex>
 #include <string>
 
-#include "vec/functions/abs.hpp"
-#include "vec/functions/comparison.hpp"
-//#include "vec/functions/functions_logical.h"
 #include "vec/functions/function.h"
 
 namespace doris::vectorized {
+
+class SimpleFunctionFactory;
+
+void registerFunctionComparison(SimpleFunctionFactory& factory);
+void registerFunctionAbs(SimpleFunctionFactory& factory);
+void registerFunctionLogical(SimpleFunctionFactory& factory);
+
 class SimpleFunctionFactory {
     using Functions = std::unordered_map<std::string, FunctionPtr>;
 
@@ -45,17 +49,9 @@ public:
         static std::once_flag oc;
         static SimpleFunctionFactory instance;
         std::call_once(oc, [&]() {
-            instance.registerFunction<FunctionAbs>();
-            instance.registerFunction<FunctionGreater>();
-            instance.registerFunction<FunctionGreaterOrEquals>();
-            instance.registerFunction<FunctionLess>();
-            instance.registerFunction<FunctionLessOrEquals>();
-            instance.registerFunction<FunctionEquals>();
-            instance.registerFunction<FunctionNotEquals>();
-//            instance.registerFunction<FunctionAnd>();
-//            instance.registerFunction<FunctionOr>();
-//            instance.registerFunction<FunctionXor>();
-//            instance.registerFunction<FunctionNot>();
+            registerFunctionAbs(instance);
+            registerFunctionComparison(instance);
+            registerFunctionLogical(instance);
         });
         return instance;
     }
