@@ -23,7 +23,7 @@
 #include "exec/schema_scanner.h"
 #include "runtime/row_batch.h"
 #include "runtime/tuple_row.h"
-#include "vec/functions/abs.hpp"
+#include "vec/functions/simple_function_factory.h"
 
 namespace doris {
 
@@ -61,8 +61,9 @@ TEST(ABSTest, ABSTest) {
         row_batch.commit_last_row();
     }
 
-    vectorized::FunctionAbs function_abs;
-    std::shared_ptr<vectorized::IFunction> abs_function_ptr = function_abs.create();
+    std::shared_ptr<vectorized::IFunction> abs_function_ptr
+        = doris::vectorized::SimpleFunctionFactory::instance().get("abs");
+
     auto block = row_batch.convert_to_vec_block();
     // 1. build arguments
     vectorized::ColumnNumbers arguments;
