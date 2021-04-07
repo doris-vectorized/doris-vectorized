@@ -96,7 +96,7 @@ TEST(BlockTest, RowBatchCovertToBlock) {
         row_batch.commit_last_row();
     }
 
-    auto block = row_batch.conver_to_vec_block();
+    auto block = row_batch.convert_to_vec_block();
     k1 = -100;
     k2 = 100000;
     k3 = 7.7;
