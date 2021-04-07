@@ -2,11 +2,13 @@
 
 #include <thrift/protocol/TJSONProtocol.h>
 
+#include <cmath>
 #include <iostream>
 
 #include "exec/schema_scanner.h"
 #include "gen_cpp/Data_types.h"
 #include "gen_cpp/Exprs_types.h"
+#include "gen_cpp/Types_types.h"
 #include "gtest/gtest.h"
 #include "runtime/exec_env.h"
 #include "runtime/mem_tracker.h"
@@ -17,6 +19,7 @@
 #include "runtime/tuple.h"
 #include "runtime/tuple_row.h"
 #include "testutil/desc_tbl_builder.h"
+#include "vec/exprs/vliteral.h"
 
 TEST(TEST_VEXPR, ABSTEST) {
     doris::ChunkAllocator::init_instance(4096);
@@ -103,7 +106,231 @@ TEST(TEST_VEXPR, ABSTEST2) {
     auto block = row_batch.conver_to_vec_block();
     int ts = -1;
     context->execute(&block, &ts);
+}
 
+namespace doris {
+template <PrimitiveType T>
+struct literal_traits {};
+
+template <>
+struct literal_traits<TYPE_BOOLEAN> {
+    const static TPrimitiveType::type ttype = TPrimitiveType::BOOLEAN;
+    const static TExprNodeType::type tnode_type = TExprNodeType::BOOL_LITERAL;
+    using CXXType = bool;
+};
+
+template <>
+struct literal_traits<TYPE_SMALLINT> {
+    const static TPrimitiveType::type ttype = TPrimitiveType::SMALLINT;
+    const static TExprNodeType::type tnode_type = TExprNodeType::INT_LITERAL;
+    using CXXType = int16_t;
+};
+
+template <>
+struct literal_traits<TYPE_INT> {
+    const static TPrimitiveType::type ttype = TPrimitiveType::INT;
+    const static TExprNodeType::type tnode_type = TExprNodeType::INT_LITERAL;
+    using CXXType = int32_t;
+};
+
+template <>
+struct literal_traits<TYPE_BIGINT> {
+    const static TPrimitiveType::type ttype = TPrimitiveType::BIGINT;
+    const static TExprNodeType::type tnode_type = TExprNodeType::INT_LITERAL;
+    using CXXType = int64_t;
+};
+
+template <>
+struct literal_traits<TYPE_LARGEINT> {
+    const static TPrimitiveType::type ttype = TPrimitiveType::LARGEINT;
+    const static TExprNodeType::type tnode_type = TExprNodeType::LARGE_INT_LITERAL;
+    using CXXType = __int128_t;
+};
+
+template <>
+struct literal_traits<TYPE_FLOAT> {
+    const static TPrimitiveType::type ttype = TPrimitiveType::FLOAT;
+    const static TExprNodeType::type tnode_type = TExprNodeType::FLOAT_LITERAL;
+    using CXXType = float;
+};
+
+template <>
+struct literal_traits<TYPE_DOUBLE> {
+    const static TPrimitiveType::type ttype = TPrimitiveType::FLOAT;
+    const static TExprNodeType::type tnode_type = TExprNodeType::FLOAT_LITERAL;
+    using CXXType = float;
+};
+
+template <>
+struct literal_traits<TYPE_DATETIME> {
+    const static TPrimitiveType::type ttype = TPrimitiveType::DATE;
+    const static TExprNodeType::type tnode_type = TExprNodeType::STRING_LITERAL;
+    using CXXType = std::string;
+};
+
+template <>
+struct literal_traits<TYPE_DECIMALV2> {
+    const static TPrimitiveType::type ttype = TPrimitiveType::DECIMALV2;
+    const static TExprNodeType::type tnode_type = TExprNodeType::DECIMAL_LITERAL;
+    using CXXType = std::string;
+};
+
+template <PrimitiveType T, class U = typename literal_traits<T>::CXXType,
+          std::enable_if_t<std::is_integral<U>::value, bool> = true>
+void set_literal(TExprNode& node, const U& value) {
+    TIntLiteral int_literal;
+    int_literal.__set_value(value);
+    node.__set_int_literal(int_literal);
+}
+
+template <>
+void set_literal<TYPE_BOOLEAN, bool>(TExprNode& node, const bool& value) {
+    TBoolLiteral bool_literal;
+    bool_literal.__set_value(value);
+    node.__set_bool_literal(bool_literal);
+}
+
+template <>
+void set_literal<TYPE_LARGEINT, __int128_t>(TExprNode& node, const __int128_t& value) {
+    TLargeIntLiteral largeIntLiteral;
+    largeIntLiteral.__set_value(LargeIntValue::to_string(value));
+    node.__set_large_int_literal(largeIntLiteral);
+}
+// std::is_same<U, std::string>::value
+template <PrimitiveType T, class U = typename literal_traits<T>::CXXType,
+          std::enable_if_t<T == TYPE_DATETIME, bool> = true>
+void set_literal(TExprNode& node, const U& value) {
+    TDateLiteral date_literal;
+    date_literal.__set_value(value);
+    node.__set_date_literal(date_literal);
+}
+
+template <PrimitiveType T, class U = typename literal_traits<T>::CXXType,
+          std::enable_if_t<std::numeric_limits<U>::is_iec559, bool> = true>
+void set_literal(TExprNode& node, const U& value) {
+    TFloatLiteral floatLiteral;
+    floatLiteral.__set_value(value);
+    node.__set_float_literal(floatLiteral);
+}
+
+template <PrimitiveType T, class U = typename literal_traits<T>::CXXType,
+          std::enable_if_t<T == TYPE_DECIMALV2, bool> = true>
+void set_literal(TExprNode& node, const U& value) {
+    TDecimalLiteral decimal_literal;
+    decimal_literal.__set_value(value);
+    node.__set_decimal_literal(decimal_literal);
+}
+
+template <PrimitiveType T, class U = typename literal_traits<T>::CXXType>
+doris::TExprNode create_literal(const U& value) {
+    TExprNode node;
+    TTypeDesc type_desc;
+    TTypeNode type_node;
+    std::vector<TTypeNode> type_nodes;
+    type_nodes.emplace_back();
+    TScalarType scalar_type;
+    scalar_type.__set_precision(27);
+    scalar_type.__set_scale(9);
+    scalar_type.__set_len(20);
+    scalar_type.__set_type(literal_traits<T>::ttype);
+    type_nodes[0].__set_scalar_type(scalar_type);
+    type_desc.__set_types(type_nodes);
+    node.__set_type(type_desc);
+    node.__set_node_type(literal_traits<T>::tnode_type);
+    set_literal<T, U>(node, value);
+    return node;
+}
+} // namespace doris
+
+TEST(TEST_VEXPR, LITERALTEST) {
+    using namespace doris;
+    using namespace doris::vectorized;
+    {
+        VLiteral literal(create_literal<TYPE_BOOLEAN>(true));
+        Block block;
+        int ret = -1;
+        literal.execute(&block, &ret);
+        auto ctn = block.safeGetByPosition(ret);
+        bool v = ctn.column->getBool(0);
+        ASSERT_EQ(v, true);
+    }
+    {
+        VLiteral literal(create_literal<TYPE_SMALLINT>(1024));
+        Block block;
+        int ret = -1;
+        literal.execute(&block, &ret);
+        auto ctn = block.safeGetByPosition(ret);
+        auto v = ctn.column->getInt(0);
+        ASSERT_EQ(v, 1024);
+    }
+    {
+        VLiteral literal(create_literal<TYPE_INT>(1024));
+        Block block;
+        int ret = -1;
+        literal.execute(&block, &ret);
+        auto ctn = block.safeGetByPosition(ret);
+        auto v = ctn.column->getInt(0);
+        ASSERT_EQ(v, 1024);
+    }
+    {
+        VLiteral literal(create_literal<TYPE_BIGINT>(1024));
+        Block block;
+        int ret = -1;
+        literal.execute(&block, &ret);
+        auto ctn = block.safeGetByPosition(ret);
+        auto v = ctn.column->get64(0);
+        ASSERT_EQ(v, 1024);
+    }
+    {
+        VLiteral literal(create_literal<TYPE_LARGEINT, __int128_t>(1024));
+        Block block;
+        int ret = -1;
+        literal.execute(&block, &ret);
+        auto ctn = block.safeGetByPosition(ret);
+        auto v = (*ctn.column)[0].get<__int128_t>();
+        ASSERT_EQ(v, 1024);
+    }
+    {
+        VLiteral literal(create_literal<TYPE_FLOAT, float>(1024.0f));
+        Block block;
+        int ret = -1;
+        literal.execute(&block, &ret);
+        auto ctn = block.safeGetByPosition(ret);
+        auto v = (*ctn.column)[0].get<double>();
+        ASSERT_FLOAT_EQ(v, 1024.0f);
+    }
+    {
+        VLiteral literal(create_literal<TYPE_DOUBLE, double>(1024.0));
+        Block block;
+        int ret = -1;
+        literal.execute(&block, &ret);
+        auto ctn = block.safeGetByPosition(ret);
+        auto v = (*ctn.column)[0].get<double>();
+        ASSERT_FLOAT_EQ(v, 1024.0);
+    }
+    {
+        DateTimeValue data_time_value;
+        const char* date = "20210407";
+        data_time_value.from_date_str(date, strlen(date));
+        __int128_t dt;
+        memcpy(&dt, &data_time_value, sizeof(__int128_t));
+        VLiteral literal(create_literal<TYPE_DATETIME, std::string>(std::string(date)));
+        Block block;
+        int ret = -1;
+        literal.execute(&block, &ret);
+        auto ctn = block.safeGetByPosition(ret);
+        auto v = (*ctn.column)[0].get<__int128_t>();
+        ASSERT_EQ(v, dt);
+    }
+    {
+        VLiteral literal(create_literal<TYPE_DECIMALV2, std::string>(std::string("1234.56")));
+        Block block;
+        int ret = -1;
+        literal.execute(&block, &ret);
+        auto ctn = block.safeGetByPosition(ret);
+        auto v = (*ctn.column)[0].get<DecimalField<Decimal128>>();
+        ASSERT_FLOAT_EQ(((double)v.getValue()) / (std::pow(10, v.getScale())), 1234.56);
+    }
 }
 
 int main(int argc, char** argv) {
