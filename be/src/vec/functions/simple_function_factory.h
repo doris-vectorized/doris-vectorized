@@ -20,6 +20,8 @@
 #include <string>
 
 #include "vec/functions/abs.hpp"
+#include "vec/functions/comparison.hpp"
+//#include "vec/functions/functions_logical.h"
 #include "vec/functions/function.h"
 
 namespace doris::vectorized {
@@ -42,7 +44,19 @@ public:
     static SimpleFunctionFactory& instance() {
         static std::once_flag oc;
         static SimpleFunctionFactory instance;
-        std::call_once(oc, [&]() { instance.registerFunction<FunctionAbs>(); });
+        std::call_once(oc, [&]() {
+            instance.registerFunction<FunctionAbs>();
+            instance.registerFunction<FunctionGreater>();
+            instance.registerFunction<FunctionGreaterOrEquals>();
+            instance.registerFunction<FunctionLess>();
+            instance.registerFunction<FunctionLessOrEquals>();
+            instance.registerFunction<FunctionEquals>();
+            instance.registerFunction<FunctionNotEquals>();
+//            instance.registerFunction<FunctionAnd>();
+//            instance.registerFunction<FunctionOr>();
+//            instance.registerFunction<FunctionXor>();
+//            instance.registerFunction<FunctionNot>();
+        });
         return instance;
     }
 };
