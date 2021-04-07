@@ -120,7 +120,7 @@ static void BM_ABS_VEC(benchmark::State& state) {
         tuple_row->set_tuple(0, tuple);
         row_batch.commit_last_row();
     }
-    auto block = row_batch.conver_to_vec_block();
+    auto block = row_batch.convert_to_vec_block();
     doris::vectorized::FunctionAbs function_abs;
     std::shared_ptr<vectorized::IFunction> abs_function_ptr = function_abs.create();
     doris::vectorized::ColumnNumbers arguments;
@@ -166,7 +166,7 @@ static void BM_ABS_VECIMPL(benchmark::State& state) {
         tuple_row->set_tuple(0, tuple);
         row_batch.commit_last_row();
     }
-    auto block = row_batch.conver_to_vec_block();
+    auto block = row_batch.convert_to_vec_block();
 
     std::string expr_json =
             R"|({"1":{"lst":["rec",2,{"1":{"i32":20},"2":{"rec":{"1":{"lst":["rec",1,{"1":{"i32":0},"2":{"rec":{"1":{"i32":6}}}}]}}},"4":{"i32":1},"20":{"i32":-1},"26":{"rec":{"1":{"rec":{"2":{"str":"abs"}}},"2":{"i32":0},"3":{"lst":["rec",1,{"1":{"lst":["rec",1,{"1":{"i32":0},"2":{"rec":{"1":{"i32":5}}}}]}}]},"4":{"rec":{"1":{"lst":["rec",1,{"1":{"i32":0},"2":{"rec":{"1":{"i32":6}}}}]}}},"5":{"tf":0},"7":{"str":"abs(INT)"},"9":{"rec":{"1":{"str":"_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_6IntValE"}}},"11":{"i64":0}}}},{"1":{"i32":16},"2":{"rec":{"1":{"lst":["rec",1,{"1":{"i32":0},"2":{"rec":{"1":{"i32":5}}}}]}}},"4":{"i32":0},"15":{"rec":{"1":{"i32":0},"2":{"i32":0}}},"20":{"i32":-1},"23":{"i32":-1}}]}})|";
@@ -187,7 +187,7 @@ static void BM_ABS_VECIMPL(benchmark::State& state) {
     int ts = -1;
 
     for (auto _ : state) {
-        block = row_batch.conver_to_vec_block();
+        block = row_batch.convert_to_vec_block();
         context->execute(&block, &ts);
         block.erase(ts);
     }
@@ -287,7 +287,7 @@ static void BM_AGG_COUNT_VEC(benchmark::State& state) {
         tuple_row->set_tuple(0, tuple);
         row_batch.commit_last_row();
     }
-    auto block = row_batch.conver_to_vec_block();
+    auto block = row_batch.convert_to_vec_block();
     doris::vectorized::Columns columns = block.getColumns();
     doris::vectorized::AggregateFunctionSimpleFactory factory;
     registerAggregateFunctionSum(factory);
