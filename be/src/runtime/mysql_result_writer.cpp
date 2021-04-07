@@ -320,7 +320,7 @@ Status MysqlResultWriter::_add_one_column(const doris::vectorized::ColumnPtr& co
 
 Status MysqlResultWriter::append_row_batch(const RowBatch* batch) {
     if (_is_vec) {
-        auto block = batch->conver_to_vec_block();
+        auto block = batch->convert_to_vec_block();
 
         _result_column_ids.resize(_output_vexpr_ctxs.size());
         for (int i = 0; i < _output_vexpr_ctxs.size(); i++) {

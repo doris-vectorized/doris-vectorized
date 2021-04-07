@@ -27,6 +27,7 @@ set(VEC_FILES
   common/demangle.cpp
   functions/function.cpp
   functions/function_helpers.cpp
+  functions/functions_logical.cpp
   columns/column_nullable.cpp
   columns/column_vector.cpp
   columns/column_const.cpp
@@ -49,6 +50,9 @@ set(VEC_FILES
   core/field.cpp
   data_types/data_types_decimal.cpp
   data_types/data_type_string.cpp
+  data_types/get_least_supertype.cpp
+  data_types/data_type_nullable.cpp
+  data_types/data_type_nothing.cpp
   exprs/vectorized_fn_call.cpp
   exprs/vexpr.cpp
   exprs/vexpr_context.cpp
