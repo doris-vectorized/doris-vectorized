@@ -61,13 +61,14 @@ TEST(ABSTest, ABSTest) {
         row_batch.commit_last_row();
     }
 
-    std::shared_ptr<vectorized::IFunction> abs_function_ptr =
-            doris::vectorized::SimpleFunctionFactory::instance().get("abs");
-
     auto block = row_batch.convert_to_vec_block();
     // 1. build arguments
     vectorized::ColumnNumbers arguments;
     arguments.emplace_back(block.getPositionByName("k1"));
+
+    doris::vectorized::ColumnsWithTypeAndName ctn = { block.getByPosition(block.getPositionByName("k1")) };
+    auto abs_function_ptr =
+        doris::vectorized::SimpleFunctionFactory::instance().get_function("abs", ctn);
 
     // 2. build result column
     size_t num_columns_without_result = block.columns();
