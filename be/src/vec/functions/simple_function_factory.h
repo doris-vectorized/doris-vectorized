@@ -30,19 +30,37 @@ void registerFunctionAbs(SimpleFunctionFactory& factory);
 void registerFunctionLogical(SimpleFunctionFactory& factory);
 
 class SimpleFunctionFactory {
-    using Functions = std::unordered_map<std::string, FunctionPtr>;
+    using Creator = std::function<FunctionBuilderPtr()>;
+    using FunctionCreators = std::unordered_map<std::string, Creator>;
 
 public:
-    void registerFunction(const std::string& name, FunctionPtr ptr) { functions[name] = ptr; }
-    template <class T>
+    void registerFunction(const std::string& name, Creator ptr) { function_creators[name] = ptr; }
+    
+    template <class Function>
     void registerFunction() {
-        registerFunction(T::name, T::create());
+        if constexpr (std::is_base_of<IFunction, Function>::value)
+            registerFunction(Function::name, &createDefaultFunction<Function>);
+        else
+            registerFunction(Function::name, &Function::create);
     }
 
-    FunctionPtr get(const std::string& name) { return functions[name]; }
+    FunctionBasePtr get_function(const std::string &name, const ColumnsWithTypeAndName& arguments) {
+        auto iter = function_creators.find(name);
+        if (iter != function_creators.end()) {
+            return iter->second()->build(arguments);
+        }
+        return nullptr;
+    }
 
 private:
-    Functions functions;
+    FunctionCreators function_creators;
+
+    template <typename Function>
+    static FunctionBuilderPtr createDefaultFunction()
+    {
+        return std::make_shared<DefaultFunctionBuilder>(Function::create());
+    }
+
 
 public:
     static SimpleFunctionFactory& instance() {
