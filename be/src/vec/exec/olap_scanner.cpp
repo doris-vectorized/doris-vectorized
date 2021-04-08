@@ -48,7 +48,7 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
         }
         while (true) {
             // block is full, break
-            if (state->batch_size() <= block->rows()) {
+            if (state->batch_size() <= columns[0]->size()) {
                 _update_realtime_counter();
                 break;
             }
