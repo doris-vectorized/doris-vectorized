@@ -28,6 +28,7 @@ class SimpleFunctionFactory;
 void registerFunctionComparison(SimpleFunctionFactory& factory);
 void registerFunctionAbs(SimpleFunctionFactory& factory);
 void registerFunctionLogical(SimpleFunctionFactory& factory);
+void registerFunctionCast(SimpleFunctionFactory& factory);
 
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
@@ -35,7 +36,7 @@ class SimpleFunctionFactory {
 
 public:
     void registerFunction(const std::string& name, Creator ptr) { function_creators[name] = ptr; }
-    
+
     template <class Function>
     void registerFunction() {
         if constexpr (std::is_base_of<IFunction, Function>::value)
@@ -44,7 +45,7 @@ public:
             registerFunction(Function::name, &Function::create);
     }
 
-    FunctionBasePtr get_function(const std::string &name, const ColumnsWithTypeAndName& arguments) {
+    FunctionBasePtr get_function(const std::string& name, const ColumnsWithTypeAndName& arguments) {
         auto iter = function_creators.find(name);
         if (iter != function_creators.end()) {
             return iter->second()->build(arguments);
@@ -56,11 +57,9 @@ private:
     FunctionCreators function_creators;
 
     template <typename Function>
-    static FunctionBuilderPtr createDefaultFunction()
-    {
+    static FunctionBuilderPtr createDefaultFunction() {
         return std::make_shared<DefaultFunctionBuilder>(Function::create());
     }
-
 
 public:
     static SimpleFunctionFactory& instance() {
@@ -70,6 +69,7 @@ public:
             registerFunctionAbs(instance);
             registerFunctionComparison(instance);
             registerFunctionLogical(instance);
+            registerFunctionCast(instance);
         });
         return instance;
     }
