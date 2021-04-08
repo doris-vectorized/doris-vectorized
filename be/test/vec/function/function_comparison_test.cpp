@@ -60,9 +60,7 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
         tuple_row->set_tuple(0, tuple);
         row_batch.commit_last_row();
     }
-
-    std::shared_ptr<doris::vectorized::IFunction> greater_function_ptr =
-            doris::vectorized::SimpleFunctionFactory::instance().get("greater");
+    
     doris::vectorized::Block block = row_batch.convert_to_vec_block();
     // 1. compute the k1 > k2
     doris::vectorized::ColumnNumbers arguments;
@@ -71,7 +69,12 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
 
     size_t num_columns_without_result = block.columns();
     block.insert({nullptr, std::make_shared<doris::vectorized::DataTypeUInt8>(), "k1 > k2"});
+
+    doris::vectorized::ColumnsWithTypeAndName ctn = { block.getByPosition(arguments[0]), block.getByPosition(arguments[1]) };
+
+    auto greater_function_ptr = doris::vectorized::SimpleFunctionFactory::instance().get_function("greater", ctn);
     greater_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
+    
 
     k1 = -100;
     k2 = 100;
@@ -85,7 +88,7 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
     block.insert({nullptr, std::make_shared<doris::vectorized::DataTypeUInt8>(), "k2 <= k3"});
 
     auto less_or_equals_function_ptr =
-            doris::vectorized::SimpleFunctionFactory::instance().get("lessOrEquals");
+            doris::vectorized::SimpleFunctionFactory::instance().get_function("lessOrEquals", ctn);
 
     arguments[0] = 1;
     arguments[1] = 2;
@@ -101,9 +104,11 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
     num_columns_without_result = block.columns();
     block.insert({nullptr, std::make_shared<doris::vectorized::DataTypeUInt8>(),
                   "k1 > k2 and k2 <= k3"});
-    auto and_function_ptr = doris::vectorized::SimpleFunctionFactory::instance().get("and");
     arguments[0] = 3;
     arguments[1] = 4;
+
+    doris::vectorized::ColumnsWithTypeAndName ctn2 = { block.getByPosition(arguments[0]), block.getByPosition(arguments[1]) };
+    auto and_function_ptr = doris::vectorized::SimpleFunctionFactory::instance().get_function("and", ctn2);
     and_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
 
     k1 = -100;
@@ -117,9 +122,11 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
     num_columns_without_result = block.columns();
     block.insert(
             {nullptr, std::make_shared<doris::vectorized::DataTypeUInt8>(), "k1 > k2 or k2 <= k3"});
-    auto or_function_ptr = doris::vectorized::SimpleFunctionFactory::instance().get("or");
     arguments[0] = 3;
     arguments[1] = 4;
+
+    // doris::vectorized::ColumnsWithTypeAndName ctn2 = { block.getByPosition(arguments[0]), block.getByPosition(arguments[1]) };
+    auto or_function_ptr = doris::vectorized::SimpleFunctionFactory::instance().get_function("or", ctn2);
     or_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
 
     k1 = -100;

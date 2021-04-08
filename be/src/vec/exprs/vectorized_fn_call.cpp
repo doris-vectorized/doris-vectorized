@@ -33,11 +33,6 @@ VectorizedFnCall::VectorizedFnCall(const doris::TExprNode& node) : VExpr(node) {
 doris::Status VectorizedFnCall::prepare(doris::RuntimeState* state,
                                         const doris::RowDescriptor& desc, VExprContext* context) {
     RETURN_IF_ERROR(VExpr::prepare(state, desc, context));
-    _function = SimpleFunctionFactory::instance().get(_fn.name.function_name);
-    if (_function == nullptr) {
-        return Status::InternalError(
-                fmt::format("Function {} is not implemented", _fn.name.function_name));
-    }
     ColumnsWithTypeAndName argument_template;
     argument_template.reserve(_children.size());
     std::vector<std::string_view> child_expr_name;
@@ -46,7 +41,12 @@ doris::Status VectorizedFnCall::prepare(doris::RuntimeState* state,
         argument_template.emplace_back(std::move(column), child->data_type(), child->expr_name());
         child_expr_name.emplace_back(child->expr_name());
     }
-    _data_type = _function->getReturnType(argument_template);
+    _function = SimpleFunctionFactory::instance().get_function(_fn.name.function_name, argument_template);
+    if (_function == nullptr) {
+        return Status::InternalError(
+                fmt::format("Function {} is not implemented", _fn.name.function_name));
+    }
+    _data_type = _function->getReturnType();
     _expr_name = fmt::format("{}({})", _fn.name.function_name, child_expr_name);
     return Status::OK();
 }
