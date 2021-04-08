@@ -35,7 +35,7 @@ public:
     virtual const std::string& expr_name() const override;
 
 private:
-    FunctionPtr _function;
+    FunctionBasePtr _function;
     std::string _expr_name;
 };
 } // namespace doris::vectorized
