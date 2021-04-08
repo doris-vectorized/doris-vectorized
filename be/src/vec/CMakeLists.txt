@@ -66,6 +66,7 @@ set(VEC_FILES
   functions/function.cpp
   functions/function_helpers.cpp
   functions/functions_logical.cpp
+  functions/function_cast.cpp
   sink/mysql_result_writer.cpp
   sink/result_sink.cpp
 )
