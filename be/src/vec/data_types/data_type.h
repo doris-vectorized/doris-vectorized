@@ -21,6 +21,7 @@
 #include <memory>
 
 #include "vec/common/cow.h"
+#include "vec/common/string_buffer.hpp"
 #include "vec/core/types.h"
 // #include <vec/DataTypes/DataTypeCustom.h>
 
@@ -70,6 +71,8 @@ public:
 
     /// Data type id. It's used for runtime type checks.
     virtual TypeIndex getTypeId() const = 0;
+
+    virtual void to_string(const IColumn& column, size_t row_num, BufferWritable& ostr) const;
 
     /** Binary serialization for range of values in column - for writing to disk/network, etc.
       *
