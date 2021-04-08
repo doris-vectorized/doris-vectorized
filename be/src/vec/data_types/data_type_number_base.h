@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "vec/common/assert_cast.h"
 #include "vec/data_types/data_type.h"
 // #include <vec/DataTypes/DataTypeWithSimpleSerialization.h>
 
@@ -68,6 +69,8 @@ public:
     size_t getSizeOfValueInMemory() const override { return sizeof(T); }
     bool isCategorial() const override { return isValueRepresentedByInteger(); }
     bool canBeInsideLowCardinality() const override { return true; }
+
+    void to_string(const IColumn& column, size_t row_num, BufferWritable& ostr) const;
 };
 
 } // namespace doris::vectorized

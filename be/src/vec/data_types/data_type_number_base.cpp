@@ -32,6 +32,16 @@
 
 namespace doris::vectorized {
 
+template <typename T>
+void DataTypeNumberBase<T>::to_string(const IColumn& column, size_t row_num,
+                                      BufferWritable& ostr) const {
+    if constexpr (std::is_same<T, __int128_t>::value || std::is_same<T, UInt128>::value) {
+        // write int 128
+    } else if constexpr (std::is_integral<T>::value || std::numeric_limits<T>::is_iec559) {
+        ostr.write_number(assert_cast<const ColumnVector<T>&>(column).getData()[row_num]);
+    }
+}
+
 // template <typename T>
 // void DataTypeNumberBase<T>::serializeText(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings &) const
 // {

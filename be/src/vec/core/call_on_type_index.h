@@ -53,10 +53,10 @@ bool callOnBasicType(TypeIndex number, F&& f) {
         case TypeIndex::Int128:
             return f(TypePair<T, Int128>());
 
-        case TypeIndex::Enum8:
-            return f(TypePair<T, Int8>());
-        case TypeIndex::Enum16:
-            return f(TypePair<T, Int16>());
+            // case TypeIndex::Enum8:
+            //     return f(TypePair<T, Int8>());
+            // case TypeIndex::Enum16:
+            //     return f(TypePair<T, Int16>());
 
         default:
             break;
@@ -87,16 +87,16 @@ bool callOnBasicType(TypeIndex number, F&& f) {
         }
     }
 
-    if constexpr (_datetime) {
-        switch (number) {
-        case TypeIndex::Date:
-            return f(TypePair<T, UInt16>());
-        case TypeIndex::DateTime:
-            return f(TypePair<T, UInt32>());
-        default:
-            break;
-        }
-    }
+    // if constexpr (_datetime) {
+    //     switch (number) {
+    //     case TypeIndex::Date:
+    //         return f(TypePair<T, UInt16>());
+    //     case TypeIndex::DateTime:
+    //         return f(TypePair<T, UInt32>());
+    //     default:
+    //         break;
+    //     }
+    // }
 
     return false;
 }
@@ -135,12 +135,12 @@ inline bool callOnBasicTypes(TypeIndex type_num1, TypeIndex type_num2, F&& f) {
             return callOnBasicType<Int128, _int, _float, _decimal, _datetime>(type_num2,
                                                                               std::forward<F>(f));
 
-        case TypeIndex::Enum8:
-            return callOnBasicType<Int8, _int, _float, _decimal, _datetime>(type_num2,
-                                                                            std::forward<F>(f));
-        case TypeIndex::Enum16:
-            return callOnBasicType<Int16, _int, _float, _decimal, _datetime>(type_num2,
-                                                                             std::forward<F>(f));
+            // case TypeIndex::Enum8:
+            //     return callOnBasicType<Int8, _int, _float, _decimal, _datetime>(type_num2,
+            //                                                                     std::forward<F>(f));
+            // case TypeIndex::Enum16:
+            //     return callOnBasicType<Int16, _int, _float, _decimal, _datetime>(type_num2,
+            //                                                                      std::forward<F>(f));
 
         default:
             break;
@@ -176,18 +176,18 @@ inline bool callOnBasicTypes(TypeIndex type_num1, TypeIndex type_num2, F&& f) {
         }
     }
 
-    if constexpr (_datetime) {
-        switch (type_num1) {
-        case TypeIndex::Date:
-            return callOnBasicType<UInt16, _int, _float, _decimal, _datetime>(type_num2,
-                                                                              std::forward<F>(f));
-        case TypeIndex::DateTime:
-            return callOnBasicType<UInt32, _int, _float, _decimal, _datetime>(type_num2,
-                                                                              std::forward<F>(f));
-        default:
-            break;
-        }
-    }
+    // if constexpr (_datetime) {
+    //     switch (type_num1) {
+    //     case TypeIndex::Date:
+    //         return callOnBasicType<UInt16, _int, _float, _decimal, _datetime>(type_num2,
+    //                                                                           std::forward<F>(f));
+    //     case TypeIndex::DateTime:
+    //         return callOnBasicType<UInt32, _int, _float, _decimal, _datetime>(type_num2,
+    //                                                                           std::forward<F>(f));
+    //     default:
+    //         break;
+    //     }
+    // }
 
     return false;
 }
@@ -237,23 +237,23 @@ bool callOnIndexAndDataType(TypeIndex number, F&& f) {
     case TypeIndex::Decimal128:
         return f(TypePair<DataTypeDecimal<Decimal128>, T>());
 
-    case TypeIndex::Date:
-        return f(TypePair<DataTypeDate, T>());
-    case TypeIndex::DateTime:
-        return f(TypePair<DataTypeDateTime, T>());
+        // case TypeIndex::Date:
+        //     return f(TypePair<DataTypeDate, T>());
+        // case TypeIndex::DateTime:
+        //     return f(TypePair<DataTypeDateTime, T>());
 
     case TypeIndex::String:
         return f(TypePair<DataTypeString, T>());
-    case TypeIndex::FixedString:
-        return f(TypePair<DataTypeFixedString, T>());
+        // case TypeIndex::FixedString:
+        //     return f(TypePair<DataTypeFixedString, T>());
 
-    case TypeIndex::Enum8:
-        return f(TypePair<DataTypeEnum<Int8>, T>());
-    case TypeIndex::Enum16:
-        return f(TypePair<DataTypeEnum<Int16>, T>());
+        // case TypeIndex::Enum8:
+        //     return f(TypePair<DataTypeEnum<Int8>, T>());
+        // case TypeIndex::Enum16:
+        //     return f(TypePair<DataTypeEnum<Int16>, T>());
 
-    case TypeIndex::UUID:
-        return f(TypePair<DataTypeUUID, T>());
+        // case TypeIndex::UUID:
+        //     return f(TypePair<DataTypeUUID, T>());
 
     default:
         break;
