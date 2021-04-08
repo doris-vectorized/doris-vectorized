@@ -127,6 +127,11 @@ size_t IDataType::getSizeOfValueInMemory() const {
 //     return stream_name;
 // }
 
+void IDataType::to_string(const IColumn& column, size_t row_num, BufferWritable& ostr) const {
+    throw Exception("Data type " + getName() + "to_string not implement.",
+                    ErrorCodes::NOT_IMPLEMENTED);
+}
+
 void IDataType::insertDefaultInto(IColumn& column) const {
     column.insertDefault();
 }
