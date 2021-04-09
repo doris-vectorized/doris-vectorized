@@ -53,6 +53,8 @@ public:
 
     DataTypePtr& data_type() { return _data_type; }
 
+    const AggregateFunctionPtr& function() { return _function; }
+
 private:
     const TFunction _fn;
 
