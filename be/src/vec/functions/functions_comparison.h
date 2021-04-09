@@ -21,6 +21,7 @@
 #include "vec/columns/column_decimal.h"
 #include "vec/columns/column_string.h"
 #include "vec/columns/columns_number.h"
+#include "vec/columns/column_nullable.h"
 #include "vec/common/assert_cast.h"
 #include "vec/common/memcmp_small.h"
 //#include <vec/Columns/ColumnFixedString.h>
@@ -513,22 +514,22 @@ struct CompileOp<GreaterOrEqualsOp> {
 #endif
 
 struct NameEquals {
-    static constexpr auto name = "equals";
+    static constexpr auto name = "eq";
 };
 struct NameNotEquals {
-    static constexpr auto name = "notEquals";
+    static constexpr auto name = "ne";
 };
 struct NameLess {
-    static constexpr auto name = "less";
+    static constexpr auto name = "lt";
 };
 struct NameGreater {
-    static constexpr auto name = "greater";
+    static constexpr auto name = "gt";
 };
 struct NameLessOrEquals {
-    static constexpr auto name = "lessOrEquals";
+    static constexpr auto name = "le";
 };
 struct NameGreaterOrEquals {
-    static constexpr auto name = "greaterOrEquals";
+    static constexpr auto name = "ge";
 };
 
 template <template <typename, typename> class Op, typename Name>
@@ -543,6 +544,7 @@ public:
     //        check_decimal_overflow(decimalCheckComparisonOverflow(context))
     FunctionComparison() {}
 
+    bool useDefaultImplementationForNulls() const override { return false; }
 private:
     //    const Context & context;
     //    bool check_decimal_overflow = true;
@@ -1027,43 +1029,56 @@ private:
     //        block.getByPosition(result).column = tmp_block.getByPosition(tmp_block.columns() - 1).column;
     //    }
 
-    //    void executeGenericIdenticalTypes(Block & block, size_t result, const IColumn * c0, const IColumn * c1)
-    //    {
-    //        bool c0_const = isColumnConst(*c0);
-    //        bool c1_const = isColumnConst(*c1);
-    //
-    //        if (c0_const && c1_const)
-    //        {
-    //            UInt8 res = 0;
-    //            GenericComparisonImpl<Op<int, int>>::constant_constant(*c0, *c1, res);
-    //            block.getByPosition(result).column = DataTypeUInt8().createColumnConst(c0->size(), toField(res));
-    //        }
-    //        else
-    //        {
-    //            auto c_res = ColumnUInt8::create();
-    //            ColumnUInt8::Container & vec_res = c_res->getData();
-    //            vec_res.resize(c0->size());
-    //
-    //            if (c0_const)
-    //                GenericComparisonImpl<Op<int, int>>::constant_vector(*c0, *c1, vec_res);
-    //            else if (c1_const)
-    //                GenericComparisonImpl<Op<int, int>>::vector_constant(*c0, *c1, vec_res);
-    //            else
-    //                GenericComparisonImpl<Op<int, int>>::vector_vector(*c0, *c1, vec_res);
-    //
-    //            block.getByPosition(result).column = std::move(c_res);
-    //        }
-    //    }
+    void executeGenericIdenticalTypes(Block & block, size_t result, const IColumn * c0, const IColumn * c1)
+    {
+        bool c0_const = isColumnConst(*c0);
+        bool c1_const = isColumnConst(*c1);
 
-    //    void executeGeneric(Block & block, size_t result, const ColumnWithTypeAndName & c0, const ColumnWithTypeAndName & c1)
-    //    {
-    //        DataTypePtr common_type = getLeastSupertype({c0.type, c1.type});
-    //
-    //        ColumnPtr c0_converted = castColumn(c0, common_type, context);
-    //        ColumnPtr c1_converted = castColumn(c1, common_type, context);
-    //
-    //        executeGenericIdenticalTypes(block, result, c0_converted.get(), c1_converted.get());
-    //    }
+        if (c0_const && c1_const)
+        {
+            UInt8 res = 0;
+            GenericComparisonImpl<Op<int, int>>::constant_constant(*c0, *c1, res);
+            block.getByPosition(result).column = DataTypeUInt8().createColumnConst(c0->size(), toField(res));
+        }
+        else
+        {
+            auto c_res = ColumnUInt8::create();
+            ColumnUInt8::Container & vec_res = c_res->getData();
+            vec_res.resize(c0->size());
+
+            if (c0_const)
+                GenericComparisonImpl<Op<int, int>>::constant_vector(*c0, *c1, vec_res);
+            else if (c1_const)
+                GenericComparisonImpl<Op<int, int>>::vector_constant(*c0, *c1, vec_res);
+            else
+                GenericComparisonImpl<Op<int, int>>::vector_vector(*c0, *c1, vec_res);
+
+            block.getByPosition(result).column = std::move(c_res);
+        }
+    }
+
+    void executeGeneric(Block & block, size_t result, const ColumnWithTypeAndName & c0, const ColumnWithTypeAndName & c1)
+    {
+        DataTypePtr common_type = getLeastSupertype({c0.type, c1.type});
+        // TODO: Support full castColumn
+//        ColumnPtr c0_converted = castColumn(c0, common_type, context);
+//        ColumnPtr c1_converted = castColumn(c1, common_type, context);
+
+        ColumnPtr c0_converted = castColumnNullable(c0, common_type);
+        ColumnPtr c1_converted = castColumnNullable(c1, common_type);
+
+        executeGenericIdenticalTypes(block, result, c0_converted.get(), c1_converted.get());
+    }
+
+private:
+    ColumnPtr castColumnNullable(const ColumnWithTypeAndName & arg, const DataTypePtr & type) {
+        if (arg.type->equals(*type))
+            return arg.column;
+
+        auto bool_column = ColumnUInt8::create();
+        bool_column->insertManyDefaults(arg.column->size());
+        return doris::vectorized::ColumnNullable::create(arg.column, bool_column->getPtr());
+    }
 
 public:
     String getName() const override { return name; }
@@ -1205,7 +1220,7 @@ public:
         //        {
         //        }
         else {
-            //            executeGeneric(block, result, col_with_type_and_name_left, col_with_type_and_name_right);
+            executeGeneric(block, result, col_with_type_and_name_left, col_with_type_and_name_right);
         }
     }
 

@@ -101,12 +101,6 @@ Status PlanFragmentExecutor::prepare(const TExecPlanFragmentParams& request,
         _is_report_success = request.query_options.is_report_success;
     }
 
-    if (request.query_options.__isset.enable_vectorized_engine) {
-        _enable_vectorized_engine = request.query_options.enable_vectorized_engine;
-    } else {
-        _enable_vectorized_engine = false;
-    }
-
     // Reserve one main thread from the pool
     _runtime_state->resource_pool()->acquire_thread_token();
     _has_thread_token = true;
@@ -258,7 +252,7 @@ Status PlanFragmentExecutor::open() {
         _report_thread_active = true;
     }
     Status status = Status::OK();
-    if(_enable_vectorized_engine) {
+    if (_runtime_state->enable_vectorized_exec()) {
         status = open_vectorized_internal();
     } else {
         status = open_internal();
