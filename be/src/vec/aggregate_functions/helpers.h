@@ -136,9 +136,12 @@ static IAggregateFunction* createWithNumericBasedType(const IDataType& argument_
 template <template <typename> class AggregateFunctionTemplate, typename... TArgs>
 static IAggregateFunction* createWithDecimalType(const IDataType& argument_type, TArgs&&... args) {
     WhichDataType which(argument_type);
-    // if (which.idx == TypeIndex::Decimal32) return new AggregateFunctionTemplate<Decimal32>(std::forward<TArgs>(args)...);
-    // if (which.idx == TypeIndex::Decimal64) return new AggregateFunctionTemplate<Decimal64>(std::forward<TArgs>(args)...);
-    // if (which.idx == TypeIndex::Decimal128) return new AggregateFunctionTemplate<Decimal128>(std::forward<TArgs>(args)...);
+    if (which.idx == TypeIndex::Decimal32)
+        return new AggregateFunctionTemplate<Decimal32>(std::forward<TArgs>(args)...);
+    if (which.idx == TypeIndex::Decimal64)
+        return new AggregateFunctionTemplate<Decimal64>(std::forward<TArgs>(args)...);
+    if (which.idx == TypeIndex::Decimal128)
+        return new AggregateFunctionTemplate<Decimal128>(std::forward<TArgs>(args)...);
     return nullptr;
 }
 
