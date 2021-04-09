@@ -40,4 +40,23 @@ void VExprContext::close(doris::RuntimeState* state) {
     return _root->close(state, this);
 }
 
+doris::Status VExprContext::clone(RuntimeState* state, VExprContext** new_ctx) {
+//    DCHECK(_prepared);
+//    DCHECK(_opened);
+    DCHECK(*new_ctx == NULL);
+
+    *new_ctx = state->obj_pool()->add(new VExprContext(_root));
+//    (*new_ctx)->_pool.reset(new MemPool(_pool->mem_tracker()));
+//    for (int i = 0; i < _fn_contexts.size(); ++i) {
+//        (*new_ctx)->_fn_contexts.push_back(_fn_contexts[i]->impl()->clone((*new_ctx)->_pool.get()));
+//    }
+//    (*new_ctx)->_fn_contexts_ptr = &((*new_ctx)->_fn_contexts[0]);
+
+//    (*new_ctx)->_is_clone = true;
+//    (*new_ctx)->_prepared = true;
+//    (*new_ctx)->_opened = true;
+
+    return _root->open(state, *new_ctx);
+}
+
 } // namespace doris::vectorized
