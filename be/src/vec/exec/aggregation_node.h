@@ -46,6 +46,8 @@ struct AggregatedDataVariants {
 // not support spill
 class AggregationNode : public ::doris::ExecNode {
 public:
+    using Sizes = std::vector<size_t>;
+
     AggregationNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs);
     ~AggregationNode();
     virtual Status init(const TPlanNode& tnode, RuntimeState* state = nullptr);
@@ -76,9 +78,15 @@ private:
     std::unique_ptr<MemPool> _mem_pool;
 
     // TODO:
-    std::vector<int> _single_data_offset;
     AggregateDataPtr _single_data_ptr;
     std::unique_ptr<Block> _single_output_block;
+
+    size_t _align_aggregate_states = 1;
+    Sizes _offsets_of_aggregate_states; /// The offset to the n-th aggregate function in a row of aggregate functions.
+    size_t _total_size_of_aggregate_states =
+            0; /// The total size of the row from the aggregate functions.
+private:
+    Status _create_agg_status(AggregateDataPtr data);
 };
 } // namespace vectorized
 } // namespace doris
