@@ -61,6 +61,7 @@ set(VEC_FILES
   exprs/vexpr_context.cpp
   exprs/vliteral.cpp
   exprs/vslot_ref.cpp
+  exprs/vcast_expr.cpp
   functions/abs.cpp
   functions/comparison.cpp
   functions/function.cpp

@@ -1009,7 +1009,14 @@ protected:
                                     " must be a constant string describing type",
                             ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
-        return DataTypeFactory::instance().get(type_col->getValue<String>());
+        auto type = DataTypeFactory::instance().get(type_col->getValue<String>());
+        bool from_is_nullable = arguments[0].type->isNullable();
+        bool to_is_nullable = type->isNullable();
+        if (from_is_nullable && !to_is_nullable) {
+            return std::make_shared<DataTypeNullable>(type);
+        }
+        // TODO: handle string convert to other type;
+        return type;
     }
 
     bool useDefaultImplementationForNulls() const override { return false; }
