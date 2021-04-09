@@ -61,9 +61,11 @@
 #include "runtime/runtime_state.h"
 #include "util/debug_util.h"
 #include "util/runtime_profile.h"
+
 #include "vec/core/block.h"
 #include "vec/exec/aggregation_node.h"
 #include "vec/exec/olap_scan_node.h"
+#include "vec/exprs/vexpr.h"
 
 namespace doris {
 
@@ -162,7 +164,15 @@ void ExecNode::push_down_predicate(RuntimeState* state, std::list<ExprContext*>*
 }
 
 Status ExecNode::init(const TPlanNode& tnode, RuntimeState* state) {
-    RETURN_IF_ERROR(Expr::create_expr_trees(_pool, tnode.conjuncts, &_conjunct_ctxs));
+    if (state->enable_vectorized_exec()) {
+        std::vector<TExpr> vconjunct_vec;
+        if (tnode.__isset.vconjunct) {
+            _vconjunct_ctx_ptr.reset(new doris::vectorized::VExprContext*);
+            RETURN_IF_ERROR(doris::vectorized::VExpr::create_expr_tree(_pool, tnode.vconjunct, _vconjunct_ctx_ptr.get()));
+        }
+    } else {
+        RETURN_IF_ERROR(Expr::create_expr_trees(_pool, tnode.conjuncts, &_conjunct_ctxs));
+    }
     return Status::OK();
 }
 
@@ -181,8 +191,12 @@ Status ExecNode::prepare(RuntimeState* state) {
     _expr_mem_tracker = MemTracker::CreateTracker(-1, "ExecNode:Exprs:" + _runtime_profile->name(),
                                                   _mem_tracker);
     _expr_mem_pool.reset(new MemPool(_expr_mem_tracker.get()));
-    // TODO chenhao
-    RETURN_IF_ERROR(Expr::prepare(_conjunct_ctxs, state, row_desc(), expr_mem_tracker()));
+
+    if (state->enable_vectorized_exec()) {
+        if (_vconjunct_ctx_ptr) RETURN_IF_ERROR((*_vconjunct_ctx_ptr)->prepare(state, row_desc(), expr_mem_tracker()));
+    } else {
+        RETURN_IF_ERROR(Expr::prepare(_conjunct_ctxs, state, row_desc(), expr_mem_tracker()));
+    }
     // TODO(zc):
     // AddExprCtxsToFree(_conjunct_ctxs);
 
@@ -195,6 +209,9 @@ Status ExecNode::prepare(RuntimeState* state) {
 
 Status ExecNode::open(RuntimeState* state) {
     RETURN_IF_ERROR(exec_debug_action(TExecNodePhase::OPEN));
+    if (state->enable_vectorized_exec()) {
+        if (_vconjunct_ctx_ptr) return (*_vconjunct_ctx_ptr)->open(state);
+    }
     return Expr::open(_conjunct_ctxs, state);
 }
 
@@ -233,7 +250,11 @@ Status ExecNode::close(RuntimeState* state) {
         }
     }
 
-    Expr::close(_conjunct_ctxs, state);
+    if (state->enable_vectorized_exec()) {
+        if (_vconjunct_ctx_ptr) (*_vconjunct_ctx_ptr)->close(state);
+    } else {
+        Expr::close(_conjunct_ctxs, state);
+    }
 
     if (expr_mem_pool() != nullptr) {
         _expr_mem_pool->free_all();
