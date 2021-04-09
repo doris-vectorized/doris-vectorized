@@ -17,8 +17,11 @@
 
 #include "vec/exec/olap_scanner.h"
 
+#include "vec/columns/column_vector.h"
+#include "vec/common/assert_cast.h"
 #include "vec/core/block.h"
 #include "vec/exec/olap_scan_node.h"
+#include "vec/exprs/vexpr_context.h"
 
 namespace doris::vectorized {
 
@@ -40,8 +43,9 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
     std::unique_ptr<MemPool> mem_pool(new MemPool(tracker.get()));
     int64_t raw_rows_threshold = raw_rows_read() + config::doris_scanner_row_num;
     auto agg_object_pool = std::make_unique<ObjectPool>();
-    block->clear();
-    {
+
+    do {
+        block->clear();
         std::vector<vectorized::MutableColumnPtr> columns;
         for (auto slot : get_query_slots()) {
             columns.emplace_back(slot->get_empty_mutable_column());
@@ -72,88 +76,6 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
             _convert_row_to_block(&columns);
             VLOG_ROW << "VOlapScanner input row: " << _read_row_cursor.to_string();
 
-            //   // 3.4 Set tuple to RowBatch(not committed)
-            //   int row_idx = batch->add_row();
-            //   TupleRow* row = batch->get_row(row_idx);
-            //   row->set_tuple(_tuple_idx, tuple);
-
-            //   do {
-            //     // 3.5.1 Using direct conjuncts to filter data
-            //     if (_eval_conjuncts_fn != nullptr) {
-            //       if (!_eval_conjuncts_fn(&_conjunct_ctxs[0], _direct_conjunct_size, row)) {
-            //         // check direct conjuncts fail then clear tuple for reuse
-            //         // make sure to reset null indicators since we're overwriting
-            //         // the tuple assembled for the previous row
-            //         tuple->init(_tuple_desc->byte_size());
-            //         break;
-            //       }
-            //     } else {
-            //       if (!ExecNode::eval_conjuncts(&_conjunct_ctxs[0], _direct_conjunct_size, row)) {
-            //         // check direct conjuncts fail then clear tuple for reuse
-            //         // make sure to reset null indicators since we're overwriting
-            //         // the tuple assembled for the previous row
-            //         tuple->init(_tuple_desc->byte_size());
-            //         break;
-            //       }
-            //     }
-
-            //     // 3.5.2 Using pushdown conjuncts to filter data
-            //     if (_use_pushdown_conjuncts) {
-            //       if (!ExecNode::eval_conjuncts(&_conjunct_ctxs[_direct_conjunct_size],
-            //                                     _conjunct_ctxs.size() - _direct_conjunct_size,
-            //                                     row)) {
-            //         // check pushdown conjuncts fail then clear tuple for reuse
-            //         // make sure to reset null indicators since we're overwriting
-            //         // the tuple assembled for the previous row
-            //         tuple->init(_tuple_desc->byte_size());
-            //         _num_rows_pushed_cond_filtered++;
-            //         break;
-            //       }
-            //     }
-
-            //     // Copy string slot
-            //     for (auto desc : _string_slots) {
-            //       StringValue* slot = tuple->get_string_slot(desc->tuple_offset());
-            //       if (slot->len != 0) {
-            //         uint8_t* v = batch->tuple_data_pool()->allocate(slot->len);
-            //         memory_copy(v, slot->ptr, slot->len);
-            //         slot->ptr = reinterpret_cast<char*>(v);
-            //       }
-            //     }
-
-            //     // the memory allocate by mem pool has been copied,
-            //     // so we should release these memory immediately
-            //     mem_pool->clear();
-
-            //     if (VLOG_ROW_IS_ON) {
-            //       VLOG_ROW << "OlapScanner output row: " << Tuple::to_string(tuple, *_tuple_desc);
-            //     }
-
-            //     // check direct && pushdown conjuncts success then commit tuple
-            //     batch->commit_last_row();
-            //     char* new_tuple = reinterpret_cast<char*>(tuple);
-            //     new_tuple += _tuple_desc->byte_size();
-            //     tuple = reinterpret_cast<Tuple*>(new_tuple);
-
-            //     // compute pushdown conjuncts filter rate
-            //     if (_use_pushdown_conjuncts) {
-            //       // check this rate after
-            //       if (_num_rows_read > 32768) {
-            //         int32_t pushdown_return_rate =
-            //             _num_rows_read * 100 /
-            //                 (_num_rows_read + _num_rows_pushed_cond_filtered);
-            //         if (pushdown_return_rate >
-            //             config::doris_max_pushdown_conjuncts_return_rate) {
-            //           _use_pushdown_conjuncts = false;
-            //           VLOG_CRITICAL << "Stop Using PushDown Conjuncts. "
-            //                         << "PushDownReturnRate: " << pushdown_return_rate << "%"
-            //                         << " MaxPushDownReturnRate: "
-            //                         << config::doris_max_pushdown_conjuncts_return_rate << "%";
-            //         }
-            //       }
-            //     }
-            //   } while (false);
-
             if (raw_rows_read() >= raw_rows_threshold) {
                 break;
             }
@@ -165,7 +87,14 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
                                                 slot_desc->col_name()));
         }
         VLOG_ROW << "VOlapScanner output rows: " << block->rows();
-    }
+        
+        if (_vconjunct_ctx != nullptr) {
+            int result_column_id = -1;
+            _vconjunct_ctx->execute(block, &result_column_id);
+            Block::filter_block(block, result_column_id, _tuple_desc->slots().size());
+        }
+    } while (block->rows() == 0 && !(*eof));
+
     return Status::OK();
 }
 

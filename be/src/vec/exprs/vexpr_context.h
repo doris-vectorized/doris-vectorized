@@ -31,6 +31,7 @@ public:
                           const std::shared_ptr<doris::MemTracker>& tracker);
     doris::Status open(doris::RuntimeState* state);
     void close(doris::RuntimeState* state);
+    doris::Status clone(doris::RuntimeState* state, VExprContext** new_ctx);
     doris::Status execute(doris::vectorized::Block* block, int* result_column_id);
 
     VExpr* root() { return _root; }

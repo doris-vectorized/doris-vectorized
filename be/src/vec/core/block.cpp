@@ -26,6 +26,7 @@
 #include <iterator>
 #include <memory>
 
+#include "vec/columns/column_vector.h"
 #include "vec/columns/column_const.h"
 #include "vec/common/assert_cast.h"
 #include "vec/common/typeid_cast.h"
@@ -527,6 +528,22 @@ void Block::swap(Block& other) noexcept {
 void Block::updateHash(SipHash& hash) const {
     for (size_t row_no = 0, num_rows = rows(); row_no < num_rows; ++row_no)
         for (const auto& col : data) col.column->updateHashWithValue(row_no, hash);
+}
+
+void Block::filter_block(Block* block, int filter_column_id, int column_to_keep) {
+    ColumnPtr filter_column = block->getByPosition(filter_column_id).column;
+    const IColumn::Filter& filter =
+            assert_cast<const doris::vectorized::ColumnVector<UInt8>&>(*filter_column).getData();
+
+    block->getByPosition(0).column = block->getByPosition(0).column->filter(filter, 0);
+    if (block->getByPosition(0).column->empty()) return;
+
+    for (int i = 1; i < column_to_keep; ++i) {
+        block->getByPosition(i).column = block->getByPosition(i).column->filter(filter, 0);
+    }
+    for (int i = column_to_keep; i < block->columns(); ++i) {
+        block->erase(i);
+    }
 }
 
 } // namespace doris::vectorized

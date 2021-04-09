@@ -771,6 +771,8 @@ struct TPlanNode {
   35: optional TOdbcScanNode odbc_scan_node
   // Runtime filters assigned to this plan node, exist in HashJoinNode and ScanNode
   36: optional list<TRuntimeFilterDesc> runtime_filters
+
+  40: optional Exprs.TExpr vconjunct
 }
 
 // A flattened representation of a tree of PlanNodes, obtained by depth-first

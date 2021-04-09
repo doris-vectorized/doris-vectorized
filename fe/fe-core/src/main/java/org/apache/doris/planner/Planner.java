@@ -167,6 +167,10 @@ public class Planner {
         singleNodePlanner = new SingleNodePlanner(plannerContext);
         PlanNode singleNodePlan = singleNodePlanner.createSingleNodePlan();
 
+        if (ConnectContext.get().getSessionVariable().enableVectorizedEngine()) {
+            singleNodePlan.convertToVectoriezd();
+        }
+
         if (statement instanceof InsertStmt) {
             InsertStmt insertStmt = (InsertStmt) statement;
             insertStmt.prepareExpressions();
