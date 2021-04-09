@@ -20,6 +20,7 @@
 #include <fmt/format.h>
 
 #include "gen_cpp/Exprs_types.h"
+#include "vec/exprs/vcast_expr.h"
 #include "vec/exprs/vectorized_fn_call.h"
 #include "vec/exprs/vliteral.h"
 #include "vec/exprs/vslot_ref.h"
@@ -75,15 +76,20 @@ Status VExpr::create_expr(doris::ObjectPool* pool, const doris::TExprNode& texpr
     case TExprNodeType::FLOAT_LITERAL:
     case TExprNodeType::DECIMAL_LITERAL:
     case TExprNodeType::DATE_LITERAL:
-    case TExprNodeType::STRING_LITERAL:
+    case TExprNodeType::STRING_LITERAL: {
         *expr = pool->add(new VLiteral(texpr_node));
         return Status::OK();
+    }
     case doris::TExprNodeType::SLOT_REF: {
         *expr = pool->add(new VSlotRef(texpr_node));
         break;
     }
     case doris::TExprNodeType::FUNCTION_CALL: {
         *expr = pool->add(new VectorizedFnCall(texpr_node));
+        break;
+    }
+    case doris::TExprNodeType::CAST_EXPR: {
+        *expr = pool->add(new VCastExpr(texpr_node));
         break;
     }
     default:

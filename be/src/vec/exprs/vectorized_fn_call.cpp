@@ -26,7 +26,6 @@
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
-using doris::Status;
 
 VectorizedFnCall::VectorizedFnCall(const doris::TExprNode& node) : VExpr(node) {}
 
@@ -41,7 +40,8 @@ doris::Status VectorizedFnCall::prepare(doris::RuntimeState* state,
         argument_template.emplace_back(std::move(column), child->data_type(), child->expr_name());
         child_expr_name.emplace_back(child->expr_name());
     }
-    _function = SimpleFunctionFactory::instance().get_function(_fn.name.function_name, argument_template);
+    _function = SimpleFunctionFactory::instance().get_function(_fn.name.function_name,
+                                                               argument_template);
     if (_function == nullptr) {
         return Status::InternalError(
                 fmt::format("Function {} is not implemented", _fn.name.function_name));
@@ -58,7 +58,7 @@ void VectorizedFnCall::close(doris::RuntimeState* state, VExprContext* context) 
     VExpr::close(state, context);
 }
 
-Status VectorizedFnCall::execute(doris::vectorized::Block* block, int* result_column_id) {
+doris::Status VectorizedFnCall::execute(doris::vectorized::Block* block, int* result_column_id) {
     // for each child call execute
     doris::vectorized::ColumnNumbers arguments(_children.size());
     for (int i = 0; i < _children.size(); ++i) {

@@ -26,8 +26,10 @@
 #include "vec/data_types/data_types_number.h"
 
 namespace doris::vectorized {
+
 class DataTypeFactory {
     using DataTypeMap = std::unordered_map<std::string, DataTypePtr>;
+    using InvertedDataTypeMap = std::vector<std::pair<DataTypePtr, std::string>>;
 
 public:
     static DataTypeFactory& instance() {
@@ -48,11 +50,22 @@ public:
         return instance;
     }
     DataTypePtr get(const std::string& name) { return _data_type_map[name]; }
+    const std::string& get(const DataTypePtr& data_type) const {
+        for (const auto& entity : _invert_data_type_map) {
+            if (entity.first->equals(*data_type)) {
+                return entity.second;
+            }
+        }
+        return _empty_string;
+    }
 
 private:
-    void regist_data_type(const std::string& name, DataTypePtr data_type) {
+    void regist_data_type(const std::string& name, const DataTypePtr& data_type) {
         _data_type_map.emplace(name, data_type);
+        _invert_data_type_map.emplace_back(data_type, name);
     }
     DataTypeMap _data_type_map;
+    InvertedDataTypeMap _invert_data_type_map;
+    std::string _empty_string;
 };
 } // namespace doris::vectorized

@@ -19,6 +19,7 @@
 
 #include "fmt/format.h"
 #include "fmt/ranges.h"
+#include "runtime/descriptors.h"
 #include "vec/aggregate_functions/aggregate_function_simple_factory.h"
 #include "vec/exprs/vexpr.h"
 
@@ -78,6 +79,7 @@ Status AggFnEvaluator::prepare(RuntimeState* state, const RowDescriptor& desc, M
                 fmt::format("Agg Function {} is not implemented", _fn.name.function_name));
     }
     _data_type = _function->getReturnType();
+    DCHECK(_data_type->equals(*_intermediate_slot_desc->get_data_type_ptr()));
     _expr_name = fmt::format("{}({})", _fn.name.function_name, child_expr_name);
     return Status::OK();
 }
@@ -102,7 +104,7 @@ void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place) {
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
         int column_id = -1;
         _input_exprs_ctxs[i]->execute(block, &column_id);
-        column_arguments[i] = columns[column_id].get();
+        column_arguments[i] = block->getByPosition(column_id).column.get();
     }
     _function->addBatchSinglePlace(block->rows(), place, column_arguments.data(), nullptr);
 }
