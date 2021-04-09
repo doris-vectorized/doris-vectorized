@@ -61,6 +61,9 @@ public:
 
     static Status open(const std::vector<VExprContext*>& ctxs, RuntimeState* state);
 
+    static Status clone_if_not_exists(const std::vector<VExprContext*>& ctxs, RuntimeState* state,
+                                 std::vector<VExprContext*>* new_ctxs);
+
     static void close(const std::vector<VExprContext*>& ctxs, RuntimeState* state);
 
     bool is_nullable() const { return _data_type->isNullable(); }

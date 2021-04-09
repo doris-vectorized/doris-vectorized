@@ -31,6 +31,7 @@ import org.apache.doris.catalog.PrimitiveType;
 import org.apache.doris.common.UserException;
 import org.apache.doris.common.profile.PlanTreeBuilder;
 import org.apache.doris.common.profile.PlanTreePrinter;
+import org.apache.doris.qe.ConnectContext;
 import org.apache.doris.rewrite.mvrewrite.MVSelectFailedException;
 import org.apache.doris.thrift.TExplainLevel;
 import org.apache.doris.thrift.TQueryOptions;
@@ -166,6 +167,10 @@ public class Planner {
         plannerContext = new PlannerContext(analyzer, queryStmt, queryOptions, statement);
         singleNodePlanner = new SingleNodePlanner(plannerContext);
         PlanNode singleNodePlan = singleNodePlanner.createSingleNodePlan();
+
+        if (ConnectContext.get().getSessionVariable().enableVectorizedEngine()) {
+            singleNodePlan.convertToVectoriezd();
+        }
 
         if (statement instanceof InsertStmt) {
             InsertStmt insertStmt = (InsertStmt) statement;
