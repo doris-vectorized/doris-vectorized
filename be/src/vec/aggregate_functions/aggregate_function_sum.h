@@ -22,10 +22,10 @@
 // #include <IO/WriteHelpers.h>
 // #include <IO/ReadHelpers.h>
 
-#include "vec/data_types/data_types_number.h"
-// #include <vec/DataTypes/DataTypesDecimal.h>
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/columns/column_vector.h"
+#include "vec/data_types/data_types_decimal.h"
+#include "vec/data_types/data_types_number.h"
 
 namespace doris::vectorized {
 
@@ -87,13 +87,11 @@ template <typename T, typename TResult, typename Data>
 class AggregateFunctionSum final
         : public IAggregateFunctionDataHelper<Data, AggregateFunctionSum<T, TResult, Data>> {
 public:
-    // using ResultDataType = std::conditional_t<IsDecimalNumber<T>, DataTypeDecimal<TResult>, DataTypeNumber<TResult>>;
-    // using ColVecType = std::conditional_t<IsDecimalNumber<T>, ColumnDecimal<T>, ColumnVector<T>>;
-    // using ColVecResult = std::conditional_t<IsDecimalNumber<T>, ColumnDecimal<TResult>, ColumnVector<TResult>>;
-
-    using ResultDataType = DataTypeNumber<TResult>;
-    using ColVecType = ColumnVector<T>;
-    using ColVecResult = ColumnVector<TResult>;
+    using ResultDataType = std::conditional_t<IsDecimalNumber<T>, DataTypeDecimal<TResult>,
+                                              DataTypeNumber<TResult>>;
+    using ColVecType = std::conditional_t<IsDecimalNumber<T>, ColumnDecimal<T>, ColumnVector<T>>;
+    using ColVecResult =
+            std::conditional_t<IsDecimalNumber<T>, ColumnDecimal<TResult>, ColumnVector<TResult>>;
 
     String getName() const override { return "sum"; }
 
@@ -102,10 +100,10 @@ public:
                       argument_types_, {}),
               scale(0) {}
 
-    // AggregateFunctionSum(const IDataType & data_type, const DataTypes & argument_types_)
-    //     : IAggregateFunctionDataHelper<Data, AggregateFunctionSum<T, TResult, Data>>(argument_types_, {})
-    //     , scale(getDecimalScale(data_type))
-    // {}
+    AggregateFunctionSum(const IDataType& data_type, const DataTypes& argument_types_)
+            : IAggregateFunctionDataHelper<Data, AggregateFunctionSum<T, TResult, Data>>(
+                      argument_types_, {}),
+              scale(getDecimalScale(data_type)) {}
 
     DataTypePtr getReturnType() const override {
         if constexpr (IsDecimalNumber<T>)
