@@ -18,16 +18,21 @@
 package org.apache.doris.planner;
 
 import org.apache.doris.analysis.Analyzer;
+import org.apache.doris.analysis.CompoundPredicate;
 import org.apache.doris.analysis.Expr;
 import org.apache.doris.analysis.ExprId;
 import org.apache.doris.analysis.ExprSubstitutionMap;
+import org.apache.doris.analysis.FunctionName;
 import org.apache.doris.analysis.SlotId;
 import org.apache.doris.analysis.TupleDescriptor;
 import org.apache.doris.analysis.TupleId;
+import org.apache.doris.catalog.Function;
+import org.apache.doris.catalog.Type;
 import org.apache.doris.common.AnalysisException;
 import org.apache.doris.common.TreeNode;
 import org.apache.doris.common.UserException;
 import org.apache.doris.thrift.TExplainLevel;
+import org.apache.doris.thrift.TFunctionBinaryType;
 import org.apache.doris.thrift.TPlan;
 import org.apache.doris.thrift.TPlanNode;
 
@@ -84,6 +89,8 @@ abstract public class PlanNode extends TreeNode<PlanNode> {
     protected Set<TupleId> nullableTupleIds = Sets.newHashSet();
 
     protected List<Expr> conjuncts = Lists.newArrayList();
+
+    protected Expr vconjunct = null;
 
     // Conjuncts used to filter the original load file.
     // In the load execution plan, the difference between "preFilterConjuncts" and "conjuncts" is that
@@ -286,6 +293,39 @@ abstract public class PlanNode extends TreeNode<PlanNode> {
         return conjuncts;
     }
 
+    private void initCompoundPredicate(Expr expr) {
+        if (expr instanceof CompoundPredicate) {
+            CompoundPredicate compoundPredicate = (CompoundPredicate) expr;
+            compoundPredicate.setType(Type.BOOLEAN);
+            List<Type> args = new ArrayList<>();
+            args.add(Type.BOOLEAN);
+            args.add(Type.BOOLEAN);
+            Function function = new Function(new FunctionName("", compoundPredicate.getOp().toString()), args, Type.BOOLEAN, false);
+            function.setBinaryType(TFunctionBinaryType.BUILTIN);
+            expr.setFn(function);
+        }
+
+        for (Expr child : expr.getChildren()) {
+            initCompoundPredicate(child);
+        }
+    }
+
+    private Expr convertConjunctsToAndCompoundPredicate() {
+        List<Expr> targetConjuncts = Lists.newArrayList(conjuncts);
+        while (targetConjuncts.size() > 1) {
+            List<Expr> newTargetConjuncts = Lists.newArrayList();
+            for (int i = 0; i < targetConjuncts.size(); i+= 2) {
+                Expr expr = i + 1 < targetConjuncts.size() ? new CompoundPredicate(CompoundPredicate.Operator.AND, targetConjuncts.get(i),
+                        targetConjuncts.get(i + 1)) : targetConjuncts.get(i);
+                newTargetConjuncts.add(expr);
+            }
+            targetConjuncts = newTargetConjuncts;
+        }
+
+        Preconditions.checkArgument(targetConjuncts.size() == 1);
+        return targetConjuncts.get(0);
+    }
+
     public void addConjuncts(List<Expr> conjuncts) {
         if (conjuncts == null) {
             return;
@@ -429,10 +469,16 @@ abstract public class PlanNode extends TreeNode<PlanNode> {
         for (Expr e : conjuncts) {
             msg.addToConjuncts(e.treeToThrift());
         }
+
         // Serialize any runtime filters
         for (RuntimeFilter filter : runtimeFilters) {
             msg.addToRuntimeFilters(filter.toThrift());
         }
+
+        if (vconjunct != null) {
+            msg.vconjunct = vconjunct.treeToThrift();
+        }
+
         msg.compact_data = compactData;
         toThrift(msg);
         container.addToNodes(msg);
@@ -801,5 +847,16 @@ abstract public class PlanNode extends TreeNode<PlanNode> {
         sb.append("\nFragment: ").append(getFragmentId().asInt()).append("]");
         sb.append("\n").append(getNodeExplainString("", TExplainLevel.BRIEF));
         return sb.toString();
+    }
+
+    void convertToVectoriezd() {
+        if (!conjuncts.isEmpty()) {
+            vconjunct = convertConjunctsToAndCompoundPredicate();
+            initCompoundPredicate(vconjunct);
+        }
+
+        for (PlanNode child : children) {
+            child.convertToVectoriezd();
+        }
     }
 }

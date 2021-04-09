@@ -23,6 +23,7 @@
 #include "util/priority_thread_pool.hpp"
 #include "vec/core/block.h"
 #include "vec/exec/olap_scanner.h"
+#include "vec/exprs/vexpr.h"
 
 namespace doris::vectorized {
 VOlapScanNode::VOlapScanNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
@@ -35,12 +36,15 @@ void VOlapScanNode::transfer_thread(RuntimeState* state) {
     // scanner open pushdown to scanThread
     state->resource_pool()->acquire_thread_token();
     Status status = Status::OK();
-    for (auto scanner : _volap_scanners) {
-        status = Expr::clone_if_not_exists(_conjunct_ctxs, state, scanner->conjunct_ctxs());
-        if (!status.ok()) {
-            std::lock_guard<SpinLock> guard(_status_mutex);
-            _status = status;
-            break;
+
+    if (_vconjunct_ctx_ptr) {
+        for (auto scanner : _volap_scanners) {
+            status = (*_vconjunct_ctx_ptr)->clone(state, scanner->vconjunct_ctx_ptr());
+            if (!status.ok()) {
+                std::lock_guard<SpinLock> guard(_status_mutex);
+                _status = status;
+                break;
+            }
         }
     }
 

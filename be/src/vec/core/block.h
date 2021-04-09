@@ -153,6 +153,8 @@ public:
     /** Get block data in string. */
     std::string dumpData() const;
 
+    static void filter_block(Block* block, int filter_conlumn_id, int column_to_keep);
+
 private:
     void eraseImpl(size_t position);
     void initializeIndexByName();
