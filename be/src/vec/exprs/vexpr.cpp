@@ -84,6 +84,8 @@ Status VExpr::create_expr(doris::ObjectPool* pool, const doris::TExprNode& texpr
         *expr = pool->add(new VSlotRef(texpr_node));
         break;
     }
+    case doris::TExprNodeType::COMPOUND_PRED:
+    case doris::TExprNodeType::BINARY_PRED:
     case doris::TExprNodeType::FUNCTION_CALL: {
         *expr = pool->add(new VectorizedFnCall(texpr_node));
         break;
@@ -148,7 +150,7 @@ Status VExpr::create_expr_tree(doris::ObjectPool* pool, const doris::TExpr& texp
                    << status.get_error_msg() << "\n"
                    << apache::thrift::ThriftDebugString(texpr);
     }
-    return Status::OK();
+    return status;
 }
 
 Status VExpr::create_expr_trees(ObjectPool* pool, const std::vector<doris::TExpr>& texprs,
@@ -183,4 +185,21 @@ Status VExpr::open(const std::vector<VExprContext*>& ctxs, RuntimeState* state) 
     return Status::OK();
 }
 
+Status VExpr::clone_if_not_exists(const std::vector<VExprContext*>& ctxs, RuntimeState* state,
+                                 std::vector<VExprContext*>* new_ctxs) {
+    DCHECK(new_ctxs != NULL);
+    if (!new_ctxs->empty()) {
+        // 'ctxs' was already cloned into '*new_ctxs', nothing to do.
+        DCHECK_EQ(new_ctxs->size(), ctxs.size());
+//        for (int i = 0; i < new_ctxs->size(); ++i) {
+//            DCHECK((*new_ctxs)[i]->_is_clone);
+//        }
+        return Status::OK();
+    }
+    new_ctxs->resize(ctxs.size());
+    for (int i = 0; i < ctxs.size(); ++i) {
+        RETURN_IF_ERROR(ctxs[i]->clone(state, &(*new_ctxs)[i]));
+    }
+    return Status::OK();
+}
 } // namespace doris::vectorized

@@ -730,6 +730,8 @@ struct TPlanNode {
   33: optional TIntersectNode intersect_node
   34: optional TExceptNode except_node
   35: optional TOdbcScanNode odbc_scan_node
+
+  40: optional Exprs.TExpr vconjunct
 }
 
 // A flattened representation of a tree of PlanNodes, obtained by depth-first

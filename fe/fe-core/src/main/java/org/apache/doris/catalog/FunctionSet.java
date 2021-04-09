@@ -20,6 +20,7 @@ package org.apache.doris.catalog;
 import org.apache.doris.analysis.ArithmeticExpr;
 import org.apache.doris.analysis.BinaryPredicate;
 import org.apache.doris.analysis.CastExpr;
+import org.apache.doris.analysis.CompoundPredicate;
 import org.apache.doris.analysis.InPredicate;
 import org.apache.doris.analysis.IsNullPredicate;
 import org.apache.doris.analysis.LikePredicate;
@@ -69,6 +70,7 @@ public class FunctionSet {
 
         ArithmeticExpr.initBuiltins(this);
         BinaryPredicate.initBuiltins(this);
+        CompoundPredicate.initBuiltins(this);
         CastExpr.initBuiltins(this);
         IsNullPredicate.initBuiltins(this);
         ScalarBuiltins.initBuiltins(this);
