@@ -87,12 +87,36 @@ Status AggregationNode::prepare(RuntimeState* state) {
                                                           output_slot_desc, mem_tracker()));
     }
 
+    _offsets_of_aggregate_states.resize(_aggregate_evaluators.size());
+
+    for (size_t i = 0; i < _aggregate_evaluators.size(); ++i) {
+        _offsets_of_aggregate_states[i] = _total_size_of_aggregate_states;
+
+        const auto agg_function = _aggregate_evaluators[i]->function();
+        // aggreate states are aligned based on maximum requirement
+        _align_aggregate_states = std::max(_align_aggregate_states, agg_function->alignOfData());
+
+        // If not the last aggregate_state, we need pad it so that next aggregate_state will be aligned.
+        if (i + 1 < _aggregate_evaluators.size()) {
+            size_t alignment_of_next_state =
+                    _aggregate_evaluators[i + 1]->function()->alignOfData();
+            if ((alignment_of_next_state & (alignment_of_next_state - 1)) != 0)
+                throw Exception("Logical error: alignOfData is not 2^N", ErrorCodes::LOGICAL_ERROR);
+
+            /// Extend total_size to next alignment requirement
+            /// Add padding by rounding up 'total_size_of_aggregate_states' to be a multiplier of alignment_of_next_state.
+            _total_size_of_aggregate_states =
+                    (_total_size_of_aggregate_states + alignment_of_next_state - 1) /
+                    alignment_of_next_state * alignment_of_next_state;
+        }
+    }
+
     if (_probe_expr_ctxs.empty()) {
         const auto& slots = _intermediate_tuple_desc->slots();
         // tmp code for test
         // TODO:
-        _single_data_ptr = new char[100];
-        _single_data_offset = {0, 8, 16, 24, 32};
+        _single_data_ptr = reinterpret_cast<AggregateDataPtr>(
+                _mem_pool->allocate(_total_size_of_aggregate_states));
 
         ColumnsWithTypeAndName intermediate;
         intermediate.reserve(slots.size());
@@ -103,9 +127,8 @@ Status AggregationNode::prepare(RuntimeState* state) {
                                       fmt::format("slot-id:{}", slot->id()));
         }
 
-        for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
-            _aggregate_evaluators[i]->create(_single_data_ptr + _single_data_offset[i]);
-        }
+        _create_agg_status(_single_data_ptr);
+
         _single_output_block.reset(new Block(std::move(intermediate)));
     }
     return Status::OK();
@@ -133,8 +156,8 @@ Status AggregationNode::open(RuntimeState* state) {
         // RETURN_IF_ERROR(static_cast<VExecNode*>(_children[0])->get_next(state, &block, &eos));
         // process no grouping
         for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
-            _aggregate_evaluators[i]->execute_single_add(&block,
-                                                         _single_data_ptr + _single_data_offset[i]);
+            _aggregate_evaluators[i]->execute_single_add(
+                    &block, _single_data_ptr + _offsets_of_aggregate_states[i]);
         }
     }
 
@@ -155,8 +178,8 @@ Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         auto columns = _single_output_block->mutateColumns();
         for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
             auto column = columns[i].get();
-            _aggregate_evaluators[i]->insert_result_info(_single_data_ptr + _single_data_offset[i],
-                                                         column);
+            _aggregate_evaluators[i]->insert_result_info(
+                    _single_data_ptr + _offsets_of_aggregate_states[i], column);
         }
         block->setColumns(std::move(columns));
 
@@ -169,4 +192,12 @@ Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
 Status AggregationNode::close(RuntimeState* state) {
     return Status::OK();
 }
+
+Status AggregationNode::_create_agg_status(AggregateDataPtr data) {
+    for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
+        _aggregate_evaluators[i]->create(data + _offsets_of_aggregate_states[i]);
+    }
+    return Status::OK();
+}
+
 } // namespace doris::vectorized
