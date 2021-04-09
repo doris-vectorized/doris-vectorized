@@ -60,7 +60,7 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
         tuple_row->set_tuple(0, tuple);
         row_batch.commit_last_row();
     }
-    
+
     doris::vectorized::Block block = row_batch.convert_to_vec_block();
     // 1. compute the k1 > k2
     doris::vectorized::ColumnNumbers arguments;
@@ -72,7 +72,7 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
 
     doris::vectorized::ColumnsWithTypeAndName ctn = { block.getByPosition(arguments[0]), block.getByPosition(arguments[1]) };
 
-    auto greater_function_ptr = doris::vectorized::SimpleFunctionFactory::instance().get_function("greater", ctn);
+    auto greater_function_ptr = doris::vectorized::SimpleFunctionFactory::instance().get_function("ge", ctn);
     greater_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
     
 
@@ -88,7 +88,7 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
     block.insert({nullptr, std::make_shared<doris::vectorized::DataTypeUInt8>(), "k2 <= k3"});
 
     auto less_or_equals_function_ptr =
-            doris::vectorized::SimpleFunctionFactory::instance().get_function("lessOrEquals", ctn);
+            doris::vectorized::SimpleFunctionFactory::instance().get_function("le", ctn);
 
     arguments[0] = 1;
     arguments[1] = 2;
