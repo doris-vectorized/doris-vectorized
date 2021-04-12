@@ -147,7 +147,7 @@ PartitionedAggregationNode::PartitionedAggregationNode(ObjectPool* pool, const T
 }
 
 Status PartitionedAggregationNode::init(const TPlanNode& tnode, RuntimeState* state) {
-    RETURN_IF_ERROR(ExecNode::init(tnode));
+    RETURN_IF_ERROR(ExecNode::init(tnode, state));
     DCHECK(intermediate_tuple_desc_ != nullptr);
     DCHECK(output_tuple_desc_ != nullptr);
     DCHECK_EQ(intermediate_tuple_desc_->slots().size(), output_tuple_desc_->slots().size());
