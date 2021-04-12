@@ -28,6 +28,7 @@
 
 #include "vec/columns/column_vector.h"
 #include "vec/columns/column_const.h"
+#include "vec/columns/columns_common.h"
 #include "vec/common/assert_cast.h"
 #include "vec/common/typeid_cast.h"
 
@@ -535,14 +536,18 @@ void Block::filter_block(Block* block, int filter_column_id, int column_to_keep)
     const IColumn::Filter& filter =
             assert_cast<const doris::vectorized::ColumnVector<UInt8>&>(*filter_column).getData();
 
-    block->getByPosition(0).column = block->getByPosition(0).column->filter(filter, 0);
-    if (block->getByPosition(0).column->empty()) return;
-
-    for (int i = 1; i < column_to_keep; ++i) {
-        block->getByPosition(i).column = block->getByPosition(i).column->filter(filter, 0);
-    }
-    for (int i = column_to_keep; i < block->columns(); ++i) {
-        block->erase(i);
+    auto count = countBytesInFilter(filter);
+    if (count == 0) {
+        block->getByPosition(0).column = block->getByPosition(0).column->cloneEmpty();
+    } else {
+        if (count != block->rows()) {
+            for (int i = 0; i < column_to_keep; ++i) {
+                block->getByPosition(i).column = block->getByPosition(i).column->filter(filter, 0);
+            }
+        }
+        for (size_t i = column_to_keep; i < block->columns(); ++i) {
+            block->erase(i);
+        }
     }
 }
 
