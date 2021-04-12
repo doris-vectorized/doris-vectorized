@@ -93,7 +93,7 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
             _vconjunct_ctx->execute(block, &result_column_id);
             Block::filter_block(block, result_column_id, _tuple_desc->slots().size());
         }
-    } while (block->rows() == 0 && !(*eof));
+    } while (block->rows() == 0 && !(*eof) && raw_rows_read() < raw_rows_threshold);
 
     return Status::OK();
 }
