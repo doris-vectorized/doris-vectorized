@@ -95,6 +95,7 @@ Status AggregationNode::prepare(RuntimeState* state) {
         const auto agg_function = _aggregate_evaluators[i]->function();
         // aggreate states are aligned based on maximum requirement
         _align_aggregate_states = std::max(_align_aggregate_states, agg_function->alignOfData());
+        _total_size_of_aggregate_states += agg_function->sizeOfData();
 
         // If not the last aggregate_state, we need pad it so that next aggregate_state will be aligned.
         if (i + 1 < _aggregate_evaluators.size()) {
