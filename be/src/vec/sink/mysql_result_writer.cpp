@@ -196,7 +196,8 @@ Status MysqlResultWriter::append_block(Block& block) {
     result->result_batch.rows.resize(num_rows);
 
     for (int i = 0; status.ok() && i < _output_vexpr_ctxs.size(); ++i) {
-        auto column_ptr = block.getByPosition(result_column_ids[i]).column;
+        auto column_ptr =
+                block.getByPosition(result_column_ids[i]).column->convertToFullColumnIfConst();
         auto type_ptr = block.getByPosition(result_column_ids[i]).type;
 
         switch (_output_vexpr_ctxs[i]->root()->result_type()) {
