@@ -359,8 +359,7 @@ Status VOlapScanNode::start_scan_thread(RuntimeState* state) {
             // add scanner to pool before doing prepare.
             // so that scanner can be automatically deconstructed if prepare failed.
             _scanner_pool->add(scanner);
-            RETURN_IF_ERROR(scanner->prepare(*scan_range, scanner_ranges, _olap_filter,
-                                             _bloom_filters_push_down));
+            RETURN_IF_ERROR(scanner->prepare(*scan_range, scanner_ranges, _olap_filter));
 
             _volap_scanners.push_back(scanner);
             disk_set.insert(scanner->scan_disk());

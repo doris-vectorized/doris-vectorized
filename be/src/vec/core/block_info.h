@@ -45,11 +45,11 @@ struct BlockInfo {
     M(bool, is_overflows, false, 1)    \
     M(Int32, bucket_num, -1, 2)
 
-#define DECLARE_FIELD(TYPE, NAME, DEFAULT, FIELD_NUM) TYPE NAME = DEFAULT;
+#define DECLARE_FIELD_VEC(TYPE, NAME, DEFAULT, FIELD_NUM) TYPE NAME = DEFAULT;
 
-    APPLY_FOR_BLOCK_INFO_FIELDS(DECLARE_FIELD)
+    APPLY_FOR_BLOCK_INFO_FIELDS(DECLARE_FIELD_VEC)
 
-#undef DECLARE_FIELD
+#undef DECLARE_FIELD_VEC
 
     // /// Write the values in binary form. NOTE: You could use protobuf, but it would be overkill for this case.
     // void write(WriteBuffer & out) const;
