@@ -94,6 +94,9 @@
 #define DBMS_DEFAULT_PATH "/var/lib/clickhouse/"
 
 // more aliases: https://mailman.videolan.org/pipermail/x264-devel/2014-May/010660.html
+#ifdef ALWAYS_INLINE
+#undef ALWAYS_INLINE
+#endif
 
 #if defined(_MSC_VER)
 #define ALWAYS_INLINE __forceinline
