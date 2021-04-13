@@ -36,7 +36,7 @@ AggregationNode::AggregationNode(ObjectPool* pool, const TPlanNode& tnode,
           _output_tuple_id(tnode.agg_node.output_tuple_id),
           _output_tuple_desc(NULL),
           _needs_finalize(tnode.agg_node.need_finalize),
-          _single_data_ptr(nullptr) {}
+          _agg_data() {}
 
 AggregationNode::~AggregationNode() {}
 
@@ -66,16 +66,6 @@ Status AggregationNode::prepare(RuntimeState* state) {
     RETURN_IF_ERROR(
             VExpr::prepare(_probe_expr_ctxs, state, child(0)->row_desc(), expr_mem_tracker()));
 
-    for (int i = 0; i < _probe_expr_ctxs.size(); ++i) {
-        SlotDescriptor* desc = _intermediate_tuple_desc->slots()[i];
-        VExpr* expr = new VSlotRef(desc);
-        state->obj_pool()->add(expr);
-        _build_expr_ctxs.push_back(new VExprContext(expr));
-        state->obj_pool()->add(_build_expr_ctxs.back());
-    }
-
-    RowDescriptor build_row_desc(_intermediate_tuple_desc, false);
-    RETURN_IF_ERROR(VExpr::prepare(_build_expr_ctxs, state, build_row_desc, expr_mem_tracker()));
     _mem_pool.reset(new MemPool(mem_tracker().get()));
 
     int j = _probe_expr_ctxs.size();
@@ -113,10 +103,10 @@ Status AggregationNode::prepare(RuntimeState* state) {
     }
 
     if (_probe_expr_ctxs.empty()) {
+        _agg_data.init(AggregatedDataVariants::Type::without_key);
         const auto& slots = _intermediate_tuple_desc->slots();
-        // tmp code for test
-        // TODO:
-        _single_data_ptr = reinterpret_cast<AggregateDataPtr>(
+
+        _agg_data.without_key = reinterpret_cast<AggregateDataPtr>(
                 _mem_pool->allocate(_total_size_of_aggregate_states));
 
         ColumnsWithTypeAndName intermediate;
@@ -128,25 +118,28 @@ Status AggregationNode::prepare(RuntimeState* state) {
                                       fmt::format("slot-id:{}", slot->id()));
         }
 
-        _create_agg_status(_single_data_ptr);
+        _create_agg_status(_agg_data.without_key);
 
         _single_output_block.reset(new Block(std::move(intermediate)));
+    } else {
+        _agg_data.init(AggregatedDataVariants::Type::serialized);
     }
+
     return Status::OK();
 }
 
 Status AggregationNode::open(RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::open(state));
     RETURN_IF_ERROR(VExpr::open(_probe_expr_ctxs, state));
-    RETURN_IF_ERROR(VExpr::open(_build_expr_ctxs, state));
 
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         RETURN_IF_ERROR(_aggregate_evaluators[i]->open(state));
     }
 
     RETURN_IF_ERROR(_children[0]->open(state));
-    // TODO: get child(0) data
+
     bool eos = false;
+
     while (!eos) {
         Block block;
         RETURN_IF_CANCELLED(state);
@@ -154,11 +147,12 @@ Status AggregationNode::open(RuntimeState* state) {
         if (block.rows() == 0) {
             continue;
         }
-        // RETURN_IF_ERROR(static_cast<VExecNode*>(_children[0])->get_next(state, &block, &eos));
-        // process no grouping
-        for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
-            _aggregate_evaluators[i]->execute_single_add(
-                    &block, _single_data_ptr + _offsets_of_aggregate_states[i]);
+        if (_agg_data._type == AggregatedDataVariants::Type::without_key) {
+            // process no grouping key
+            RETURN_IF_ERROR(_execute_without_key(&block));
+        } else {
+            // with group by key
+            RETURN_IF_ERROR(_execute_with_serialized_key(&block));
         }
     }
 
@@ -171,26 +165,18 @@ Status AggregationNode::get_next(RuntimeState* state, RowBatch* row_batch, bool*
 
 Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     block->clear();
-    // Block tmp(VectorizedUtils::create_empty_columnswithtypename(row_desc()));
-    // block->swap(tmp);
     // procsess no group by
-    if (_single_output_block) {
-        *block = _single_output_block->cloneEmpty();
-        auto columns = _single_output_block->mutateColumns();
-        for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
-            auto column = columns[i].get();
-            _aggregate_evaluators[i]->insert_result_info(
-                    _single_data_ptr + _offsets_of_aggregate_states[i], column);
-        }
-        block->setColumns(std::move(columns));
-
-        *eos = true;
+    if (_agg_data._type == AggregatedDataVariants::Type::without_key) {
+        return _get_without_key_result(state, block, eos);
+    } else {
+        return _get_with_serialized_key_result(state, block, eos);
     }
-
     return Status::OK();
 }
 
 Status AggregationNode::close(RuntimeState* state) {
+    RETURN_IF_ERROR(ExecNode::close(state));
+    VExpr::close(_probe_expr_ctxs, state);
     return Status::OK();
 }
 
@@ -198,6 +184,133 @@ Status AggregationNode::_create_agg_status(AggregateDataPtr data) {
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         _aggregate_evaluators[i]->create(data + _offsets_of_aggregate_states[i]);
     }
+    return Status::OK();
+}
+
+Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* block, bool* eos) {
+    DCHECK(_agg_data.without_key != nullptr);
+    *block = _single_output_block->cloneEmpty();
+    auto columns = _single_output_block->mutateColumns();
+
+    for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
+        auto column = columns[i].get();
+        _aggregate_evaluators[i]->insert_result_info(
+                _agg_data.without_key + _offsets_of_aggregate_states[i], column);
+    }
+
+    block->setColumns(std::move(columns));
+    *eos = true;
+    return Status::OK();
+}
+
+Status AggregationNode::_execute_without_key(Block* block) {
+    DCHECK(_agg_data.without_key != nullptr);
+    for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
+        _aggregate_evaluators[i]->execute_single_add(
+                block, _agg_data.without_key + _offsets_of_aggregate_states[i]);
+    }
+    return Status::OK();
+}
+
+Status AggregationNode::_execute_with_serialized_key(Block* block) {
+    DCHECK(!_probe_expr_ctxs.empty());
+    // now we only support serialized key
+    // TODO:
+    DCHECK(_agg_data.serialized != nullptr);
+
+    using Method = AggregationMethodSerialized<AggregatedDataWithStringKey>;
+    using AggState = Method::State;
+
+    auto& method = *_agg_data.serialized;
+
+    size_t key_size = _probe_expr_ctxs.size();
+    ColumnRawPtrs key_columns(key_size);
+
+    for (size_t i = 0; i < key_size; ++i) {
+        int result_column_id = -1;
+        RETURN_IF_ERROR(_probe_expr_ctxs[i]->execute(block, &result_column_id));
+        key_columns[i] = block->getByPosition(result_column_id).column.get();
+    }
+
+    int rows = block->rows();
+    PODArray<AggregateDataPtr> places(rows);
+
+    AggState state(key_columns, {}, nullptr);
+
+    /// For all rows.
+    for (size_t i = 0; i < rows; ++i) {
+        AggregateDataPtr aggregate_data = nullptr;
+
+        auto emplace_result = state.emplaceKey(method.data, i, _agg_arena_pool);
+
+        /// If a new key is inserted, initialize the states of the aggregate functions, and possibly something related to the key.
+        if (emplace_result.isInserted()) {
+            /// exception-safety - if you can not allocate memory or create states, then destructors will not be called.
+            emplace_result.setMapped(nullptr);
+
+            aggregate_data = _agg_arena_pool.alignedAlloc(_total_size_of_aggregate_states,
+                                                          _align_aggregate_states);
+            _create_agg_status(aggregate_data);
+
+            emplace_result.setMapped(aggregate_data);
+        } else
+            aggregate_data = emplace_result.getMapped();
+
+        places[i] = aggregate_data;
+        assert(places[i] != nullptr);
+    }
+
+    for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
+        _aggregate_evaluators[i]->execute_batch_add(block, _offsets_of_aggregate_states[i],
+                                                    places.data(), &_agg_arena_pool);
+    }
+
+    return Status::OK();
+}
+
+Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Block* block,
+                                                        bool* eos) {
+    DCHECK(_agg_data.serialized != nullptr);
+    using Method = AggregationMethodSerialized<AggregatedDataWithStringKey>;
+    using AggState = Method::State;
+
+    auto& method = *_agg_data.serialized;
+    auto& data = _agg_data.serialized->data;
+
+    block->clear();
+    auto column_withschema = VectorizedUtils::create_columns_with_type_and_name(row_desc());
+
+    int key_size = _probe_expr_ctxs.size();
+
+    MutableColumns key_columns;
+    for (int i = 0; i < key_size; ++i) {
+        key_columns.emplace_back(column_withschema[i].type->createColumn());
+    }
+    MutableColumns value_columns;
+    for (int i = key_size; i < column_withschema.size(); ++i) {
+        value_columns.emplace_back(column_withschema[i].type->createColumn());
+    }
+
+    data.forEachValue([&](const auto& key, auto& mapped) {
+        // insert keys
+        method.insertKeyIntoColumns(key, key_columns, {});
+        // insert values
+        for (size_t i = 0; i < _aggregate_evaluators.size(); ++i)
+            _aggregate_evaluators[i]->insert_result_info(mapped + _offsets_of_aggregate_states[i],
+                                                         value_columns[i].get());
+    });
+
+    *block = column_withschema;
+    MutableColumns columns(block->columns());
+    for (int i = 0; i < block->columns(); ++i) {
+        if (i < key_size) {
+            columns[i] = std::move(key_columns[i]);
+        } else {
+            columns[i] = std::move(value_columns[i - key_size]);
+        }
+    }
+    block->setColumns(std::move(columns));
+    *eos = true;
     return Status::OK();
 }
 

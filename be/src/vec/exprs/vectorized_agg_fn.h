@@ -51,6 +51,8 @@ public:
 
     // void execute_add(int row_size, AggregateDataPtr* places, size_t place_offset);
 
+    void execute_batch_add(Block* block, size_t offset, AggregateDataPtr* places, Arena* arena);
+
     DataTypePtr& data_type() { return _data_type; }
 
     const AggregateFunctionPtr& function() { return _function; }
