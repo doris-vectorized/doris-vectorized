@@ -18,6 +18,8 @@
 #pragma once
 #include "exec/exec_node.h"
 #include "vec/aggregate_functions/aggregate_function.h"
+#include "vec/common/columns_hashing.h"
+#include "vec/common/hash_table/hash_map.h"
 #include "vec/exprs/vectorized_agg_fn.h"
 
 namespace doris {
@@ -29,19 +31,66 @@ class MemPool;
 namespace vectorized {
 class VExprContext;
 
+/** Aggregates by concatenating serialized key values.
+  * The serialized value differs in that it uniquely allows to deserialize it, having only the position with which it starts.
+  * That is, for example, for strings, it contains first the serialized length of the string, and then the bytes.
+  * Therefore, when aggregating by several strings, there is no ambiguity.
+  */
+template <typename TData>
+struct AggregationMethodSerialized {
+    using Data = TData;
+    using Key = typename Data::key_type;
+    using Mapped = typename Data::mapped_type;
+
+    Data data;
+
+    AggregationMethodSerialized() {}
+
+    template <typename Other>
+    AggregationMethodSerialized(const Other& other) : data(other.data) {}
+
+    using State = ColumnsHashing::HashMethodSerialized<typename Data::value_type, Mapped>;
+
+    static const bool low_cardinality_optimization = false;
+
+    static void insertKeyIntoColumns(const StringRef& key, MutableColumns& key_columns,
+                                     const Sizes&) {
+        auto pos = key.data;
+        for (auto& column : key_columns) pos = column->deserializeAndInsertFromArena(pos);
+    }
+};
+
 using AggregatedDataWithoutKey = AggregateDataPtr;
+using AggregatedDataWithStringKey = HashMapWithSavedHash<StringRef, AggregateDataPtr>;
 
 struct AggregatedDataVariants {
+    AggregatedDataVariants() = default;
     AggregatedDataVariants(const AggregatedDataVariants&) = delete;
     AggregatedDataVariants& operator=(const AggregatedDataVariants&) = delete;
     AggregatedDataWithoutKey without_key = nullptr;
+    std::unique_ptr<AggregationMethodSerialized<AggregatedDataWithStringKey>> serialized;
     enum class Type {
         EMPTY = 0,
-        without_key
-        // TODO: add more keys
+        without_key,
+        serialized
+        // TODO: add more key optimize types
     };
-    Type type = Type::EMPTY;
+
+    Type _type = Type::EMPTY;
+
+    void init(Type type) {
+        _type = type;
+        switch (_type) {
+        case Type::serialized:
+            serialized.reset(new AggregationMethodSerialized<AggregatedDataWithStringKey>());
+            break;
+        default:
+            break;
+        }
+    }
 };
+
+using AggregatedDataVariantsPtr = std::shared_ptr<AggregatedDataVariants>;
 
 // not support spill
 class AggregationNode : public ::doris::ExecNode {
@@ -63,7 +112,7 @@ private:
     // used for input
     std::vector<VExprContext*> _probe_expr_ctxs;
     // used for group by key
-    std::vector<VExprContext*> _build_expr_ctxs;
+    // std::vector<VExprContext*> _build_expr_ctxs;
 
     std::vector<AggFnEvaluator*> _aggregate_evaluators;
 
@@ -78,15 +127,27 @@ private:
     std::unique_ptr<MemPool> _mem_pool;
 
     // TODO:
-    AggregateDataPtr _single_data_ptr;
+    // AggregateDataPtr _single_data_ptr;
     std::unique_ptr<Block> _single_output_block;
 
     size_t _align_aggregate_states = 1;
-    Sizes _offsets_of_aggregate_states; /// The offset to the n-th aggregate function in a row of aggregate functions.
-    size_t _total_size_of_aggregate_states =
-            0; /// The total size of the row from the aggregate functions.
+    /// The offset to the n-th aggregate function in a row of aggregate functions.
+    Sizes _offsets_of_aggregate_states;
+    /// The total size of the row from the aggregate functions.
+    size_t _total_size_of_aggregate_states = 0;
+
+    AggregatedDataVariants _agg_data;
+    // TODO:
+    // add tracker here
+    Arena _agg_arena_pool;
+
 private:
     Status _create_agg_status(AggregateDataPtr data);
+    Status _get_without_key_result(RuntimeState* state, Block* block, bool* eos);
+    Status _execute_without_key(Block* block);
+
+    Status _execute_with_serialized_key(Block* block);
+    Status _get_with_serialized_key_result(RuntimeState* state, Block* block, bool* eos);
 };
 } // namespace vectorized
 } // namespace doris
