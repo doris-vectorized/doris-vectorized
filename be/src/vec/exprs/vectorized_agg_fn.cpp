@@ -109,6 +109,18 @@ void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place) {
     _function->addBatchSinglePlace(block->rows(), place, column_arguments.data(), nullptr);
 }
 
+void AggFnEvaluator::execute_batch_add(Block* block, size_t offset, AggregateDataPtr* places,
+                                       Arena* arena) {
+    std::vector<const IColumn*> column_arguments(_input_exprs_ctxs.size());
+    auto columns = block->getColumns();
+    for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
+        int column_id = -1;
+        _input_exprs_ctxs[i]->execute(block, &column_id);
+        column_arguments[i] = block->getByPosition(column_id).column.get();
+    }
+    _function->addBatch(block->rows(), places, offset, column_arguments.data(), arena);
+}
+
 void AggFnEvaluator::insert_result_info(AggregateDataPtr place, IColumn* column) {
     _function->insertResultInto(place, *column);
 }
