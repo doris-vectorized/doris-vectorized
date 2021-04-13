@@ -10,7 +10,11 @@ class VectorizedUtils {
 public:
     static Block create_empty_columnswithtypename(const RowDescriptor& row_desc) {
         // Block block;
-        doris::vectorized::ColumnsWithTypeAndName columns_with_type_and_name;
+        return create_columns_with_type_and_name(row_desc);
+    }
+
+    static ColumnsWithTypeAndName create_columns_with_type_and_name(const RowDescriptor& row_desc) {
+        ColumnsWithTypeAndName columns_with_type_and_name;
         for (const auto tuple_desc : row_desc.tuple_descriptors()) {
             for (const auto slot_desc : tuple_desc->slots()) {
                 columns_with_type_and_name.emplace_back(nullptr, slot_desc->get_data_type_ptr(),
