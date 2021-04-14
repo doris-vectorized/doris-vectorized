@@ -107,12 +107,8 @@ public:
     virtual Status close(RuntimeState* state);
 
 private:
-    // TODO: provide a hash table
-
-    // used for input
+    // group by k1,k2
     std::vector<VExprContext*> _probe_expr_ctxs;
-    // used for group by key
-    // std::vector<VExprContext*> _build_expr_ctxs;
 
     std::vector<AggFnEvaluator*> _aggregate_evaluators;
 
@@ -125,10 +121,6 @@ private:
 
     bool _needs_finalize;
     std::unique_ptr<MemPool> _mem_pool;
-
-    // TODO:
-    // AggregateDataPtr _single_data_ptr;
-    std::unique_ptr<Block> _single_output_block;
 
     size_t _align_aggregate_states = 1;
     /// The offset to the n-th aggregate function in a row of aggregate functions.
