@@ -55,6 +55,7 @@ Status AggFnEvaluator::prepare(RuntimeState* state, const RowDescriptor& desc, M
     DCHECK(intermediate_slot_desc != NULL);
     DCHECK(_intermediate_slot_desc == NULL);
     _output_slot_desc = output_slot_desc;
+    // 
     _intermediate_slot_desc = intermediate_slot_desc;
 
     Status status = VExpr::prepare(_input_exprs_ctxs, state, desc, mem_tracker);
@@ -79,7 +80,6 @@ Status AggFnEvaluator::prepare(RuntimeState* state, const RowDescriptor& desc, M
                 fmt::format("Agg Function {} is not implemented", _fn.name.function_name));
     }
     _data_type = _function->getReturnType();
-    DCHECK(_data_type->equals(*_intermediate_slot_desc->get_data_type_ptr()));
     _expr_name = fmt::format("{}({})", _fn.name.function_name, child_expr_name);
     return Status::OK();
 }
@@ -104,7 +104,7 @@ void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place) {
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
         int column_id = -1;
         _input_exprs_ctxs[i]->execute(block, &column_id);
-        column_arguments[i] = block->getByPosition(column_id).column.get();
+        column_arguments[i] = block->getByPosition(column_id).column->convertToFullColumnIfConst().get();
     }
     _function->addBatchSinglePlace(block->rows(), place, column_arguments.data(), nullptr);
 }
@@ -116,7 +116,7 @@ void AggFnEvaluator::execute_batch_add(Block* block, size_t offset, AggregateDat
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
         int column_id = -1;
         _input_exprs_ctxs[i]->execute(block, &column_id);
-        column_arguments[i] = block->getByPosition(column_id).column.get();
+        column_arguments[i] = block->getByPosition(column_id).column->convertToFullColumnIfConst().get();
     }
     _function->addBatch(block->rows(), places, offset, column_arguments.data(), arena);
 }
