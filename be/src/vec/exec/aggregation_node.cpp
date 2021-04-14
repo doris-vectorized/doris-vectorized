@@ -60,6 +60,7 @@ Status AggregationNode::init(const TPlanNode& tnode, RuntimeState* state) {
 Status AggregationNode::prepare(RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::prepare(state));
 
+    SCOPED_TIMER(_runtime_profile->total_time_counter());
     _intermediate_tuple_desc = state->desc_tbl().get_tuple_descriptor(_intermediate_tuple_id);
     _output_tuple_desc = state->desc_tbl().get_tuple_descriptor(_output_tuple_id);
     DCHECK_EQ(_intermediate_tuple_desc->slots().size(), _output_tuple_desc->slots().size());
@@ -130,6 +131,8 @@ Status AggregationNode::prepare(RuntimeState* state) {
 
 Status AggregationNode::open(RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::open(state));
+    SCOPED_TIMER(_runtime_profile->total_time_counter());
+
     RETURN_IF_ERROR(VExpr::open(_probe_expr_ctxs, state));
 
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
@@ -164,6 +167,7 @@ Status AggregationNode::get_next(RuntimeState* state, RowBatch* row_batch, bool*
 }
 
 Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
+    SCOPED_TIMER(_runtime_profile->total_time_counter());
     block->clear();
     // procsess no group by
     if (_agg_data._type == AggregatedDataVariants::Type::without_key) {
