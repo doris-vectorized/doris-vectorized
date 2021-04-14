@@ -387,6 +387,7 @@ Status OlapScanNode::start_scan(RuntimeState* state) {
 
     VLOG_CRITICAL << "Filter idle conjuncts";
     // 4. Filter idle conjunct which already trans to olap filters`
+    // TODO: filter idle conjunct in vexpr_contexts
     remove_pushed_conjuncts(state);
 
     VLOG_CRITICAL << "BuildScanKey";
