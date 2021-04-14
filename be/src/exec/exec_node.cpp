@@ -164,15 +164,12 @@ void ExecNode::push_down_predicate(RuntimeState* state, std::list<ExprContext*>*
 }
 
 Status ExecNode::init(const TPlanNode& tnode, RuntimeState* state) {
-    if (state->enable_vectorized_exec()) {
-        std::vector<TExpr> vconjunct_vec;
-        if (tnode.__isset.vconjunct) {
-            _vconjunct_ctx_ptr.reset(new doris::vectorized::VExprContext*);
-            RETURN_IF_ERROR(doris::vectorized::VExpr::create_expr_tree(_pool, tnode.vconjunct, _vconjunct_ctx_ptr.get()));
-        }
-    } else {
-        RETURN_IF_ERROR(Expr::create_expr_trees(_pool, tnode.conjuncts, &_conjunct_ctxs));
+    if (tnode.__isset.vconjunct) {
+        _vconjunct_ctx_ptr.reset(new doris::vectorized::VExprContext*);
+        RETURN_IF_ERROR(doris::vectorized::VExpr::create_expr_tree(_pool, tnode.vconjunct, _vconjunct_ctx_ptr.get()));
     }
+    RETURN_IF_ERROR(Expr::create_expr_trees(_pool, tnode.conjuncts, &_conjunct_ctxs));
+
     return Status::OK();
 }
 
@@ -192,14 +189,13 @@ Status ExecNode::prepare(RuntimeState* state) {
                                                   _mem_tracker);
     _expr_mem_pool.reset(new MemPool(_expr_mem_tracker.get()));
 
-    if (state->enable_vectorized_exec()) {
-        if (_vconjunct_ctx_ptr) RETURN_IF_ERROR((*_vconjunct_ctx_ptr)->prepare(state, row_desc(), expr_mem_tracker()));
-    } else {
-        RETURN_IF_ERROR(Expr::prepare(_conjunct_ctxs, state, row_desc(), expr_mem_tracker()));
+    if (_vconjunct_ctx_ptr) {
+        RETURN_IF_ERROR((*_vconjunct_ctx_ptr)->prepare(state, row_desc(), expr_mem_tracker()));
     }
+    RETURN_IF_ERROR(Expr::prepare(_conjunct_ctxs, state, row_desc(), expr_mem_tracker()));
+
     // TODO(zc):
     // AddExprCtxsToFree(_conjunct_ctxs);
-
     for (int i = 0; i < _children.size(); ++i) {
         RETURN_IF_ERROR(_children[i]->prepare(state));
     }
@@ -209,8 +205,8 @@ Status ExecNode::prepare(RuntimeState* state) {
 
 Status ExecNode::open(RuntimeState* state) {
     RETURN_IF_ERROR(exec_debug_action(TExecNodePhase::OPEN));
-    if (state->enable_vectorized_exec()) {
-        if (_vconjunct_ctx_ptr) return (*_vconjunct_ctx_ptr)->open(state);
+    if (_vconjunct_ctx_ptr) {
+        RETURN_IF_ERROR((*_vconjunct_ctx_ptr)->open(state));
     }
     return Expr::open(_conjunct_ctxs, state);
 }
@@ -250,11 +246,8 @@ Status ExecNode::close(RuntimeState* state) {
         }
     }
 
-    if (state->enable_vectorized_exec()) {
-        if (_vconjunct_ctx_ptr) (*_vconjunct_ctx_ptr)->close(state);
-    } else {
-        Expr::close(_conjunct_ctxs, state);
-    }
+    if (_vconjunct_ctx_ptr) (*_vconjunct_ctx_ptr)->close(state);
+    Expr::close(_conjunct_ctxs, state);
 
     if (expr_mem_pool() != nullptr) {
         _expr_mem_pool->free_all();
