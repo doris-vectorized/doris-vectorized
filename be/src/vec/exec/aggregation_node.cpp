@@ -105,23 +105,12 @@ Status AggregationNode::prepare(RuntimeState* state) {
 
     if (_probe_expr_ctxs.empty()) {
         _agg_data.init(AggregatedDataVariants::Type::without_key);
-        const auto& slots = _intermediate_tuple_desc->slots();
 
         _agg_data.without_key = reinterpret_cast<AggregateDataPtr>(
                 _mem_pool->allocate(_total_size_of_aggregate_states));
 
-        ColumnsWithTypeAndName intermediate;
-        intermediate.reserve(slots.size());
-
-        for (const auto slot : slots) {
-            auto data_type_ptr = slot->get_data_type_ptr();
-            intermediate.emplace_back(data_type_ptr->createColumn(), data_type_ptr,
-                                      fmt::format("slot-id:{}", slot->id()));
-        }
-
         _create_agg_status(_agg_data.without_key);
 
-        _single_output_block.reset(new Block(std::move(intermediate)));
     } else {
         _agg_data.init(AggregatedDataVariants::Type::serialized);
     }
@@ -193,13 +182,35 @@ Status AggregationNode::_create_agg_status(AggregateDataPtr data) {
 
 Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* block, bool* eos) {
     DCHECK(_agg_data.without_key != nullptr);
-    *block = _single_output_block->cloneEmpty();
-    auto columns = _single_output_block->mutateColumns();
+
+    *block = VectorizedUtils::create_empty_columnswithtypename(row_desc());
+    
+    int agg_size = _aggregate_evaluators.size();
+
+    MutableColumns columns(agg_size);
+    std::vector<DataTypePtr> data_types(agg_size);
+    for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
+        data_types[i] = _aggregate_evaluators[i]->function()->getReturnType();
+        columns[i] = data_types[i]->createColumn();
+    }
 
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         auto column = columns[i].get();
         _aggregate_evaluators[i]->insert_result_info(
                 _agg_data.without_key + _offsets_of_aggregate_states[i], column);
+    }
+
+    const auto & block_schema = block->getColumnsWithTypeAndName();
+    DCHECK_EQ(block_schema.size(), columns.size());
+    for(int i = 0;i < block_schema.size(); ++i) {
+        const auto column_type = block_schema[i].type;
+        if (!column_type->equals(*data_types[i])) {
+            DCHECK(column_type->isNullable());
+            DCHECK(!data_types[i]->isNullable());
+            ColumnPtr ptr = std::move(columns[i]);
+            ptr = makeNullable(ptr);
+            columns[i] = std::move(*ptr).mutate();
+        }
     }
 
     block->setColumns(std::move(columns));
