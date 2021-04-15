@@ -68,6 +68,12 @@ set(VEC_FILES
   functions/function_helpers.cpp
   functions/functions_logical.cpp
   functions/function_cast.cpp
+  functions/plus.cpp
+  functions/modulo.cpp
+  functions/multiply.cpp
+  functions/minus.cpp
+  functions/int_div.cpp
+  functions/divide.cpp
   sink/mysql_result_writer.cpp
   sink/result_sink.cpp
 )

@@ -84,6 +84,7 @@ Status VExpr::create_expr(doris::ObjectPool* pool, const doris::TExprNode& texpr
         *expr = pool->add(new VSlotRef(texpr_node));
         break;
     }
+    case doris::TExprNodeType::ARITHMETIC_EXPR:
     case doris::TExprNodeType::COMPOUND_PRED:
     case doris::TExprNodeType::BINARY_PRED:
     case doris::TExprNodeType::FUNCTION_CALL: {
