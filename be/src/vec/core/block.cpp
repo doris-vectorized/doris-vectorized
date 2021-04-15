@@ -225,6 +225,16 @@ size_t Block::rows() const {
     return 0;
 }
 
+void Block::set_num_rows(int length) {
+    if (rows() > length) {
+        for (auto &elem : data) {
+            if (elem.column) {
+                elem.column = elem.column->cut(0, length);
+            }
+        }
+    }
+}
+
 size_t Block::bytes() const {
     size_t res = 0;
     for (const auto& elem : data) res += elem.column->byteSize();
