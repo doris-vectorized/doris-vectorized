@@ -100,6 +100,9 @@ public:
     /// Returns number of rows from first column in block, not equal to nullptr. If no columns, returns 0.
     size_t rows() const;
 
+    // Cut the rows in block, use in LIMIT operation
+    void set_num_rows(int length);
+
     size_t columns() const { return data.size(); }
 
     /// Checks that every column in block is not nullptr and has same number of elements.
