@@ -29,6 +29,12 @@ void registerFunctionComparison(SimpleFunctionFactory& factory);
 void registerFunctionAbs(SimpleFunctionFactory& factory);
 void registerFunctionLogical(SimpleFunctionFactory& factory);
 void registerFunctionCast(SimpleFunctionFactory& factory);
+void registerFunctionPlus(SimpleFunctionFactory& factory);
+void registerFunctionMinus(SimpleFunctionFactory& factory);
+void registerFunctionMultiply(SimpleFunctionFactory& factory);
+void registerFunctionDivide(SimpleFunctionFactory& factory);
+void registerFunctionIntDiv(SimpleFunctionFactory& factory);
+void registerFunctionModulo(SimpleFunctionFactory& factory);
 
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
@@ -70,6 +76,12 @@ public:
             registerFunctionComparison(instance);
             registerFunctionLogical(instance);
             registerFunctionCast(instance);
+            registerFunctionPlus(instance);
+            registerFunctionMinus(instance);
+            registerFunctionMultiply(instance);
+            registerFunctionDivide(instance);
+            registerFunctionIntDiv(instance);
+            registerFunctionModulo(instance);
         });
         return instance;
     }
