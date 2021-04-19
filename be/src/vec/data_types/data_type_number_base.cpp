@@ -29,6 +29,8 @@
 // #include <Formats/FormatSettings.h>
 // #include <Formats/ProtobufReader.h>
 // #include <Formats/ProtobufWriter.h>
+#include "gen_cpp/data.pb.h"
+#include "vec/io/io_helper.h"
 
 namespace doris::vectorized {
 
@@ -255,6 +257,33 @@ Field DataTypeNumberBase<T>::getDefault() const {
 //         container.back() = value;
 // }
 
+template <typename T>
+void DataTypeNumberBase<T>::serialize(const IColumn& column, PColumn* pcolumn) const {
+    std::ostringstream buf;
+    for (size_t i = 0; i < column.size(); ++i) {
+        const FieldType& x = assert_cast<const ColumnVector<T>&>(column).getData()[i];
+        writeBinary(x, buf);
+    }
+    pcolumn->mutable_binary()->append(buf.str());
+}
+
+template <typename T>
+void DataTypeNumberBase<T>::serialize(const IColumn& column, size_t row_num,
+                                      PColumn* pcolumn) const {
+    std::ostringstream buf;
+    writeBinary(assert_cast<const ColumnVector<T>&>(column).getData()[row_num], buf);
+    pcolumn->mutable_binary()->append(buf.str());
+}
+
+template <typename T>
+void DataTypeNumberBase<T>::deserialize(const PColumn& pcolumn, IColumn* column) const {
+    std::istringstream istr(pcolumn.binary());
+    while (istr.peek() != EOF) {
+        typename ColumnVector<T>::value_type x;
+        readBinary(x, istr);
+        assert_cast<ColumnVector<T>*>(column)->getData().push_back(x);
+    }
+}
 template <typename T>
 MutableColumnPtr DataTypeNumberBase<T>::createColumn() const {
     return ColumnVector<T>::create();
