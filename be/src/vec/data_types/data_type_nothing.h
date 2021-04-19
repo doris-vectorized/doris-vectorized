@@ -50,6 +50,9 @@ public:
     size_t getSizeOfValueInMemory() const override { return 0; }
     bool canBeInsideNullable() const override { return true; }
 
+    void serialize(const IColumn& column, size_t row_num, PColumn* pcolumn) const override;
+    void serialize(const IColumn& column, PColumn* pcolumn) const override;
+    void deserialize(const PColumn& pcolumn, IColumn* column) const override;
     Field getDefault() const override {
         throw Exception("Method getDefault() is not implemented for data type " + getName(),
                         ErrorCodes::NOT_IMPLEMENTED);

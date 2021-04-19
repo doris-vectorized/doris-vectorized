@@ -28,9 +28,17 @@
 
 #include "vec/columns/column_vector.h"
 #include "vec/columns/column_const.h"
+
 #include "vec/columns/columns_common.h"
+
+#include "vec/columns/column_nullable.h"
+#include "vec/columns/columns_number.h"
 #include "vec/common/assert_cast.h"
 #include "vec/common/typeid_cast.h"
+#include "vec/data_types/data_type_string.h"
+#include "vec/data_types/data_types_decimal.h"
+#include "vec/data_types/data_types_number.h"
+#include "gen_cpp/data.pb.h"
 
 namespace doris::vectorized {
 
@@ -39,13 +47,131 @@ extern const int POSITION_OUT_OF_BOUND;
 extern const int NOT_FOUND_COLUMN_IN_BLOCK;
 extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
 extern const int BLOCKS_HAVE_DIFFERENT_STRUCTURE;
+extern const int UNKNOWN_TYPE;
 } // namespace ErrorCodes
+
+inline DataTypePtr get_data_type(const PColumn& pcolumn) {
+    switch (pcolumn.type()) {
+    case PColumn::UINT8: {
+        return std::make_shared<DataTypeUInt8>();
+    }
+    case PColumn::UINT16: {
+        return std::make_shared<DataTypeUInt16>();
+    }
+    case PColumn::UINT32: {
+        return std::make_shared<DataTypeUInt32>();
+    }
+    case PColumn::UINT64: {
+        return std::make_shared<DataTypeUInt64>();
+    }
+    case PColumn::UINT128: {
+        return std::make_shared<DataTypeUInt128>();
+    }
+    case PColumn::INT8: {
+        return std::make_shared<DataTypeInt8>();
+    }
+    case PColumn::INT16: {
+        return std::make_shared<DataTypeInt16>();
+    }
+    case PColumn::INT32: {
+        return std::make_shared<DataTypeInt32>();
+    }
+    case PColumn::INT64: {
+        return std::make_shared<DataTypeInt64>();
+    }
+    case PColumn::INT128: {
+        return std::make_shared<DataTypeInt128>();
+    }
+    case PColumn::FLOAT32: {
+        return std::make_shared<DataTypeFloat32>();
+    }
+    case PColumn::FLOAT64: {
+        return std::make_shared<DataTypeFloat64>();
+    }
+    case PColumn::STRING: {
+        return std::make_shared<DataTypeString>();
+    }
+    case PColumn::DECIMAL32: {
+        return std::make_shared<DataTypeDecimal<Decimal32>>(pcolumn.decimal_param().precision(),
+                                                            pcolumn.decimal_param().scale());
+    }
+    case PColumn::DECIMAL64: {
+        return std::make_shared<DataTypeDecimal<Decimal64>>(pcolumn.decimal_param().precision(),
+                                                            pcolumn.decimal_param().scale());
+    }
+    case PColumn::DECIMAL128: {
+        return std::make_shared<DataTypeDecimal<Decimal128>>(pcolumn.decimal_param().precision(),
+                                                             pcolumn.decimal_param().scale());
+    }
+    default: {
+        throw Exception("Unknown data type: " + std::to_string(pcolumn.type()) +
+                                ", data type name: " + PColumn::DataType_Name(pcolumn.type()),
+                        ErrorCodes::UNKNOWN_TYPE);
+        break;
+    }
+    }
+}
+
+PColumn::DataType get_pdata_type(DataTypePtr data_type) {
+    switch (data_type->getTypeId()) {
+    case TypeIndex::UInt8:
+        return PColumn::UINT8;
+    case TypeIndex::UInt16:
+        return PColumn::UINT16;
+    case TypeIndex::UInt32:
+        return PColumn::UINT32;
+    case TypeIndex::UInt64:
+        return PColumn::UINT64;
+    case TypeIndex::UInt128:
+        return PColumn::UINT128;
+    case TypeIndex::Int8:
+        return PColumn::INT8;
+    case TypeIndex::Int16:
+        return PColumn::INT16;
+    case TypeIndex::Int32:
+        return PColumn::INT32;
+    case TypeIndex::Int64:
+        return PColumn::INT64;
+    case TypeIndex::Int128:
+        return PColumn::INT128;
+    case TypeIndex::Float32:
+        return PColumn::FLOAT32;
+    case TypeIndex::Float64:
+        return PColumn::FLOAT64;
+    case TypeIndex::Decimal32:
+        return PColumn::DECIMAL32;
+    case TypeIndex::Decimal64:
+        return PColumn::DECIMAL64;
+    case TypeIndex::Decimal128:
+        return PColumn::DECIMAL128;
+    case TypeIndex::String:
+        return PColumn::STRING;
+    default:
+        return PColumn::UNKNOWN;
+    }
+}
 
 Block::Block(std::initializer_list<ColumnWithTypeAndName> il) : data {il} {
     initializeIndexByName();
 }
 
 Block::Block(const ColumnsWithTypeAndName& data_) : data {data_} {
+    initializeIndexByName();
+}
+
+Block::Block(const PBlock& pblock) {
+    for (const auto& pcolumn : pblock.columns()) {
+        DataTypePtr type = get_data_type(pcolumn);
+        MutableColumnPtr data_column;
+        if (pcolumn.is_null_size() > 0) {
+            data_column =
+                    ColumnNullable::create(std::move(type->createColumn()), ColumnUInt8::create());
+        } else {
+            data_column = type->createColumn();
+        }
+        type->deserialize(pcolumn, data_column.get());
+        data.emplace_back(data_column->getPtr(), type, pcolumn.name());
+    }
     initializeIndexByName();
 }
 
@@ -558,6 +684,14 @@ void Block::filter_block(Block* block, int filter_column_id, int column_to_keep)
         for (size_t i = column_to_keep; i < block->columns(); ++i) {
             block->erase(i);
         }
+    }
+}
+void Block::serialize(PBlock* pblock) const {
+    for (auto c = cbegin(); c != cend(); ++c) {
+        PColumn* pc = pblock->add_columns();
+        pc->set_name(c->name);
+        pc->set_type(get_pdata_type(c->type));
+        c->type->serialize(*(c->column), pc);
     }
 }
 
