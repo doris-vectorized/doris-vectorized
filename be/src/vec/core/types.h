@@ -21,6 +21,7 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include "vec/common/types.h"
 
 namespace doris::vectorized {
 
