@@ -53,6 +53,7 @@ public:
     Block() = default;
     Block(std::initializer_list<ColumnWithTypeAndName> il);
     Block(const ColumnsWithTypeAndName& data_);
+    Block(const PBlock& pblock);
 
     /// insert the column at the specified position
     void insert(size_t position, const ColumnWithTypeAndName& elem);
@@ -157,6 +158,8 @@ public:
     std::string dumpData() const;
 
     static void filter_block(Block* block, int filter_conlumn_id, int column_to_keep);
+    // serialize block to PRowBatch 
+    void serialize(PBlock* pblock) const;
 
 private:
     void eraseImpl(size_t position);

@@ -131,6 +131,9 @@ public:
     //    void serializeProtobuf(const IColumn & column, size_t row_num, ProtobufWriter & protobuf, size_t & value_index) const override;
     //    void deserializeProtobuf(IColumn & column, ProtobufReader & protobuf, bool allow_add_row, bool & row_added) const override;
 
+    void serialize(const IColumn& column, size_t row_num, PColumn* pcolumn) const override;
+    void serialize(const IColumn& column, PColumn* pcolumn) const override;
+    void deserialize(const PColumn& pcolumn, IColumn* column) const override;
     Field getDefault() const override;
     bool canBePromoted() const override { return true; }
     DataTypePtr promoteNumericType() const override;
