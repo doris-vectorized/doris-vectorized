@@ -18,7 +18,10 @@
 #pragma once
 
 #include "vec/common/assert_cast.h"
+#include "vec/common/string_ref.h"
+#include "vec/core/types.h"
 #include "vec/data_types/data_type.h"
+
 // #include <vec/DataTypes/DataTypeWithSimpleSerialization.h>
 
 namespace doris::vectorized {
@@ -54,6 +57,9 @@ public:
     // void serializeProtobuf(const IColumn & column, size_t row_num, ProtobufWriter & protobuf, size_t & value_index) const override;
     // void deserializeProtobuf(IColumn & column, ProtobufReader & protobuf, bool allow_add_row, bool & row_added) const override;
 
+    void serialize(const IColumn& column, size_t row_num, PColumn* pcolumn) const override;
+    void serialize(const IColumn& column, PColumn* pcolumn) const override;
+    void deserialize(const PColumn& pcolumn, IColumn* column) const override;
     MutableColumnPtr createColumn() const override;
 
     bool isParametric() const override { return false; }

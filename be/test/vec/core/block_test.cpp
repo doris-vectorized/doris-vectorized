@@ -23,8 +23,14 @@
 #include <string>
 
 #include "exec/schema_scanner.h"
+#include "gen_cpp/data.pb.h"
 #include "runtime/row_batch.h"
 #include "runtime/tuple_row.h"
+#include "vec/columns/column_decimal.h"
+#include "vec/columns/column_string.h"
+#include "vec/columns/column_vector.h"
+#include "vec/common/exception.h"
+#include "vec/data_types/data_type.h"
 
 namespace doris {
 
@@ -139,6 +145,68 @@ TEST(BlockTest, RowBatchCovertToBlock) {
 
         k1++;
         k3 += 0.1;
+    }
+}
+
+TEST(BlockTest, SerializeAndDeserializeBlock) {
+    {
+        auto vec = vectorized::ColumnVector<Int32>::create();
+        auto& data = vec->getData();
+        for (int i = 0; i < 1024; ++i) {
+            data.push_back(i);
+        }
+        vectorized::DataTypePtr data_type(std::make_shared<vectorized::DataTypeInt32>());
+        vectorized::ColumnWithTypeAndName type_and_name(vec->getPtr(), data_type, "test_int");
+        vectorized::Block block({type_and_name});
+        PBlock pblock;
+        block.serialize(&pblock);
+        std::string s1 = pblock.DebugString();
+        PBlock pblock2;
+        vectorized::Block block2(pblock);
+        block2.serialize(&pblock2);
+        std::string s2 = pblock2.DebugString();
+        EXPECT_EQ(s1, s2);
+    }
+    {
+        auto strcol = vectorized::ColumnString::create();
+        for (int i = 0; i < 1024; ++i) {
+            std::string is = std::to_string(i);
+            strcol->insertData(is.c_str(), is.size());
+        }
+        vectorized::DataTypePtr data_type(std::make_shared<vectorized::DataTypeString>());
+        vectorized::ColumnWithTypeAndName type_and_name(strcol->getPtr(), data_type, "test_string");
+        vectorized::Block block({type_and_name});
+        PBlock pblock;
+        block.serialize(&pblock);
+        std::string s1 = pblock.DebugString();
+        PBlock pblock2;
+        vectorized::Block block2(pblock);
+        block2.serialize(&pblock2);
+        std::string s2 = pblock2.DebugString();
+        EXPECT_EQ(s1, s2);
+    }
+    {
+        vectorized::DataTypePtr decimal_data_type(doris::vectorized::createDecimal(27, 9));
+        auto decimal_column = decimal_data_type->createColumn();
+        auto& data = ((vectorized::ColumnDecimal<vectorized::Decimal<vectorized::Int128>>*)decimal_column.get())->getData();
+        for (int i = 0; i < 1024; ++i) {
+            __int128_t value = i;
+            for (int j = 0; j < 9; ++j) {
+                value *= 10;
+            }
+            data.push_back(value);
+        }
+        vectorized::ColumnWithTypeAndName type_and_name(decimal_column->getPtr(), decimal_data_type,
+                                            "test_decimal");
+        vectorized::Block block({type_and_name});
+        PBlock pblock;
+        block.serialize(&pblock);
+        std::string s1 = pblock.DebugString();
+        PBlock pblock2;
+        vectorized::Block block2(pblock);
+        block2.serialize(&pblock2);
+        std::string s2 = pblock2.DebugString();
+        EXPECT_EQ(s1, s2);
     }
 }
 
