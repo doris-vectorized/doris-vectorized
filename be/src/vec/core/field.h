@@ -942,6 +942,7 @@ void writeText(const Array& x, WriteBuffer& buf);
 }
 
 void readBinary(Tuple& x, ReadBuffer& buf);
+void readBinary(Tuple& x, std::istream& buf);
 
 [[noreturn]] inline void readText(Tuple&, ReadBuffer&) {
     throw Exception("Cannot read Tuple.", ErrorCodes::NOT_IMPLEMENTED);
@@ -951,6 +952,7 @@ void readBinary(Tuple& x, ReadBuffer& buf);
 }
 
 void writeBinary(const Tuple& x, WriteBuffer& buf);
+void writeBinary(const Tuple& x, std::ostream& buf);
 
 void writeText(const Tuple& x, WriteBuffer& buf);
 

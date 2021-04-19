@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "gen_cpp/data.pb.h"
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_string.h"
 #include "vec/columns/columns_number.h"
@@ -22,6 +23,7 @@
 #include "vec/common/typeid_cast.h"
 #include "vec/core/defines.h"
 #include "vec/core/field.h"
+#include "vec/io/io_helper.h"
 
 //#include <Formats/FormatSettings.h>
 //#include <Formats/ProtobufReader.h>
@@ -250,6 +252,40 @@ static inline void read(IColumn& column, Reader&& reader) {
         offsets.resize_assume_reserved(old_offsets_size);
         data.resize_assume_reserved(old_chars_size);
         throw;
+    }
+}
+
+void DataTypeString::serialize(const IColumn& column, PColumn* pcolumn) const {
+    std::ostringstream buf;
+    for (size_t i = 0; i < column.size(); ++i) {
+        const auto& s = assert_cast<const ColumnString&>(column).getDataAt(i);
+        writeStringBinary(s, buf);
+    }
+    pcolumn->mutable_binary()->append(buf.str());
+}
+
+void DataTypeString::serialize(const IColumn& column, size_t row_num, PColumn* pcolumn) const {
+    std::ostringstream buf;
+    const StringRef& s = assert_cast<const ColumnString&>(column).getDataAt(row_num);
+    writeStringBinary(s, buf);
+    pcolumn->mutable_binary()->append(buf.str());
+}
+
+void DataTypeString::deserialize(const PColumn& pcolumn, IColumn* column) const {
+    ColumnString* column_string = assert_cast<ColumnString*>(column);
+    ColumnString::Chars& data = column_string->getChars();
+    ColumnString::Offsets& offsets = column_string->getOffsets();
+    size_t offset = 0;
+    std::istringstream istr(pcolumn.binary());
+    while (istr.peek() != EOF) {
+        std::string s;
+        readBinary(s, istr);
+        size_t size = s.size();
+        offset = offset + size + 1;
+        offsets.push_back(offset);
+        data.resize(offset);
+        s.copy(reinterpret_cast<char*>(&data[offset - size - 1]), size);
+        data.back() = 0;
     }
 }
 

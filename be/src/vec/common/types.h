@@ -17,6 +17,9 @@
 
 #pragma once
 #include <cstdint>
+#include <cstdlib>
+#include <type_traits>
+#include <algorithm>
 
 using Int8 = int8_t;
 using Int16 = int16_t;
