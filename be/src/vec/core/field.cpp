@@ -23,6 +23,7 @@
 #include "vec/core/field.h"
 
 #include "vec/core/decimal_comparison.h"
+#include "vec/io/io_helper.h"
 //#include <vec/Common/FieldVisitors.h>
 
 namespace doris::vectorized {
@@ -314,6 +315,118 @@ namespace doris::vectorized {
 //        doris::vectorized::String res = applyVisitor(doris::vectorized::FieldVisitorToString(), x);
 //        buf.write(res.data(), res.size());
 //    }
+void readBinary(Array& x, std::istream& buf) {
+    size_t size;
+    UInt8 type;
+    doris::vectorized::readBinary(type, buf);
+    doris::vectorized::readBinary(size, buf);
+
+    for (size_t index = 0; index < size; ++index) {
+        switch (type) {
+        case Field::Types::Null: {
+            x.push_back(doris::vectorized::Field());
+            break;
+        }
+        case Field::Types::UInt64: {
+            UInt64 value;
+            doris::vectorized::readVarUInt(value, buf);
+            x.push_back(value);
+            break;
+        }
+        case Field::Types::UInt128: {
+            UInt128 value;
+            doris::vectorized::readBinary(value, buf);
+            x.push_back(value);
+            break;
+        }
+        case Field::Types::Int64: {
+            Int64 value;
+            doris::vectorized::readVarInt(value, buf);
+            x.push_back(value);
+            break;
+        }
+        case Field::Types::Float64: {
+            Float64 value;
+            doris::vectorized::readFloatBinary(value, buf);
+            x.push_back(value);
+            break;
+        }
+        case Field::Types::String: {
+            std::string value;
+            doris::vectorized::readStringBinary(value, buf);
+            x.push_back(value);
+            break;
+        }
+        // case Field::Types::Array: {
+        //     Array value;
+        //     doris::vectorized::readBinary(value, buf);
+        //     x.push_back(value);
+        //     break;
+        // }
+        // case Field::Types::Tuple: {
+        //     Tuple value;
+        //     doris::vectorized::readBinary(value, buf);
+        //     x.push_back(value);
+        //     break;
+        // }
+        case Field::Types::AggregateFunctionState: {
+            AggregateFunctionStateData value;
+            doris::vectorized::readStringBinary(value.name, buf);
+            doris::vectorized::readStringBinary(value.data, buf);
+            x.push_back(value);
+            break;
+        }
+        }
+    }
+}
+
+void writeBinary(const Array& x, std::ostream& buf) {
+    UInt8 type = Field::Types::Null;
+    size_t size = x.size();
+    if (size) type = x.front().getType();
+    doris::vectorized::writeBinary(type, buf);
+    doris::vectorized::writeBinary(size, buf);
+
+    for (Array::const_iterator it = x.begin(); it != x.end(); ++it) {
+        switch (type) {
+        case Field::Types::Null:
+            break;
+        case Field::Types::UInt64: {
+            doris::vectorized::writeVarUInt(get<UInt64>(*it), buf);
+            break;
+        }
+        case Field::Types::UInt128: {
+            doris::vectorized::writeBinary(get<UInt128>(*it), buf);
+            break;
+        }
+        case Field::Types::Int64: {
+            doris::vectorized::writeVarInt(get<Int64>(*it), buf);
+            break;
+        }
+        case Field::Types::Float64: {
+            doris::vectorized::writeFloatBinary(get<Float64>(*it), buf);
+            break;
+        }
+        case Field::Types::String: {
+            doris::vectorized::writeStringBinary(get<std::string>(*it), buf);
+            break;
+        }
+        // case Field::Types::Array: {
+        //     doris::vectorized::writeBinary(get<Array>(*it), buf);
+        //     break;
+        // }
+        // case Field::Types::Tuple: {
+        //     doris::vectorized::writeBinary(get<Tuple>(*it), buf);
+        //     break;
+        // }
+        case Field::Types::AggregateFunctionState: {
+            doris::vectorized::writeStringBinary(it->get<AggregateFunctionStateData>().name, buf);
+            doris::vectorized::writeStringBinary(it->get<AggregateFunctionStateData>().data, buf);
+            break;
+        }
+        }
+    }
+}
 
 template <>
 Decimal32 DecimalField<Decimal32>::getScaleMultiplier() const {
