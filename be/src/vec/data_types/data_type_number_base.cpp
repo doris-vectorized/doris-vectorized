@@ -19,17 +19,12 @@
 
 #include <type_traits>
 
+#include "gen_cpp/data.pb.h"
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_vector.h"
-// #include <IO/ReadHelpers.h>
-// #include <IO/WriteHelpers.h>
 #include "vec/common/assert_cast.h"
 #include "vec/common/nan_utils.h"
 #include "vec/common/typeid_cast.h"
-// #include <Formats/FormatSettings.h>
-// #include <Formats/ProtobufReader.h>
-// #include <Formats/ProtobufWriter.h>
-#include "gen_cpp/data.pb.h"
 #include "vec/io/io_helper.h"
 
 namespace doris::vectorized {
@@ -264,7 +259,7 @@ void DataTypeNumberBase<T>::serialize(const IColumn& column, PColumn* pcolumn) c
         const FieldType& x = assert_cast<const ColumnVector<T>&>(column).getData()[i];
         writeBinary(x, buf);
     }
-    pcolumn->mutable_binary()->append(buf.str());
+    write_binary(buf, pcolumn);
 }
 
 template <typename T>
@@ -277,7 +272,9 @@ void DataTypeNumberBase<T>::serialize(const IColumn& column, size_t row_num,
 
 template <typename T>
 void DataTypeNumberBase<T>::deserialize(const PColumn& pcolumn, IColumn* column) const {
-    std::istringstream istr(pcolumn.binary());
+    std::string uncompressed;
+    read_binary(pcolumn, &uncompressed);
+    std::istringstream istr(uncompressed);
     while (istr.peek() != EOF) {
         typename ColumnVector<T>::value_type x;
         readBinary(x, istr);

@@ -76,11 +76,13 @@ message PColumn {
     required DataType type = 2;
     // serialized data type
     // required DataType data_type = 3;
-    repeated bool is_null = 4;
+    repeated bool is_null = 3;
     // optional bool nested = 5 [default = false];
     // optional bool plain = 6 [default = false];
     // store in plain text or in binary data
-    optional bytes binary = 7;
+    optional bytes binary = 4;
+    optional bool compressed = 5 [default = false];
+    optional Decimal decimal_param = 6;
     // the following is used for store plain data
     // repeated string type_params = 8;
     // repeated int32 int32_data = 9;
@@ -92,11 +94,9 @@ message PColumn {
     // repeated bool bool_data = 15;
     // repeated string string_data = 16;
     // repeated bytes bytes_data = 17; 
-    optional Decimal decimal_param = 18;
 } 
 message PBlock {
     optional uint64 num_rows = 1;
     optional uint32 num_columns = 2;
-    optional bool compressed = 3 [default = false];
-    repeated PColumn columns = 4;
+    repeated PColumn columns = 3;
 }
