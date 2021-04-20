@@ -111,8 +111,20 @@ Status AggregationNode::prepare(RuntimeState* state) {
 
         _create_agg_status(_agg_data.without_key);
 
+        _executor.execute = std::bind<Status>(&AggregationNode::_execute_without_key, this,
+                                              std::placeholders::_1);
+        _executor.get_result = std::bind<Status>(&AggregationNode::_get_without_key_result, this,
+                                                 std::placeholders::_1, std::placeholders::_2,
+                                                 std::placeholders::_3);
+
     } else {
         _agg_data.init(AggregatedDataVariants::Type::serialized);
+
+        _executor.execute = std::bind<Status>(&AggregationNode::_execute_with_serialized_key, this,
+                                              std::placeholders::_1);
+        _executor.get_result = std::bind<Status>(&AggregationNode::_get_with_serialized_key_result,
+                                                 this, std::placeholders::_1, std::placeholders::_2,
+                                                 std::placeholders::_3);
     }
 
     return Status::OK();
@@ -139,13 +151,7 @@ Status AggregationNode::open(RuntimeState* state) {
         if (block.rows() == 0) {
             continue;
         }
-        if (_agg_data._type == AggregatedDataVariants::Type::without_key) {
-            // process no grouping key
-            RETURN_IF_ERROR(_execute_without_key(&block));
-        } else {
-            // with group by key
-            RETURN_IF_ERROR(_execute_with_serialized_key(&block));
-        }
+        RETURN_IF_ERROR(_executor.execute(&block));
     }
 
     return Status::OK();
@@ -158,13 +164,7 @@ Status AggregationNode::get_next(RuntimeState* state, RowBatch* row_batch, bool*
 Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     SCOPED_TIMER(_runtime_profile->total_time_counter());
     block->clear();
-    // procsess no group by
-    if (_agg_data._type == AggregatedDataVariants::Type::without_key) {
-        return _get_without_key_result(state, block, eos);
-    } else {
-        return _get_with_serialized_key_result(state, block, eos);
-    }
-    return Status::OK();
+    return _executor.get_result(state, block, eos);
 }
 
 Status AggregationNode::close(RuntimeState* state) {
@@ -184,7 +184,7 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
     DCHECK(_agg_data.without_key != nullptr);
 
     *block = VectorizedUtils::create_empty_columnswithtypename(row_desc());
-    
+
     int agg_size = _aggregate_evaluators.size();
 
     MutableColumns columns(agg_size);
@@ -200,9 +200,9 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
                 _agg_data.without_key + _offsets_of_aggregate_states[i], column);
     }
 
-    const auto & block_schema = block->getColumnsWithTypeAndName();
+    const auto& block_schema = block->getColumnsWithTypeAndName();
     DCHECK_EQ(block_schema.size(), columns.size());
-    for(int i = 0;i < block_schema.size(); ++i) {
+    for (int i = 0; i < block_schema.size(); ++i) {
         const auto column_type = block_schema[i].type;
         if (!column_type->equals(*data_types[i])) {
             DCHECK(column_type->isNullable());

@@ -76,6 +76,8 @@ set(VEC_FILES
   functions/divide.cpp
   sink/mysql_result_writer.cpp
   sink/result_sink.cpp
+  sink/vdata_stream_sender.cpp
+  runtime/vdata_stream_recvr.cpp
 )
 
 add_library(Vec STATIC
