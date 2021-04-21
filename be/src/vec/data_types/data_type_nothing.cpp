@@ -17,13 +17,9 @@
 
 #include "vec/data_types/data_type_nothing.h"
 
-#include "vec/common/typeid_cast.h"
-// #include <vec/DataTypes/DataTypeFactory.h>
-#include "vec/columns/column_nothing.h"
 #include "gen_cpp/data.pb.h"
-
-// #include <vec/IO/ReadBuffer.h>
-// #include <vec/IO/WriteBuffer.h>
+#include "vec/columns/column_nothing.h"
+#include "vec/common/typeid_cast.h"
 
 namespace doris::vectorized {
 
@@ -47,12 +43,9 @@ MutableColumnPtr DataTypeNothing::createColumn() const {
 //     typeid_cast<ColumnNothing &>(column).addSize(istr.tryIgnore(limit));
 // }
 
-void DataTypeNothing::serialize(const IColumn& column, PColumn* pcolumn) const {
-}
-void DataTypeNothing::serialize(const IColumn& column, size_t row_num, PColumn* pcolumn) const {
-}
-void DataTypeNothing::deserialize(const PColumn& pcolumn, IColumn* column) const {
-}
+void DataTypeNothing::serialize(const IColumn& column, PColumn* pcolumn) const {}
+
+void DataTypeNothing::deserialize(const PColumn& pcolumn, IColumn* column) const {}
 bool DataTypeNothing::equals(const IDataType& rhs) const {
     return typeid(rhs) == typeid(*this);
 }
