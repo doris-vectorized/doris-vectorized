@@ -476,18 +476,13 @@ bool DataTypeNullable::onlyNull() const {
 //     }
 // }
 
-void DataTypeNullable::serialize(const IColumn& column, size_t row_num, PColumn* pcolumn) const {
-    const ColumnNullable& col = assert_cast<const ColumnNullable&>(column);
-    pcolumn->set_is_null(row_num, col.isNullAt(row_num));
-    nested_data_type->serialize(column, row_num, pcolumn);
-}
 void DataTypeNullable::serialize(const IColumn& column, PColumn* pcolumn) const {
     const ColumnNullable& col = assert_cast<const ColumnNullable&>(column);
     for (size_t i = 0; i < column.size(); ++i) {
         bool is_null = col.isNullAt(i);
         pcolumn->add_is_null(is_null);
-        nested_data_type->serialize(col.getNestedColumn(), i, pcolumn);
     }
+    nested_data_type->serialize(col.getNestedColumn(), pcolumn);
 }
 void DataTypeNullable::deserialize(const PColumn& pcolumn, IColumn* column) const {
     ColumnNullable* col = assert_cast<ColumnNullable*>(column);

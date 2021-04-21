@@ -23,7 +23,6 @@
 #include "vec/common/cow.h"
 #include "vec/common/string_buffer.hpp"
 #include "vec/core/types.h"
-// #include <vec/DataTypes/DataTypeCustom.h>
 
 namespace doris {
 class PBlock;
@@ -459,7 +458,6 @@ public:
     /// Updates avg_value_size_hint for newly read column. Uses to optimize deserialization. Zero expected for first column.
     static void updateAvgValueSizeHint(const IColumn& column, double& avg_value_size_hint);
 
-    virtual void serialize(const IColumn& column, size_t row_num, PColumn* pcolumn) const = 0;
     virtual void serialize(const IColumn& column, PColumn* pcolumn) const = 0;
     virtual void deserialize(const PColumn& pcolumn, IColumn* column) const = 0;
 
