@@ -24,17 +24,6 @@
 #include "vec/common/int_exp.h"
 #include "vec/common/typeid_cast.h"
 #include "vec/io/io_helper.h"
-//#include <DataTypes/DataTypeFactory.h>
-//#include <Formats/ProtobufReader.h>
-//#include <Formats/ProtobufWriter.h>
-//#include <IO/ReadHelpers.h>
-//#include <IO/WriteHelpers.h>
-//#include <IO/readDecimalText.h>
-//#include <Parsers/IAST.h>
-//#include <Parsers/ASTLiteral.h>
-//#include <Interpreters/Context.h>
-#include "gen_cpp/data.pb.h"
-
 
 namespace doris::vectorized {
 
@@ -211,13 +200,16 @@ void DataTypeDecimal<T>::serialize(const IColumn& column, PColumn* pcolumn) cons
         const FieldType& x = assert_cast<const ColumnType&>(column).getElement(i);
         writeBinary(x, buf);
     }
-    pcolumn->mutable_binary()->append(buf.str());
+
+    write_binary(buf, pcolumn);
     pcolumn->mutable_decimal_param()->set_precision(precision);
     pcolumn->mutable_decimal_param()->set_scale(scale);
 }
 template <typename T>
 void DataTypeDecimal<T>::deserialize(const PColumn& pcolumn, IColumn* column) const {
-    std::istringstream istr(pcolumn.binary());
+    std::string uncompressed;
+    read_binary(pcolumn, &uncompressed);
+    std::istringstream istr(uncompressed);
     while (istr.peek() != EOF) {
         typename FieldType::NativeType x;
         readBinary(x, istr);

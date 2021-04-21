@@ -16,7 +16,7 @@
 # under the License.
 
 # where to put generated libraries
-set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/test/vec/AggregateFunctions")
+set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/test/vec/aggregate_functions")
 
 ADD_BE_TEST(agg_test)
 

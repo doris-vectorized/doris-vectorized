@@ -27,10 +27,9 @@
 #include "olap/hll.h"
 #include "runtime/primitive_type.h"
 #include "thrift/protocol/TDebugProtocol.h"
-
-#include "vec/data_types/data_types_number.h"
 #include "vec/data_types/data_type_string.h"
 #include "vec/data_types/data_types_decimal.h"
+#include "vec/data_types/data_types_number.h"
 
 namespace doris {
 
@@ -76,6 +75,10 @@ struct TypeDescriptor {
         DCHECK_NE(type, TYPE_ARRAY);
         DCHECK_NE(type, TYPE_MAP);
 #endif
+        if (type == TYPE_DECIMAL || type == TYPE_DECIMALV2) {
+            precision = 27;
+            scale = 9;
+        }
     }
 
     static TypeDescriptor create_char_type(int len) {

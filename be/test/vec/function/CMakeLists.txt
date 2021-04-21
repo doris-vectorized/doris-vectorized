@@ -16,7 +16,7 @@
 # under the License.
 
 # where to put generated libraries
-set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/test/vec/Function")
+set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/test/vec/function")
 
 ADD_BE_TEST(function_abs_test)
 ADD_BE_TEST(function_comparison_test)
