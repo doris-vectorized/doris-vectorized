@@ -17,8 +17,11 @@
 
 #pragma once
 
+#include <snappy/snappy.h>
+
 #include <iostream>
 
+#include "gen_cpp/data.pb.h"
 #include "vec/common/exception.h"
 #include "vec/io/var_int.h"
 
@@ -54,7 +57,7 @@ inline void writeStringBinary(const StringRef& s, std::ostream& buf) {
 }
 
 inline void writeStringBinary(const char* s, std::ostream& buf) {
-    writeStringBinary(StringRef {s}, buf);
+    writeStringBinary(StringRef{s}, buf);
 }
 
 template <typename Type>
@@ -92,6 +95,13 @@ inline void writeBinary(const Decimal64& x, std::ostream& buf) {
 }
 inline void writeBinary(const Decimal128& x, std::ostream& buf) {
     writePODBinary(x, buf);
+}
+inline void write_binary(const std::ostringstream& buf, PColumn* pcolumn) {
+    std::string uncompressed = buf.str();
+    std::string compressed;
+    snappy::Compress(uncompressed.data(), uncompressed.size(), &compressed);
+    pcolumn->set_compressed(true);
+    pcolumn->mutable_binary()->append(compressed);
 }
 
 /// Read POD-type in native format
@@ -165,5 +175,12 @@ inline void readBinary(Decimal64& x, std::istream& buf) {
 }
 inline void readBinary(Decimal128& x, std::istream& buf) {
     readPODBinary(x, buf);
+}
+inline void read_binary(const PColumn& pcolumn, std::string* data) {
+    if (pcolumn.compressed()) {
+        snappy::Uncompress(pcolumn.binary().data(), pcolumn.binary().size(), data);
+    } else {
+        *data = pcolumn.binary();
+    }
 }
 } // namespace doris::vectorized
