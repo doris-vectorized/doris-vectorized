@@ -21,6 +21,8 @@ class Closure;
 namespace doris {
 class MemTracker;
 class RuntimeProfile;
+class PBlock;
+
 namespace vectorized {
 class Block;
 class VDataStreamMgr;
@@ -33,8 +35,11 @@ public:
                      std::shared_ptr<QueryStatisticsRecvr> sub_plan_query_statistics_recvr);
 
     ~VDataStreamRecvr();
-    void add_batch(Block* block, int sender_id, bool use_move);
+
     // TODO: merger
+
+    void add_batch(const PBlock& pblock, int sender_id, int be_number, int64_t packet_seq,
+                   ::google::protobuf::Closure** done);
 
     Status get_next(Block* block, bool* eos);
 
@@ -51,10 +56,13 @@ public:
     // sender queue. Called from DataStreamMgr.
     void remove_sender(int sender_id, int be_number);
 
+    void cancel_stream();
+
+    void close();
+
 private:
     class SenderQueue;
 
-    void cancel_stream();
     bool exceeds_limit(int batch_size) {
         return _num_buffered_bytes + batch_size > _total_buffer_limit;
     }
@@ -100,9 +108,12 @@ class VDataStreamRecvr::SenderQueue {
 public:
     SenderQueue(VDataStreamRecvr* parent_recvr, int num_senders, RuntimeProfile* profile);
 
-    ~SenderQueue() {}
+    ~SenderQueue();
 
     Status get_batch(Block** next_block);
+
+    void add_batch(const PBlock& pblock, int be_number, int64_t packet_seq,
+                   ::google::protobuf::Closure** done);
 
     void decrement_senders(int sender_id);
 

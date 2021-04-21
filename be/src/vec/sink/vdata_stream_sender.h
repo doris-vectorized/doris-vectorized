@@ -21,19 +21,22 @@ class RuntimeProfile;
 class BufferControlBlock;
 class ExprContext;
 class MemTracker;
-class PartitionInfo;
+class PartRangeKey;
 
 namespace vectorized {
 class VExprContext;
+class VPartitionInfo;
 
-class VDataSender : public VDataSink {
+// TODO: support Partition Range
+// TODO: support Local Exechange
+class VDataStreamSender final : public VDataSink {
 public:
-    VDataSender(ObjectPool* pool, int sender_id, const RowDescriptor& row_desc,
-                const TDataStreamSink& sink,
-                const std::vector<TPlanFragmentDestination>& destinations,
-                int per_channel_buffer_size, bool send_query_statistics_with_every_batch);
+    VDataStreamSender(ObjectPool* pool, int sender_id, const RowDescriptor& row_desc,
+                      const TDataStreamSink& sink,
+                      const std::vector<TPlanFragmentDestination>& destinations,
+                      int per_channel_buffer_size, bool send_query_statistics_with_every_batch);
 
-    ~VDataSender();
+    ~VDataStreamSender();
 
     virtual Status init(const TDataSink& thrift_sink) override;
 
@@ -48,18 +51,19 @@ public:
 
     RuntimeState* state() { return _state; }
 
+    Status serialize_block(Block* src, PBlock* dest, int num_receivers);
+
 private:
     class Channel;
 
-    /* Status compute_range_part_code(RuntimeState* state, TupleRow* row, size_t* hash_value,*/
-    /*bool* ignore);*/
+    struct hash_128 {
+        uint64_t high;
+        uint64_t low;
+    };
 
-    //int binary_find_partition(const PartRangeKey& key) const;
+    using hash_128_t = hash_128;
 
-    //Status find_partition(RuntimeState* state, TupleRow* row, PartitionInfo** info, bool* ignore);
-
-    //Status process_distribute(RuntimeState* state, TupleRow* row, const PartitionInfo* part,
-    //size_t* hash_val);
+    Status handle_unpartitioned(Block* block);
 
     // Sender instance id, unique within a fragment.
     int _sender_id;
@@ -75,9 +79,9 @@ private:
 
     // serialized batches for broadcasting; we need two so we can write
     // one while the other one is still being sent
-    PRowBatch _pb_batch1;
-    PRowBatch _pb_batch2;
-    PRowBatch* _current_pb_batch = nullptr;
+    PBlock _pb_block1;
+    PBlock _pb_block2;
+    PBlock* _current_pb_block = nullptr;
 
     // compute per-row partition values
     std::vector<VExprContext*> _partition_expr_ctxs;
@@ -87,7 +91,7 @@ private:
 
     // map from range value to partition_id
     // sorted in ascending orderi by range for binary search
-    std::vector<PartitionInfo*> _partition_infos;
+    std::vector<VPartitionInfo*> _partition_infos;
 
     RuntimeProfile* _profile; // Allocated from _pool
     RuntimeProfile::Counter* _serialize_batch_timer;
@@ -106,15 +110,16 @@ private:
 
 // TODO: support local exechange
 
-class VDataSender::Channel {
+class VDataStreamSender::Channel {
 public:
     // Create channel to send data to particular ipaddress/port/query/node
     // combination. buffer_size is specified in bytes and a soft limit on
     // how much tuple data is getting accumulated before being sent; it only applies
     // when data is added via add_row() and not sent directly via send_batch().
-    Channel(VDataSender* parent, const RowDescriptor& row_desc, const TNetworkAddress& brpc_dest,
-            const TUniqueId& fragment_instance_id, PlanNodeId dest_node_id, int buffer_size,
-            bool is_transfer_chain, bool send_query_statistics_with_every_batch)
+    Channel(VDataStreamSender* parent, const RowDescriptor& row_desc,
+            const TNetworkAddress& brpc_dest, const TUniqueId& fragment_instance_id,
+            PlanNodeId dest_node_id, int buffer_size, bool is_transfer_chain,
+            bool send_query_statistics_with_every_batch)
             : _parent(parent),
               _buffer_size(buffer_size),
               _row_desc(row_desc),
@@ -148,7 +153,9 @@ public:
     // Returns the status of the most recently finished transmit_data
     // rpc (or OK if there wasn't one that hasn't been reported yet).
     // if batch is nullptr, send the eof packet
-    Status send_batch(PRowBatch* batch, bool eos = false);
+    Status send_block(PBlock* block, bool eos = false);
+
+    Status send_current_block(bool eos = false);
 
     // Flush buffered rows and close channel. This function don't wait the response
     // of close operation, client should call close_wait() to finish channel's close.
@@ -161,7 +168,7 @@ public:
 
     int64_t num_data_bytes_sent() const { return _num_data_bytes_sent; }
 
-    PRowBatch* pb_batch() { return &_pb_batch; }
+    PBlock* pb_block() { return &_pb_block; }
 
     std::string get_fragment_instance_id_str() {
         UniqueId uid(_fragment_instance_id);
@@ -174,7 +181,8 @@ private:
     inline Status _wait_last_brpc() {
         if (_closure == nullptr) return Status::OK();
         auto cntl = &_closure->cntl;
-        brpc::Join(cntl->call_id());
+        auto call_id = _closure->cntl.call_id();
+        brpc::Join(call_id);
         if (cntl->Failed()) {
             std::string err = fmt::format(
                     "failed to send brpc batch, error={}, error_text={}, client: {}",
@@ -191,7 +199,7 @@ private:
     Status send_current_batch(bool eos = false);
     Status close_internal();
 
-    VDataSender* _parent;
+    VDataStreamSender* _parent;
     int _buffer_size;
 
     const RowDescriptor& _row_desc;
@@ -212,7 +220,7 @@ private:
     TNetworkAddress _brpc_dest_addr;
 
     PUniqueId _finst_id;
-    PRowBatch _pb_batch;
+    PBlock _pb_block;
     PTransmitDataParams _brpc_request;
     PBackendService_Stub* _brpc_stub = nullptr;
     RefCountClosure<PTransmitDataResult>* _closure = nullptr;

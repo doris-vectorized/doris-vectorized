@@ -23,6 +23,10 @@
 
 #include "gen_cpp/data.pb.h"
 #include "vec/common/exception.h"
+#include "vec/common/string_ref.h"
+#include "vec/common/types.h"
+#include "vec/common/uint128.h"
+#include "vec/core/types.h"
 #include "vec/io/var_int.h"
 
 #define DEFAULT_MAX_STRING_SIZE (1ULL << 30)

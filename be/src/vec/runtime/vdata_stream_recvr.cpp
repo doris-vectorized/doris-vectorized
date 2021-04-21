@@ -1,8 +1,10 @@
 #include "vec/runtime/vdata_stream_recvr.h"
 
+#include "gen_cpp/data.pb.h"
 #include "runtime/mem_tracker.h"
 #include "util/uid_util.h"
 #include "vec/core/block.h"
+#include "vec/runtime/vdata_stream_mgr.h"
 
 namespace doris::vectorized {
 
@@ -12,6 +14,8 @@ VDataStreamRecvr::SenderQueue::SenderQueue(VDataStreamRecvr* parent_recvr, int n
           _is_cancelled(false),
           _num_remaining_senders(num_senders),
           _received_first_batch(false) {}
+
+VDataStreamRecvr::SenderQueue::~SenderQueue() {}
 
 Status VDataStreamRecvr::SenderQueue::get_batch(Block** next_block) {
     std::unique_lock<std::mutex> l(_lock);
@@ -62,6 +66,118 @@ Status VDataStreamRecvr::SenderQueue::get_batch(Block** next_block) {
     return Status::OK();
 }
 
+void VDataStreamRecvr::SenderQueue::add_batch(const PBlock& pblock, int be_number,
+                                              int64_t packet_seq,
+                                              ::google::protobuf::Closure** done) {
+    std::unique_lock<std::mutex> l(_lock);
+    if (_is_cancelled) {
+        return;
+    }
+    auto iter = _packet_seq_map.find(be_number);
+    if (iter != _packet_seq_map.end()) {
+        if (iter->second >= packet_seq) {
+            LOG(WARNING) << fmt::format(
+                    "packet already exist [cur_packet_id= {} receive_packet_id={}]", iter->second,
+                    packet_seq);
+            return;
+        }
+        iter->second = packet_seq;
+    } else {
+        _packet_seq_map.emplace(be_number, packet_seq);
+    }
+    int block_byte_size = pblock.ByteSize();
+
+    if (_num_remaining_senders <= 0) {
+        DCHECK(_sender_eos_set.end() != _sender_eos_set.find(be_number));
+        return;
+    }
+
+    if (_is_cancelled) {
+        return;
+    }
+
+    Block* block = nullptr;
+    {
+        SCOPED_TIMER(_recvr->_deserialize_row_batch_timer);
+        block = new Block(pblock);
+    }
+    VLOG_ROW << "added #rows=" << block->rows() << " batch_size=" << block_byte_size << "\n";
+    _block_queue.emplace_back(block_byte_size, block);
+    // if done is nullptr, this function can't delay this response
+    if (done != nullptr && _recvr->exceeds_limit(block_byte_size)) {
+        MonotonicStopWatch monotonicStopWatch;
+        monotonicStopWatch.start();
+        DCHECK(*done != nullptr);
+        _pending_closures.emplace_back(*done, monotonicStopWatch);
+        *done = nullptr;
+    }
+    _recvr->_num_buffered_bytes += block_byte_size;
+    _data_arrival_cv.notify_one();
+}
+
+void VDataStreamRecvr::SenderQueue::decrement_senders(int be_number) {
+    std::lock_guard<std::mutex> l(_lock);
+    if (_sender_eos_set.end() != _sender_eos_set.find(be_number)) {
+        return;
+    }
+    _sender_eos_set.insert(be_number);
+    DCHECK_GT(_num_remaining_senders, 0);
+    _num_remaining_senders--;
+    VLOG_FILE << "decremented senders: fragment_instance_id=" << _recvr->fragment_instance_id()
+              << " node_id=" << _recvr->dest_node_id() << " #senders=" << _num_remaining_senders;
+    if (_num_remaining_senders == 0) {
+        _data_arrival_cv.notify_one();
+    }
+}
+
+void VDataStreamRecvr::SenderQueue::cancel() {
+    {
+        std::lock_guard<std::mutex> l(_lock);
+        if (_is_cancelled) {
+            return;
+        }
+        _is_cancelled = true;
+        VLOG_QUERY << "cancelled stream: _fragment_instance_id=" << _recvr->fragment_instance_id()
+                   << " node_id=" << _recvr->dest_node_id();
+    }
+    // Wake up all threads waiting to produce/consume batches.  They will all
+    // notice that the stream is cancelled and handle it.
+    _data_arrival_cv.notify_all();
+    // _data_removal_cv.notify_all();
+    // PeriodicCounterUpdater::StopTimeSeriesCounter(
+    //         _recvr->_bytes_received_time_series_counter);
+
+    {
+        std::lock_guard<std::mutex> l(_lock);
+        for (auto closure_pair : _pending_closures) {
+            closure_pair.first->Run();
+        }
+        _pending_closures.clear();
+    }
+}
+
+void VDataStreamRecvr::SenderQueue::close() {
+    {
+        // If _is_cancelled is not set to true, there may be concurrent send
+        // which add batch to _block_queue. The batch added after _block_queue
+        // is clear will be memory leak
+        std::lock_guard<std::mutex> l(_lock);
+        _is_cancelled = true;
+
+        for (auto closure_pair : _pending_closures) {
+            closure_pair.first->Run();
+        }
+        _pending_closures.clear();
+    }
+
+    // Delete any batches queued in _block_queue
+    for (auto it = _block_queue.begin(); it != _block_queue.end(); ++it) {
+        delete it->second;
+    }
+
+    _current_block.reset();
+}
+
 VDataStreamRecvr::VDataStreamRecvr(
         VDataStreamMgr* stream_mgr, const std::shared_ptr<MemTracker>& parent_tracker,
         const RowDescriptor& row_desc, const TUniqueId& fragment_instance_id,
@@ -100,7 +216,52 @@ VDataStreamRecvr::VDataStreamRecvr(
 }
 
 VDataStreamRecvr::~VDataStreamRecvr() {
-    DCHECK(_mgr == NULL) << "Must call close()";
+    DCHECK(_mgr == nullptr) << "Must call close()";
+}
+
+void VDataStreamRecvr::add_batch(const PBlock& pblock, int sender_id, int be_number,
+                                 int64_t packet_seq, ::google::protobuf::Closure** done) {
+    int use_sender_id = _is_merging ? sender_id : 0;
+    _sender_queues[use_sender_id]->add_batch(pblock, be_number, packet_seq, done);
+}
+
+Status VDataStreamRecvr::get_next(Block* block, bool* eos) {
+    // TODO: use merge
+    block->clear();
+    Block* res = nullptr;
+    RETURN_IF_ERROR(_sender_queues[0]->get_batch(&res));
+    if (res != nullptr) {
+        *block = *res;
+    } else {
+        *eos = true;
+    }
+    return Status::OK();
+}
+
+void VDataStreamRecvr::remove_sender(int sender_id, int be_number) {
+    int use_sender_id = _is_merging ? sender_id : 0;
+    _sender_queues[use_sender_id]->decrement_senders(be_number);
+}
+
+void VDataStreamRecvr::cancel_stream() {
+    for (int i = 0; i < _sender_queues.size(); ++i) {
+        _sender_queues[i]->cancel();
+    }
+}
+
+void VDataStreamRecvr::close() {
+    for (int i = 0; i < _sender_queues.size(); ++i) {
+        _sender_queues[i]->close();
+    }
+    // Remove this receiver from the DataStreamMgr that created it.
+    // TODO: log error msg
+    _mgr->deregister_recvr(fragment_instance_id(), dest_node_id());
+    _mgr = nullptr;
+
+    // TODO:
+    // _merger.reset();
+    // TODO: Maybe shared tracker doesn't need to be reset manually
+    _mem_tracker.reset();
 }
 
 } // namespace doris::vectorized

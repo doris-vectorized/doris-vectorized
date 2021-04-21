@@ -192,6 +192,9 @@ void DataTypeDecimal<T>::serialize(const IColumn& column, size_t row_num, PColum
     const FieldType& x = assert_cast<const ColumnType&>(column).getElement(row_num);
     writeBinary(x, buf);
     pcolumn->mutable_binary()->append(buf.str());
+
+    pcolumn->mutable_decimal_param()->set_precision(precision);
+    pcolumn->mutable_decimal_param()->set_scale(scale);
 }
 template <typename T>
 void DataTypeDecimal<T>::serialize(const IColumn& column, PColumn* pcolumn) const {

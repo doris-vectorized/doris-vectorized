@@ -17,6 +17,7 @@
 
 package org.apache.doris.planner;
 
+import org.apache.doris.qe.ConnectContext;
 import org.apache.doris.thrift.TDataSink;
 import org.apache.doris.thrift.TDataSinkType;
 import org.apache.doris.thrift.TDataStreamSink;
@@ -61,7 +62,8 @@ public class DataStreamSink extends DataSink {
 
     @Override
     protected TDataSink toThrift() {
-        TDataSink result = new TDataSink(TDataSinkType.DATA_STREAM_SINK);
+        TDataSink result = new TDataSink(ConnectContext.get().getSessionVariable().enableVectorizedEngine() ?
+                TDataSinkType.VDATA_STREAM_SINK : TDataSinkType.DATA_STREAM_SINK);
         TDataStreamSink tStreamSink =
           new TDataStreamSink(exchNodeId.asInt(), outputPartition.toThrift());
         result.setStreamSink(tStreamSink);
