@@ -187,13 +187,6 @@ bool DataTypeDecimal<T>::equals(const IDataType& rhs) const {
 //}
 
 template <typename T>
-void DataTypeDecimal<T>::serialize(const IColumn& column, size_t row_num, PColumn* pcolumn) const {
-    std::ostringstream buf;
-    const FieldType& x = assert_cast<const ColumnType&>(column).getElement(row_num);
-    writeBinary(x, buf);
-    pcolumn->mutable_binary()->append(buf.str());
-}
-template <typename T>
 void DataTypeDecimal<T>::serialize(const IColumn& column, PColumn* pcolumn) const {
     std::ostringstream buf;
     for (size_t i = 0; i < column.size(); ++i) {
