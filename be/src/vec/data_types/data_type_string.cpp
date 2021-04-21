@@ -256,13 +256,6 @@ void DataTypeString::serialize(const IColumn& column, PColumn* pcolumn) const {
     write_binary(buf, pcolumn);
 }
 
-void DataTypeString::serialize(const IColumn& column, size_t row_num, PColumn* pcolumn) const {
-    std::ostringstream buf;
-    const StringRef& s = assert_cast<const ColumnString&>(column).getDataAt(row_num);
-    writeStringBinary(s, buf);
-    pcolumn->mutable_binary()->append(buf.str());
-}
-
 void DataTypeString::deserialize(const PColumn& pcolumn, IColumn* column) const {
     ColumnString* column_string = assert_cast<ColumnString*>(column);
     ColumnString::Chars& data = column_string->getChars();
