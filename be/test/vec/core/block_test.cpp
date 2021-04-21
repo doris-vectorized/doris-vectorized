@@ -27,10 +27,12 @@
 #include "runtime/row_batch.h"
 #include "runtime/tuple_row.h"
 #include "vec/columns/column_decimal.h"
+#include "vec/columns/column_nullable.h"
 #include "vec/columns/column_string.h"
 #include "vec/columns/column_vector.h"
 #include "vec/common/exception.h"
 #include "vec/data_types/data_type.h"
+#include "vec/data_types/data_type_nullable.h"
 
 namespace doris {
 
@@ -188,7 +190,9 @@ TEST(BlockTest, SerializeAndDeserializeBlock) {
     {
         vectorized::DataTypePtr decimal_data_type(doris::vectorized::createDecimal(27, 9));
         auto decimal_column = decimal_data_type->createColumn();
-        auto& data = ((vectorized::ColumnDecimal<vectorized::Decimal<vectorized::Int128>>*)decimal_column.get())->getData();
+        auto& data = ((vectorized::ColumnDecimal<vectorized::Decimal<vectorized::Int128>>*)
+                              decimal_column.get())
+                             ->getData();
         for (int i = 0; i < 1024; ++i) {
             __int128_t value = i;
             for (int j = 0; j < 9; ++j) {
@@ -197,7 +201,27 @@ TEST(BlockTest, SerializeAndDeserializeBlock) {
             data.push_back(value);
         }
         vectorized::ColumnWithTypeAndName type_and_name(decimal_column->getPtr(), decimal_data_type,
-                                            "test_decimal");
+                                                        "test_decimal");
+        vectorized::Block block({type_and_name});
+        PBlock pblock;
+        block.serialize(&pblock);
+        std::string s1 = pblock.DebugString();
+        PBlock pblock2;
+        vectorized::Block block2(pblock);
+        block2.serialize(&pblock2);
+        std::string s2 = pblock2.DebugString();
+        EXPECT_EQ(s1, s2);
+    }
+    {
+        auto column_vector_int32 = vectorized::ColumnVector<Int32>::create();
+        auto column_nullable_vector = makeNullable(std::move(column_vector_int32));
+        auto mutable_nullable_vector = std::move(*column_nullable_vector).mutate();
+        for (int i = 0; i < 4096; i++) {
+            mutable_nullable_vector->insert(vectorized::castToNearestFieldType(i));
+        }
+        auto data_type = makeNullable(std::make_shared<vectorized::DataTypeInt32>());
+        vectorized::ColumnWithTypeAndName type_and_name(mutable_nullable_vector->getPtr(),
+                                                        data_type, "test_nullable_int32");
         vectorized::Block block({type_and_name});
         PBlock pblock;
         block.serialize(&pblock);
