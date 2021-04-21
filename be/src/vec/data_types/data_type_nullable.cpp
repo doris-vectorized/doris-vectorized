@@ -17,21 +17,13 @@
 
 #include "vec/data_types/data_type_nullable.h"
 
-#include "vec/data_types/data_type_nothing.h"
-#include "vec/data_types/data_types_number.h"
-// #include <vec/DataTypes/DataTypeFactory.h>
-#include "vec/columns/column_nullable.h"
-#include "vec/core/field.h"
-// #include <vec/IO/ReadBuffer.h>
-// #include <vec/IO/ReadBufferFromMemory.h>
-// #include <vec/IO/ReadHelpers.h>
-// #include <vec/IO/WriteBuffer.h>
-// #include <vec/IO/WriteHelpers.h>
-// #include <vec/IO/ConcatReadBuffer.h>
-// #include <vec/Parsers/IAST.h>
 #include "gen_cpp/data.pb.h"
+#include "vec/columns/column_nullable.h"
 #include "vec/common/assert_cast.h"
 #include "vec/common/typeid_cast.h"
+#include "vec/core/field.h"
+#include "vec/data_types/data_type_nothing.h"
+#include "vec/data_types/data_types_number.h"
 
 namespace doris::vectorized {
 
