@@ -16,7 +16,7 @@
 # under the License.
 
 # where to put generated libraries
-set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/test/vec/Core")
+set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/test/vec/core")
 
 ADD_BE_TEST(block_test)
 
