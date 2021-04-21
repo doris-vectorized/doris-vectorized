@@ -161,6 +161,7 @@ Block::Block(const PBlock& pblock) {
         if (pcolumn.is_null_size() > 0) {
             data_column =
                     ColumnNullable::create(std::move(type->createColumn()), ColumnUInt8::create());
+            type = makeNullable(type);
         } else {
             data_column = type->createColumn();
         }
