@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "vec/data_types/data_type_string.h"
+
 #include "gen_cpp/data.pb.h"
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_string.h"
@@ -24,16 +26,6 @@
 #include "vec/core/defines.h"
 #include "vec/core/field.h"
 #include "vec/io/io_helper.h"
-
-//#include <Formats/FormatSettings.h>
-//#include <Formats/ProtobufReader.h>
-//#include <Formats/ProtobufWriter.h>
-#include "vec/data_types/data_type_string.h"
-//#include <vec/DataTypes/DataTypeFactory.h>
-//
-//#include <IO/ReadHelpers.h>
-//#include <IO/WriteHelpers.h>
-//#include <IO/VarInt.h>
 
 #ifdef __SSE2__
 #include <emmintrin.h>
@@ -261,7 +253,7 @@ void DataTypeString::serialize(const IColumn& column, PColumn* pcolumn) const {
         const auto& s = assert_cast<const ColumnString&>(column).getDataAt(i);
         writeStringBinary(s, buf);
     }
-    pcolumn->mutable_binary()->append(buf.str());
+    write_binary(buf, pcolumn);
 }
 
 void DataTypeString::serialize(const IColumn& column, size_t row_num, PColumn* pcolumn) const {
@@ -276,7 +268,9 @@ void DataTypeString::deserialize(const PColumn& pcolumn, IColumn* column) const 
     ColumnString::Chars& data = column_string->getChars();
     ColumnString::Offsets& offsets = column_string->getOffsets();
     size_t offset = 0;
-    std::istringstream istr(pcolumn.binary());
+    std::string uncompressed;
+    read_binary(pcolumn, &uncompressed);
+    std::istringstream istr(uncompressed);
     while (istr.peek() != EOF) {
         std::string s;
         readBinary(s, istr);
