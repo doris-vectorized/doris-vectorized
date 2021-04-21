@@ -17,28 +17,23 @@
 
 #include "vec/core/block.h"
 
-#include "vec/common/exception.h"
-#include "vec/common/field_visitors.h"
-
-// #include <IO/WriteBufferFromString.h>
-// #include <IO/Operators.h>
-
 #include <iterator>
 #include <memory>
 
-#include "vec/columns/column_vector.h"
+#include "gen_cpp/data.pb.h"
 #include "vec/columns/column_const.h"
-
-#include "vec/columns/columns_common.h"
-
 #include "vec/columns/column_nullable.h"
+#include "vec/columns/column_vector.h"
+#include "vec/columns/columns_common.h"
 #include "vec/columns/columns_number.h"
 #include "vec/common/assert_cast.h"
+#include "vec/common/exception.h"
+#include "vec/common/field_visitors.h"
 #include "vec/common/typeid_cast.h"
+#include "vec/data_types/data_type_nullable.h"
 #include "vec/data_types/data_type_string.h"
 #include "vec/data_types/data_types_decimal.h"
 #include "vec/data_types/data_types_number.h"
-#include "gen_cpp/data.pb.h"
 
 namespace doris::vectorized {
 
@@ -151,11 +146,11 @@ PColumn::DataType get_pdata_type(DataTypePtr data_type) {
     }
 }
 
-Block::Block(std::initializer_list<ColumnWithTypeAndName> il) : data {il} {
+Block::Block(std::initializer_list<ColumnWithTypeAndName> il) : data{il} {
     initializeIndexByName();
 }
 
-Block::Block(const ColumnsWithTypeAndName& data_) : data {data_} {
+Block::Block(const ColumnsWithTypeAndName& data_) : data{data_} {
     initializeIndexByName();
 }
 
@@ -166,6 +161,7 @@ Block::Block(const PBlock& pblock) {
         if (pcolumn.is_null_size() > 0) {
             data_column =
                     ColumnNullable::create(std::move(type->createColumn()), ColumnUInt8::create());
+            type = makeNullable(type);
         } else {
             data_column = type->createColumn();
         }
@@ -353,7 +349,7 @@ size_t Block::rows() const {
 
 void Block::set_num_rows(int length) {
     if (rows() > length) {
-        for (auto &elem : data) {
+        for (auto& elem : data) {
             if (elem.column) {
                 elem.column = elem.column->cut(0, length);
             }
@@ -690,7 +686,12 @@ void Block::serialize(PBlock* pblock) const {
     for (auto c = cbegin(); c != cend(); ++c) {
         PColumn* pc = pblock->add_columns();
         pc->set_name(c->name);
-        pc->set_type(get_pdata_type(c->type));
+        if (c->type->isNullable()) {
+            pc->set_type(get_pdata_type(
+                    std::dynamic_pointer_cast<const DataTypeNullable>(c->type)->getNestedType()));
+        } else {
+            pc->set_type(get_pdata_type(c->type));
+        }
         c->type->serialize(*(c->column), pc);
     }
 }

@@ -17,22 +17,13 @@
 
 #include "vec/data_types/data_type_nullable.h"
 
+#include "gen_cpp/data.pb.h"
+#include "vec/columns/column_nullable.h"
+#include "vec/common/assert_cast.h"
+#include "vec/common/typeid_cast.h"
+#include "vec/core/field.h"
 #include "vec/data_types/data_type_nothing.h"
 #include "vec/data_types/data_types_number.h"
-// #include <vec/DataTypes/DataTypeFactory.h>
-#include "vec/columns/column_nullable.h"
-#include "vec/core/field.h"
-// #include <vec/IO/ReadBuffer.h>
-// #include <vec/IO/ReadBufferFromMemory.h>
-// #include <vec/IO/ReadHelpers.h>
-// #include <vec/IO/WriteBuffer.h>
-// #include <vec/IO/WriteHelpers.h>
-// #include <vec/IO/ConcatReadBuffer.h>
-// #include <vec/Parsers/IAST.h>
-#include "vec/common/assert_cast.h"
-#include "gen_cpp/data.pb.h"
-
-#include "vec/common/typeid_cast.h"
 
 namespace doris::vectorized {
 
@@ -42,7 +33,7 @@ extern const int ILLEGAL_TYPE_OF_ARGUMENT;
 } // namespace ErrorCodes
 
 DataTypeNullable::DataTypeNullable(const DataTypePtr& nested_data_type_)
-        : nested_data_type {nested_data_type_} {
+        : nested_data_type{nested_data_type_} {
     if (!nested_data_type->canBeInsideNullable())
         throw Exception(
                 "Nested type " + nested_data_type->getName() + " cannot be inside Nullable type",
@@ -486,27 +477,29 @@ bool DataTypeNullable::onlyNull() const {
 // }
 
 void DataTypeNullable::serialize(const IColumn& column, size_t row_num, PColumn* pcolumn) const {
-    const ColumnNullable& col = assert_cast<const ColumnNullable& >(column);
+    const ColumnNullable& col = assert_cast<const ColumnNullable&>(column);
     pcolumn->set_is_null(row_num, col.isNullAt(row_num));
     nested_data_type->serialize(column, row_num, pcolumn);
 }
 void DataTypeNullable::serialize(const IColumn& column, PColumn* pcolumn) const {
-    const ColumnNullable& col = assert_cast<const ColumnNullable& >(column);
+    const ColumnNullable& col = assert_cast<const ColumnNullable&>(column);
     for (size_t i = 0; i < column.size(); ++i) {
         bool is_null = col.isNullAt(i);
         pcolumn->add_is_null(is_null);
-        nested_data_type->serialize(column, i, pcolumn);
-        if (!is_null) {
-            nested_data_type->serialize(column, i, pcolumn);
-        }
+        nested_data_type->serialize(col.getNestedColumn(), i, pcolumn);
     }
 }
 void DataTypeNullable::deserialize(const PColumn& pcolumn, IColumn* column) const {
-    ColumnNullable * col = assert_cast<ColumnNullable *>(column);
+    ColumnNullable* col = assert_cast<ColumnNullable*>(column);
     for (size_t i = 0; i < pcolumn.is_null_size(); ++i) {
-        col->getNullMapData().push_back(pcolumn.is_null(i));
+        if (pcolumn.is_null(i)) {
+            col->getNullMapData().push_back(1);
+        } else {
+            col->getNullMapData().push_back(0);
+        }
     }
-    nested_data_type->deserialize(pcolumn, column);
+    IColumn& nested = col->getNestedColumn();
+    nested_data_type->deserialize(pcolumn, &nested);
 }
 MutableColumnPtr DataTypeNullable::createColumn() const {
     return ColumnNullable::create(nested_data_type->createColumn(), ColumnUInt8::create());

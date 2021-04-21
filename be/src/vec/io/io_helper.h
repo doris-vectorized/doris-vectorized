@@ -100,8 +100,13 @@ inline void write_binary(const std::ostringstream& buf, PColumn* pcolumn) {
     std::string uncompressed = buf.str();
     std::string compressed;
     snappy::Compress(uncompressed.data(), uncompressed.size(), &compressed);
-    pcolumn->set_compressed(true);
-    pcolumn->mutable_binary()->append(compressed);
+    if (static_cast<double>(compressed.size()) / uncompressed.size() > 0.7) {
+        pcolumn->set_compressed(false);
+        pcolumn->mutable_binary()->append(uncompressed);
+    } else {
+        pcolumn->set_compressed(true);
+        pcolumn->mutable_binary()->append(compressed);
+    }
 }
 
 /// Read POD-type in native format
