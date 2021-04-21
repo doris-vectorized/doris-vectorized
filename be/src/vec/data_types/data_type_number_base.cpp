@@ -263,14 +263,6 @@ void DataTypeNumberBase<T>::serialize(const IColumn& column, PColumn* pcolumn) c
 }
 
 template <typename T>
-void DataTypeNumberBase<T>::serialize(const IColumn& column, size_t row_num,
-                                      PColumn* pcolumn) const {
-    std::ostringstream buf;
-    writeBinary(assert_cast<const ColumnVector<T>&>(column).getData()[row_num], buf);
-    pcolumn->mutable_binary()->append(buf.str());
-}
-
-template <typename T>
 void DataTypeNumberBase<T>::deserialize(const PColumn& pcolumn, IColumn* column) const {
     std::string uncompressed;
     read_binary(pcolumn, &uncompressed);
