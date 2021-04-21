@@ -15,17 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "vec/data_types/data_type.h"
+
 #include "vec/columns/column.h"
 #include "vec/columns/column_const.h"
 #include "vec/common/exception.h"
-// #include <vec/Common/escapeForFileName.h>
-
 #include "vec/core/defines.h"
-
-// #include <IO/WriteHelpers.h>
-
-#include "vec/data_types/data_type.h"
-// #include <vec/DataTypes/DataTypeCustom.h>
 #include "vec/data_types/nested_utils.h"
 
 namespace doris::vectorized {
