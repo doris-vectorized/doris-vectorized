@@ -186,6 +186,7 @@ bool DataTypeDecimal<T>::equals(const IDataType& rhs) const {
 //        container.back() = decimal;
 //}
 
+template <typename T>
 void DataTypeDecimal<T>::serialize(const IColumn& column, PColumn* pcolumn) const {
     std::ostringstream buf;
     for (size_t i = 0; i < column.size(); ++i) {
