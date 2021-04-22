@@ -22,6 +22,7 @@ import org.apache.doris.analysis.Expr;
 import org.apache.doris.analysis.SortInfo;
 import org.apache.doris.analysis.TupleId;
 import org.apache.doris.common.UserException;
+import org.apache.doris.qe.ConnectContext;
 import org.apache.doris.thrift.TExchangeNode;
 import org.apache.doris.thrift.TPlanNode;
 import org.apache.doris.thrift.TPlanNodeType;
@@ -109,7 +110,8 @@ public class ExchangeNode extends PlanNode {
 
     @Override
     protected void toThrift(TPlanNode msg) {
-        msg.node_type = TPlanNodeType.EXCHANGE_NODE;
+        msg.node_type = ConnectContext.get().getSessionVariable().enableVectorizedEngine() ? 
+            TPlanNodeType.VEXCHANGE_NODE : TPlanNodeType.EXCHANGE_NODE;
         msg.exchange_node = new TExchangeNode();
         for (TupleId tid : tupleIds) {
             msg.exchange_node.addToInputRowTuples(tid.asInt());

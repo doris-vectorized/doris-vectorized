@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#pragma once
 //#include <Functions/FunctionFactory.h>
 #include "vec/common/field_visitors.h"
 #include "vec/data_types/number_traits.h"

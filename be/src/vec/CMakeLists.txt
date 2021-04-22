@@ -55,6 +55,7 @@ set(VEC_FILES
   exec/aggregation_node.cpp
   exec/olap_scan_node.cpp
   exec/olap_scanner.cpp
+  exec/vexchange_node.cpp
   exprs/vectorized_agg_fn.cpp
   exprs/vectorized_fn_call.cpp
   exprs/vexpr.cpp
@@ -76,6 +77,10 @@ set(VEC_FILES
   functions/divide.cpp
   sink/mysql_result_writer.cpp
   sink/result_sink.cpp
+  sink/vdata_stream_sender.cpp
+  runtime/vdata_stream_recvr.cpp
+  runtime/vdata_stream_mgr.cpp
+  runtime/vpartition_info.cpp
 )
 
 add_library(Vec STATIC
