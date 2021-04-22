@@ -46,7 +46,8 @@ static IAggregateFunction * createAggregateFunctionSingleValue(const String & na
     // if (which.idx == TypeIndex::String)
     //     return new AggregateFunctionTemplate<Data<SingleValueDataString>, true>(argument_type);
 
-    return new AggregateFunctionTemplate<Data<SingleValueDataGeneric>, false>(argument_type);
+    // return new AggregateFunctionTemplate<Data<SingleValueDataGeneric>, false>(argument_type);
+    return nullptr;
 }
 
 AggregateFunctionPtr createAggregateFunctionMax(const std::string & name, const DataTypes & argument_types, const Array & parameters)
@@ -54,11 +55,18 @@ AggregateFunctionPtr createAggregateFunctionMax(const std::string & name, const 
     return AggregateFunctionPtr(createAggregateFunctionSingleValue<AggregateFunctionsSingleValue, AggregateFunctionMaxData>(name, argument_types, parameters));
 }
 
+AggregateFunctionPtr createAggregateFunctionMin(const std::string & name, const DataTypes & argument_types, const Array & parameters)
+{
+    return AggregateFunctionPtr(createAggregateFunctionSingleValue<AggregateFunctionsSingleValue, AggregateFunctionMinData>(name, argument_types, parameters));
+}
+
 } // namespace
 
 void registerAggregateFunctionMinMax(AggregateFunctionSimpleFactory& factory) {
     factory.registerFunction("max", createAggregateFunctionMax);
     factory.registerFunction("max", createAggregateFunctionMax, true);
+    factory.registerFunction("min", createAggregateFunctionMin);
+    factory.registerFunction("min", createAggregateFunctionMin, true);
 }
 
 } // namespace doris::vectorized

@@ -21,6 +21,7 @@
 #include "vec/columns/column_vector.h"
 
 #include "vec/common/assert_cast.h"
+#include "vec/io/io_helper.h"
 
 namespace doris::vectorized {
 
@@ -48,19 +49,19 @@ public:
             assert_cast<ColumnVector<T> &>(to).insertDefault();
     }
 
-    // void write(WriteBuffer & buf, const IDataType & /*data_type*/) const
-    // {
-    //     writeBinary(has(), buf);
-    //     if (has())
-    //         writeBinary(value, buf);
-    // }
+    void write(std::ostream& buf) const
+    {
+        writeBinary(has(), buf);
+        if (has())
+            writeBinary(value, buf);
+    }
 
-    // void read(ReadBuffer & buf, const IDataType & /*data_type*/, Arena *)
-    // {
-    //     readBinary(has_value, buf);
-    //     if (has())
-    //         readBinary(value, buf);
-    // }
+    void read(std::istream& buf)
+    {
+        readBinary(has_value, buf);
+        if (has())
+            readBinary(value, buf);
+    }
 
 
     void change(const IColumn & column, size_t row_num, Arena *)
@@ -564,6 +565,17 @@ struct AggregateFunctionMaxData : Data
     static const char * name() { return "max"; }
 };
 
+template <typename Data>
+struct AggregateFunctionMinData : Data
+{
+    using Self = AggregateFunctionMinData;
+
+    bool changeIfBetter(const IColumn & column, size_t row_num, Arena * arena) { return this->changeIfLess(column, row_num, arena); }
+    bool changeIfBetter(const Self & to, Arena * arena)                        { return this->changeIfLess(to, arena); }
+
+    static const char * name() { return "min"; }
+};
+
 template <typename Data, bool AllocatesMemoryInArena>
 class AggregateFunctionsSingleValue final : public IAggregateFunctionDataHelper<Data, AggregateFunctionsSingleValue<Data, AllocatesMemoryInArena>>
 {
@@ -601,15 +613,15 @@ public:
         this->data(place).changeIfBetter(this->data(rhs), arena);
     }
 
-    // void serialize(ConstAggregateDataPtr place, WriteBuffer & buf) const override
-    // {
-    //     this->data(place).write(buf, *type.get());
-    // }
+    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override
+    {
+        this->data(place).write(buf);
+    }
 
-    // void deserialize(AggregateDataPtr place, ReadBuffer & buf, Arena * arena) const override
-    // {
-    //     this->data(place).read(buf, *type.get(), arena);
-    // }
+    void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override
+    {
+        this->data(place).read(buf);
+    }
 
     bool allocatesMemoryInArena() const override
     {
