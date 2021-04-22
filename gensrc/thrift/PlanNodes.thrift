@@ -53,6 +53,7 @@ enum TPlanNodeType {
   ODBC_SCAN_NODE,
   VOLAP_SCAN_NODE,
   VAGGREGATION_NODE,
+  VEXCHANGE_NODE,
 }
 
 // phases of an execution node

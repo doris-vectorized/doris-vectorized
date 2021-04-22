@@ -70,6 +70,7 @@ TEST(BlockTest, RowBatchCovertToBlock) {
         if (i % 5 == 0) {
             tuple->set_null(slot_desc->null_indicator_offset());
         } else {
+            tuple->set_not_null(slot_desc->null_indicator_offset());
             memcpy(tuple->get_slot(slot_desc->tuple_offset()), &k1, column_descs[0].size);
         }
         slot_desc = tuple_desc->slots()[1];
@@ -212,6 +213,7 @@ TEST(BlockTest, SerializeAndDeserializeBlock) {
         std::string s2 = pblock2.DebugString();
         EXPECT_EQ(s1, s2);
     }
+    // Test Block
     {
         auto column_vector_int32 = vectorized::ColumnVector<Int32>::create();
         auto column_nullable_vector = makeNullable(std::move(column_vector_int32));
