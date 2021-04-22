@@ -36,6 +36,7 @@
 #include "runtime/runtime_state.h"
 #include "util/logging.h"
 #include "vec/sink/result_sink.h"
+#include "vec/sink/vdata_stream_sender.h"
 
 namespace doris {
 
@@ -63,13 +64,30 @@ Status DataSink::create_data_sink(ObjectPool* pool, const TDataSink& thrift_sink
         sink->reset(tmp_sink);
         break;
     }
+    case TDataSinkType::VDATA_STREAM_SINK: {
+        if (!thrift_sink.__isset.stream_sink) {
+            return Status::InternalError("Missing data stream sink.");
+        }
+        bool send_query_statistics_with_every_batch =
+                params.__isset.send_query_statistics_with_every_batch
+                        ? params.send_query_statistics_with_every_batch
+                        : false;
+        // TODO: figure out good buffer size based on size of output row
+        tmp_sink = new doris::vectorized::VDataStreamSender(
+                pool, params.sender_id, row_desc, thrift_sink.stream_sink, params.destinations,
+                16 * 1024, send_query_statistics_with_every_batch);
+        // RETURN_IF_ERROR(sender->prepare(state->obj_pool(), thrift_sink.stream_sink));
+        sink->reset(tmp_sink);
+        break;
+    }
     case TDataSinkType::RESULT_SINK:
         if (!thrift_sink.__isset.result_sink) {
             return Status::InternalError("Missing data buffer sink.");
         }
 
         // TODO: figure out good buffer size based on size of output row
-        tmp_sink = new ResultSink(row_desc, output_exprs, thrift_sink.result_sink, 1024, config::is_vec);
+        tmp_sink = new ResultSink(row_desc, output_exprs, thrift_sink.result_sink, 1024,
+                                  config::is_vec);
         sink->reset(tmp_sink);
         break;
     case TDataSinkType::VRESULT_SINK:
@@ -78,7 +96,8 @@ Status DataSink::create_data_sink(ObjectPool* pool, const TDataSink& thrift_sink
         }
 
         // TODO: figure out good buffer size based on size of output row
-        tmp_sink = new doris::vectorized::ResultSink(row_desc, output_exprs, thrift_sink.result_sink, 1024);
+        tmp_sink = new doris::vectorized::ResultSink(row_desc, output_exprs,
+                                                     thrift_sink.result_sink, 1024);
         sink->reset(tmp_sink);
         break;
     case TDataSinkType::MEMORY_SCRATCH_SINK:
@@ -108,8 +127,7 @@ Status DataSink::create_data_sink(ObjectPool* pool, const TDataSink& thrift_sink
         if (!thrift_sink.__isset.odbc_table_sink) {
             return Status::InternalError("Missing data odbc sink.");
         }
-        OdbcTableSink* odbc_tbl_sink = new OdbcTableSink(pool,
-                                                         row_desc, output_exprs);
+        OdbcTableSink* odbc_tbl_sink = new OdbcTableSink(pool, row_desc, output_exprs);
         sink->reset(odbc_tbl_sink);
         break;
     }
@@ -168,9 +186,9 @@ Status DataSink::init(const TDataSink& thrift_sink) {
 }
 
 Status DataSink::prepare(RuntimeState* state) {
-    _expr_mem_tracker = MemTracker::CreateTracker(
-            -1, _name + ":Expr:" + std::to_string(state->load_job_id()),
-            state->instance_mem_tracker());
+    _expr_mem_tracker =
+            MemTracker::CreateTracker(-1, _name + ":Expr:" + std::to_string(state->load_job_id()),
+                                      state->instance_mem_tracker());
     return Status::OK();
 }
 

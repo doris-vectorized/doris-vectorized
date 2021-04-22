@@ -24,6 +24,7 @@
 #include <vec/columns/column_nullable.h>
 #include <vec/common/assert_cast.h>
 #include <vec/data_types/data_types_number.h>
+#include <vec/io/io_helper.h>
 
 #include <array>
 
@@ -57,15 +58,13 @@ public:
         data(place).count += data(rhs).count;
     }
 
-    // void serialize(ConstAggregateDataPtr place, WriteBuffer & buf) const override
-    // {
-    //     writeVarUInt(data(place).count, buf);
-    // }
+    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
+        writeVarUInt(data(place).count, buf);
+    }
 
-    // void deserialize(AggregateDataPtr place, ReadBuffer & buf, Arena *) const override
-    // {
-    //     readVarUInt(data(place).count, buf);
-    // }
+    void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
+        readVarUInt(data(place).count, buf);
+    }
 
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
         assert_cast<ColumnUInt64&>(to).getData().push_back(data(place).count);
@@ -102,15 +101,13 @@ public:
         data(place).count += data(rhs).count;
     }
 
-    // void serialize(ConstAggregateDataPtr place, WriteBuffer & buf) const override
-    // {
-    //     writeVarUInt(data(place).count, buf);
-    // }
+    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
+        writeVarUInt(data(place).count, buf);
+    }
 
-    // void deserialize(AggregateDataPtr place, ReadBuffer & buf, Arena *) const override
-    // {
-    //     readVarUInt(data(place).count, buf);
-    // }
+    void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
+        readVarUInt(data(place).count, buf);
+    }
 
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
         assert_cast<ColumnUInt64&>(to).getData().push_back(data(place).count);

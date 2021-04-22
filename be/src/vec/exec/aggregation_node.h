@@ -16,6 +16,8 @@
 // under the License.
 
 #pragma once
+#include <functional>
+
 #include "exec/exec_node.h"
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/common/columns_hashing.h"
@@ -140,6 +142,16 @@ private:
 
     Status _execute_with_serialized_key(Block* block);
     Status _get_with_serialized_key_result(RuntimeState* state, Block* block, bool* eos);
+
+    using vectorized_execute = std::function<Status(Block* block)>;
+    using vectorized_get_result =
+            std::function<Status(RuntimeState* state, Block* block, bool* eos)>;
+    struct executor {
+        vectorized_execute execute;
+        vectorized_get_result get_result;
+    };
+
+    executor _executor;
 };
 } // namespace vectorized
 } // namespace doris

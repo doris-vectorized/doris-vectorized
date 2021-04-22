@@ -83,6 +83,11 @@ public:
     void clear_cache(google::protobuf::RpcController* controller, const PClearCacheRequest* request,
                      PCacheResponse* response, google::protobuf::Closure* done) override;
 
+    void transmit_block(::google::protobuf::RpcController* controller,
+                        const ::doris::PTransmitDataParams* request,
+                        ::doris::PTransmitDataResult* response,
+                        ::google::protobuf::Closure* done) override;
+
 private:
     Status _exec_plan_fragment(const std::string& s_request);
 
