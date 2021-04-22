@@ -44,14 +44,15 @@ public:
     void destroy(AggregateDataPtr place);
 
     // agg_function
-    // void execute_single_add(int row_size, AggregateDataPtr place);
-    void execute_single_add(Block* block, AggregateDataPtr place);
+    void execute_single_add(Block* block, AggregateDataPtr place, Arena* arena = nullptr);
+
+    void execute_batch_add(Block* block, size_t offset, AggregateDataPtr* places,
+                           Arena* arena = nullptr);
+
+    void execute_single_merge(AggregateDataPtr place, ConstAggregateDataPtr rhs,
+                              Arena* arena = nullptr);
 
     void insert_result_info(AggregateDataPtr place, IColumn* column);
-
-    // void execute_add(int row_size, AggregateDataPtr* places, size_t place_offset);
-
-    void execute_batch_add(Block* block, size_t offset, AggregateDataPtr* places, Arena* arena);
 
     DataTypePtr& data_type() { return _data_type; }
 

@@ -44,6 +44,7 @@
 #include "util/pretty_printer.h"
 #include "util/uid_util.h"
 #include "vec/core/block.h"
+#include "vec/exec/vexchange_node.h"
 #include "vec/sink/data_sink.h"
 
 namespace doris {
@@ -133,10 +134,10 @@ Status PlanFragmentExecutor::prepare(const TExecPlanFragmentParams& request,
         bytes_limit = _exec_env->process_mem_tracker()->limit();
     }
     // NOTE: this MemTracker only for olap
-    _mem_tracker = MemTracker::CreateTracker(
-            bytes_limit,
-            "PlanFragmentExecutor:" + print_id(_query_id) + ":" + print_id(params.fragment_instance_id),
-            _exec_env->process_mem_tracker());
+    _mem_tracker = MemTracker::CreateTracker(bytes_limit,
+                                             "PlanFragmentExecutor:" + print_id(_query_id) + ":" +
+                                                     print_id(params.fragment_instance_id),
+                                             _exec_env->process_mem_tracker());
     _runtime_state->set_fragment_mem_tracker(_mem_tracker);
 
     LOG(INFO) << "Using query memory limit: " << PrettyPrinter::print(bytes_limit, TUnit::BYTES);
@@ -162,7 +163,8 @@ Status PlanFragmentExecutor::prepare(const TExecPlanFragmentParams& request,
     if (params.__isset.debug_node_id) {
         DCHECK(params.__isset.debug_action);
         DCHECK(params.__isset.debug_phase);
-        ExecNode::set_debug_options(params.debug_node_id, params.debug_phase, params.debug_action, _plan);
+        ExecNode::set_debug_options(params.debug_node_id, params.debug_phase, params.debug_action,
+                                    _plan);
     }
 
     // set #senders of exchange nodes before calling Prepare()
@@ -173,6 +175,15 @@ Status PlanFragmentExecutor::prepare(const TExecPlanFragmentParams& request,
         int num_senders = find_with_default(params.per_exch_num_senders, exch_node->id(), 0);
         DCHECK_GT(num_senders, 0);
         static_cast<ExchangeNode*>(exch_node)->set_num_senders(num_senders);
+    }
+    // for vexchange node
+    exch_nodes.clear();
+    _plan->collect_nodes(TPlanNodeType::VEXCHANGE_NODE, &exch_nodes);
+    for (auto exch_node : exch_nodes) {
+        DCHECK_EQ(exch_node->type(), TPlanNodeType::VEXCHANGE_NODE);
+        int num_senders = find_with_default(params.per_exch_num_senders, exch_node->id(), 0);
+        DCHECK_GT(num_senders, 0);
+        static_cast<doris::vectorized::VExchangeNode*>(exch_node)->set_num_senders(num_senders);
     }
 
     RETURN_IF_ERROR(_plan->prepare(_runtime_state.get()));

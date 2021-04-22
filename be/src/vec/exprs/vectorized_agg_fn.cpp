@@ -55,7 +55,7 @@ Status AggFnEvaluator::prepare(RuntimeState* state, const RowDescriptor& desc, M
     DCHECK(intermediate_slot_desc != NULL);
     DCHECK(_intermediate_slot_desc == NULL);
     _output_slot_desc = output_slot_desc;
-    // 
+    //
     _intermediate_slot_desc = intermediate_slot_desc;
 
     Status status = VExpr::prepare(_input_exprs_ctxs, state, desc, mem_tracker);
@@ -98,13 +98,14 @@ void AggFnEvaluator::destroy(AggregateDataPtr place) {
     _function->destroy(place);
 }
 
-void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place) {
+void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place, Arena* arena) {
     std::vector<const IColumn*> column_arguments(_input_exprs_ctxs.size());
     auto columns = block->getColumns();
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
         int column_id = -1;
         _input_exprs_ctxs[i]->execute(block, &column_id);
-        column_arguments[i] = block->getByPosition(column_id).column->convertToFullColumnIfConst().get();
+        column_arguments[i] =
+                block->getByPosition(column_id).column->convertToFullColumnIfConst().get();
     }
     _function->addBatchSinglePlace(block->rows(), place, column_arguments.data(), nullptr);
 }
@@ -116,9 +117,15 @@ void AggFnEvaluator::execute_batch_add(Block* block, size_t offset, AggregateDat
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
         int column_id = -1;
         _input_exprs_ctxs[i]->execute(block, &column_id);
-        column_arguments[i] = block->getByPosition(column_id).column->convertToFullColumnIfConst().get();
+        column_arguments[i] =
+                block->getByPosition(column_id).column->convertToFullColumnIfConst().get();
     }
     _function->addBatch(block->rows(), places, offset, column_arguments.data(), arena);
+}
+
+void AggFnEvaluator::execute_single_merge(AggregateDataPtr place, ConstAggregateDataPtr rhs,
+                                          Arena* arena) {
+    _function->merge(place, rhs, arena);
 }
 
 void AggFnEvaluator::insert_result_info(AggregateDataPtr place, IColumn* column) {
