@@ -21,25 +21,28 @@
 
 // #include <IO/WriteHelpers.h>
 // #include <IO/ReadHelpers.h>
+#include <istream>
+#include <ostream>
 
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/columns/column_vector.h"
 #include "vec/data_types/data_types_decimal.h"
 #include "vec/data_types/data_types_number.h"
+#include "vec/io/io_helper.h"
 
 namespace doris::vectorized {
 
 template <typename T>
 struct AggregateFunctionSumData {
-    T sum {};
+    T sum{};
 
     void add(T value) { sum += value; }
 
     void merge(const AggregateFunctionSumData& rhs) { sum += rhs.sum; }
 
-    void write(WriteBuffer& buf) const { writeBinary(sum, buf); }
+    void write(std::ostream& buf) const { writeBinary(sum, buf); }
 
-    void read(ReadBuffer& buf) { readBinary(sum, buf); }
+    void read(std::istream& buf) { readBinary(sum, buf); }
 
     T get() const { return sum; }
 };
@@ -50,8 +53,8 @@ struct AggregateFunctionSumKahanData {
             std::is_floating_point_v<T>,
             "It doesn't make sense to use Kahan Summation algorithm for non floating point types");
 
-    T sum {};
-    T compensation {};
+    T sum{};
+    T compensation{};
 
     void add(T value) {
         auto compensated_value = value - compensation;
@@ -122,15 +125,13 @@ public:
         this->data(place).merge(this->data(rhs));
     }
 
-    // void serialize(ConstAggregateDataPtr place, WriteBuffer & buf) const override
-    // {
-    //     this->data(place).write(buf);
-    // }
+    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
+        this->data(place).write(buf);
+    }
 
-    // void deserialize(AggregateDataPtr place, ReadBuffer & buf, Arena *) const override
-    // {
-    //     this->data(place).read(buf);
-    // }
+    void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
+        this->data(place).read(buf);
+    }
 
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
         auto& column = static_cast<ColVecResult&>(to);
