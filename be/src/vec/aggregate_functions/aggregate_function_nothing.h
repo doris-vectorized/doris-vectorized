@@ -21,6 +21,7 @@
 #include <vec/columns/column.h>
 #include <vec/data_types/data_type_nothing.h>
 #include <vec/data_types/data_type_nullable.h>
+#include <vec/io/io_helper.h>
 
 namespace doris::vectorized {
 
@@ -51,13 +52,9 @@ public:
 
     void merge(AggregateDataPtr, ConstAggregateDataPtr, Arena*) const override {}
 
-    // void serialize(ConstAggregateDataPtr, WriteBuffer &) const override
-    // {
-    // }
+    void serialize(ConstAggregateDataPtr, std::ostream&) const override {}
 
-    // void deserialize(AggregateDataPtr, ReadBuffer &, Arena *) const override
-    // {
-    // }
+    void deserialize(AggregateDataPtr, std::istream&, Arena*) const override {}
 
     void insertResultInto(ConstAggregateDataPtr, IColumn& to) const override { to.insertDefault(); }
 

@@ -61,10 +61,10 @@
 #include "runtime/runtime_state.h"
 #include "util/debug_util.h"
 #include "util/runtime_profile.h"
-
 #include "vec/core/block.h"
 #include "vec/exec/aggregation_node.h"
 #include "vec/exec/olap_scan_node.h"
+#include "vec/exec/vexchange_node.h"
 #include "vec/exprs/vexpr.h"
 
 namespace doris {
@@ -166,7 +166,8 @@ void ExecNode::push_down_predicate(RuntimeState* state, std::list<ExprContext*>*
 Status ExecNode::init(const TPlanNode& tnode, RuntimeState* state) {
     if (tnode.__isset.vconjunct) {
         _vconjunct_ctx_ptr.reset(new doris::vectorized::VExprContext*);
-        RETURN_IF_ERROR(doris::vectorized::VExpr::create_expr_tree(_pool, tnode.vconjunct, _vconjunct_ctx_ptr.get()));
+        RETURN_IF_ERROR(doris::vectorized::VExpr::create_expr_tree(_pool, tnode.vconjunct,
+                                                                   _vconjunct_ctx_ptr.get()));
     }
     RETURN_IF_ERROR(Expr::create_expr_trees(_pool, tnode.conjuncts, &_conjunct_ctxs));
 
@@ -414,6 +415,10 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
 
     case TPlanNodeType::EXCHANGE_NODE:
         *node = pool->add(new ExchangeNode(pool, tnode, descs));
+        return Status::OK();
+
+    case TPlanNodeType::VEXCHANGE_NODE:
+        *node = pool->add(new doris::vectorized::VExchangeNode(pool, tnode, descs));
         return Status::OK();
 
     case TPlanNodeType::SELECT_NODE:

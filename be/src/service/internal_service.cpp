@@ -30,6 +30,7 @@
 #include "service/brpc.h"
 #include "util/thrift_util.h"
 #include "util/uid_util.h"
+#include "vec/runtime/vdata_stream_mgr.h"
 
 namespace doris {
 
@@ -105,8 +106,8 @@ void PInternalServiceImpl<T>::tablet_writer_add_batch(google::protobuf::RpcContr
         int64_t execution_time_ns = 0;
         {
             SCOPED_RAW_TIMER(&execution_time_ns);
-            auto st = _exec_env->load_channel_mgr()->add_batch(
-                    *request, response->mutable_tablet_vec());
+            auto st = _exec_env->load_channel_mgr()->add_batch(*request,
+                                                               response->mutable_tablet_vec());
             if (!st.ok()) {
                 LOG(WARNING) << "tablet writer add batch failed, message=" << st.get_error_msg()
                              << ", id=" << request->id() << ", index_id=" << request->index_id()
@@ -251,6 +252,19 @@ void PInternalServiceImpl<T>::clear_cache(google::protobuf::RpcController* contr
                                           google::protobuf::Closure* done) {
     brpc::ClosureGuard closure_guard(done);
     _exec_env->result_cache()->clear(request, response);
+}
+
+template <typename T>
+void PInternalServiceImpl<T>::transmit_block(google::protobuf::RpcController* cntl_base,
+                                             const PTransmitDataParams* request,
+                                             PTransmitDataResult* response,
+                                             google::protobuf::Closure* done) {
+    VLOG_ROW << "transmit data: fragment_instance_id=" << print_id(request->finst_id())
+             << " node=" << request->node_id();
+    _exec_env->vstream_mgr()->transmit_block(request, &done);
+    if (done != nullptr) {
+        done->Run();
+    }
 }
 
 template class PInternalServiceImpl<PBackendService>;
