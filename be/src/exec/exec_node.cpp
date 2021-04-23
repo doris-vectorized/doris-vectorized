@@ -61,10 +61,12 @@
 #include "runtime/runtime_state.h"
 #include "util/debug_util.h"
 #include "util/runtime_profile.h"
+
 #include "vec/core/block.h"
 #include "vec/exec/aggregation_node.h"
 #include "vec/exec/olap_scan_node.h"
 #include "vec/exec/vexchange_node.h"
+#include "vec/exec/vsort_node.h"
 #include "vec/exprs/vexpr.h"
 
 namespace doris {
@@ -430,10 +432,14 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         return Status::OK();
 
     case TPlanNodeType::SORT_NODE:
-        if (tnode.sort_node.use_top_n) {
-            *node = pool->add(new TopNNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new vectorized::VSortNode(pool, tnode, descs));
         } else {
-            *node = pool->add(new SpillSortNode(pool, tnode, descs));
+            if (tnode.sort_node.use_top_n) {
+                *node = pool->add(new TopNNode(pool, tnode, descs));
+            } else {
+                *node = pool->add(new SpillSortNode(pool, tnode, descs));
+            }
         }
 
         return Status::OK();
