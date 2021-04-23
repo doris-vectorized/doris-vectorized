@@ -233,31 +233,31 @@ struct ColumnString::less {
     }
 };
 
-//void ColumnString::getPermutation(bool reverse, size_t limit, int /*nan_direction_hint*/, Permutation & res) const
-//{
-//    size_t s = offsets.size();
-//    res.resize(s);
-//    for (size_t i = 0; i < s; ++i)
-//        res[i] = i;
-//
-//    if (limit >= s)
-//        limit = 0;
-//
-//    if (limit)
-//    {
-//        if (reverse)
-//            std::partial_sort(res.begin(), res.begin() + limit, res.end(), less<false>(*this));
-//        else
-//            std::partial_sort(res.begin(), res.begin() + limit, res.end(), less<true>(*this));
-//    }
-//    else
-//    {
-//        if (reverse)
-//            std::sort(res.begin(), res.end(), less<false>(*this));
-//        else
-//            std::sort(res.begin(), res.end(), less<true>(*this));
-//    }
-//}
+void ColumnString::getPermutation(bool reverse, size_t limit, int /*nan_direction_hint*/, Permutation & res) const
+{
+    size_t s = offsets.size();
+    res.resize(s);
+    for (size_t i = 0; i < s; ++i)
+        res[i] = i;
+
+    if (limit >= s)
+        limit = 0;
+
+    if (limit)
+    {
+        if (reverse)
+            std::partial_sort(res.begin(), res.begin() + limit, res.end(), less<false>(*this));
+        else
+            std::partial_sort(res.begin(), res.begin() + limit, res.end(), less<true>(*this));
+    }
+    else
+    {
+        if (reverse)
+            std::sort(res.begin(), res.end(), less<false>(*this));
+        else
+            std::sort(res.begin(), res.end(), less<true>(*this));
+    }
+}
 
 ColumnPtr ColumnString::replicate(const Offsets& replicate_offsets) const {
     size_t col_size = size();
