@@ -32,6 +32,7 @@ namespace doris::vectorized {
 class AggregateFunctionSimpleFactory;
 void registerAggregateFunctionSum(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionCombinatorNull(AggregateFunctionSimpleFactory& factory);
+void registerAggregateFunctionMinMax(AggregateFunctionSimpleFactory& factory);
 
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
@@ -66,9 +67,11 @@ public:
             }
         }
         if (nullable) {
-            return nullable_aggregate_functions[name](name, argument_types, parameters);
+            return nullable_aggregate_functions[name] == nullptr ? nullptr :
+                nullable_aggregate_functions[name](name, argument_types, parameters);
         } else {
-            return aggregate_functions[name](name, argument_types, parameters);
+            return aggregate_functions[name] == nullptr ? nullptr : 
+            aggregate_functions[name](name, argument_types, parameters);
         }
     }
 
@@ -79,6 +82,7 @@ public:
         std::call_once(oc, [&]() {
             registerAggregateFunctionSum(instance);
             registerAggregateFunctionCombinatorNull(instance);
+            registerAggregateFunctionMinMax(instance);
         });
         return instance;
     }
