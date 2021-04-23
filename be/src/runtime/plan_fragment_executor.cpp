@@ -302,7 +302,7 @@ Status PlanFragmentExecutor::open_vectorized_internal() {
 
         if (block == NULL) {
             break;
-        }
+        } 
 
         SCOPED_TIMER(profile()->total_time_counter());
         SCOPED_CPU_TIMER(_fragment_cpu_timer);

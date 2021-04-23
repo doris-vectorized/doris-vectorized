@@ -198,6 +198,7 @@ void DataTypeDecimal<T>::serialize(const IColumn& column, PColumn* pcolumn) cons
     pcolumn->mutable_decimal_param()->set_precision(precision);
     pcolumn->mutable_decimal_param()->set_scale(scale);
 }
+
 template <typename T>
 void DataTypeDecimal<T>::deserialize(const PColumn& pcolumn, IColumn* column) const {
     std::string uncompressed;
