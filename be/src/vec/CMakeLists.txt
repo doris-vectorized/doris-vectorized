@@ -42,6 +42,7 @@ set(VEC_FILES
   core/column_with_type_and_name.cpp
   core/field.cpp
   core/field.cpp
+  core/sort_block.cpp
   data_types/data_type.cpp
   data_types/data_type_nothing.cpp
   data_types/data_type_nothing.cpp
@@ -55,6 +56,8 @@ set(VEC_FILES
   data_types/nested_utils.cpp
   exec/aggregation_node.cpp
   exec/olap_scan_node.cpp
+  exec/vsort_node.cpp
+  exec/vsort_exec_exprs.cpp
   exec/olap_scanner.cpp
   exec/vexchange_node.cpp
   exprs/vectorized_agg_fn.cpp
