@@ -122,6 +122,7 @@ private:
     TupleDescriptor* _output_tuple_desc;
 
     bool _needs_finalize;
+    bool _is_merge;
     std::unique_ptr<MemPool> _mem_pool;
 
     size_t _align_aggregate_states = 1;
@@ -138,7 +139,9 @@ private:
 private:
     Status _create_agg_status(AggregateDataPtr data);
     Status _get_without_key_result(RuntimeState* state, Block* block, bool* eos);
+    Status _serialize_without_key(RuntimeState* state, Block* block, bool* eos);
     Status _execute_without_key(Block* block);
+    Status _merge_without_key(Block* block);
 
     Status _execute_with_serialized_key(Block* block);
     Status _get_with_serialized_key_result(RuntimeState* state, Block* block, bool* eos);
