@@ -211,78 +211,78 @@ int ColumnNullable::compareAt(size_t n, size_t m, const IColumn& rhs_,
     return getNestedColumn().compareAt(n, m, nested_rhs, null_direction_hint);
 }
 
-//void ColumnNullable::getPermutation(bool reverse, size_t limit, int null_direction_hint, Permutation & res) const
-//{
-//    /// Cannot pass limit because of unknown amount of NULLs.
-//    getNestedColumn().getPermutation(reverse, 0, null_direction_hint, res);
-//
-//    if ((null_direction_hint > 0) != reverse)
-//    {
-//        /// Shift all NULL values to the end.
-//
-//        size_t read_idx = 0;
-//        size_t write_idx = 0;
-//        size_t end_idx = res.size();
-//
-//        if (!limit)
-//            limit = end_idx;
-//        else
-//            limit = std::min(end_idx, limit);
-//
-//        while (read_idx < limit && !isNullAt(res[read_idx]))
-//        {
-//            ++read_idx;
-//            ++write_idx;
-//        }
-//
-//        ++read_idx;
-//
-//        /// Invariants:
-//        ///  write_idx < read_idx
-//        ///  write_idx points to NULL
-//        ///  read_idx will be incremented to position of next not-NULL
-//        ///  there are range of NULLs between write_idx and read_idx - 1,
-//        /// We are moving elements from end to begin of this range,
-//        ///  so range will "bubble" towards the end.
-//        /// Relative order of NULL elements could be changed,
-//        ///  but relative order of non-NULLs is preserved.
-//
-//        while (read_idx < end_idx && write_idx < limit)
-//        {
-//            if (!isNullAt(res[read_idx]))
-//            {
-//                std::swap(res[read_idx], res[write_idx]);
-//                ++write_idx;
-//            }
-//            ++read_idx;
-//        }
-//    }
-//    else
-//    {
-//        /// Shift all NULL values to the beginning.
-//
-//        ssize_t read_idx = res.size() - 1;
-//        ssize_t write_idx = res.size() - 1;
-//
-//        while (read_idx >= 0 && !isNullAt(res[read_idx]))
-//        {
-//            --read_idx;
-//            --write_idx;
-//        }
-//
-//        --read_idx;
-//
-//        while (read_idx >= 0 && write_idx >= 0)
-//        {
-//            if (!isNullAt(res[read_idx]))
-//            {
-//                std::swap(res[read_idx], res[write_idx]);
-//                --write_idx;
-//            }
-//            --read_idx;
-//        }
-//    }
-//}
+void ColumnNullable::getPermutation(bool reverse, size_t limit, int null_direction_hint, Permutation & res) const
+{
+    /// Cannot pass limit because of unknown amount of NULLs.
+    getNestedColumn().getPermutation(reverse, 0, null_direction_hint, res);
+
+    if ((null_direction_hint > 0) != reverse)
+    {
+        /// Shift all NULL values to the end.
+
+        size_t read_idx = 0;
+        size_t write_idx = 0;
+        size_t end_idx = res.size();
+
+        if (!limit)
+            limit = end_idx;
+        else
+            limit = std::min(end_idx, limit);
+
+        while (read_idx < limit && !isNullAt(res[read_idx]))
+        {
+            ++read_idx;
+            ++write_idx;
+        }
+
+        ++read_idx;
+
+        /// Invariants:
+        ///  write_idx < read_idx
+        ///  write_idx points to NULL
+        ///  read_idx will be incremented to position of next not-NULL
+        ///  there are range of NULLs between write_idx and read_idx - 1,
+        /// We are moving elements from end to begin of this range,
+        ///  so range will "bubble" towards the end.
+        /// Relative order of NULL elements could be changed,
+        ///  but relative order of non-NULLs is preserved.
+
+        while (read_idx < end_idx && write_idx < limit)
+        {
+            if (!isNullAt(res[read_idx]))
+            {
+                std::swap(res[read_idx], res[write_idx]);
+                ++write_idx;
+            }
+            ++read_idx;
+        }
+    }
+    else
+    {
+        /// Shift all NULL values to the beginning.
+
+        ssize_t read_idx = res.size() - 1;
+        ssize_t write_idx = res.size() - 1;
+
+        while (read_idx >= 0 && !isNullAt(res[read_idx]))
+        {
+            --read_idx;
+            --write_idx;
+        }
+
+        --read_idx;
+
+        while (read_idx >= 0 && write_idx >= 0)
+        {
+            if (!isNullAt(res[read_idx]))
+            {
+                std::swap(res[read_idx], res[write_idx]);
+                --write_idx;
+            }
+            --read_idx;
+        }
+    }
+}
 //
 //void ColumnNullable::gather(ColumnGathererStream & gatherer)
 //{
