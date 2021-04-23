@@ -21,6 +21,7 @@
 #include "runtime/mem_pool.h"
 #include "runtime/row_batch.h"
 #include "vec/core/block.h"
+#include "vec/data_types/data_type_nullable.h"
 #include "vec/exprs/vexpr.h"
 #include "vec/exprs/vexpr_context.h"
 #include "vec/exprs/vslot_ref.h"
@@ -36,6 +37,7 @@ AggregationNode::AggregationNode(ObjectPool* pool, const TPlanNode& tnode,
           _output_tuple_id(tnode.agg_node.output_tuple_id),
           _output_tuple_desc(NULL),
           _needs_finalize(tnode.agg_node.need_finalize),
+          _is_merge(false),
           _agg_data() {}
 
 AggregationNode::~AggregationNode() {}
@@ -54,6 +56,10 @@ Status AggregationNode::init(const TPlanNode& tnode, RuntimeState* state) {
                 AggFnEvaluator::create(_pool, tnode.agg_node.aggregate_functions[i], &evaluator));
         _aggregate_evaluators.push_back(evaluator);
     }
+
+    auto agg_functions = tnode.agg_node.aggregate_functions;
+    _is_merge = std::any_of(agg_functions.begin(), agg_functions.end(),
+                            [](const auto& e) { return e.nodes[0].agg_expr.is_merge_agg; });
     return Status::OK();
 }
 
@@ -111,11 +117,23 @@ Status AggregationNode::prepare(RuntimeState* state) {
 
         _create_agg_status(_agg_data.without_key);
 
-        _executor.execute = std::bind<Status>(&AggregationNode::_execute_without_key, this,
-                                              std::placeholders::_1);
-        _executor.get_result = std::bind<Status>(&AggregationNode::_get_without_key_result, this,
-                                                 std::placeholders::_1, std::placeholders::_2,
-                                                 std::placeholders::_3);
+        if (_is_merge) {
+            _executor.execute = std::bind<Status>(&AggregationNode::_merge_without_key, this,
+                                                  std::placeholders::_1);
+        } else {
+            _executor.execute = std::bind<Status>(&AggregationNode::_execute_without_key, this,
+                                                  std::placeholders::_1);
+        }
+
+        if (_needs_finalize) {
+            _executor.get_result = std::bind<Status>(&AggregationNode::_get_without_key_result,
+                                                     this, std::placeholders::_1,
+                                                     std::placeholders::_2, std::placeholders::_3);
+        } else {
+            _executor.get_result = std::bind<Status>(&AggregationNode::_serialize_without_key, this,
+                                                     std::placeholders::_1, std::placeholders::_2,
+                                                     std::placeholders::_3);
+        }
 
     } else {
         _agg_data.init(AggregatedDataVariants::Type::serialized);
@@ -206,6 +224,7 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
         const auto column_type = block_schema[i].type;
         if (!column_type->equals(*data_types[i])) {
             DCHECK(column_type->isNullable());
+            DCHECK(((DataTypeNullable*)column_type.get())->getNestedType()->equals(*data_types[i]));
             DCHECK(!data_types[i]->isNullable());
             ColumnPtr ptr = std::move(columns[i]);
             ptr = makeNullable(ptr);
@@ -218,11 +237,73 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
     return Status::OK();
 }
 
+Status AggregationNode::_serialize_without_key(RuntimeState* state, Block* block, bool* eos) {
+    DCHECK(_agg_data.without_key != nullptr);
+    int agg_size = _aggregate_evaluators.size();
+
+    MutableColumns value_columns(agg_size);
+    std::vector<DataTypePtr> data_types(agg_size);
+
+    // will serialize data to string column
+    for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
+        data_types[i] = makeNullable(std::make_shared<DataTypeString>());
+        value_columns[i] = data_types[i]->createColumn();
+    }
+
+    // TODO: we could use pod char as buffer instead of ostream ?
+    std::ostringstream buf;
+    for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
+        _aggregate_evaluators[i]->function()->serialize(
+                _agg_data.without_key + _offsets_of_aggregate_states[i], buf);
+        value_columns[i]->insertData(buf.str().c_str(), buf.str().length());
+        buf.str().clear();
+    }
+    {
+        ColumnsWithTypeAndName data_with_schema;
+        for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
+            ColumnWithTypeAndName column_with_schema = {nullptr, data_types[i], ""};
+            data_with_schema.push_back(std::move(column_with_schema));
+        }
+        *block = Block(data_with_schema);
+    }
+
+    block->setColumns(std::move(value_columns));
+    *eos = true;
+    return Status::OK();
+}
+
 Status AggregationNode::_execute_without_key(Block* block) {
     DCHECK(_agg_data.without_key != nullptr);
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         _aggregate_evaluators[i]->execute_single_add(
                 block, _agg_data.without_key + _offsets_of_aggregate_states[i]);
+    }
+    return Status::OK();
+}
+
+Status AggregationNode::_merge_without_key(Block* block) {
+    DCHECK(_agg_data.without_key != nullptr);
+    std::unique_ptr<char[]> deserialize_buffer(new char[_total_size_of_aggregate_states]);
+    int rows = block->rows();
+    for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
+        auto column = block->getByPosition(i).column;
+        if (column->isNullable()) {
+            column = ((ColumnNullable*)column.get())->getNestedColumnPtr();
+        }
+        for (int j = 0; j < rows; ++j) {
+            std::string data_buffer;
+            StringRef ref = column->getDataAt(j);
+            data_buffer.assign(ref.data, ref.size);
+            std::istringstream buf(data_buffer);
+
+            _aggregate_evaluators[i]->function()->deserialize(
+                    deserialize_buffer.get() + _offsets_of_aggregate_states[i], buf,
+                    &_agg_arena_pool);
+
+            _aggregate_evaluators[i]->function()->merge(
+                    _agg_data.without_key + _offsets_of_aggregate_states[i],
+                    deserialize_buffer.get() + _offsets_of_aggregate_states[i], &_agg_arena_pool);
+        }
     }
     return Status::OK();
 }
