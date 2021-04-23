@@ -137,12 +137,23 @@ Status AggregationNode::prepare(RuntimeState* state) {
 
     } else {
         _agg_data.init(AggregatedDataVariants::Type::serialized);
+        if (_is_merge) {
+            _executor.execute = std::bind<Status>(&AggregationNode::_merge_with_serialized_key,
+                                                  this, std::placeholders::_1);
+        } else {
+            _executor.execute = std::bind<Status>(&AggregationNode::_execute_with_serialized_key,
+                                                  this, std::placeholders::_1);
+        }
 
-        _executor.execute = std::bind<Status>(&AggregationNode::_execute_with_serialized_key, this,
-                                              std::placeholders::_1);
-        _executor.get_result = std::bind<Status>(&AggregationNode::_get_with_serialized_key_result,
-                                                 this, std::placeholders::_1, std::placeholders::_2,
-                                                 std::placeholders::_3);
+        if (_needs_finalize) {
+            _executor.get_result = std::bind<Status>(
+                    &AggregationNode::_get_with_serialized_key_result, this, std::placeholders::_1,
+                    std::placeholders::_2, std::placeholders::_3);
+        } else {
+            _executor.get_result = std::bind<Status>(
+                    &AggregationNode::_serialize_with_serialized_key_result, this,
+                    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+        }
     }
 
     return Status::OK();
@@ -407,6 +418,132 @@ Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Blo
     }
     block->setColumns(std::move(columns));
     *eos = true;
+    return Status::OK();
+}
+
+Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* state, Block* block,
+                                                              bool* eos) {
+    DCHECK(_agg_data.serialized != nullptr);
+    using Method = AggregationMethodSerialized<AggregatedDataWithStringKey>;
+    using AggState = Method::State;
+
+    auto& method = *_agg_data.serialized;
+    auto& data = _agg_data.serialized->data;
+
+    int key_size = _probe_expr_ctxs.size();
+    int agg_size = _aggregate_evaluators.size();
+    MutableColumns value_columns(agg_size);
+    DataTypes value_data_types(agg_size);
+
+    MutableColumns key_columns;
+    for (int i = 0; i < key_size; ++i) {
+        key_columns.emplace_back(_probe_expr_ctxs[i]->root()->data_type()->createColumn());
+    }
+
+    // will serialize data to string column
+    for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
+        value_data_types[i] = makeNullable(std::make_shared<DataTypeString>());
+        value_columns[i] = value_data_types[i]->createColumn();
+    }
+
+    data.forEachValue([&](const auto& key, auto& mapped) {
+        // insert keys
+        method.insertKeyIntoColumns(key, key_columns, {});
+
+        std::ostringstream buf;
+        // serialize values
+        for (size_t i = 0; i < _aggregate_evaluators.size(); ++i) {
+            _aggregate_evaluators[i]->function()->serialize(
+                    mapped + _offsets_of_aggregate_states[i], buf);
+            value_columns[i]->insertData(buf.str().c_str(), buf.str().length());
+            buf.str().clear();
+        }
+    });
+
+    ColumnsWithTypeAndName columns_with_schema;
+    for (int i = 0; i < key_size; ++i) {
+        columns_with_schema.emplace_back(std::move(key_columns[i]),
+                                         _probe_expr_ctxs[i]->root()->data_type(), "");
+    }
+
+    for (int i = 0; i < agg_size; ++i) {
+        columns_with_schema.emplace_back(std::move(value_columns[i]), value_data_types[i], "");
+    }
+
+    *block = Block(columns_with_schema);
+    *eos = true;
+    return Status::OK();
+}
+
+Status AggregationNode::_merge_with_serialized_key(Block* block) {
+    DCHECK(!_probe_expr_ctxs.empty());
+    // now we only support serialized key
+    // TODO:
+    DCHECK(_agg_data.serialized != nullptr);
+
+    using Method = AggregationMethodSerialized<AggregatedDataWithStringKey>;
+    using AggState = Method::State;
+
+    auto& method = *_agg_data.serialized;
+
+    size_t key_size = _probe_expr_ctxs.size();
+    ColumnRawPtrs key_columns(key_size);
+
+    for (size_t i = 0; i < key_size; ++i) {
+        int result_column_id = -1;
+        RETURN_IF_ERROR(_probe_expr_ctxs[i]->execute(block, &result_column_id));
+        key_columns[i] = block->getByPosition(result_column_id).column.get();
+    }
+
+    int rows = block->rows();
+    PODArray<AggregateDataPtr> places(rows);
+
+    AggState state(key_columns, {}, nullptr);
+
+    /// For all rows.
+    for (size_t i = 0; i < rows; ++i) {
+        AggregateDataPtr aggregate_data = nullptr;
+
+        auto emplace_result = state.emplaceKey(method.data, i, _agg_arena_pool);
+
+        /// If a new key is inserted, initialize the states of the aggregate functions, and possibly something related to the key.
+        if (emplace_result.isInserted()) {
+            /// exception-safety - if you can not allocate memory or create states, then destructors will not be called.
+            emplace_result.setMapped(nullptr);
+
+            aggregate_data = _agg_arena_pool.alignedAlloc(_total_size_of_aggregate_states,
+                                                          _align_aggregate_states);
+            _create_agg_status(aggregate_data);
+
+            emplace_result.setMapped(aggregate_data);
+        } else
+            aggregate_data = emplace_result.getMapped();
+
+        places[i] = aggregate_data;
+        assert(places[i] != nullptr);
+    }
+
+    std::unique_ptr<char[]> deserialize_buffer(new char[_total_size_of_aggregate_states]);
+    for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
+        auto column = block->getByPosition(i + key_size).column;
+        if (column->isNullable()) {
+            column = ((ColumnNullable*)column.get())->getNestedColumnPtr();
+        }
+        for (int j = 0; j < rows; ++j) {
+            std::string data_buffer;
+            StringRef ref = column->getDataAt(j);
+            data_buffer.assign(ref.data, ref.size);
+            std::istringstream buf(data_buffer);
+
+            _aggregate_evaluators[i]->function()->deserialize(
+                    deserialize_buffer.get() + _offsets_of_aggregate_states[i], buf,
+                    &_agg_arena_pool);
+
+            _aggregate_evaluators[i]->function()->merge(
+                    places.data()[j] + _offsets_of_aggregate_states[i],
+                    deserialize_buffer.get() + _offsets_of_aggregate_states[i], &_agg_arena_pool);
+        }
+    }
     return Status::OK();
 }
 
