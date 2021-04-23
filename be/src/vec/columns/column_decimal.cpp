@@ -77,24 +77,24 @@ void ColumnDecimal<T>::updateHashWithValue(size_t n, SipHash& hash) const {
     hash.update(data[n]);
 }
 
-//template <typename T>
-//void ColumnDecimal<T>::getPermutation(bool reverse, size_t limit, int , IColumn::Permutation & res) const
-//{
-//#if 1 /// TODO: perf test
-//    if (data.size() <= std::numeric_limits<UInt32>::max())
-//    {
-//        PaddedPODArray<UInt32> tmp_res;
-//        permutation(reverse, limit, tmp_res);
-//
-//        res.resize(tmp_res.size());
-//        for (size_t i = 0; i < tmp_res.size(); ++i)
-//            res[i] = tmp_res[i];
-//        return;
-//    }
-//#endif
-//
-//    permutation(reverse, limit, res);
-//}
+template <typename T>
+void ColumnDecimal<T>::getPermutation(bool reverse, size_t limit, int , IColumn::Permutation & res) const
+{
+#if 1 /// TODO: perf test
+    if (data.size() <= std::numeric_limits<UInt32>::max())
+    {
+        PaddedPODArray<UInt32> tmp_res;
+        permutation(reverse, limit, tmp_res);
+
+        res.resize(tmp_res.size());
+        for (size_t i = 0; i < tmp_res.size(); ++i)
+            res[i] = tmp_res[i];
+        return;
+    }
+#endif
+
+    permutation(reverse, limit, res);
+}
 
 template <typename T>
 ColumnPtr ColumnDecimal<T>::permute(const IColumn::Permutation& perm, size_t limit) const {

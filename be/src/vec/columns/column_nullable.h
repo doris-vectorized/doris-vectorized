@@ -94,7 +94,7 @@ public:
     ColumnPtr permute(const Permutation& perm, size_t limit) const override;
     //    ColumnPtr index(const IColumn & indexes, size_t limit) const override;
     int compareAt(size_t n, size_t m, const IColumn& rhs_, int null_direction_hint) const override;
-    //    void getPermutation(bool reverse, size_t limit, int null_direction_hint, Permutation & res) const override;
+    void getPermutation(bool reverse, size_t limit, int null_direction_hint, Permutation & res) const override;
     void reserve(size_t n) override;
     size_t byteSize() const override;
     size_t allocatedBytes() const override;

@@ -17,7 +17,8 @@ Status VExchangeNode::init(const TPlanNode& tnode, RuntimeState* state) {
     if (!_is_merging) {
         return Status::OK();
     }
-    DCHECK(!_is_merging) << "now we don't support merge";
+//    DCHECK(!_is_merging) << "now we don't support merge";
+    _is_merging = false;
     // TODO: sort code
     return Status::OK();
 }
@@ -45,9 +46,11 @@ Status VExchangeNode::open(RuntimeState* state) {
 Status VExchangeNode::get_next(RuntimeState* state, RowBatch* row_batch, bool* eos) {
     return Status::NotSupported("Not Implemented VExchange Node::get_next scalar");
 }
+
 Status VExchangeNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     return _stream_recvr->get_next(block, eos);
 }
+
 Status VExchangeNode::close(RuntimeState* state) {
     if (_stream_recvr != nullptr) {
         _stream_recvr->close();

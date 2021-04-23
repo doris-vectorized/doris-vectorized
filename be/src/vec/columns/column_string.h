@@ -209,7 +209,7 @@ public:
     int compareAtWithCollation(size_t n, size_t m, const IColumn& rhs_,
                                const Collator& collator) const;
 
-    //    void getPermutation(bool reverse, size_t limit, int nan_direction_hint, Permutation & res) const override;
+    void getPermutation(bool reverse, size_t limit, int nan_direction_hint, Permutation & res) const override;
 
     /// Sorting with respect of collation.
     void getPermutationWithCollation(const Collator& collator, bool reverse, size_t limit,
