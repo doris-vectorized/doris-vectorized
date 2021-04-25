@@ -4,6 +4,8 @@
 
 #include "exec/exec_node.h"
 
+#include "vec/exec/vsort_exec_exprs.h"
+
 namespace doris {
 namespace vectorized {
 class VDataStreamRecvr;
@@ -30,6 +32,11 @@ private:
     RowDescriptor _input_row_desc;
     RuntimeProfile::Counter* _convert_row_batch_timer;
     std::shared_ptr<QueryStatisticsRecvr> _sub_plan_query_statistics_recvr;
+
+    // use in merge sort
+    VSortExecExprs _vsort_exec_exprs;
+    std::vector<bool> _is_asc_order;
+    std::vector<bool> _nulls_first;
 };
 } // namespace vectorized
 } // namespace doris
