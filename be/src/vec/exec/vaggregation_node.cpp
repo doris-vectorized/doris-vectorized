@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/exec/aggregation_node.h"
+#include "vec/exec/vaggregation_node.h"
 
 #include "exec/exec_node.h"
 #include "runtime/mem_pool.h"
