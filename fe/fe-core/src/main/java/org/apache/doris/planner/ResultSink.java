@@ -60,8 +60,7 @@ public class ResultSink extends DataSink {
 
     @Override
     protected TDataSink toThrift() {
-        TDataSink result = new TDataSink(ConnectContext.get().getSessionVariable().enableVectorizedEngine() ?
-                TDataSinkType.VRESULT_SINK : TDataSinkType.RESULT_SINK);
+        TDataSink result = new TDataSink(TDataSinkType.RESULT_SINK);
         TResultSink tResultSink = new TResultSink();
         tResultSink.setType(sinkType);
         if (fileSinkOptions != null) {

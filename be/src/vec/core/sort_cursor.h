@@ -7,7 +7,7 @@
 #include "vec/core/column_numbers.h"
 #include "vec/columns/column.h"
 #include "vec/columns/column_string.h"
-
+#include "vec/runtime/vdata_stream_recvr.h"
 
 namespace doris::vectorized
 {
@@ -41,17 +41,15 @@ struct SortCursorImpl
     /** Is there at least one column with Collator. */
     bool has_collation = false;
 
-    SortCursorImpl() {}
+    SortCursorImpl() = default;
 
     SortCursorImpl(const Block & block, const SortDescription & desc_, size_t order_ = 0)
-        : desc(desc_), sort_columns_size(desc.size()), order(order_), need_collation(desc.size())
-    {
+        : desc(desc_), sort_columns_size(desc.size()), order(order_), need_collation(desc.size()) {
         reset(block);
     }
 
     SortCursorImpl(const Columns & columns, const SortDescription & desc_, size_t order_ = 0)
-        : desc(desc_), sort_columns_size(desc.size()), order(order_), need_collation(desc.size())
-    {
+        : desc(desc_), sort_columns_size(desc.size()), order(order_), need_collation(desc.size()) {
         for (auto & column_desc : desc)
         {
             if (!column_desc.column_name.empty())
@@ -97,10 +95,27 @@ struct SortCursorImpl
     }
 
     bool isFirst() const { return pos == 0; }
-    bool isLast() const { return pos + 1 >= rows; }
+    virtual bool isLast() { return pos + 1 >= rows; }
     void next() { ++pos; }
 };
 
+struct ReceiveQueueSortCursorImpl : public SortCursorImpl {
+    ReceiveQueueSortCursorImpl() = default;
+    VDataStreamRecvr::SenderQueue* _sender_queue;
+
+    bool isLast() override {
+        if (pos + 1 >= rows) {
+            Block* block_ptr;
+            auto status = _sender_queue->get_batch(&block_ptr);
+            if (status.ok() && block_ptr != nullptr) {
+                SortCursorImpl::reset(*block_ptr);
+            } else {
+                return true;
+            }
+        }
+        return false;
+    }
+};
 
 /// For easy copying.
 struct SortCursor
