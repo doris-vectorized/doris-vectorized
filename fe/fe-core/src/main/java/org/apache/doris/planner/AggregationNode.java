@@ -205,9 +205,6 @@ public class AggregationNode extends PlanNode {
 
     private void updateplanNodeName() {
         StringBuilder sb = new StringBuilder();
-//        if (ConnectContext.get().getSessionVariable().enableVectorizedEngine()) {
-//            sb.append("V");
-//        }
         sb.append("AGGREGATE");
         sb.append(" (");
         if (aggInfo.isMerge()) {
