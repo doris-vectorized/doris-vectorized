@@ -266,8 +266,10 @@ Status AggregationNode::_serialize_without_key(RuntimeState* state, Block* block
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         _aggregate_evaluators[i]->function()->serialize(
                 _agg_data.without_key + _offsets_of_aggregate_states[i], buf);
-        value_columns[i]->insertData(buf.str().c_str(), buf.str().length());
-        buf.str().clear();
+        auto str_buffer = buf.str();
+        value_columns[i]->insertData(str_buffer.c_str(), str_buffer.length());
+        buf.str("");
+        buf.clear();
     }
     {
         ColumnsWithTypeAndName data_with_schema;
