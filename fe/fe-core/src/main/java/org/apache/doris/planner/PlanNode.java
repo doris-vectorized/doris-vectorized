@@ -31,6 +31,7 @@ import org.apache.doris.catalog.Type;
 import org.apache.doris.common.AnalysisException;
 import org.apache.doris.common.TreeNode;
 import org.apache.doris.common.UserException;
+import org.apache.doris.qe.ConnectContext;
 import org.apache.doris.thrift.TExplainLevel;
 import org.apache.doris.thrift.TFunctionBinaryType;
 import org.apache.doris.thrift.TPlan;
@@ -135,7 +136,8 @@ abstract public class PlanNode extends TreeNode<PlanNode> {
         this.tupleIds = Lists.newArrayList(tupleIds);
         this.tblRefIds = Lists.newArrayList(tupleIds);
         this.cardinality = -1;
-        this.planNodeName = planNodeName;
+        this.planNodeName = ConnectContext.get().getSessionVariable().enableVectorizedEngine() ?
+                "V" + planNodeName : planNodeName;
         this.numInstances = 1;
     }
 
@@ -145,7 +147,8 @@ abstract public class PlanNode extends TreeNode<PlanNode> {
         this.tupleIds = Lists.newArrayList();
         this.tblRefIds = Lists.newArrayList();
         this.cardinality = -1;
-        this.planNodeName = planNodeName;
+        this.planNodeName = ConnectContext.get().getSessionVariable().enableVectorizedEngine() ?
+                "V" + planNodeName : planNodeName;
         this.numInstances = 1;
     }
 
@@ -161,7 +164,8 @@ abstract public class PlanNode extends TreeNode<PlanNode> {
         this.conjuncts = Expr.cloneList(node.conjuncts, null);
         this.cardinality = -1;
         this.compactData = node.compactData;
-        this.planNodeName = planNodeName;
+        this.planNodeName = ConnectContext.get().getSessionVariable().enableVectorizedEngine() ?
+                "V" + planNodeName : planNodeName;
         this.numInstances = 1;
     }
 

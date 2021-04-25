@@ -62,6 +62,7 @@ public:
 
 private:
     class SenderQueue;
+    friend class ReceiveQueueSortCursorImpl;
 
     bool exceeds_limit(int batch_size) {
         return _num_buffered_bytes + batch_size > _total_buffer_limit;

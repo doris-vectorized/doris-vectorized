@@ -44,6 +44,7 @@ Status DataSink::create_data_sink(ObjectPool* pool, const TDataSink& thrift_sink
                                   const std::vector<TExpr>& output_exprs,
                                   const TPlanFragmentExecParams& params,
                                   const RowDescriptor& row_desc,
+                                  bool is_vec,
                                   boost::scoped_ptr<DataSink>* sink) {
     DataSink* tmp_sink = NULL;
 
@@ -57,25 +58,15 @@ Status DataSink::create_data_sink(ObjectPool* pool, const TDataSink& thrift_sink
                         ? params.send_query_statistics_with_every_batch
                         : false;
         // TODO: figure out good buffer size based on size of output row
-        tmp_sink = new DataStreamSender(pool, params.sender_id, row_desc, thrift_sink.stream_sink,
-                                        params.destinations, 16 * 1024,
-                                        send_query_statistics_with_every_batch);
-        // RETURN_IF_ERROR(sender->prepare(state->obj_pool(), thrift_sink.stream_sink));
-        sink->reset(tmp_sink);
-        break;
-    }
-    case TDataSinkType::VDATA_STREAM_SINK: {
-        if (!thrift_sink.__isset.stream_sink) {
-            return Status::InternalError("Missing data stream sink.");
+        if (is_vec) {
+            tmp_sink = new doris::vectorized::VDataStreamSender(
+                    pool, params.sender_id, row_desc, thrift_sink.stream_sink, params.destinations,
+                    16 * 1024, send_query_statistics_with_every_batch);
+        } else {
+            tmp_sink = new DataStreamSender(pool, params.sender_id, row_desc, thrift_sink.stream_sink,
+                                 params.destinations, 16 * 1024,
+                                 send_query_statistics_with_every_batch);
         }
-        bool send_query_statistics_with_every_batch =
-                params.__isset.send_query_statistics_with_every_batch
-                        ? params.send_query_statistics_with_every_batch
-                        : false;
-        // TODO: figure out good buffer size based on size of output row
-        tmp_sink = new doris::vectorized::VDataStreamSender(
-                pool, params.sender_id, row_desc, thrift_sink.stream_sink, params.destinations,
-                16 * 1024, send_query_statistics_with_every_batch);
         // RETURN_IF_ERROR(sender->prepare(state->obj_pool(), thrift_sink.stream_sink));
         sink->reset(tmp_sink);
         break;
@@ -86,18 +77,11 @@ Status DataSink::create_data_sink(ObjectPool* pool, const TDataSink& thrift_sink
         }
 
         // TODO: figure out good buffer size based on size of output row
-        tmp_sink = new ResultSink(row_desc, output_exprs, thrift_sink.result_sink, 1024,
-                                  config::is_vec);
-        sink->reset(tmp_sink);
-        break;
-    case TDataSinkType::VRESULT_SINK:
-        if (!thrift_sink.__isset.result_sink) {
-            return Status::InternalError("Missing data buffer sink.");
+        if (is_vec) {
+            tmp_sink = new doris::vectorized::ResultSink(row_desc, output_exprs, thrift_sink.result_sink, 1024);
+        } else {
+            tmp_sink = new ResultSink(row_desc, output_exprs, thrift_sink.result_sink, 1024, config::is_vec);
         }
-
-        // TODO: figure out good buffer size based on size of output row
-        tmp_sink = new doris::vectorized::ResultSink(row_desc, output_exprs,
-                                                     thrift_sink.result_sink, 1024);
         sink->reset(tmp_sink);
         break;
     case TDataSinkType::MEMORY_SCRATCH_SINK:
