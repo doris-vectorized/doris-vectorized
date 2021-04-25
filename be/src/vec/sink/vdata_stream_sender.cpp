@@ -8,6 +8,7 @@
 #include "runtime/exec_env.h"
 #include "runtime/mem_tracker.h"
 #include "runtime/runtime_state.h"
+#include "vec/common/sip_hash.h"
 #include "vec/runtime/vpartition_info.h"
 
 namespace doris::vectorized {
@@ -17,7 +18,7 @@ Status VDataStreamSender::Channel::init(RuntimeState* state) {
 
     _capacity = std::max(1, _buffer_size / std::max(_row_desc.get_row_size(), 1));
     //_batch.reset(new RowBatch(_row_desc, capacity, _parent->_mem_tracker.get()));
-    _block.reset(new Block());
+    _mutable_block.reset(new MutableBlock());
 
     if (_brpc_dest_addr.hostname.empty()) {
         LOG(WARNING) << "there is no brpc destination address's hostname"
@@ -46,13 +47,14 @@ Status VDataStreamSender::Channel::init(RuntimeState* state) {
 Status VDataStreamSender::Channel::send_current_block(bool eos) {
     {
         SCOPED_TIMER(_parent->_serialize_batch_timer);
-        _block->serialize(&_pb_block);
+        _pb_block.Clear();
+        _mutable_block->to_block().serialize(&_pb_block);
+        _mutable_block->clear();
         int uncompressed_bytes = _pb_block.ByteSize();
         int bytes = uncompressed_bytes;
         COUNTER_UPDATE(_parent->_bytes_sent_counter, bytes);
         COUNTER_UPDATE(_parent->_uncompressed_bytes_counter, uncompressed_bytes);
     }
-    _block->clear();
     RETURN_IF_ERROR(send_block(&_pb_block, eos));
     return Status::OK();
 }
@@ -87,6 +89,23 @@ Status VDataStreamSender::Channel::send_block(PBlock* block, bool eos) {
     return Status::OK();
 }
 
+Status VDataStreamSender::Channel::add_row(Block* block, int row) {
+    if (_fragment_instance_id.lo == -1) {
+        return Status::OK();
+    }
+    int batch_size = _parent->state()->batch_size();
+    if (block->rows() == batch_size) {
+        RETURN_IF_ERROR(send_current_block());
+    }
+    if (_mutable_block->rows() == 0) {
+        auto empty_block = block->cloneEmpty();
+        _mutable_block.reset(
+                new MutableBlock(empty_block.mutateColumns(), empty_block.getDataTypes()));
+    }
+    _mutable_block->add_row(block, row);
+    return Status::OK();
+}
+
 Status VDataStreamSender::Channel::close_wait(RuntimeState* state) {
     if (_need_close) {
         Status st = _wait_last_brpc();
@@ -96,7 +115,7 @@ Status VDataStreamSender::Channel::close_wait(RuntimeState* state) {
         _need_close = false;
         return st;
     }
-    _block.reset();
+    _mutable_block.reset();
     return Status::OK();
 }
 
@@ -106,8 +125,8 @@ Status VDataStreamSender::Channel::close_internal() {
     }
     VLOG_RPC << "Channel::close() instance_id=" << _fragment_instance_id
              << " dest_node=" << _dest_node_id
-             << " #rows= " << ((_block == nullptr) ? 0 : _block->rows());
-    if (_block != nullptr && _block->rows() > 0) {
+             << " #rows= " << ((_mutable_block == nullptr) ? 0 : _mutable_block->rows());
+    if (_mutable_block != nullptr && _mutable_block->rows() > 0) {
         RETURN_IF_ERROR(send_current_block(true));
     } else {
         RETURN_IF_ERROR(send_block(nullptr, true));
@@ -281,8 +300,32 @@ Status VDataStreamSender::send(RuntimeState* state, Block* block) {
         // 3. send batch
         // 4. switch proto
     } else if (_part_type == TPartitionType::HASH_PARTITIONED) {
-        // 1. caculate hash
-        // 2. dispatch rows to channel
+        // TODO: use vectorized hash caculate
+        int num_channels = _channels.size();
+        // will only copy schema
+        // we don't want send temp columns
+        auto send_block = *block;
+
+        std::vector<int> result(_partition_expr_ctxs.size());
+        int counter = 0;
+
+        for (auto ctx : _partition_expr_ctxs) {
+            RETURN_IF_ERROR(ctx->execute(block, &result[counter++]));
+        }
+
+        // caculate hash
+        int rows = block->rows();
+        for (int i = 0; i < rows; ++i) {
+            SipHash siphash;
+            for (int j = 0; j < result.size(); ++j) {
+                auto column = block->getByPosition(result[j]).column;
+                column->updateHashWithValue(i, siphash);
+            }
+            auto target_channel_id = siphash.get64() % num_channels;
+            RETURN_IF_ERROR(_channels[target_channel_id]->add_row(&send_block, i));
+        }
+        return Status::OK();
+
     } else if (_part_type == TPartitionType::BUCKET_SHFFULE_HASH_PARTITIONED) {
         // 1. caculate hash
         // 2. dispatch rows to channel
