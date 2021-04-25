@@ -155,6 +155,8 @@ public:
     // if batch is nullptr, send the eof packet
     Status send_block(PBlock* block, bool eos = false);
 
+    Status add_row(Block* block, int row);
+
     Status send_current_block(bool eos = false);
 
     // Flush buffered rows and close channel. This function don't wait the response
@@ -212,7 +214,8 @@ private:
 
     // we're accumulating rows into this batch
     //boost::scoped_ptr<RowBatch> _batch;
-    std::unique_ptr<Block> _block;
+    // std::unique_ptr<Block> _block;
+    std::unique_ptr<MutableBlock> _mutable_block;
 
     bool _need_close;
     int _be_number;
