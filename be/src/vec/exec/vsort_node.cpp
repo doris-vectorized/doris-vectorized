@@ -79,7 +79,7 @@ Status VSortNode::get_next(RuntimeState* state, RowBatch* row_batch, bool* eos) 
 }
 
 Status VSortNode::get_next(RuntimeState* state, Block* block, bool* eos) {
-//    _sorted_blocks
+    SCOPED_TIMER(_runtime_profile->total_time_counter());
     if (_sorted_blocks.empty()) {
         *eos = true;
         return Status::OK();
@@ -88,7 +88,11 @@ Status VSortNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         _sorted_blocks.clear();
         return Status::OK();
     }
-    return merge_sort_read(state, block, eos);
+
+    auto status = merge_sort_read(state, block, eos);
+    if (*eos) COUNTER_SET(_rows_returned_counter, _num_rows_returned);
+
+    return status;
 }
 
 Status VSortNode::reset(RuntimeState* state) {
@@ -101,7 +105,6 @@ Status VSortNode::close(RuntimeState* state) {
         return Status::OK();
     }
     _vsort_exec_exprs.close(state);
-//    _sorter.reset();
     ExecNode::close(state);
     return Status::OK();
 }
@@ -157,7 +160,8 @@ Status VSortNode::pretreat_block(doris::vectorized::Block& block) {
         _sort_description[i].direction = _is_asc_order[i] ? 1 : -1;
         _sort_description[i].nulls_direction = _nulls_first[i] ? 1 : -1;
     }
-    sortBlock(block, _sort_description);
+
+    sortBlock(block, _sort_description, _offset + _limit);
 
     return Status::OK();
 }
@@ -200,14 +204,6 @@ Status VSortNode::merge_sort_read(doris::RuntimeState *state, doris::vectorized:
             _priority_queue.push(current);
         }
 
-//        ++total_merged_rows;
-//        if (limit && total_merged_rows == limit)
-//        {
-//            auto res = _sorted_blocks[0].cloneWithColumns(std::move(merged_columns));
-//            _sorted_blocks.clear();
-//            return res;
-//        }
-
         ++merged_rows;
         if (merged_rows == state->batch_size())
             break;
@@ -219,6 +215,11 @@ Status VSortNode::merge_sort_read(doris::RuntimeState *state, doris::vectorized:
     }
 
     Block merge_block = _sorted_blocks[0].cloneWithColumns(std::move(merged_columns));
+    _num_rows_returned += merge_block.rows();
+    if (reached_limit()) {
+        merge_block.set_num_rows(merge_block.rows() - (_num_rows_returned - _limit));
+        *eos = true;
+    }
     merge_block.swap(*block);
 
     return Status::OK();
