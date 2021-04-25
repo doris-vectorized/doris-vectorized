@@ -23,6 +23,7 @@ import org.apache.doris.ha.BDBHA;
 import org.apache.doris.ha.BDBStateChangeListener;
 import org.apache.doris.ha.HAProtocol;
 
+import org.apache.commons.lang.StringUtils;
 import com.sleepycat.je.Database;
 import com.sleepycat.je.DatabaseConfig;
 import com.sleepycat.je.DatabaseException;
@@ -340,12 +341,11 @@ public class BDBEnvironment {
         if (names != null) {
             for (String name : names) {
                 // We don't count epochDB
-                if (name.equals("epochDB")) {
-                    continue;
+                if (StringUtils.isNumeric(name)) {
+                    ret.add(Long.parseLong(name));
                 }
-                
-                long db = Long.parseLong(name);
-                ret.add(db);
+//                long db = Long.parseLong(name);
+//                ret.add(db);
             }
         }
         
