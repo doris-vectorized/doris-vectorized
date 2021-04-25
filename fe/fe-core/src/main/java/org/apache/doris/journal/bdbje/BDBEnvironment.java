@@ -344,8 +344,6 @@ public class BDBEnvironment {
                 if (StringUtils.isNumeric(name)) {
                     ret.add(Long.parseLong(name));
                 }
-//                long db = Long.parseLong(name);
-//                ret.add(db);
             }
         }
         
