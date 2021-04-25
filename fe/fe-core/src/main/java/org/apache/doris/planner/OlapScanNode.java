@@ -648,8 +648,7 @@ public class OlapScanNode extends ScanNode {
                 keyColumnTypes.add(col.getDataType().toThrift());
             }
         }
-        msg.node_type = ConnectContext.get().getSessionVariable().enableVectorizedEngine() ? 
-            TPlanNodeType.VOLAP_SCAN_NODE : TPlanNodeType.OLAP_SCAN_NODE;
+        msg.node_type = TPlanNodeType.OLAP_SCAN_NODE;
         msg.olap_scan_node =
                 new TOlapScanNode(desc.getId().asInt(), keyColumnNames, keyColumnTypes, isPreAggregation);
         if (null != sortColumn) {

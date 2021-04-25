@@ -17,9 +17,10 @@ Status VExchangeNode::init(const TPlanNode& tnode, RuntimeState* state) {
     if (!_is_merging) {
         return Status::OK();
     }
-//    DCHECK(!_is_merging) << "now we don't support merge";
-    _is_merging = false;
-    // TODO: sort code
+
+    RETURN_IF_ERROR(_vsort_exec_exprs.init(tnode.exchange_node.sort_info, _pool));
+    _is_asc_order = tnode.exchange_node.sort_info.is_asc_order;
+    _nulls_first = tnode.exchange_node.sort_info.nulls_first;
     return Status::OK();
 }
 
@@ -33,8 +34,10 @@ Status VExchangeNode::prepare(RuntimeState* state) {
             config::exchg_node_buffer_size_bytes, _runtime_profile.get(), _is_merging,
             _sub_plan_query_statistics_recvr);
 
-    DCHECK(!_is_merging);
-    // TODO: sort code
+    if (_is_merging) {
+        RETURN_IF_ERROR(_vsort_exec_exprs.prepare(state, _row_descriptor, _row_descriptor,
+                expr_mem_tracker()));
+    }
     return Status::OK();
 }
 Status VExchangeNode::open(RuntimeState* state) {

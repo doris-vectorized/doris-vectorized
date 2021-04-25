@@ -135,7 +135,6 @@ ExecNode::ExecNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl
           _rows_returned_rate(NULL),
           _memory_used_counter(NULL),
           _is_closed(false) {
-    init_runtime_profile(print_plan_node_type(tnode.node_type));
 }
 
 ExecNode::~ExecNode() {}
@@ -166,6 +165,9 @@ void ExecNode::push_down_predicate(RuntimeState* state, std::list<ExprContext*>*
 }
 
 Status ExecNode::init(const TPlanNode& tnode, RuntimeState* state) {
+    init_runtime_profile(state->enable_vectorized_exec()? "V" + print_plan_node_type(tnode.node_type) :
+        print_plan_node_type(tnode.node_type));
+
     if (tnode.__isset.vconjunct) {
         _vconjunct_ctx_ptr.reset(new doris::vectorized::VExprContext*);
         RETURN_IF_ERROR(doris::vectorized::VExpr::create_expr_tree(_pool, tnode.vconjunct,
@@ -382,23 +384,25 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         return Status::OK();
 
     case TPlanNodeType::OLAP_SCAN_NODE:
-        *node = pool->add(new OlapScanNode(pool, tnode, descs));
-        return Status::OK();
-
-    case TPlanNodeType::VOLAP_SCAN_NODE:
-        *node = pool->add(new vectorized::VOlapScanNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new vectorized::VOlapScanNode(pool, tnode, descs));
+        } else {
+            *node = pool->add(new OlapScanNode(pool, tnode, descs));
+        }
         return Status::OK();
 
     case TPlanNodeType::AGGREGATION_NODE:
-        if (config::enable_partitioned_aggregation) {
-            *node = pool->add(new PartitionedAggregationNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new vectorized::AggregationNode(pool, tnode, descs));
         } else {
-            *node = pool->add(new AggregationNode(pool, tnode, descs));
+            if (config::enable_partitioned_aggregation) {
+                *node = pool->add(new PartitionedAggregationNode(pool, tnode, descs));
+            } else {
+                *node = pool->add(new AggregationNode(pool, tnode, descs));
+            }
         }
         return Status::OK();
-    case TPlanNodeType::VAGGREGATION_NODE:
-        *node = pool->add(new doris::vectorized::AggregationNode(pool, tnode, descs));
-        return Status::OK();
+
     case TPlanNodeType::HASH_JOIN_NODE:
         *node = pool->add(new HashJoinNode(pool, tnode, descs));
         return Status::OK();
@@ -416,11 +420,11 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         return Status::OK();
 
     case TPlanNodeType::EXCHANGE_NODE:
-        *node = pool->add(new ExchangeNode(pool, tnode, descs));
-        return Status::OK();
-
-    case TPlanNodeType::VEXCHANGE_NODE:
-        *node = pool->add(new doris::vectorized::VExchangeNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new doris::vectorized::VExchangeNode(pool, tnode, descs));
+        } else {
+            *node = pool->add(new ExchangeNode(pool, tnode, descs));
+        }
         return Status::OK();
 
     case TPlanNodeType::SELECT_NODE:
@@ -548,7 +552,6 @@ void ExecNode::collect_nodes(TPlanNodeType::type node_type, std::vector<ExecNode
 
 void ExecNode::collect_scan_nodes(vector<ExecNode*>* nodes) {
     collect_nodes(TPlanNodeType::OLAP_SCAN_NODE, nodes);
-    collect_nodes(TPlanNodeType::VOLAP_SCAN_NODE, nodes);
     collect_nodes(TPlanNodeType::BROKER_SCAN_NODE, nodes);
     collect_nodes(TPlanNodeType::ES_SCAN_NODE, nodes);
     collect_nodes(TPlanNodeType::ES_HTTP_SCAN_NODE, nodes);
@@ -565,8 +568,7 @@ void ExecNode::try_do_aggregate_serde_improve() {
         return;
     }
 
-    if (agg_node[0]->_children[0]->type() != TPlanNodeType::OLAP_SCAN_NODE &&
-        agg_node[0]->_children[0]->type() != TPlanNodeType::VOLAP_SCAN_NODE) {
+    if (agg_node[0]->_children[0]->type() != TPlanNodeType::OLAP_SCAN_NODE) {
         return;
     }
 

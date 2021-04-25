@@ -165,6 +165,7 @@ Status PlanFragmentExecutor::prepare(const TExecPlanFragmentParams& request,
                                     _plan);
     }
 
+
     // set #senders of exchange nodes before calling Prepare()
     std::vector<ExecNode*> exch_nodes;
     _plan->collect_nodes(TPlanNodeType::EXCHANGE_NODE, &exch_nodes);
@@ -172,17 +173,21 @@ Status PlanFragmentExecutor::prepare(const TExecPlanFragmentParams& request,
         DCHECK_EQ(exch_node->type(), TPlanNodeType::EXCHANGE_NODE);
         int num_senders = find_with_default(params.per_exch_num_senders, exch_node->id(), 0);
         DCHECK_GT(num_senders, 0);
-        static_cast<ExchangeNode*>(exch_node)->set_num_senders(num_senders);
+        if (_runtime_state->enable_vectorized_exec()) {
+            static_cast<doris::vectorized::VExchangeNode*>(exch_node)->set_num_senders(num_senders);
+        } else {
+            static_cast<ExchangeNode *>(exch_node)->set_num_senders(num_senders);
+        }
     }
-    // for vexchange node
-    exch_nodes.clear();
-    _plan->collect_nodes(TPlanNodeType::VEXCHANGE_NODE, &exch_nodes);
-    for (auto exch_node : exch_nodes) {
-        DCHECK_EQ(exch_node->type(), TPlanNodeType::VEXCHANGE_NODE);
-        int num_senders = find_with_default(params.per_exch_num_senders, exch_node->id(), 0);
-        DCHECK_GT(num_senders, 0);
-        static_cast<doris::vectorized::VExchangeNode*>(exch_node)->set_num_senders(num_senders);
-    }
+//    // for vexchange node
+//    exch_nodes.clear();
+//    _plan->collect_nodes(TPlanNodeType::VEXCHANGE_NODE, &exch_nodes);
+//    for (auto exch_node : exch_nodes) {
+//        DCHECK_EQ(exch_node->type(), TPlanNodeType::VEXCHANGE_NODE);
+//        int num_senders = find_with_default(params.per_exch_num_senders, exch_node->id(), 0);
+//        DCHECK_GT(num_senders, 0);
+//        static_cast<doris::vectorized::VExchangeNode*>(exch_node)->set_num_senders(num_senders);
+//    }
 
     RETURN_IF_ERROR(_plan->prepare(_runtime_state.get()));
     // set scan ranges
@@ -209,7 +214,7 @@ Status PlanFragmentExecutor::prepare(const TExecPlanFragmentParams& request,
     if (request.fragment.__isset.output_sink) {
         RETURN_IF_ERROR(DataSink::create_data_sink(obj_pool(), request.fragment.output_sink,
                                                    request.fragment.output_exprs, params,
-                                                   row_desc(), &_sink));
+                                                   row_desc(), runtime_state()->enable_vectorized_exec(), &_sink));
         RETURN_IF_ERROR(_sink->prepare(runtime_state()));
 
         RuntimeProfile* sink_profile = _sink->profile();
