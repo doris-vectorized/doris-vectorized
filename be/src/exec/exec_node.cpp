@@ -63,8 +63,8 @@
 #include "util/runtime_profile.h"
 
 #include "vec/core/block.h"
-#include "vec/exec/aggregation_node.h"
-#include "vec/exec/olap_scan_node.h"
+#include "vec/exec/vaggregation_node.h"
+#include "vec/exec/volap_scan_node.h"
 #include "vec/exec/vexchange_node.h"
 #include "vec/exec/vsort_node.h"
 #include "vec/exprs/vexpr.h"

@@ -51,5 +51,6 @@ private:
     OlapScanNode* _parent;
     RuntimeProfile* _profile;
 };
+
 } // namespace vectorized
 } // namespace doris

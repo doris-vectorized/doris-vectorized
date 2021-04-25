@@ -15,12 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/exec/olap_scanner.h"
+#include "vec/exec/volap_scanner.h"
 
 #include "vec/columns/column_vector.h"
 #include "vec/common/assert_cast.h"
 #include "vec/core/block.h"
-#include "vec/exec/olap_scan_node.h"
+#include "vec/exec/volap_scan_node.h"
 #include "vec/exprs/vexpr_context.h"
 
 namespace doris::vectorized {
