@@ -696,4 +696,26 @@ void Block::serialize(PBlock* pblock) const {
     }
 }
 
+int MutableBlock::rows() {
+    for (const auto& column : _columns)
+        if (column) return column->size();
+
+    return 0;
+}
+
+void MutableBlock::add_row(const Block* block, int row) {
+    auto& src_columns_with_schema = block->getColumnsWithTypeAndName();
+    for (int i = 0; i < _columns.size(); ++i) {
+        _columns[i]->insertFrom(*src_columns_with_schema[i].column.get(), row);
+    }
+}
+
+Block MutableBlock::to_block() {
+    ColumnsWithTypeAndName columns_with_schema;
+    for (int i = 0; i < _columns.size(); ++i) {
+        columns_with_schema.emplace_back(std::move(_columns[i]), _data_types[i], "");
+    }
+    return columns_with_schema;
+}
+
 } // namespace doris::vectorized
