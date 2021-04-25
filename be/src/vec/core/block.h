@@ -158,7 +158,7 @@ public:
     std::string dumpData() const;
 
     static void filter_block(Block* block, int filter_conlumn_id, int column_to_keep);
-    // serialize block to PRowBatch 
+    // serialize block to PRowBatch
     void serialize(PBlock* pblock) const;
 
 private:
@@ -179,5 +179,38 @@ using BlocksPtrs = std::shared_ptr<std::vector<BlocksPtr>>;
 
 /// Calculate difference in structure of blocks and write description into output strings. NOTE It doesn't compare values of constant columns.
 // void getBlocksDifference(const Block & lhs, const Block & rhs, std::string & out_lhs_diff, std::string & out_rhs_diff);
+
+class MutableBlock {
+private:
+    MutableColumns _columns;
+    DataTypes _data_types;
+
+public:
+    MutableBlock() = default;
+    ~MutableBlock() = default;
+
+    MutableBlock(MutableColumns&& columns, DataTypes&& data_types)
+            : _columns(std::move(columns)), _data_types(std::move(data_types)) {}
+
+    int rows();
+
+    bool empty() { return rows() == 0; }
+
+    MutableColumns& mutable_columns() { return _columns; }
+
+    DataTypes& data_types() { return _data_types; }
+
+    Block to_block();
+
+    void add_row(const Block* block, int row);
+
+    void clear() {
+        _columns.clear();
+        _data_types.clear();
+    }
+
+    // TODO: use add_rows instead of this
+    // add_rows(Block* block,PODArray<Int32>& group, int group_num);
+};
 
 } // namespace doris::vectorized
