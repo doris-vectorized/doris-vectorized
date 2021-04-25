@@ -15,14 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/exec/olap_scan_node.h"
+#include "vec/exec/volap_scan_node.h"
 
 #include "gen_cpp/PlanNodes_types.h"
 #include "runtime/descriptors.h"
 #include "runtime/exec_env.h"
 #include "util/priority_thread_pool.hpp"
 #include "vec/core/block.h"
-#include "vec/exec/olap_scanner.h"
+#include "vec/exec/volap_scanner.h"
 #include "vec/exprs/vexpr.h"
 
 namespace doris::vectorized {

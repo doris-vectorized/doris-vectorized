@@ -18,7 +18,6 @@
 #pragma once
 
 #include "exec/olap_scan_node.h"
-#include "vec/exec/olap_scan_node.h"
 
 namespace doris {
 class ObjectPool;

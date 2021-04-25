@@ -54,11 +54,11 @@ set(VEC_FILES
   data_types/data_types_number.cpp
   data_types/get_least_supertype.cpp
   data_types/nested_utils.cpp
-  exec/aggregation_node.cpp
-  exec/olap_scan_node.cpp
+  exec/vaggregation_node.cpp
+  exec/volap_scan_node.cpp
   exec/vsort_node.cpp
   exec/vsort_exec_exprs.cpp
-  exec/olap_scanner.cpp
+  exec/volap_scanner.cpp
   exec/vexchange_node.cpp
   exprs/vectorized_agg_fn.cpp
   exprs/vectorized_fn_call.cpp
