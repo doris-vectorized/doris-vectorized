@@ -72,10 +72,9 @@ Status VSortNode::open(RuntimeState* state) {
 }
 
 Status VSortNode::get_next(RuntimeState* state, RowBatch* row_batch, bool* eos) {
-//    return Status::NotSupported("Not Implemented VSortNode::get_next scalar");
-//    row_batch = nullptr;
+    row_batch = nullptr;
     *eos = true;
-    return Status::OK();
+    return Status::NotSupported("Not Implemented VSortNode::get_next scalar");
 }
 
 Status VSortNode::get_next(RuntimeState* state, Block* block, bool* eos) {
