@@ -26,6 +26,9 @@ class PBlock;
 namespace vectorized {
 class Block;
 class VDataStreamMgr;
+class VSortedRunMerger;
+class VExprContext;
+
 class VDataStreamRecvr {
 public:
     VDataStreamRecvr(VDataStreamMgr* stream_mgr, const std::shared_ptr<MemTracker>& parent_tracker,
@@ -36,7 +39,8 @@ public:
 
     ~VDataStreamRecvr();
 
-    // TODO: merger
+    Status create_merger(const std::vector<VExprContext*>& ordering_expr, const std::vector<bool>& is_asc_order,
+            const std::vector<bool>& nulls_first, const size_t batch_size, int64_t limit, size_t offset);
 
     void add_batch(const PBlock& pblock, int sender_id, int be_number, int64_t packet_seq,
                    ::google::protobuf::Closure** done);
@@ -92,7 +96,8 @@ private:
     std::shared_ptr<MemTracker> _mem_tracker;
     std::vector<SenderQueue*> _sender_queues;
 
-    // TODO: declare merger
+    std::unique_ptr<VSortedRunMerger> _merger;
+
     ObjectPool _sender_queue_pool;
     RuntimeProfile* _profile;
 
