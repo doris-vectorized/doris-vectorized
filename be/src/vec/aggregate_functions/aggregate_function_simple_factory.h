@@ -81,8 +81,8 @@ public:
         static AggregateFunctionSimpleFactory instance;
         std::call_once(oc, [&]() {
             registerAggregateFunctionSum(instance);
-            registerAggregateFunctionCombinatorNull(instance);
             registerAggregateFunctionMinMax(instance);
+            registerAggregateFunctionCombinatorNull(instance);
         });
         return instance;
     }
