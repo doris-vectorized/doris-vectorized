@@ -3,8 +3,11 @@
 #include "gen_cpp/data.pb.h"
 #include "runtime/mem_tracker.h"
 #include "util/uid_util.h"
+
 #include "vec/core/block.h"
+#include "vec/core/sort_cursor.h"
 #include "vec/runtime/vdata_stream_mgr.h"
+#include "vec/runtime/vsorted_run_merger.h"
 
 namespace doris::vectorized {
 
@@ -219,6 +222,21 @@ VDataStreamRecvr::~VDataStreamRecvr() {
     DCHECK(_mgr == nullptr) << "Must call close()";
 }
 
+Status VDataStreamRecvr::create_merger(const std::vector<VExprContext*>& ordering_expr, const std::vector<bool>& is_asc_order,
+            const std::vector<bool>& nulls_first, const size_t batch_size, int64_t limit, size_t offset) {
+    DCHECK(_is_merging);
+    vector<BlockSupplier> child_block_suppliers;
+    // Create the merger that will a single stream of sorted rows.
+    _merger.reset(new VSortedRunMerger(ordering_expr, is_asc_order, nulls_first, batch_size, limit, offset, _profile));
+
+    for (int i = 0; i < _sender_queues.size(); ++i) {
+        child_block_suppliers.emplace_back(
+                std::bind(std::mem_fn(&SenderQueue::get_batch), _sender_queues[i], std::placeholders::_1));
+    }
+    RETURN_IF_ERROR(_merger->prepare(child_block_suppliers));
+    return Status::OK();
+}
+
 void VDataStreamRecvr::add_batch(const PBlock& pblock, int sender_id, int be_number,
                                  int64_t packet_seq, ::google::protobuf::Closure** done) {
     int use_sender_id = _is_merging ? sender_id : 0;
@@ -229,12 +247,18 @@ Status VDataStreamRecvr::get_next(Block* block, bool* eos) {
     // TODO: use merge
     block->clear();
     Block* res = nullptr;
-    RETURN_IF_ERROR(_sender_queues[0]->get_batch(&res));
-    if (res != nullptr) {
-        *block = *res;
+
+    if (!_is_merging) {
+        RETURN_IF_ERROR(_sender_queues[0]->get_batch(&res));
+        if (res != nullptr) {
+            *block = *res;
+        } else {
+            *eos = true;
+        }
     } else {
-        *eos = true;
+        RETURN_IF_ERROR(_merger->get_next(block, eos));
     }
+
     return Status::OK();
 }
 
@@ -258,8 +282,7 @@ void VDataStreamRecvr::close() {
     _mgr->deregister_recvr(fragment_instance_id(), dest_node_id());
     _mgr = nullptr;
 
-    // TODO:
-    // _merger.reset();
+     _merger.reset();
     // TODO: Maybe shared tracker doesn't need to be reset manually
     _mem_tracker.reset();
 }
