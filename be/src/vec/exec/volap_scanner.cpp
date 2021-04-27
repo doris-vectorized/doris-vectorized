@@ -99,6 +99,7 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
 }
 
 void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPtr>* columns) {
+    SCOPED_TIMER(_parent->_row_cursor_convert_timer);
     size_t slots_size = _query_slots.size();
     for (int i = 0; i < slots_size; ++i) {
         SlotDescriptor* slot_desc = _query_slots[i];
