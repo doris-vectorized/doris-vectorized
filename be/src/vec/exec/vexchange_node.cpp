@@ -9,6 +9,7 @@ namespace doris::vectorized {
 VExchangeNode::VExchangeNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
         : ExecNode(pool, tnode, descs),
           _num_senders(0),
+          _offset(tnode.exchange_node.__isset.offset ? tnode.exchange_node.offset : 0),
           _is_merging(tnode.exchange_node.__isset.sort_info),
           _stream_recvr(nullptr) {}
 
@@ -43,7 +44,13 @@ Status VExchangeNode::prepare(RuntimeState* state) {
 Status VExchangeNode::open(RuntimeState* state) {
     SCOPED_TIMER(_runtime_profile->total_time_counter());
     RETURN_IF_ERROR(ExecNode::open(state));
-    // TODO: sort
+
+     if (_is_merging) {
+        RETURN_IF_ERROR(_vsort_exec_exprs.open(state));
+        RETURN_IF_ERROR(_stream_recvr->create_merger(_vsort_exec_exprs.lhs_ordering_expr_ctxs(),
+                _is_asc_order, _nulls_first, state->batch_size(), _limit, _offset));
+    }
+
     return Status::OK();
 }
 Status VExchangeNode::get_next(RuntimeState* state, RowBatch* row_batch, bool* eos) {

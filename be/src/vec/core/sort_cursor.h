@@ -7,6 +7,7 @@
 #include "vec/core/column_numbers.h"
 #include "vec/columns/column.h"
 #include "vec/columns/column_string.h"
+#include "vec/exprs/vexpr_context.h"
 #include "vec/runtime/vdata_stream_recvr.h"
 
 namespace doris::vectorized
@@ -86,8 +87,8 @@ struct SortCursorImpl
                                    : column_desc.column_number;
             sort_columns.push_back(columns[column_number].get());
 
-            need_collation[j] = desc[j].collator != nullptr && typeid_cast<const ColumnString *>(sort_columns.back());    /// TODO Nullable(String)
-            has_collation |= need_collation[j];
+//            need_collation[j] = desc[j].collator != nullptr && typeid_cast<const ColumnString *>(sort_columns.back());    /// TODO Nullable(String)
+//            has_collation |= need_collation[j];
         }
 
         pos = 0;
@@ -95,26 +96,60 @@ struct SortCursorImpl
     }
 
     bool isFirst() const { return pos == 0; }
-    virtual bool isLast() { return pos + 1 >= rows; }
+    bool isLast() { return pos + 1 >= rows; }
     void next() { ++pos; }
+
+    virtual bool has_next_block() { return false; }
+    virtual Block* block_ptr() { return nullptr; }
 };
 
-struct ReceiveQueueSortCursorImpl : public SortCursorImpl {
-    ReceiveQueueSortCursorImpl() = default;
-    VDataStreamRecvr::SenderQueue* _sender_queue;
+using BlockSupplier = std::function<Status(Block **)>;
 
-    bool isLast() override {
-        if (pos + 1 >= rows) {
-            Block* block_ptr;
-            auto status = _sender_queue->get_batch(&block_ptr);
-            if (status.ok() && block_ptr != nullptr) {
-                SortCursorImpl::reset(*block_ptr);
-            } else {
-                return true;
-            }
+struct ReceiveQueueSortCursorImpl : public SortCursorImpl {
+    ReceiveQueueSortCursorImpl(const BlockSupplier& block_supplier, const std::vector<VExprContext*>& ordering_expr, const std::vector<bool>& is_asc_order,
+            const std::vector<bool>& nulls_first):
+        SortCursorImpl(), _ordering_expr(ordering_expr), _block_supplier(block_supplier){
+        sort_columns_size = ordering_expr.size();
+
+        desc.resize(ordering_expr.size());
+        for (int i = 0; i < desc.size(); i++) {
+            desc[i].direction = is_asc_order[i] ? 1 : -1;
+            desc[i].nulls_direction = nulls_first[i] ? 1 : -1;
         }
+        has_next_block();
+    }
+
+    bool has_next_block() override {
+        auto status = _block_supplier(&_block_ptr);
+        if (status.ok() && _block_ptr != nullptr) {
+            for (int i = 0; i < desc.size(); ++i) {
+                _ordering_expr[i]->execute(_block_ptr, &desc[i].column_number);
+            }
+            SortCursorImpl::reset(*_block_ptr);
+            return true;
+        }
+        _block_ptr = nullptr;
         return false;
     }
+
+    Block* block_ptr() override {
+        return _block_ptr;
+    }
+
+    size_t columns_num() const { return all_columns.size(); }
+
+    Block create_empty_blocks() const {
+        size_t num_columns = columns_num();
+        MutableColumns columns(num_columns);
+        for (size_t i = 0; i < num_columns; ++i)
+            columns[i] = all_columns[i]->cloneEmpty();
+        return _block_ptr->cloneWithColumns(std::move(columns));
+    }
+
+    const std::vector<VExprContext*>& _ordering_expr;
+    Block* _block_ptr = nullptr;
+    BlockSupplier _block_supplier{};
+    bool _is_eof = false;
 };
 
 /// For easy copying.
