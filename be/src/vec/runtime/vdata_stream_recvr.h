@@ -40,7 +40,7 @@ public:
     ~VDataStreamRecvr();
 
     Status create_merger(const std::vector<VExprContext*>& ordering_expr, const std::vector<bool>& is_asc_order,
-            const std::vector<bool>& nulls_first, const size_t batch_size, int64_t limit, size_t offset);
+            const std::vector<bool>& nulls_first, size_t batch_size, int64_t limit, size_t offset);
 
     void add_batch(const PBlock& pblock, int sender_id, int be_number, int64_t packet_seq,
                    ::google::protobuf::Closure** done);
@@ -72,7 +72,6 @@ private:
         return _num_buffered_bytes + batch_size > _total_buffer_limit;
     }
 
-    // TODO:
     // DataStreamMgr instance used to create this recvr. (Not owned)
     VDataStreamMgr* _mgr;
 

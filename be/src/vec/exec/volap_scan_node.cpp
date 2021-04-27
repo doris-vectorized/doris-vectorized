@@ -459,6 +459,7 @@ Status VOlapScanNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     Block* materialized_block = NULL;
     {
         std::unique_lock<std::mutex> l(_blocks_lock);
+        SCOPED_TIMER(_olap_wait_batch_queue_timer);
         while (_materialized_blocks.empty() && !_transfer_done) {
             if (state->is_cancelled()) {
                 _transfer_done = true;

@@ -44,7 +44,7 @@ class Block;
 // an input batch is processed.
 class VSortedRunMerger {
 public:
-    // Function that returns the next batch of rows from an input sorted run. The batch
+    // Function that returns the next block of rows from an input sorted run. The batch
     // is owned by the supplier (i.e. not VSortedRunMerger). eos is indicated by an NULL
     // batch being returned.
     VSortedRunMerger(const std::vector<VExprContext *>& ordering_expr, const std::vector<bool>& _is_asc_order,
@@ -87,10 +87,11 @@ protected:
     RuntimeProfile::Counter *_get_next_timer;
 
     // Times calls to get the next batch of rows from the input run.
-    RuntimeProfile::Counter *_get_next_batch_timer;
+    RuntimeProfile::Counter *_get_next_block_timer;
 
 private:
     void next_heap(SortCursor& current);
+    inline bool has_next_block(SortCursor& current);
 };
 
 }
