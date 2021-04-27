@@ -140,6 +140,11 @@ void OlapScanNode::_init_counter(RuntimeState* state) {
     _scanner_wait_batch_timer = ADD_TIMER(_runtime_profile, "ScannerBatchWaitTime");
     // time of scan thread to wait for worker thread of the thread pool
     _scanner_wait_worker_timer = ADD_TIMER(_runtime_profile, "ScannerWorkerWaitTime");
+
+    // time of node to wait for batch/block queue
+    _olap_wait_batch_queue_timer = ADD_TIMER(_runtime_profile, "BatchQueueWaitTime");
+    // time of row cursor to convert batch/block
+    _row_cursor_convert_timer = ADD_TIMER(_runtime_profile, "RowCursorConvertTime");
 }
 
 Status OlapScanNode::prepare(RuntimeState* state) {
@@ -226,6 +231,7 @@ Status OlapScanNode::get_next(RuntimeState* state, RowBatch* row_batch, bool* eo
     RowBatch* materialized_batch = NULL;
     {
         std::unique_lock<std::mutex> l(_row_batches_lock);
+        SCOPED_TIMER(_olap_wait_batch_queue_timer);
         while (_materialized_row_batches.empty() && !_transfer_done) {
             if (state->is_cancelled()) {
                 _transfer_done = true;

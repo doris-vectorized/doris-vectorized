@@ -376,6 +376,7 @@ Status OlapScanner::get_batch(RuntimeState* state, RowBatch* batch, bool* eof) {
 }
 
 void OlapScanner::_convert_row_to_tuple(Tuple* tuple) {
+    SCOPED_TIMER(_parent->_row_cursor_convert_timer);
     size_t slots_size = _query_slots.size();
     for (int i = 0; i < slots_size; ++i) {
         SlotDescriptor* slot_desc = _query_slots[i];
