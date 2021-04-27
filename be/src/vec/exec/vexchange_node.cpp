@@ -58,7 +58,13 @@ Status VExchangeNode::get_next(RuntimeState* state, RowBatch* row_batch, bool* e
 }
 
 Status VExchangeNode::get_next(RuntimeState* state, Block* block, bool* eos) {
-    return _stream_recvr->get_next(block, eos);
+    SCOPED_TIMER(runtime_profile()->total_time_counter());
+    auto status = _stream_recvr->get_next(block, eos);
+    if (block != nullptr) {
+        _num_rows_returned += block->rows();
+        COUNTER_SET(_rows_returned_counter, _num_rows_returned);
+    }
+    return status;
 }
 
 Status VExchangeNode::close(RuntimeState* state) {

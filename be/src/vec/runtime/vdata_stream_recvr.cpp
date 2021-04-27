@@ -223,7 +223,7 @@ VDataStreamRecvr::~VDataStreamRecvr() {
 }
 
 Status VDataStreamRecvr::create_merger(const std::vector<VExprContext*>& ordering_expr, const std::vector<bool>& is_asc_order,
-            const std::vector<bool>& nulls_first, const size_t batch_size, int64_t limit, size_t offset) {
+            const std::vector<bool>& nulls_first, size_t batch_size, int64_t limit, size_t offset) {
     DCHECK(_is_merging);
     vector<BlockSupplier> child_block_suppliers;
     // Create the merger that will a single stream of sorted rows.
