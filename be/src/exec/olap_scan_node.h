@@ -34,6 +34,8 @@
 #include "util/progress_updater.h"
 #include "util/spinlock.h"
 
+#include "vec/exec/volap_scanner.h"
+
 namespace doris {
 
 enum TransferStatus {
@@ -192,6 +194,7 @@ protected:
                         RuntimeProfile* profile);
 
     friend class OlapScanner;
+    friend class doris::vectorized::VOlapScanner;
 
     // Tuple id resolved in prepare() to set _tuple_desc;
     TupleId _tuple_id;
@@ -337,6 +340,9 @@ protected:
 
     RuntimeProfile::Counter* _scanner_wait_batch_timer = nullptr;
     RuntimeProfile::Counter* _scanner_wait_worker_timer = nullptr;
+
+    RuntimeProfile::Counter* _olap_wait_batch_queue_timer = nullptr;
+    RuntimeProfile::Counter* _row_cursor_convert_timer = nullptr;
 };
 
 } // namespace doris

@@ -56,10 +56,12 @@ doris::Status VCastExpr::prepare(doris::RuntimeState* state, const doris::RowDes
     _expr_name = fmt::format("(CAST {}, TO {})", child_name, _target_data_type_name);
     return Status::OK();
 }
+
 doris::Status VCastExpr::open(doris::RuntimeState* state, VExprContext* context) {
     RETURN_IF_ERROR(VExpr::open(state, context));
     return Status::OK();
 }
+
 void VCastExpr::close(doris::RuntimeState* state, VExprContext* context) {
     VExpr::close(state, context);
 }
