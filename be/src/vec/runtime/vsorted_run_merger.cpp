@@ -37,7 +37,7 @@ VSortedRunMerger::VSortedRunMerger(const std::vector<VExprContext *>& ordering_e
         :_ordering_expr(ordering_expr), _is_asc_order(is_asc_order), _nulls_first(nulls_first), _batch_size(batch_size),
         _limit(limit), _offset(offset){
     _get_next_timer = ADD_TIMER(profile, "MergeGetNext");
-    _get_next_batch_timer = ADD_TIMER(profile, "MergeGetNextBatch");
+    _get_next_block_timer = ADD_TIMER(profile, "MergeGetNextBlock");
 }
 
 Status VSortedRunMerger::prepare(const vector<BlockSupplier>& input_runs, bool parallel) {
@@ -60,6 +60,7 @@ Status VSortedRunMerger::prepare(const vector<BlockSupplier>& input_runs, bool p
 }
 
 Status VSortedRunMerger::get_next(Block* output_block, bool* eos) {
+    ScopedTimer<MonotonicStopWatch> timer(_get_next_timer);
     // Only have one receive data queue of data, no need to do merge and
     // copy the data of block.
     // return the data in receive data directly
@@ -68,7 +69,7 @@ Status VSortedRunMerger::get_next(Block* output_block, bool* eos) {
         while (_offset != 0 && current->block_ptr() != nullptr) {
             if (_offset >= current->rows - current->pos) {
                 _offset -= (current->rows - current->pos);
-                current->has_next_block();
+                has_next_block(current);
             } else {
                 current->pos += _offset;
                 _offset = 0;
@@ -78,7 +79,7 @@ Status VSortedRunMerger::get_next(Block* output_block, bool* eos) {
         if (current->isFirst()) {
             if (current->block_ptr() != nullptr) {
                 current->block_ptr()->swap(*output_block);
-                *eos = !current->has_next_block();
+                *eos = !has_next_block(current);
             } else {
                 *eos = true;
             }
@@ -90,7 +91,7 @@ Status VSortedRunMerger::get_next(Block* output_block, bool* eos) {
                             current->rows - current->pos);
                 }
                 current->block_ptr()->swap(*output_block);
-                *eos = !current->has_next_block();
+                *eos = !has_next_block(current);
             } else {
                 *eos = true;
             }
@@ -139,9 +140,14 @@ void VSortedRunMerger::next_heap(SortCursor& current) {
     if (!current->isLast()) {
         current->next();
         _priority_queue.push(current);
-    } else if (current->has_next_block()) {
+    } else if (has_next_block(current)) {
         _priority_queue.push(current);
     }
+}
+
+inline bool VSortedRunMerger::has_next_block(doris::vectorized::SortCursor &current) {
+    ScopedTimer<MonotonicStopWatch> timer(_get_next_block_timer);
+    return current->has_next_block();
 }
 
 } // namespace doris
