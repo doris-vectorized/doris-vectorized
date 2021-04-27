@@ -25,6 +25,7 @@ class OLAPReader;
 class RuntimeProfile;
 class Field;
 class RowBatch;
+
 namespace vectorized {
 class VOlapScanNode;
 
