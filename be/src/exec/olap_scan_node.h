@@ -33,7 +33,6 @@
 #include "runtime/vectorized_row_batch.h"
 #include "util/progress_updater.h"
 #include "util/spinlock.h"
-
 #include "vec/exec/volap_scanner.h"
 
 namespace doris {
@@ -140,7 +139,7 @@ protected:
     // In order to ensure the accuracy of the query result
     // only key column conjuncts will be remove as idle conjunct
     bool is_key_column(const std::string& key_name);
-    void remove_pushed_conjuncts(RuntimeState *state);
+    void remove_pushed_conjuncts(RuntimeState* state);
 
     Status start_scan(RuntimeState* state);
 
@@ -164,7 +163,8 @@ protected:
 
     template <typename T>
     static bool normalize_is_null_predicate(Expr* expr, SlotDescriptor* slot,
-            const std::string& is_null_str, ColumnValueRange<T>* range);
+                                            const std::string& is_null_str,
+                                            ColumnValueRange<T>* range);
 
     void transfer_thread(RuntimeState* state);
     void scanner_thread(OlapScanner* scanner);
@@ -181,17 +181,18 @@ protected:
 
     bool should_push_down_in_predicate(SlotDescriptor* slot, InPredicate* in_pred);
 
-    std::pair<bool, void*> should_push_down_eq_predicate(SlotDescriptor* slot, Expr* pred, int conj_idx, int child_idx);
+    std::pair<bool, void*> should_push_down_eq_predicate(SlotDescriptor* slot, Expr* pred,
+                                                         int conj_idx, int child_idx);
 
     template <typename T, typename ChangeFixedValueRangeFunc>
-    static Status change_fixed_value_range(ColumnValueRange <T> &range, PrimitiveType type, void *value,
-                                               const ChangeFixedValueRangeFunc& func);
+    static Status change_fixed_value_range(ColumnValueRange<T>& range, PrimitiveType type,
+                                           void* value, const ChangeFixedValueRangeFunc& func);
 
     static Status get_hints(const TPaloScanRange& scan_range, int block_row_count,
-                        bool is_begin_include, bool is_end_include,
-                        const std::vector<std::unique_ptr<OlapScanRange>>& scan_key_range,
-                        std::vector<std::unique_ptr<OlapScanRange>>* sub_scan_range,
-                        RuntimeProfile* profile);
+                            bool is_begin_include, bool is_end_include,
+                            const std::vector<std::unique_ptr<OlapScanRange>>& scan_key_range,
+                            std::vector<std::unique_ptr<OlapScanRange>>* sub_scan_range,
+                            RuntimeProfile* profile);
 
     friend class OlapScanner;
     friend class doris::vectorized::VOlapScanner;
@@ -342,7 +343,6 @@ protected:
     RuntimeProfile::Counter* _scanner_wait_worker_timer = nullptr;
 
     RuntimeProfile::Counter* _olap_wait_batch_queue_timer = nullptr;
-    RuntimeProfile::Counter* _row_cursor_convert_timer = nullptr;
 };
 
 } // namespace doris
