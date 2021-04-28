@@ -34,7 +34,6 @@
 #include "runtime/vectorized_row_batch.h"
 #include "util/progress_updater.h"
 #include "util/spinlock.h"
-
 #include "vec/exec/volap_scanner.h"
 
 namespace doris {
@@ -197,10 +196,10 @@ private:
                                                          int conj_idx, int child_idx);
 
     static Status get_hints(const TPaloScanRange& scan_range, int block_row_count,
-                        bool is_begin_include, bool is_end_include,
-                        const std::vector<std::unique_ptr<OlapScanRange>>& scan_key_range,
-                        std::vector<std::unique_ptr<OlapScanRange>>* sub_scan_range,
-                        RuntimeProfile* profile);
+                            bool is_begin_include, bool is_end_include,
+                            const std::vector<std::unique_ptr<OlapScanRange>>& scan_key_range,
+                            std::vector<std::unique_ptr<OlapScanRange>>* sub_scan_range,
+                            RuntimeProfile* profile);
 
     friend class OlapScanner;
     friend class doris::vectorized::VOlapScanner;
@@ -367,7 +366,6 @@ private:
     RuntimeProfile::Counter* _scanner_wait_worker_timer = nullptr;
 
     RuntimeProfile::Counter* _olap_wait_batch_queue_timer = nullptr;
-    RuntimeProfile::Counter* _row_cursor_convert_timer = nullptr;
 };
 
 } // namespace doris
