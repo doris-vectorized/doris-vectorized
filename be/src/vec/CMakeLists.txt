@@ -69,6 +69,9 @@ set(VEC_FILES
   exprs/vcast_expr.cpp
   functions/abs.cpp
   functions/comparison.cpp
+  functions/comparison_less.cpp
+  functions/comparison_equels.cpp
+  functions/comparison_greater.cpp
   functions/function.cpp
   functions/function_helpers.cpp
   functions/functions_logical.cpp

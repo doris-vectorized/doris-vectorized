@@ -87,7 +87,7 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
                                                 slot_desc->col_name()));
         }
         VLOG_ROW << "VOlapScanner output rows: " << block->rows();
-        
+
         if (_vconjunct_ctx != nullptr) {
             int result_column_id = -1;
             _vconjunct_ctx->execute(block, &result_column_id);
@@ -99,7 +99,6 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
 }
 
 void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPtr>* columns) {
-    SCOPED_TIMER(_parent->_row_cursor_convert_timer);
     size_t slots_size = _query_slots.size();
     for (int i = 0; i < slots_size; ++i) {
         SlotDescriptor* slot_desc = _query_slots[i];
