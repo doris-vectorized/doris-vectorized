@@ -180,6 +180,26 @@ public:
             this->nested_function->add(this->nestedPlace(place), &nested_column, row_num, arena);
         }
     }
+
+    void addBatchSinglePlace(size_t batch_size, AggregateDataPtr place, const IColumn** columns,
+                             Arena* arena) const override {
+        const ColumnNullable* column = assert_cast<const ColumnNullable*>(columns[0]);
+        bool has_null = column->has_null();
+
+        if (has_null) {
+            for (size_t i = 0; i < batch_size; ++i) {
+                if (!column->isNullAt(i)) {
+                    this->setFlag(place);
+                    this->add(place, columns, i, arena);
+                }
+            }
+        } else {
+            this->setFlag(place);
+            const IColumn* nested_column = &column->getNestedColumn();
+            this->nested_function->addBatchSinglePlace(batch_size, this->nestedPlace(place),
+                                                       &nested_column, arena);
+        }
+    }
 };
 
 template <bool result_is_nullable>

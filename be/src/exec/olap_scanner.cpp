@@ -358,9 +358,10 @@ Status OlapScanner::get_batch(RuntimeState* state, RowBatch* batch, bool* eof) {
                             config::doris_max_pushdown_conjuncts_return_rate) {
                             _use_pushdown_conjuncts = false;
                             VLOG_CRITICAL << "Stop Using PushDown Conjuncts. "
-                                    << "PushDownReturnRate: " << pushdown_return_rate << "%"
-                                    << " MaxPushDownReturnRate: "
-                                    << config::doris_max_pushdown_conjuncts_return_rate << "%";
+                                          << "PushDownReturnRate: " << pushdown_return_rate << "%"
+                                          << " MaxPushDownReturnRate: "
+                                          << config::doris_max_pushdown_conjuncts_return_rate
+                                          << "%";
                         }
                     }
                 }
@@ -376,7 +377,6 @@ Status OlapScanner::get_batch(RuntimeState* state, RowBatch* batch, bool* eof) {
 }
 
 void OlapScanner::_convert_row_to_tuple(Tuple* tuple) {
-    SCOPED_TIMER(_parent->_row_cursor_convert_timer);
     size_t slots_size = _query_slots.size();
     for (int i = 0; i < slots_size; ++i) {
         SlotDescriptor* slot_desc = _query_slots[i];

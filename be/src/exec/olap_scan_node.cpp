@@ -143,8 +143,6 @@ void OlapScanNode::_init_counter(RuntimeState* state) {
 
     // time of node to wait for batch/block queue
     _olap_wait_batch_queue_timer = ADD_TIMER(_runtime_profile, "BatchQueueWaitTime");
-    // time of row cursor to convert batch/block
-    _row_cursor_convert_timer = ADD_TIMER(_runtime_profile, "RowCursorConvertTime");
 }
 
 Status OlapScanNode::prepare(RuntimeState* state) {
@@ -595,10 +593,10 @@ Status OlapScanNode::build_scan_key() {
 }
 
 Status OlapScanNode::get_hints(const TPaloScanRange& scan_range, int block_row_count,
-                        bool is_begin_include, bool is_end_include,
-                        const std::vector<std::unique_ptr<OlapScanRange>>& scan_key_range,
-                        std::vector<std::unique_ptr<OlapScanRange>>* sub_scan_range,
-                        RuntimeProfile* profile) {
+                               bool is_begin_include, bool is_end_include,
+                               const std::vector<std::unique_ptr<OlapScanRange>>& scan_key_range,
+                               std::vector<std::unique_ptr<OlapScanRange>>* sub_scan_range,
+                               RuntimeProfile* profile) {
     auto tablet_id = scan_range.tablet_id;
     int32_t schema_hash = strtoul(scan_range.schema_hash.c_str(), NULL, 10);
     std::string err;
