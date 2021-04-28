@@ -15,16 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "vec/functions/functions_comparison.h"
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
-void registerFunctionComparisonEquals(SimpleFunctionFactory& factory);
-void registerFunctionComparisonGreater(SimpleFunctionFactory& factory);
-void registerFunctionComparisonLess(SimpleFunctionFactory& factory);
+using FunctionEquals = FunctionComparison<EqualsOp, NameEquals>;
+using FunctionNotEquals = FunctionComparison<NotEqualsOp, NameNotEquals>;
 
-void registerFunctionComparison(SimpleFunctionFactory& factory) {
-    registerFunctionComparisonEquals(factory);
-    registerFunctionComparisonGreater(factory);
-    registerFunctionComparisonLess(factory);
+void registerFunctionComparisonEquals(SimpleFunctionFactory& factory) {
+    factory.registerFunction<FunctionEquals>();
+    factory.registerFunction<FunctionNotEquals>();
 }
 } // namespace doris::vectorized
