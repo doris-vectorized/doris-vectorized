@@ -247,10 +247,18 @@ static inline void read(IColumn& column, Reader&& reader) {
     }
 }
 
+std::string DataTypeString::to_string(const IColumn& column, size_t row_num) const {
+    const StringRef& s =
+            assert_cast<const ColumnString&>(*column.convertToFullColumnIfConst().get())
+                    .getDataAt(row_num);
+    return s.toString();
+}
+
 void DataTypeString::serialize(const IColumn& column, PColumn* pcolumn) const {
     std::ostringstream buf;
     for (size_t i = 0; i < column.size(); ++i) {
-        const auto& s = assert_cast<const ColumnString&>(column).getDataAt(i);
+        const auto& s = assert_cast<const ColumnString&>(*column.convertToFullColumnIfConst().get())
+                                .getDataAt(i);
         writeStringBinary(s, buf);
     }
     write_binary(buf, pcolumn);

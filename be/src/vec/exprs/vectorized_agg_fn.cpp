@@ -131,5 +131,22 @@ void AggFnEvaluator::execute_single_merge(AggregateDataPtr place, ConstAggregate
 void AggFnEvaluator::insert_result_info(AggregateDataPtr place, IColumn* column) {
     _function->insertResultInto(place, *column);
 }
+std::string AggFnEvaluator::debug_string(const std::vector<AggFnEvaluator*>& exprs) {
+    std::stringstream out;
+    out << "[";
 
+    for (int i = 0; i < exprs.size(); ++i) {
+        out << (i == 0 ? "" : " ") << exprs[i]->debug_string();
+    }
+
+    out << "]";
+    return out.str();
+}
+
+std::string AggFnEvaluator::debug_string() const {
+    std::stringstream out;
+    out << "AggFnEvaluator(";
+    out << ")";
+    return out.str();
+}
 } // namespace doris::vectorized

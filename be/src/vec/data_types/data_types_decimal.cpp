@@ -52,6 +52,15 @@ bool DataTypeDecimal<T>::equals(const IDataType& rhs) const {
     return false;
 }
 
+template <typename T>
+std::string DataTypeDecimal<T>::to_string(const IColumn& column, size_t row_num) const {
+    T value = assert_cast<const ColumnType&>(*column.convertToFullColumnIfConst().get())
+                      .getData()[row_num];
+    std::ostringstream buf;
+    writeText(value, scale, buf);
+    return buf.str();
+}
+
 //template <typename T>
 //void DataTypeDecimal<T>::serializeText(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings &) const
 //{
@@ -190,7 +199,9 @@ template <typename T>
 void DataTypeDecimal<T>::serialize(const IColumn& column, PColumn* pcolumn) const {
     std::ostringstream buf;
     for (size_t i = 0; i < column.size(); ++i) {
-        const FieldType& x = assert_cast<const ColumnType&>(column).getElement(i);
+        const FieldType& x =
+                assert_cast<const ColumnType&>(*column.convertToFullColumnIfConst().get())
+                        .getElement(i);
         writeBinary(x, buf);
     }
 

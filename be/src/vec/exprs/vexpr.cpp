@@ -187,14 +187,14 @@ Status VExpr::open(const std::vector<VExprContext*>& ctxs, RuntimeState* state) 
 }
 
 Status VExpr::clone_if_not_exists(const std::vector<VExprContext*>& ctxs, RuntimeState* state,
-                                 std::vector<VExprContext*>* new_ctxs) {
+                                  std::vector<VExprContext*>* new_ctxs) {
     DCHECK(new_ctxs != NULL);
     if (!new_ctxs->empty()) {
         // 'ctxs' was already cloned into '*new_ctxs', nothing to do.
         DCHECK_EQ(new_ctxs->size(), ctxs.size());
-//        for (int i = 0; i < new_ctxs->size(); ++i) {
-//            DCHECK((*new_ctxs)[i]->_is_clone);
-//        }
+        //        for (int i = 0; i < new_ctxs->size(); ++i) {
+        //            DCHECK((*new_ctxs)[i]->_is_clone);
+        //        }
         return Status::OK();
     }
     new_ctxs->resize(ctxs.size());
@@ -203,4 +203,38 @@ Status VExpr::clone_if_not_exists(const std::vector<VExprContext*>& ctxs, Runtim
     }
     return Status::OK();
 }
+std::string VExpr::debug_string() const {
+    // TODO: implement partial debug string for member vars
+    std::stringstream out;
+    out << " type=" << _type.debug_string();
+    out << " codegen="
+        << "false";
+
+    if (!_children.empty()) {
+        out << " children=" << debug_string(_children);
+    }
+
+    return out.str();
+}
+
+std::string VExpr::debug_string(const std::vector<VExpr*>& exprs) {
+    std::stringstream out;
+    out << "[";
+
+    for (int i = 0; i < exprs.size(); ++i) {
+        out << (i == 0 ? "" : " ") << exprs[i]->debug_string();
+    }
+
+    out << "]";
+    return out.str();
+}
+
+std::string VExpr::debug_string(const std::vector<VExprContext*>& ctxs) {
+    std::vector<VExpr*> exprs;
+    for (int i = 0; i < ctxs.size(); ++i) {
+        exprs.push_back(ctxs[i]->root());
+    }
+    return debug_string(exprs);
+}
+
 } // namespace doris::vectorized

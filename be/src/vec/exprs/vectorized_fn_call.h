@@ -33,6 +33,8 @@ public:
         return pool->add(new VectorizedFnCall(*this));
     }
     virtual const std::string& expr_name() const override;
+    virtual std::string debug_string() const;
+    static std::string debug_string(const std::vector<VectorizedFnCall*>& exprs);
 
 private:
     FunctionBasePtr _function;

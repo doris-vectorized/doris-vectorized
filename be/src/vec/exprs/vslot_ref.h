@@ -35,6 +35,7 @@ public:
     }
 
     virtual const std::string& expr_name() const override;
+    virtual std::string debug_string() const;
 
 private:
     FunctionPtr _function;
