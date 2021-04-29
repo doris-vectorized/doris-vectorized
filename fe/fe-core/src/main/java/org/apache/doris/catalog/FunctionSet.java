@@ -49,7 +49,7 @@ public class FunctionSet {
     // on this map. Functions are sorted in a canonical order defined by
     // FunctionResolutionOrder.
     private final HashMap<String, List<Function>> functions;
-
+    private final HashMap<String, List<Function>> vectorizedFunctions;
     // For most build-in functions, it will return NullLiteral when params contain NullLiteral.
     // But a few functions need to handle NullLiteral differently, such as "if". It need to add
     // an attribute to LiteralExpr to mark null and check the attribute to decide whether to
@@ -62,6 +62,7 @@ public class FunctionSet {
 
     public FunctionSet() {
         functions = Maps.newHashMap();
+        vectorizedFunctions = Maps.newHashMap();
     }
 
     public void init() {
@@ -884,7 +885,7 @@ public class FunctionSet {
                     .build();
 
     public Function getFunction(Function desc, Function.CompareMode mode) {
-        List<Function> fns = functions.get(desc.functionName());
+        List<Function> fns = desc.isVectorized() ? vectorizedFunctions.get(desc.functionName()) : functions.get(desc.functionName());
         if (fns == null) {
             return null;
         }
@@ -954,8 +955,8 @@ public class FunctionSet {
         return true;
     }
 
-    public Function getFunction(String signatureString) {
-        for (List<Function> fns : functions.values()) {
+    public Function getFunction(String signatureString, boolean vectorized) {
+        for (List<Function> fns : vectorized ? vectorizedFunctions.values() : functions.values()) {
             for (Function f : fns) {
                 if (f.signatureString().equals(signatureString)) {
                     return f;
@@ -970,10 +971,14 @@ public class FunctionSet {
         if (getFunction(fn, Function.CompareMode.IS_INDISTINGUISHABLE) != null) {
             return false;
         }
-        List<Function> fns = functions.get(fn.functionName());
+        List<Function> fns = fn.isVectorized() ? vectorizedFunctions.get(fn.functionName()) : functions.get(fn.functionName());
         if (fns == null) {
             fns = Lists.newArrayList();
-            functions.put(fn.functionName(), fns);
+            if (fn.isVectorized()) {
+                vectorizedFunctions.put(fn.functionName(), fns);
+            } else {
+                functions.put(fn.functionName(), fns);
+            }
         }
         if (fns.add(fn)) {
             return true;
@@ -1433,6 +1438,16 @@ public class FunctionSet {
         // Avg
         // TODO: switch to CHAR(sizeof(AvgIntermediateType) when that becomes available
         addBuiltin(AggregateFunction.createBuiltin("avg",
+                Lists.<Type>newArrayList(Type.BIGINT), Type.DOUBLE, Type.VARCHAR,
+                prefix + "8avg_initEPN9doris_udf15FunctionContextEPNS1_9StringValE",
+                prefix + "10avg_updateIN9doris_udf9BigIntValEEEvPNS2_15FunctionContextERKT_PNS2_9StringValE",
+                prefix + "9avg_mergeEPN9doris_udf15FunctionContextERKNS1_9StringValEPS4_",
+                stringValSerializeOrFinalize,
+                prefix + "13avg_get_valueEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                prefix + "10avg_removeIN9doris_udf9BigIntValEEEvPNS2_15FunctionContextERKT_PNS2_9StringValE",
+                prefix + "12avg_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                false, true, false));
+        addBuiltin(AggregateFunction.createBuiltin("avg",
                 Lists.<Type>newArrayList(Type.BIGINT), Type.DOUBLE, Type.BIGINT,
                 prefix + "8avg_initEPN9doris_udf15FunctionContextEPNS1_9StringValE",
                 prefix + "10avg_updateIN9doris_udf9BigIntValEEEvPNS2_15FunctionContextERKT_PNS2_9StringValE",
@@ -1440,6 +1455,16 @@ public class FunctionSet {
                 stringValSerializeOrFinalize,
                 prefix + "13avg_get_valueEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                 prefix + "10avg_removeIN9doris_udf9BigIntValEEEvPNS2_15FunctionContextERKT_PNS2_9StringValE",
+                prefix + "12avg_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                false, true, false, true));
+        addBuiltin(AggregateFunction.createBuiltin("avg",
+                Lists.<Type>newArrayList(Type.DOUBLE), Type.DOUBLE, Type.VARCHAR,
+                prefix + "8avg_initEPN9doris_udf15FunctionContextEPNS1_9StringValE",
+                prefix + "10avg_updateIN9doris_udf9DoubleValEEEvPNS2_15FunctionContextERKT_PNS2_9StringValE",
+                prefix + "9avg_mergeEPN9doris_udf15FunctionContextERKNS1_9StringValEPS4_",
+                stringValSerializeOrFinalize,
+                prefix + "13avg_get_valueEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                prefix + "10avg_removeIN9doris_udf9DoubleValEEEvPNS2_15FunctionContextERKT_PNS2_9StringValE",
                 prefix + "12avg_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                 false, true, false));
         addBuiltin(AggregateFunction.createBuiltin("avg",
@@ -1451,6 +1476,16 @@ public class FunctionSet {
                 prefix + "13avg_get_valueEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                 prefix + "10avg_removeIN9doris_udf9DoubleValEEEvPNS2_15FunctionContextERKT_PNS2_9StringValE",
                 prefix + "12avg_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                false, true, false, true));
+        addBuiltin(AggregateFunction.createBuiltin("avg",
+                Lists.<Type>newArrayList(Type.DECIMAL), Type.DECIMAL, Type.VARCHAR,
+                prefix + "16decimal_avg_initEPN9doris_udf15FunctionContextEPNS1_9StringValE",
+                prefix + "18decimal_avg_updateEPN9doris_udf15FunctionContextERKNS1_10DecimalValEPNS1_9StringValE",
+                prefix + "17decimal_avg_mergeEPN9doris_udf15FunctionContextERKNS1_9StringValEPS4_",
+                stringValSerializeOrFinalize,
+                prefix + "21decimal_avg_get_valueEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                prefix + "18decimal_avg_removeEPN9doris_udf15FunctionContextERKNS1_10DecimalValEPNS1_9StringValE",
+                prefix + "20decimal_avg_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                 false, true, false));
         addBuiltin(AggregateFunction.createBuiltin("avg",
                 Lists.<Type>newArrayList(Type.DECIMAL), Type.DECIMAL, Type.DECIMAL,
@@ -1461,6 +1496,16 @@ public class FunctionSet {
                 prefix + "21decimal_avg_get_valueEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                 prefix + "18decimal_avg_removeEPN9doris_udf15FunctionContextERKNS1_10DecimalValEPNS1_9StringValE",
                 prefix + "20decimal_avg_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                false, true, false, true));
+        addBuiltin(AggregateFunction.createBuiltin("avg",
+                Lists.<Type>newArrayList(Type.DECIMALV2), Type.DECIMALV2, Type.VARCHAR,
+                prefix + "18decimalv2_avg_initEPN9doris_udf15FunctionContextEPNS1_9StringValE",
+                prefix + "20decimalv2_avg_updateEPN9doris_udf15FunctionContextERKNS1_12DecimalV2ValEPNS1_9StringValE",
+                prefix + "19decimalv2_avg_mergeEPN9doris_udf15FunctionContextERKNS1_9StringValEPS4_",
+                prefix + "23decimalv2_avg_serializeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                prefix + "23decimalv2_avg_get_valueEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                prefix + "20decimalv2_avg_removeEPN9doris_udf15FunctionContextERKNS1_12DecimalV2ValEPNS1_9StringValE",
+                prefix + "22decimalv2_avg_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                 false, true, false));
         addBuiltin(AggregateFunction.createBuiltin("avg",
                 Lists.<Type>newArrayList(Type.DECIMALV2), Type.DECIMALV2, Type.DECIMALV2,
@@ -1471,8 +1516,18 @@ public class FunctionSet {
                 prefix + "23decimalv2_avg_get_valueEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                 prefix + "20decimalv2_avg_removeEPN9doris_udf15FunctionContextERKNS1_12DecimalV2ValEPNS1_9StringValE",
                 prefix + "22decimalv2_avg_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
-                false, true, false));
+                false, true, false, true));
         // Avg(Timestamp)
+        addBuiltin(AggregateFunction.createBuiltin("avg",
+                Lists.<Type>newArrayList(Type.DATE), Type.DATE, Type.VARCHAR,
+                prefix + "8avg_initEPN9doris_udf15FunctionContextEPNS1_9StringValE",
+                prefix + "20timestamp_avg_updateEPN9doris_udf15FunctionContextERKNS1_11DateTimeValEPNS1_9StringValE",
+                prefix + "9avg_mergeEPN9doris_udf15FunctionContextERKNS1_9StringValEPS4_",
+                stringValSerializeOrFinalize,
+                prefix + "23timestamp_avg_get_valueEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                prefix + "20timestamp_avg_removeEPN9doris_udf15FunctionContextERKNS1_11DateTimeValEPNS1_9StringValE",
+                prefix + "22timestamp_avg_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                false, true, false));
         addBuiltin(AggregateFunction.createBuiltin("avg",
                 Lists.<Type>newArrayList(Type.DATE), Type.DATE, Type.DATE,
                 prefix + "8avg_initEPN9doris_udf15FunctionContextEPNS1_9StringValE",
@@ -1482,7 +1537,7 @@ public class FunctionSet {
                 prefix + "23timestamp_avg_get_valueEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                 prefix + "20timestamp_avg_removeEPN9doris_udf15FunctionContextERKNS1_11DateTimeValEPNS1_9StringValE",
                 prefix + "22timestamp_avg_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
-                false, true, false));
+                false, true, false, true));
         addBuiltin(AggregateFunction.createBuiltin("avg",
                 Lists.<Type>newArrayList(Type.DATETIME), Type.DATETIME, Type.DATETIME,
                 prefix + "8avg_initEPN9doris_udf15FunctionContextEPNS1_9StringValE",
