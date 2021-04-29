@@ -1041,6 +1041,14 @@ public class FunctionSet {
             null, null,
             prefix + "17count_star_removeEPN9doris_udf15FunctionContextEPNS1_9BigIntValE",
             null, false, true, true));
+        addBuiltin(AggregateFunction.createBuiltin(FunctionSet.COUNT,
+                new ArrayList<Type>(), Type.BIGINT, Type.BIGINT,
+                prefix + "9init_zeroIN9doris_udf9BigIntValEEEvPNS2_15FunctionContextEPT_",
+                prefix + "17count_star_updateEPN9doris_udf15FunctionContextEPNS1_9BigIntValE",
+                prefix + "11count_mergeEPN9doris_udf15FunctionContextERKNS1_9BigIntValEPS4_",
+                null, null,
+                prefix + "17count_star_removeEPN9doris_udf15FunctionContextEPNS1_9BigIntValE",
+                null, false, true, true, true));
 
         for (Type t : Type.getSupportedTypes()) {
             if (t.isNull()) {
@@ -1172,6 +1180,13 @@ public class FunctionSet {
                     minMaxSerializeOrFinalize, minMaxGetValue,
                     null, minMaxSerializeOrFinalize, true, true, false));
 
+            addBuiltin(AggregateFunction.createBuiltin("min",
+                    Lists.newArrayList(t), t, t, minMaxInit,
+                    prefix + MIN_UPDATE_SYMBOL.get(t),
+                    prefix + MIN_UPDATE_SYMBOL.get(t),
+                    minMaxSerializeOrFinalize, minMaxGetValue,
+                    null, minMaxSerializeOrFinalize, true, true, false, true));
+
             // Max
             addBuiltin(AggregateFunction.createBuiltin("max",
                     Lists.newArrayList(t), t, t, minMaxInit,
@@ -1179,6 +1194,12 @@ public class FunctionSet {
                     prefix + MAX_UPDATE_SYMBOL.get(t),
                     minMaxSerializeOrFinalize, minMaxGetValue,
                     null, minMaxSerializeOrFinalize, true, true, false));
+            addBuiltin(AggregateFunction.createBuiltin("max",
+                    Lists.newArrayList(t), t, t, minMaxInit,
+                    prefix + MAX_UPDATE_SYMBOL.get(t),
+                    prefix + MAX_UPDATE_SYMBOL.get(t),
+                    minMaxSerializeOrFinalize, minMaxGetValue,
+                    null, minMaxSerializeOrFinalize, true, true, false, true));
 
             // NDV
             // ndv return string
@@ -1383,6 +1404,42 @@ public class FunctionSet {
                     null, null,
                     prefix + "10sum_removeIN9doris_udf11LargeIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
                     null, false, true, false));
+            // vectorized
+            addBuiltin(AggregateFunction.createBuiltin(name,
+                    Lists.<Type>newArrayList(Type.BIGINT), Type.BIGINT, Type.BIGINT, initNull,
+                    prefix + "3sumIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    prefix + "3sumIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, null,
+                    prefix + "10sum_removeIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, false, true, false, true));
+            addBuiltin(AggregateFunction.createBuiltin(name,
+                    Lists.<Type>newArrayList(Type.DOUBLE), Type.DOUBLE, Type.DOUBLE, initNull,
+                    prefix + "3sumIN9doris_udf9DoubleValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    prefix + "3sumIN9doris_udf9DoubleValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, null,
+                    prefix + "10sum_removeIN9doris_udf9DoubleValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, false, true, false, true));
+            addBuiltin(AggregateFunction.createBuiltin(name,
+                    Lists.<Type>newArrayList(Type.DECIMAL), Type.DECIMAL, Type.DECIMAL, initNull,
+                    prefix + "3sumIN9doris_udf10DecimalValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    prefix + "3sumIN9doris_udf10DecimalValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, null,
+                    prefix + "10sum_removeIN9doris_udf10DecimalValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, false, true, false, true));
+            addBuiltin(AggregateFunction.createBuiltin(name,
+                    Lists.<Type>newArrayList(Type.DECIMALV2), Type.DECIMALV2, Type.DECIMALV2, initNull,
+                    prefix + "3sumIN9doris_udf12DecimalV2ValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    prefix + "3sumIN9doris_udf12DecimalV2ValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, null,
+                    prefix + "10sum_removeIN9doris_udf12DecimalV2ValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, false, true, false, true));
+            addBuiltin(AggregateFunction.createBuiltin(name,
+                    Lists.<Type>newArrayList(Type.LARGEINT), Type.LARGEINT, Type.LARGEINT, initNull,
+                    prefix + "3sumIN9doris_udf11LargeIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    prefix + "3sumIN9doris_udf11LargeIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, null,
+                    prefix + "10sum_removeIN9doris_udf11LargeIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, false, true, false, true));
         }
 
         // bitmap
