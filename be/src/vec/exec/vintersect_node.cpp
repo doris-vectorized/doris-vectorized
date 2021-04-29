@@ -17,7 +17,49 @@
 
 #include "vec/exec/vintersect_node.h"
 
-namespace doris {
+#include "gen_cpp/PlanNodes_types.h"
+#include "runtime/runtime_state.h"
+#include "util/runtime_profile.h"
+#include "vec/core/block.h"
+#include "vec/exprs/vexpr.h"
+#include "vec/exprs/vexpr_context.h"
 
-namespace vectorized {} // namespace vectorized
+namespace doris {
+namespace vectorized {
+
+VIntersectNode::VIntersectNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
+        : VSetOperationNode(pool, tnode, descs) {}
+Status VIntersectNode::init(const TPlanNode& tnode, RuntimeState* state) {
+    RETURN_IF_ERROR(VSetOperationNode::init(tnode, state));
+    DCHECK(tnode.__isset.union_node);
+    return Status::OK();
+}
+
+Status VIntersectNode::prepare(RuntimeState* state) {
+    return VSetOperationNode::prepare(state);
+}
+
+Status VIntersectNode::open(RuntimeState* state) {
+    return VSetOperationNode::open(state);
+}
+
+Status VIntersectNode::get_next(RuntimeState* state, Block* block, bool* eos) {
+    return Status::NotSupported("Not Implemented.");
+}
+
+Status VIntersectNode::close(RuntimeState* state) {
+    return VSetOperationNode::close(state);
+}
+
+void VIntersectNode::debug_string(int indentation_level, std::stringstream* out) const {
+    *out << string(indentation_level * 2, ' ');
+    *out << " _child_expr_lists=[";
+    for (int i = 0; i < _child_expr_lists.size(); ++i) {
+        *out << VExpr::debug_string(_child_expr_lists[i]) << ", ";
+    }
+    *out << "] \n";
+    ExecNode::debug_string(indentation_level, out);
+    *out << ")" << std::endl;
+}
+} // namespace vectorized
 } // namespace doris

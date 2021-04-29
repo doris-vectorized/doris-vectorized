@@ -20,7 +20,6 @@
 #include "vec/exec/vset_operation_node.h"
 
 namespace doris {
-
 namespace vectorized {
 
 class VUnionNode : public VSetOperationNode {

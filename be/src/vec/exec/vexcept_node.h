@@ -17,7 +17,19 @@
 
 #pragma once
 
-namespace doris {
+#include "vec/exec/vset_operation_node.h"
 
-namespace vectorized {} // namespace vectorized
+namespace doris {
+namespace vectorized {
+
+class VExceptNode : public VSetOperationNode {
+public:
+    VExceptNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs);
+    virtual Status init(const TPlanNode& tnode, RuntimeState* state = nullptr);
+    virtual Status prepare(RuntimeState* state);
+    virtual Status open(RuntimeState* state);
+    virtual Status get_next(RuntimeState* state, vectorized::Block* block, bool* eos);
+    virtual Status close(RuntimeState* state);
+};
+} // namespace vectorized
 } // namespace doris

@@ -27,6 +27,7 @@
 namespace doris {
 
 namespace vectorized {
+
 VUnionNode::VUnionNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
         : VSetOperationNode(pool, tnode, descs),
           _first_materialized_child_idx(tnode.union_node.first_materialized_child_idx) {}
@@ -89,8 +90,9 @@ Status VUnionNode::get_next_materialized(RuntimeState* state, Block* block) {
         // The first batch from each child is always fetched here.
         RETURN_IF_ERROR(child(_child_idx)->get_next(state, &child_block, &_child_eos));
         SCOPED_TIMER(_materialize_exprs_evaluate_timer);
-        mblock.merge(materialize_block(&child_block));
-
+        if (child_block.rows() > 0) {
+            mblock.merge(materialize_block(&child_block));
+        }
         // It shouldn't be the case that we reached the limit because we shouldn't have
         // incremented '_num_rows_returned' yet.
         DCHECK(!reached_limit());
@@ -185,14 +187,15 @@ void VUnionNode::debug_string(int indentation_level, std::stringstream* out) con
     ExecNode::debug_string(indentation_level, out);
     *out << ")" << std::endl;
 }
-Block VUnionNode::materialize_block(Block* dst_block) {
+Block VUnionNode::materialize_block(Block* src_block) {
     const std::vector<VExprContext*>& child_exprs = _child_expr_lists[_child_idx];
     ColumnsWithTypeAndName colunms;
     for (size_t i = 0; i < child_exprs.size(); ++i) {
         int result_column_id = -1;
-        child_exprs[i]->execute(dst_block, &result_column_id);
-        colunms.emplace_back(dst_block->getByPosition(result_column_id));
+        child_exprs[i]->execute(src_block, &result_column_id);
+        colunms.emplace_back(src_block->getByPosition(result_column_id));
     }
+    _child_row_idx += src_block->rows();
     return {colunms};
 }
 

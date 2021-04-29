@@ -413,7 +413,7 @@ std::string Block::dumpData(size_t row_limit) const {
     // header bottom line
     line();
     // content
-    for (size_t row_num = 0; row_num < rows() && row_num <= row_limit; ++row_num) {
+    for (size_t row_num = 0; row_num < rows() && row_num < row_limit; ++row_num) {
         for (size_t i = 0; i < columns(); ++i) {
             std::string s = data[i].to_string(row_num);
             if (s.length() > headers_size[i]) {
@@ -426,6 +426,9 @@ std::string Block::dumpData(size_t row_limit) const {
     }
     // bottom line
     line();
+    if (row_limit < rows()) {
+        out << rows() << " rows in block, only show first " << row_limit << " rows." << std::endl;
+    }
     return out.str();
 }
 
@@ -793,7 +796,7 @@ std::string MutableBlock::dumpData(size_t row_limit) const {
     // header bottom line
     line();
     // content
-    for (size_t row_num = 0; row_num < rows() && row_num <= row_limit; ++row_num) {
+    for (size_t row_num = 0; row_num < rows() && row_num < row_limit; ++row_num) {
         for (size_t i = 0; i < columns(); ++i) {
             std::string s = _data_types[i]->to_string(*_columns[i].get(), row_num);
             if (s.length() > headers_size[i]) {
@@ -806,6 +809,9 @@ std::string MutableBlock::dumpData(size_t row_limit) const {
     }
     // bottom line
     line();
+    if (row_limit < rows()) {
+        out << rows() << " rows in block, only show first " << row_limit << " rows." << std::endl;
+    }
     return out.str();
 }
 } // namespace doris::vectorized
