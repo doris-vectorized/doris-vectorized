@@ -61,6 +61,8 @@ set(VEC_FILES
   exec/vsort_exec_exprs.cpp
   exec/volap_scanner.cpp
   exec/vexchange_node.cpp
+  exec/vset_operation_node.cpp
+  exec/vunion_node.cpp
   exprs/vectorized_agg_fn.cpp
   exprs/vectorized_fn_call.cpp
   exprs/vexpr.cpp

@@ -39,6 +39,17 @@ void DataTypeNumberBase<T>::to_string(const IColumn& column, size_t row_num,
     }
 }
 
+template <typename T>
+std::string DataTypeNumberBase<T>::to_string(const IColumn& column, size_t row_num) const {
+    if constexpr (std::is_same<T, __int128_t>::value || std::is_same<T, UInt128>::value) {
+        // write int 128
+    } else if constexpr (std::is_integral<T>::value || std::numeric_limits<T>::is_iec559) {
+        return std::to_string(
+                assert_cast<const ColumnVector<T>&>(*column.convertToFullColumnIfConst().get())
+                        .getData()[row_num]);
+    }
+}
+
 // template <typename T>
 // void DataTypeNumberBase<T>::serializeText(const IColumn & column, size_t row_num, WriteBuffer & ostr, const FormatSettings &) const
 // {
@@ -256,7 +267,9 @@ template <typename T>
 void DataTypeNumberBase<T>::serialize(const IColumn& column, PColumn* pcolumn) const {
     std::ostringstream buf;
     for (size_t i = 0; i < column.size(); ++i) {
-        const FieldType& x = assert_cast<const ColumnVector<T>&>(column).getData()[i];
+        const FieldType& x =
+                assert_cast<const ColumnVector<T>&>(*column.convertToFullColumnIfConst().get())
+                        .getData()[i];
         writeBinary(x, buf);
     }
     write_binary(buf, pcolumn);

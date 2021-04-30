@@ -76,6 +76,7 @@ public:
     bool isCategorial() const override { return true; }
     bool canBeInsideNullable() const override { return true; }
     bool canBeInsideLowCardinality() const override { return true; }
+    std::string to_string(const IColumn& column, size_t row_num) const;
 };
 
 } // namespace doris::vectorized

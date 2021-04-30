@@ -30,8 +30,47 @@
 #include "vec/io/var_int.h"
 
 #define DEFAULT_MAX_STRING_SIZE (1ULL << 30)
+#define WRITE_HELPERS_MAX_INT_WIDTH 40U
 
 namespace doris::vectorized {
+
+template <typename T>
+inline T decimalScaleMultiplier(UInt32 scale);
+template <>
+inline Int32 decimalScaleMultiplier<Int32>(UInt32 scale) {
+    return common::exp10_i32(scale);
+}
+template <>
+inline Int64 decimalScaleMultiplier<Int64>(UInt32 scale) {
+    return common::exp10_i64(scale);
+}
+template <>
+inline Int128 decimalScaleMultiplier<Int128>(UInt32 scale) {
+    return common::exp10_i128(scale);
+}
+
+template <typename T>
+void writeText(Decimal<T> value, UInt32 scale, std::ostream& ostr) {
+    if (value < Decimal<T>(0)) {
+        value *= Decimal<T>(-1);
+        ostr << '-';
+    }
+
+    T whole_part = value;
+    if (scale) whole_part = value / decimalScaleMultiplier<T>(scale);
+    if constexpr (std::is_same<T, __int128_t>::value || std::is_same<T, UInt128>::value) {
+        // int128
+    } else {
+        ostr << whole_part;
+    }
+    if (scale) {
+        ostr << '.';
+        String str_fractional(scale, '0');
+        for (Int32 pos = scale - 1; pos >= 0; --pos, value /= Decimal<T>(10))
+            str_fractional[pos] += value % Decimal<T>(10);
+        ostr.write(str_fractional.data(), scale);
+    }
+}
 /// Methods for output in binary format.
 
 /// Write POD-type in native format. It's recommended to use only with packed (dense) data types.
