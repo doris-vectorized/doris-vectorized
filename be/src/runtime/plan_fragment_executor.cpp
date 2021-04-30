@@ -323,7 +323,7 @@ Status PlanFragmentExecutor::open_vectorized_internal() {
         _collect_query_statistics();
         Status status;
         {
-            boost::lock_guard<boost::mutex> l(_status_lock);
+            std::lock_guard<std::mutex> l(_status_lock);
             status = _status;
         }
         status = _sink->close(runtime_state(), status);

@@ -16,33 +16,20 @@
 // under the License.
 
 #pragma once
-#include "runtime/runtime_state.h"
-#include "vec/exprs/vexpr.h"
-#include "vec/functions/function.h"
+
+#include "vec/exec/vset_operation_node.h"
 
 namespace doris {
-class SlotDescriptor;
 namespace vectorized {
-class VSlotRef final : public VExpr {
+
+class VExceptNode : public VSetOperationNode {
 public:
-    VSlotRef(const doris::TExprNode& node);
-    VSlotRef(const SlotDescriptor* desc);
-    virtual doris::Status execute(doris::vectorized::Block* block, int* result_column_id);
-    virtual doris::Status prepare(doris::RuntimeState* state, const doris::RowDescriptor& desc,
-                                  VExprContext* context);
-    virtual VExpr* clone(doris::ObjectPool* pool) const override {
-        return pool->add(new VSlotRef(*this));
-    }
-
-    virtual const std::string& expr_name() const override;
-    virtual std::string debug_string() const;
-
-private:
-    FunctionPtr _function;
-    int _slot_id;
-    int _column_id;
-    bool _is_nullable;
-    const std::string* _column_name;
+    VExceptNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs);
+    virtual Status init(const TPlanNode& tnode, RuntimeState* state = nullptr);
+    virtual Status prepare(RuntimeState* state);
+    virtual Status open(RuntimeState* state);
+    virtual Status get_next(RuntimeState* state, vectorized::Block* block, bool* eos);
+    virtual Status close(RuntimeState* state);
 };
 } // namespace vectorized
 } // namespace doris

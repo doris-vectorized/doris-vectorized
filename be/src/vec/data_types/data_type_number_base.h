@@ -74,6 +74,7 @@ public:
     bool canBeInsideLowCardinality() const override { return true; }
 
     void to_string(const IColumn& column, size_t row_num, BufferWritable& ostr) const;
+    std::string to_string(const IColumn& column, size_t row_num) const;
 };
 
 } // namespace doris::vectorized
