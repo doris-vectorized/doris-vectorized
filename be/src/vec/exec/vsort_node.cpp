@@ -124,7 +124,7 @@ Status VSortNode::sort_input(RuntimeState* state) {
     do {
         Block block;
         RETURN_IF_ERROR(child(0)->get_next(state, &block, &eos));
-        if (!eos && block.rows() != 0) {
+        if ( block.rows() != 0) {
             RETURN_IF_ERROR(pretreat_block(block));
             _sorted_blocks.emplace_back(std::move(block));
             RETURN_IF_CANCELLED(state);
