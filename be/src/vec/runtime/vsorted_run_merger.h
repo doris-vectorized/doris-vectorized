@@ -31,17 +31,12 @@ class RuntimeProfile;
 
 namespace vectorized {
 class Block;
-// VSortedRunMerger is used to merge multiple sorted runs of tuples. A run is a sorted
-// sequence of row batches, which are fetched from a BlockSupplier function object.
+// VSortedRunMerger is used to merge multiple sorted runs of blocks. A run is a sorted
+// sequence of blocks, which are fetched from a BlockSupplier function object.
 // Merging is implemented using a binary min-heap that maintains the run with the next
-// tuple in sorted order at the top of the heap.
+// rows in sorted order at the top of the heap.
 //
-// Merged batches of rows are retrieved from VSortedRunMerger via calls to get_next().
-// The merger is constructed with a boolean flag deep_copy_input.
-// If true, sorted output rows are deep copied into the data pool of the output batch.
-// If false, get_next() only copies tuple pointers (TupleRows) into the output batch,
-// and transfers resource ownership from the input batches to the output batch when
-// an input batch is processed.
+// Merged block of rows are retrieved from VSortedRunMerger via calls to get_next().
 class VSortedRunMerger {
 public:
     // Function that returns the next block of rows from an input sorted run. The batch
@@ -57,10 +52,10 @@ public:
     // the priority queue.
     Status prepare(const std::vector<BlockSupplier>& input_runs, bool parallel = false);
 
-    // Return the next batch of sorted rows from this merger.
+    // Return the next block of sorted rows from this merger.
     Status get_next(Block* output_block, bool *eos);
 
-    // Only Child class implement this Method, Return the next batch of sorted rows from this merger.
+    // Do not support now
     virtual Status get_batch(RowBatch **output_batch) {
         return Status::InternalError("no support method get_batch(RowBatch** output_batch)");
     }
@@ -79,9 +74,6 @@ protected:
     std::priority_queue<SortCursor> _priority_queue;
 
     Block _empty_block;
-
-    // Pool of BatchedRowSupplier instances.
-    ObjectPool _pool;
 
     // Times calls to get_next().
     RuntimeProfile::Counter *_get_next_timer;
