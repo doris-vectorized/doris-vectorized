@@ -132,6 +132,7 @@ public:
     bool canBeInsideLowCardinality() const override {
         return nested_data_type->canBeInsideLowCardinality();
     }
+    std::string to_string(const IColumn& column, size_t row_num) const;
 
     const DataTypePtr& getNestedType() const { return nested_data_type; }
 

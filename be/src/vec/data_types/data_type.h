@@ -75,6 +75,7 @@ public:
     virtual TypeIndex getTypeId() const = 0;
 
     virtual void to_string(const IColumn& column, size_t row_num, BufferWritable& ostr) const;
+    virtual std::string to_string(const IColumn& column, size_t row_num) const;
 
     /** Binary serialization for range of values in column - for writing to disk/network, etc.
       *

@@ -78,4 +78,23 @@ doris::Status VectorizedFnCall::execute(doris::vectorized::Block* block, int* re
 const std::string& VectorizedFnCall::expr_name() const {
     return _expr_name;
 }
+std::string VectorizedFnCall::debug_string() const {
+    std::stringstream out;
+    out << "VAggFn(";
+    for (VExpr* input_expr : children()) {
+        out << " " << input_expr->debug_string() << ")";
+    }
+    out << ")";
+    return out.str();
+}
+
+std::string VectorizedFnCall::debug_string(const std::vector<VectorizedFnCall*>& agg_fns) {
+    std::stringstream out;
+    out << "[";
+    for (int i = 0; i < agg_fns.size(); ++i) {
+        out << (i == 0 ? "" : " ") << agg_fns[i]->debug_string();
+    }
+    out << "]";
+    return out.str();
+}
 } // namespace doris::vectorized

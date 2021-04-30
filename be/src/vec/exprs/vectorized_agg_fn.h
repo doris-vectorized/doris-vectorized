@@ -57,6 +57,8 @@ public:
     DataTypePtr& data_type() { return _data_type; }
 
     const AggregateFunctionPtr& function() { return _function; }
+    static std::string debug_string(const std::vector<AggFnEvaluator*>& exprs);
+    std::string debug_string() const;
 
 private:
     const TFunction _fn;

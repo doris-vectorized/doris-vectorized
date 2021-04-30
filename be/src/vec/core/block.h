@@ -147,6 +147,7 @@ public:
 
     void clear();
     void swap(Block& other) noexcept;
+    void swap(Block&& other) noexcept;
 
     /** Updates SipHash of the Block, using update method of columns.
       * Returns hash for block, that could be used to differentiate blocks
@@ -155,7 +156,7 @@ public:
     void updateHash(SipHash& hash) const;
 
     /** Get block data in string. */
-    std::string dumpData() const;
+    std::string dumpData(size_t row_limit = 100) const;
 
     static void filter_block(Block* block, int filter_conlumn_id, int column_to_keep);
     // serialize block to PRowBatch
@@ -191,8 +192,11 @@ public:
 
     MutableBlock(MutableColumns&& columns, DataTypes&& data_types)
             : _columns(std::move(columns)), _data_types(std::move(data_types)) {}
+    MutableBlock(Block* block)
+            : _columns(block->mutateColumns()), _data_types(block->getDataTypes()) {}
 
-    int rows();
+    size_t rows() const;
+    size_t columns() const { return _columns.size(); }
 
     bool empty() { return rows() == 0; }
 
@@ -200,9 +204,55 @@ public:
 
     DataTypes& data_types() { return _data_types; }
 
+    void merge(Block&& block) {
+        if (_columns.size() == 0 && _data_types.size() == 0) {
+            _data_types = std::move(block.getDataTypes());
+            _columns.resize(block.columns());
+            for (size_t i = 0; i < block.columns(); ++i) {
+                if (block.getByPosition(i).column) {
+                    _columns[i] =
+                            (*std::move(
+                                     block.getByPosition(i).column->convertToFullColumnIfConst()))
+                                    .mutate();
+                } else {
+                    _columns[i] = _data_types[i]->createColumn();
+                }
+            }
+        } else {
+            for (int i = 0; i < _columns.size(); ++i) {
+                _columns[i]->insertRangeFrom(
+                        *block.getByPosition(i).column->convertToFullColumnIfConst().get(), 0,
+                        block.rows());
+            }
+        }
+    }
+    void merge(Block& block) {
+        if (_columns.size() == 0 && _data_types.size() == 0) {
+            _data_types = block.getDataTypes();
+            _columns.resize(block.columns());
+            for (size_t i = 0; i < block.columns(); ++i) {
+                if (block.getByPosition(i).column) {
+                    _columns[i] =
+                            (*std::move(
+                                     block.getByPosition(i).column->convertToFullColumnIfConst()))
+                                    .mutate();
+                } else {
+                    _columns[i] = _data_types[i]->createColumn();
+                }
+            }
+        } else {
+            for (int i = 0; i < _columns.size(); ++i) {
+                _columns[i]->insertRangeFrom(
+                        *block.getByPosition(i).column->convertToFullColumnIfConst().get(), 0,
+                        block.rows());
+            }
+        }
+    }
+
     Block to_block();
 
     void add_row(const Block* block, int row);
+    std::string dumpData(size_t row_limit = 100) const;
 
     void clear() {
         _columns.clear();
