@@ -17,9 +17,11 @@
 
 #include "vec/core/block.h"
 
+#include <iomanip>
 #include <iterator>
 #include <memory>
 
+#include "fmt/format.h"
 #include "gen_cpp/data.pb.h"
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_nullable.h"
@@ -381,12 +383,51 @@ std::string Block::dumpNames() const {
     return out.str();
 }
 
-std::string Block::dumpData() const {
-    // WriteBufferFromOwnString out;
-    std::stringstream out;
+std::string Block::dumpData(size_t row_limit) const {
+    if (rows() == 0) {
+        return "empty block.";
+    }
+    std::vector<std::string> headers;
+    std::vector<size_t> headers_size;
     for (auto it = data.begin(); it != data.end(); ++it) {
-        if (it != data.begin()) out << ", ";
-        out << it->name;
+        std::string s = fmt::format("{}({})", it->name, it->type->getName());
+        headers_size.push_back(s.size() > 15 ? s.size() : 15);
+        headers.emplace_back(s);
+    }
+
+    std::stringstream out;
+    // header upper line
+    auto line = [&]() {
+        for (size_t i = 0; i < columns(); ++i) {
+            out << std::setfill('-') << std::setw(1) << "+" << std::setw(headers_size[i]) << "-";
+        }
+        out << std::setw(1) << "+" << std::endl;
+    };
+    line();
+    // header text
+    for (size_t i = 0; i < columns(); ++i) {
+        out << std::setfill(' ') << std::setw(1) << "|" << std::left << std::setw(headers_size[i])
+            << headers[i];
+    }
+    out << std::setw(1) << "|" << std::endl;
+    // header bottom line
+    line();
+    // content
+    for (size_t row_num = 0; row_num < rows() && row_num < row_limit; ++row_num) {
+        for (size_t i = 0; i < columns(); ++i) {
+            std::string s = data[i].to_string(row_num);
+            if (s.length() > headers_size[i]) {
+                s = s.substr(0, headers_size[i] - 3) + "...";
+            }
+            out << std::setfill(' ') << std::setw(1) << "|" << std::setw(headers_size[i])
+                << std::right << s;
+        }
+        out << std::setw(1) << "|" << std::endl;
+    }
+    // bottom line
+    line();
+    if (row_limit < rows()) {
+        out << rows() << " rows in block, only show first " << row_limit << " rows." << std::endl;
     }
     return out.str();
 }
@@ -658,6 +699,12 @@ void Block::swap(Block& other) noexcept {
     index_by_name.swap(other.index_by_name);
 }
 
+void Block::swap(Block&& other) noexcept {
+    clear();
+    data = std::move(other.data);
+    initializeIndexByName();
+}
+
 void Block::updateHash(SipHash& hash) const {
     for (size_t row_no = 0, num_rows = rows(); row_no < num_rows; ++row_no)
         for (const auto& col : data) col.column->updateHashWithValue(row_no, hash);
@@ -696,9 +743,11 @@ void Block::serialize(PBlock* pblock) const {
     }
 }
 
-int MutableBlock::rows() {
+size_t MutableBlock::rows() const {
     for (const auto& column : _columns)
-        if (column) return column->size();
+        if (column) {
+            return column->size();
+        }
 
     return 0;
 }
@@ -715,7 +764,54 @@ Block MutableBlock::to_block() {
     for (int i = 0; i < _columns.size(); ++i) {
         columns_with_schema.emplace_back(std::move(_columns[i]), _data_types[i], "");
     }
-    return columns_with_schema;
+    return {columns_with_schema};
 }
+std::string MutableBlock::dumpData(size_t row_limit) const {
+    if (rows() == 0) {
+        return "empty block.";
+    }
+    std::vector<std::string> headers;
+    std::vector<size_t> headers_size;
+    for (size_t i = 0; i < columns(); ++i) {
+        std::string s = _data_types[i]->getName();
+        headers_size.push_back(s.size() > 15 ? s.size() : 15);
+        headers.emplace_back(s);
+    }
 
+    std::stringstream out;
+    // header upper line
+    auto line = [&]() {
+        for (size_t i = 0; i < columns(); ++i) {
+            out << std::setfill('-') << std::setw(1) << "+" << std::setw(headers_size[i]) << "-";
+        }
+        out << std::setw(1) << "+" << std::endl;
+    };
+    line();
+    // header text
+    for (size_t i = 0; i < columns(); ++i) {
+        out << std::setfill(' ') << std::setw(1) << "|" << std::left << std::setw(headers_size[i])
+            << headers[i];
+    }
+    out << std::setw(1) << "|" << std::endl;
+    // header bottom line
+    line();
+    // content
+    for (size_t row_num = 0; row_num < rows() && row_num < row_limit; ++row_num) {
+        for (size_t i = 0; i < columns(); ++i) {
+            std::string s = _data_types[i]->to_string(*_columns[i].get(), row_num);
+            if (s.length() > headers_size[i]) {
+                s = s.substr(0, headers_size[i] - 3) + "...";
+            }
+            out << std::setfill(' ') << std::setw(1) << "|" << std::setw(headers_size[i])
+                << std::right << s;
+        }
+        out << std::setw(1) << "|" << std::endl;
+    }
+    // bottom line
+    line();
+    if (row_limit < rows()) {
+        out << rows() << " rows in block, only show first " << row_limit << " rows." << std::endl;
+    }
+    return out.str();
+}
 } // namespace doris::vectorized

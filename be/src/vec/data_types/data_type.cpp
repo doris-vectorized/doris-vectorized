@@ -127,6 +127,11 @@ void IDataType::to_string(const IColumn& column, size_t row_num, BufferWritable&
                     ErrorCodes::NOT_IMPLEMENTED);
 }
 
+std::string IDataType::to_string(const IColumn& column, size_t row_num) const {
+    throw Exception("Data type " + getName() + "to_string not implement.",
+                    ErrorCodes::NOT_IMPLEMENTED);
+}
+
 void IDataType::insertDefaultInto(IColumn& column) const {
     column.insertDefault();
 }
