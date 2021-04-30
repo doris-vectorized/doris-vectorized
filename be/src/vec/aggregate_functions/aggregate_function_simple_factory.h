@@ -33,6 +33,7 @@ class AggregateFunctionSimpleFactory;
 void registerAggregateFunctionSum(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionCombinatorNull(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionMinMax(AggregateFunctionSimpleFactory& factory);
+void registerAggregateFunctionAvg(AggregateFunctionSimpleFactory& factory);
 
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
@@ -82,6 +83,7 @@ public:
         std::call_once(oc, [&]() {
             registerAggregateFunctionSum(instance);
             registerAggregateFunctionMinMax(instance);
+            registerAggregateFunctionAvg(instance);
             registerAggregateFunctionCombinatorNull(instance);
         });
         return instance;

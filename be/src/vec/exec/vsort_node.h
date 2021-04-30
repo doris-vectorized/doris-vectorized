@@ -28,15 +28,9 @@
 namespace doris {
 
 namespace vectorized {
-// Node that implements a full sort of its input with a fixed memory budget, spilling
-// to disk if the input is larger than available memory.
-// Uses SpillSorter and BufferedBlockMgr for the external sort implementation.
-// Input rows to SortNode are materialized by the SpillSorter into a single tuple
-// using the expressions specified in _sort_exec_exprs.
-// In get_next(), SortNode passes in the output batch to the sorter instance created
-// in open() to fill it with sorted rows.
-// If a merge phase was performed in the sort, sorted rows are deep copied into
-// the output batch. Otherwise, the sorter instance owns the sorted data.
+// Node that implements a full sort of its input with a fixed memory budget
+// In open() the input Block to VSortNode will sort firstly, using the expressions specified in _sort_exec_exprs.
+// In get_next(), VSortNode do the merge sort to gather data to a new block
 
 // support spill to disk in the future
 class VSortNode : public doris::ExecNode {
@@ -75,7 +69,7 @@ private:
     // Number of rows to skip.
     int64_t _offset;
 
-    // Expressions and parameters used for tuple materialization and tuple comparison.
+    // Expressions and parameters used for build _sort_description
     VSortExecExprs _vsort_exec_exprs;
     std::vector<bool> _is_asc_order;
     std::vector<bool> _nulls_first;
@@ -85,11 +79,9 @@ private:
     std::vector<Block> _sorted_blocks;
     std::priority_queue<SortCursor> _priority_queue;
 
+    // TODO: Not using now, maybe should be delete
     // Keeps track of the number of rows skipped for handling _offset.
     int64_t _num_rows_skipped;
-
-    // END: Members that must be reset()
-    /////////////////////////////////////////
 };
 
 }
