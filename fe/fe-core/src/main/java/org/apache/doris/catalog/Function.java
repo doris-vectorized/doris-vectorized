@@ -21,6 +21,7 @@ import static org.apache.doris.common.io.IOUtils.writeOptionString;
 
 import org.apache.doris.analysis.FunctionName;
 import org.apache.doris.analysis.HdfsURI;
+import org.apache.doris.common.FeMetaVersion;
 import org.apache.doris.common.io.Text;
 import org.apache.doris.common.io.Writable;
 import org.apache.doris.thrift.TFunction;
@@ -104,6 +105,8 @@ public class Function implements Writable {
     private HdfsURI location;
     private TFunctionBinaryType binaryType;
 
+    private boolean vectorized;
+
     // library's checksum to make sure all backends use one library to serve user's request
     protected String checksum = "";
 
@@ -115,11 +118,22 @@ public class Function implements Writable {
         this(0, name, argTypes, retType, varArgs);
     }
 
+    public Function(FunctionName name, Type[] argTypes, Type retType, boolean varArgs, boolean vectorized) {
+        this(0, name, argTypes, retType, varArgs, vectorized);
+    }
     public Function(FunctionName name, List<Type> args, Type retType, boolean varArgs) {
         this(0, name, args, retType, varArgs);
     }
 
+    public Function(FunctionName name, List<Type> args, Type retType, boolean varArgs, boolean vectorized) {
+        this(0, name, args, retType, varArgs, vectorized);
+    }
+
     public Function(long id, FunctionName name, Type[] argTypes, Type retType, boolean hasVarArgs) {
+        this(id, name, argTypes, retType, hasVarArgs, false);
+    }
+
+    public Function(long id, FunctionName name, Type[] argTypes, Type retType, boolean hasVarArgs, boolean vectorized) {
         this.id = id;
         this.name = name;
         this.hasVarArgs = hasVarArgs;
@@ -129,17 +143,20 @@ public class Function implements Writable {
             this.argTypes = argTypes;
         }
         this.retType = retType;
+        this.vectorized = vectorized;
     }
 
-    public Function(long id, FunctionName name, List<Type> argTypes, Type retType, boolean hasVarArgs) {
-        this(id, name, (Type[]) null, retType, hasVarArgs);
+    public Function(long id, FunctionName name, List<Type> argTypes, Type retType, boolean hasVarArgs, boolean vectorized) {
+        this(id, name, (Type[]) null, retType, hasVarArgs, vectorized);
         if (argTypes.size() > 0) {
             this.argTypes = argTypes.toArray(new Type[argTypes.size()]);
         } else {
             this.argTypes = new Type[0];
         }
     }
-
+    public Function(long id, FunctionName name, List<Type> argTypes, Type retType, boolean hasVarArgs) {
+        this(id, name, argTypes, retType, hasVarArgs, false);
+    }
     public FunctionName getFunctionName() {
         return name;
     }
@@ -434,6 +451,7 @@ public class Function implements Writable {
         if (!checksum.isEmpty()) {
             fn.setChecksum(checksum);
         }
+        fn.setVectorized(vectorized);
         return fn;
     }
 
@@ -612,6 +630,7 @@ public class Function implements Writable {
         }
         writeOptionString(output, libUrl);
         writeOptionString(output, checksum);
+        output.writeBoolean(vectorized);
     }
 
     @Override
@@ -639,6 +658,9 @@ public class Function implements Writable {
         boolean hasChecksum = input.readBoolean();
         if (hasChecksum) {
             checksum = Text.readString(input);
+        }
+        if (Catalog.getCurrentCatalogJournalVersion() >= FeMetaVersion.VERSION_98) {
+            vectorized = input.readBoolean();
         }
     }
 
@@ -691,5 +713,9 @@ public class Function implements Writable {
             row.add(functionName());
         }
         return row;
+    }
+
+    public boolean isVectorized() {
+        return vectorized;
     }
 }
