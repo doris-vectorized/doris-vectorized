@@ -47,10 +47,10 @@ struct AggregationMethodSerialized {
 
     Data data;
 
-    AggregationMethodSerialized() {}
+    AggregationMethodSerialized() = default;
 
     template <typename Other>
-    AggregationMethodSerialized(const Other& other) : data(other.data) {}
+    explicit AggregationMethodSerialized(const Other& other) : data(other.data) {}
 
     using State = ColumnsHashing::HashMethodSerialized<typename Data::value_type, Mapped>;
 
@@ -153,6 +153,7 @@ private:
     using vectorized_execute = std::function<Status(Block* block)>;
     using vectorized_get_result =
             std::function<Status(RuntimeState* state, Block* block, bool* eos)>;
+
     struct executor {
         vectorized_execute execute;
         vectorized_get_result get_result;
