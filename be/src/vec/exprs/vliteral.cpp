@@ -123,6 +123,9 @@ VLiteral::~VLiteral() {}
 
 Status VLiteral::execute(vectorized::Block* block, int* result_column_id) {
     int rows = block->rows();
+    if (rows < 1) {
+        rows = 1;
+    }
     size_t res = block->columns();
     block->insert({_column_ptr->cloneResized(rows), _data_type, _expr_name});
     *result_column_id = res;

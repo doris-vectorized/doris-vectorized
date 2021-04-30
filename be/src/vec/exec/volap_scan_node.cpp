@@ -489,7 +489,6 @@ Status VOlapScanNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         // reach scan node limit
         if (reached_limit()) {
             int num_rows_over = _num_rows_returned - _limit;
-            // TODO (yangzhg) impliments limit
             block->set_num_rows(block->rows() - num_rows_over);
 
             _num_rows_returned -= num_rows_over;

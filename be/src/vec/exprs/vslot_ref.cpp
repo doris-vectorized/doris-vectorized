@@ -67,5 +67,9 @@ Status VSlotRef::execute(Block* block, int* result_column_id) {
 const std::string& VSlotRef::expr_name() const {
     return *_column_name;
 }
-
+std::string VSlotRef::debug_string() const {
+    std::stringstream out;
+    out << "SlotRef(slot_id=" << _slot_id << VExpr::debug_string() << ")";
+    return out.str();
+}
 } // namespace doris::vectorized

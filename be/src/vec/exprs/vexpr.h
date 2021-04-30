@@ -62,7 +62,7 @@ public:
     static Status open(const std::vector<VExprContext*>& ctxs, RuntimeState* state);
 
     static Status clone_if_not_exists(const std::vector<VExprContext*>& ctxs, RuntimeState* state,
-                                 std::vector<VExprContext*>* new_ctxs);
+                                      std::vector<VExprContext*>* new_ctxs);
 
     static void close(const std::vector<VExprContext*>& ctxs, RuntimeState* state);
 
@@ -75,8 +75,19 @@ public:
     static Status create_tree_from_thrift(ObjectPool* pool, const std::vector<TExprNode>& nodes,
                                           VExpr* parent, int* node_idx, VExpr** root_expr,
                                           VExprContext** ctx);
+    const std::vector<VExpr*>& children() const { return _children; }
+    virtual std::string debug_string() const;
+    static std::string debug_string(const std::vector<VExpr*>& exprs);
+    static std::string debug_string(const std::vector<VExprContext*>& ctxs);
 
 protected:
+    /// Simple debug string that provides no expr subclass-specific information
+    std::string debug_string(const std::string& expr_name) const {
+        std::stringstream out;
+        out << expr_name << "(" << VExpr::debug_string() << ")";
+        return out.str();
+    }
+
     TExprNodeType::type _node_type;
     TypeDescriptor _type;
     DataTypePtr _data_type;
