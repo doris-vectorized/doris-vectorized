@@ -1041,6 +1041,7 @@ public class FunctionSet {
             null, null,
             prefix + "17count_star_removeEPN9doris_udf15FunctionContextEPNS1_9BigIntValE",
             null, false, true, true));
+        // vectorized
         addBuiltin(AggregateFunction.createBuiltin(FunctionSet.COUNT,
                 new ArrayList<Type>(), Type.BIGINT, Type.BIGINT,
                 prefix + "9init_zeroIN9doris_udf9BigIntValEEEvPNS2_15FunctionContextEPT_",
@@ -1057,7 +1058,7 @@ public class FunctionSet {
             if (t.isScalarType(PrimitiveType.CHAR)) {
                 continue; // promoted to STRING
             }
-            // Count
+            // count
             addBuiltin(AggregateFunction.createBuiltin(FunctionSet.COUNT,
                     Lists.newArrayList(t), Type.BIGINT, Type.BIGINT,
                     prefix + "9init_zeroIN9doris_udf9BigIntValEEEvPNS2_15FunctionContextEPT_",
@@ -1066,6 +1067,15 @@ public class FunctionSet {
                     null, null,
                     prefix + "12count_removeEPN9doris_udf15FunctionContextERKNS1_6AnyValEPNS1_9BigIntValE",
                     null, false, true, true));
+            // vectorized
+            addBuiltin(AggregateFunction.createBuiltin(FunctionSet.COUNT,
+                    Lists.newArrayList(t), Type.BIGINT, Type.BIGINT,
+                    prefix + "9init_zeroIN9doris_udf9BigIntValEEEvPNS2_15FunctionContextEPT_",
+                    prefix + "12count_updateEPN9doris_udf15FunctionContextERKNS1_6AnyValEPNS1_9BigIntValE",
+                    prefix + "11count_mergeEPN9doris_udf15FunctionContextERKNS1_9BigIntValEPS4_",
+                    null, null,
+                    prefix + "12count_removeEPN9doris_udf15FunctionContextERKNS1_6AnyValEPNS1_9BigIntValE",
+                    null, false, true, true, true));
 
             // count in multi distinct
             if (t.equals(Type.CHAR) || t.equals(Type.VARCHAR)) {
@@ -1179,7 +1189,7 @@ public class FunctionSet {
                     prefix + MIN_UPDATE_SYMBOL.get(t),
                     minMaxSerializeOrFinalize, minMaxGetValue,
                     null, minMaxSerializeOrFinalize, true, true, false));
-
+            // vectorized
             addBuiltin(AggregateFunction.createBuiltin("min",
                     Lists.newArrayList(t), t, t, minMaxInit,
                     prefix + MIN_UPDATE_SYMBOL.get(t),
@@ -1194,6 +1204,7 @@ public class FunctionSet {
                     prefix + MAX_UPDATE_SYMBOL.get(t),
                     minMaxSerializeOrFinalize, minMaxGetValue,
                     null, minMaxSerializeOrFinalize, true, true, false));
+            // vectorized
             addBuiltin(AggregateFunction.createBuiltin("max",
                     Lists.newArrayList(t), t, t, minMaxInit,
                     prefix + MAX_UPDATE_SYMBOL.get(t),
