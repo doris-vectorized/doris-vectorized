@@ -104,6 +104,7 @@ void registerAggregateFunctionCombinatorNull(AggregateFunctionSimpleFactory& fac
     factory.registerFunction("sum", creator, true);
     factory.registerFunction("max", creator, true);
     factory.registerFunction("min", creator, true);
+    factory.registerFunction("avg", creator, true);
 }
 
 } // namespace doris::vectorized

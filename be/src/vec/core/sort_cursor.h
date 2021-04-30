@@ -116,7 +116,7 @@ struct ReceiveQueueSortCursorImpl : public SortCursorImpl {
             desc[i].direction = is_asc_order[i] ? 1 : -1;
             desc[i].nulls_direction = nulls_first[i] ? 1 : -1;
         }
-        has_next_block();
+        _is_eof = !has_next_block();
     }
 
     bool has_next_block() override {
