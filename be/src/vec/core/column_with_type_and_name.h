@@ -47,6 +47,7 @@ struct ColumnWithTypeAndName {
 
     void dumpStructure(std::ostream& out) const;
     String dumpStructure() const;
+    std::string to_string(size_t row_num) const;
 };
 
 } // namespace doris::vectorized

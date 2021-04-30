@@ -61,12 +61,12 @@
 #include "runtime/runtime_state.h"
 #include "util/debug_util.h"
 #include "util/runtime_profile.h"
-
 #include "vec/core/block.h"
 #include "vec/exec/vaggregation_node.h"
-#include "vec/exec/volap_scan_node.h"
 #include "vec/exec/vexchange_node.h"
+#include "vec/exec/volap_scan_node.h"
 #include "vec/exec/vsort_node.h"
+#include "vec/exec/vunion_node.h"
 #include "vec/exprs/vexpr.h"
 
 namespace doris {
@@ -134,8 +134,7 @@ ExecNode::ExecNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl
           _rows_returned_counter(NULL),
           _rows_returned_rate(NULL),
           _memory_used_counter(NULL),
-          _is_closed(false) {
-}
+          _is_closed(false) {}
 
 ExecNode::~ExecNode() {}
 
@@ -165,8 +164,9 @@ void ExecNode::push_down_predicate(RuntimeState* state, std::list<ExprContext*>*
 }
 
 Status ExecNode::init(const TPlanNode& tnode, RuntimeState* state) {
-    init_runtime_profile(state->enable_vectorized_exec()? "V" + print_plan_node_type(tnode.node_type) :
-        print_plan_node_type(tnode.node_type));
+    init_runtime_profile(state->enable_vectorized_exec()
+                                 ? "V" + print_plan_node_type(tnode.node_type)
+                                 : print_plan_node_type(tnode.node_type));
 
     if (tnode.__isset.vconjunct) {
         _vconjunct_ctx_ptr.reset(new doris::vectorized::VExprContext*);
@@ -456,7 +456,11 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         return Status::OK();
 
     case TPlanNodeType::UNION_NODE:
-        *node = pool->add(new UnionNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new vectorized::VUnionNode(pool, tnode, descs));
+        } else {
+            *node = pool->add(new UnionNode(pool, tnode, descs));
+        }
         return Status::OK();
 
     case TPlanNodeType::INTERSECT_NODE:

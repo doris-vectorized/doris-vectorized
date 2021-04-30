@@ -193,6 +193,7 @@ VDataStreamRecvr::VDataStreamRecvr(
           _total_buffer_limit(total_buffer_limit),
           _row_desc(row_desc),
           _is_merging(is_merging),
+          _is_closed(false),
           _num_buffered_bytes(0),
           _profile(profile),
           _sub_plan_query_statistics_recvr(sub_plan_query_statistics_recvr) {
@@ -274,6 +275,10 @@ void VDataStreamRecvr::cancel_stream() {
 }
 
 void VDataStreamRecvr::close() {
+    if (_is_closed) {
+        return;
+    }
+    _is_closed = true;
     for (int i = 0; i < _sender_queues.size(); ++i) {
         _sender_queues[i]->close();
     }
