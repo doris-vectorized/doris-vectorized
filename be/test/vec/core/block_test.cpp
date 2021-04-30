@@ -236,6 +236,50 @@ TEST(BlockTest, SerializeAndDeserializeBlock) {
     }
 }
 
+TEST(BlockTest, DumpData) {
+    auto vec = vectorized::ColumnVector<Int32>::create();
+    auto& int32_data = vec->getData();
+    for (int i = 0; i < 1024; ++i) {
+        int32_data.push_back(i);
+    }
+    vectorized::DataTypePtr int32_type(std::make_shared<vectorized::DataTypeInt32>());
+    vectorized::ColumnWithTypeAndName test_int(vec->getPtr(), int32_type, "test_int");
+
+    auto strcol = vectorized::ColumnString::create();
+    for (int i = 0; i < 1024; ++i) {
+        std::string is = std::to_string(i);
+        strcol->insertData(is.c_str(), is.size());
+    }
+    vectorized::DataTypePtr string_type(std::make_shared<vectorized::DataTypeString>());
+    vectorized::ColumnWithTypeAndName test_string(strcol->getPtr(), string_type, "test_string");
+
+    vectorized::DataTypePtr decimal_data_type(doris::vectorized::createDecimal(27, 9));
+    auto decimal_column = decimal_data_type->createColumn();
+    auto& decimal_data = ((vectorized::ColumnDecimal<vectorized::Decimal<vectorized::Int128>>*)
+                                  decimal_column.get())
+                                 ->getData();
+    for (int i = 0; i < 1024; ++i) {
+        __int128_t value = i;
+        for (int j = 0; j < 9; ++j) {
+            value *= 10;
+        }
+        decimal_data.push_back(value);
+    }
+    vectorized::ColumnWithTypeAndName test_decimal(decimal_column->getPtr(), decimal_data_type,
+                                                   "test_decimal");
+
+    auto column_vector_int32 = vectorized::ColumnVector<Int32>::create();
+    auto column_nullable_vector = makeNullable(std::move(column_vector_int32));
+    auto mutable_nullable_vector = std::move(*column_nullable_vector).mutate();
+    for (int i = 0; i < 4096; i++) {
+        mutable_nullable_vector->insert(vectorized::castToNearestFieldType(i));
+    }
+    auto nint32_type = makeNullable(std::make_shared<vectorized::DataTypeInt32>());
+    vectorized::ColumnWithTypeAndName test_nullable_int32(mutable_nullable_vector->getPtr(),
+                                                          nint32_type, "test_nullable_int32");
+    vectorized::Block block({test_int, test_string, test_decimal, test_nullable_int32});
+    EXPECT_GT(block.dumpData().size(), 1);
+}
 } // namespace doris
 
 int main(int argc, char** argv) {

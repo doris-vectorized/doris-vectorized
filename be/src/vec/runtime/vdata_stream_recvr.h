@@ -90,6 +90,7 @@ private:
     // True if this reciver merges incoming rows from different senders. Per-sender
     // row batch queues are maintained in this case.
     bool _is_merging;
+    bool _is_closed;
 
     std::atomic<int> _num_buffered_bytes;
     std::shared_ptr<MemTracker> _mem_tracker;

@@ -44,6 +44,17 @@ bool DataTypeNullable::onlyNull() const {
     return typeid_cast<const DataTypeNothing*>(nested_data_type.get());
 }
 
+std::string DataTypeNullable::to_string(const IColumn& column, size_t row_num) const {
+    const ColumnNullable& col =
+            assert_cast<const ColumnNullable&>(*column.convertToFullColumnIfConst().get());
+
+    if (col.isNullAt(row_num)) {
+        return "\\N";
+    } else {
+        return nested_data_type->to_string(col.getNestedColumn(), row_num);
+    }
+}
+
 // void DataTypeNullable::enumerateStreams(const StreamCallback & callback, SubstreamPath & path) const
 // {
 //     path.push_back(Substream::NullMap);
@@ -477,7 +488,8 @@ bool DataTypeNullable::onlyNull() const {
 // }
 
 void DataTypeNullable::serialize(const IColumn& column, PColumn* pcolumn) const {
-    const ColumnNullable& col = assert_cast<const ColumnNullable&>(column);
+    const ColumnNullable& col =
+            assert_cast<const ColumnNullable&>(*column.convertToFullColumnIfConst().get());
     for (size_t i = 0; i < column.size(); ++i) {
         bool is_null = col.isNullAt(i);
         pcolumn->add_is_null(is_null);
