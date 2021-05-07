@@ -349,7 +349,7 @@ size_t Block::rows() const {
     return 0;
 }
 
-void Block::set_num_rows(int length) {
+void Block::set_num_rows(size_t length) {
     if (rows() > length) {
         for (auto& elem : data) {
             if (elem.column) {
@@ -720,7 +720,7 @@ void Block::filter_block(Block* block, int filter_column_id, int column_to_keep)
         block->getByPosition(0).column = block->getByPosition(0).column->cloneEmpty();
     } else {
         if (count != block->rows()) {
-            for (int i = 0; i < column_to_keep; ++i) {
+            for (size_t i = 0; i < column_to_keep; ++i) {
                 block->getByPosition(i).column = block->getByPosition(i).column->filter(filter, 0);
             }
         }
@@ -754,14 +754,14 @@ size_t MutableBlock::rows() const {
 
 void MutableBlock::add_row(const Block* block, int row) {
     auto& src_columns_with_schema = block->getColumnsWithTypeAndName();
-    for (int i = 0; i < _columns.size(); ++i) {
+    for (size_t i = 0; i < _columns.size(); ++i) {
         _columns[i]->insertFrom(*src_columns_with_schema[i].column.get(), row);
     }
 }
 
 Block MutableBlock::to_block() {
     ColumnsWithTypeAndName columns_with_schema;
-    for (int i = 0; i < _columns.size(); ++i) {
+    for (size_t i = 0; i < _columns.size(); ++i) {
         columns_with_schema.emplace_back(std::move(_columns[i]), _data_types[i], "");
     }
     return {columns_with_schema};

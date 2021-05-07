@@ -499,7 +499,7 @@ void DataTypeNullable::serialize(const IColumn& column, PColumn* pcolumn) const 
 
 void DataTypeNullable::deserialize(const PColumn& pcolumn, IColumn* column) const {
     ColumnNullable* col = assert_cast<ColumnNullable*>(column);
-    for (size_t i = 0; i < pcolumn.is_null_size(); ++i) {
+    for (int i = 0; i < pcolumn.is_null_size(); ++i) {
         if (pcolumn.is_null(i)) {
             col->getNullMapData().push_back(1);
         } else {
