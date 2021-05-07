@@ -48,6 +48,7 @@ std::string DataTypeNumberBase<T>::to_string(const IColumn& column, size_t row_n
                 assert_cast<const ColumnVector<T>&>(*column.convertToFullColumnIfConst().get())
                         .getData()[row_num]);
     }
+    throw Exception("to_string not support", -1);
 }
 
 // template <typename T>

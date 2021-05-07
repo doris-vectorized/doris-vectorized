@@ -102,7 +102,7 @@ public:
     size_t rows() const;
 
     // Cut the rows in block, use in LIMIT operation
-    void set_num_rows(int length);
+    void set_num_rows(size_t length);
 
     size_t columns() const { return data.size(); }
 
