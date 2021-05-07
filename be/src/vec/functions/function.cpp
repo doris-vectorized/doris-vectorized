@@ -497,7 +497,7 @@ DataTypePtr FunctionBuilderImpl::getReturnTypeWithoutLowCardinality(
         }
         if (null_presence.has_nullable) {
             ColumnNumbers numbers(arguments.size());
-            for (int i = 0; i < arguments.size(); i++) {
+            for (size_t i = 0; i < arguments.size(); i++) {
                 numbers[i] = i;
             }
             Block nested_block = createBlockWithNestedColumns(Block(arguments), numbers);
