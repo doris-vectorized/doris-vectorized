@@ -383,8 +383,11 @@ Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Blo
     using Method = AggregationMethodSerialized<AggregatedDataWithStringKey>;
     using AggState = Method::State;
 
+    _agg_data.serialized->init_once();
+
     auto& method = *_agg_data.serialized;
     auto& data = _agg_data.serialized->data;
+    auto& iter = _agg_data.serialized->iterator;
 
     block->clear();
     auto column_withschema = VectorizedUtils::create_columns_with_type_and_name(row_desc());
@@ -400,14 +403,16 @@ Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Blo
         value_columns.emplace_back(column_withschema[i].type->createColumn());
     }
 
-    data.forEachValue([&](const auto& key, auto& mapped) {
-        // insert keys
+    while (iter != data.end() && key_columns[0]->size() < state->batch_size()) {
+        const auto& key = iter->getFirst();
+        auto& mapped = iter->getSecond();
         method.insertKeyIntoColumns(key, key_columns, {});
-        // insert values
         for (size_t i = 0; i < _aggregate_evaluators.size(); ++i)
             _aggregate_evaluators[i]->insert_result_info(mapped + _offsets_of_aggregate_states[i],
                                                          value_columns[i].get());
-    });
+
+        ++iter;
+    }
 
     *block = column_withschema;
     MutableColumns columns(block->columns());
@@ -419,7 +424,9 @@ Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Blo
         }
     }
     block->setColumns(std::move(columns));
-    *eos = true;
+    if (iter == data.end()) {
+        *eos = true;
+    }
     return Status::OK();
 }
 
@@ -429,8 +436,11 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
     using Method = AggregationMethodSerialized<AggregatedDataWithStringKey>;
     using AggState = Method::State;
 
+    _agg_data.serialized->init_once();
+
     auto& method = *_agg_data.serialized;
     auto& data = _agg_data.serialized->data;
+    auto& iter = _agg_data.serialized->iterator;
 
     int key_size = _probe_expr_ctxs.size();
     int agg_size = _aggregate_evaluators.size();
@@ -448,7 +458,9 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
         value_columns[i] = value_data_types[i]->createColumn();
     }
 
-    data.forEachValue([&](const auto& key, auto& mapped) {
+    while (iter != data.end() && key_columns[0]->size() < state->batch_size()) {
+        const auto& key = iter->getFirst();
+        auto& mapped = iter->getSecond();
         // insert keys
         method.insertKeyIntoColumns(key, key_columns, {});
 
@@ -458,9 +470,11 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
             _aggregate_evaluators[i]->function()->serialize(
                     mapped + _offsets_of_aggregate_states[i], buf);
             value_columns[i]->insertData(buf.str().c_str(), buf.str().length());
-            buf.str().clear();
+            buf.str("");
+            buf.clear();
         }
-    });
+        ++iter;
+    }
 
     ColumnsWithTypeAndName columns_with_schema;
     for (int i = 0; i < key_size; ++i) {
@@ -473,7 +487,9 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
     }
 
     *block = Block(columns_with_schema);
-    *eos = true;
+    if (iter == data.end()) {
+        *eos = true;
+    }
     return Status::OK();
 }
 

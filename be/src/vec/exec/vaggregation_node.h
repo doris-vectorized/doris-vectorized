@@ -44,8 +44,11 @@ struct AggregationMethodSerialized {
     using Data = TData;
     using Key = typename Data::key_type;
     using Mapped = typename Data::mapped_type;
+    using Iterator = typename Data::iterator;
 
     Data data;
+    Iterator iterator;
+    bool inited = false;
 
     AggregationMethodSerialized() = default;
 
@@ -60,6 +63,13 @@ struct AggregationMethodSerialized {
                                      const Sizes&) {
         auto pos = key.data;
         for (auto& column : key_columns) pos = column->deserializeAndInsertFromArena(pos);
+    }
+
+    void init_once() {
+        if (!inited) {
+            inited = true;
+            iterator = data.begin();
+        }
     }
 };
 
