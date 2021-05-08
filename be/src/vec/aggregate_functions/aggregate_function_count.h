@@ -48,7 +48,7 @@ public:
 
     String getName() const override { return "count"; }
 
-    DataTypePtr getReturnType() const override { return std::make_shared<DataTypeUInt64>(); }
+    DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
 
     void add(AggregateDataPtr place, const IColumn**, size_t, Arena*) const override {
         ++data(place).count;
@@ -67,7 +67,7 @@ public:
     }
 
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
-        assert_cast<ColumnUInt64&>(to).getData().push_back(data(place).count);
+        assert_cast<ColumnInt64&>(to).getData().push_back(data(place).count);
     }
 
     const char* getHeaderFilePath() const override { return __FILE__; }
@@ -90,7 +90,7 @@ public:
 
     String getName() const override { return "count"; }
 
-    DataTypePtr getReturnType() const override { return std::make_shared<DataTypeUInt64>(); }
+    DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
 
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
@@ -110,7 +110,7 @@ public:
     }
 
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
-        assert_cast<ColumnUInt64&>(to).getData().push_back(data(place).count);
+        assert_cast<ColumnInt64&>(to).getData().push_back(data(place).count);
     }
 
     const char* getHeaderFilePath() const override { return __FILE__; }

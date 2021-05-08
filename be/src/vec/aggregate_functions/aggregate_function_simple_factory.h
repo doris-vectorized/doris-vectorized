@@ -31,6 +31,7 @@ namespace doris::vectorized {
 
 class AggregateFunctionSimpleFactory;
 void registerAggregateFunctionSum(AggregateFunctionSimpleFactory& factory);
+void registerAggregateFunctionCount(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionCombinatorNull(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionMinMax(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionAvg(AggregateFunctionSimpleFactory& factory);
@@ -82,6 +83,7 @@ public:
         static AggregateFunctionSimpleFactory instance;
         std::call_once(oc, [&]() {
             registerAggregateFunctionSum(instance);
+            registerAggregateFunctionCount(instance);
             registerAggregateFunctionMinMax(instance);
             registerAggregateFunctionAvg(instance);
             registerAggregateFunctionCombinatorNull(instance);

@@ -17,6 +17,8 @@
 
 #include "vec/exec/vaggregation_node.h"
 
+#include <memory>
+
 #include "exec/exec_node.h"
 #include "runtime/mem_pool.h"
 #include "runtime/row_batch.h"
@@ -40,7 +42,7 @@ AggregationNode::AggregationNode(ObjectPool* pool, const TPlanNode& tnode,
           _is_merge(false),
           _agg_data() {}
 
-AggregationNode::~AggregationNode() {}
+AggregationNode::~AggregationNode() = default;
 
 Status AggregationNode::init(const TPlanNode& tnode, RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::init(tnode, state));
@@ -57,8 +59,8 @@ Status AggregationNode::init(const TPlanNode& tnode, RuntimeState* state) {
         _aggregate_evaluators.push_back(evaluator);
     }
 
-    auto agg_functions = tnode.agg_node.aggregate_functions;
-    _is_merge = std::any_of(agg_functions.begin(), agg_functions.end(),
+    const auto& agg_functions = tnode.agg_node.aggregate_functions;
+    _is_merge = std::any_of(agg_functions.cbegin(), agg_functions.cend(),
                             [](const auto& e) { return e.nodes[0].agg_expr.is_merge_agg; });
     return Status::OK();
 }
@@ -73,7 +75,7 @@ Status AggregationNode::prepare(RuntimeState* state) {
     RETURN_IF_ERROR(
             VExpr::prepare(_probe_expr_ctxs, state, child(0)->row_desc(), expr_mem_tracker()));
 
-    _mem_pool.reset(new MemPool(mem_tracker().get()));
+    _mem_pool = std::make_unique<MemPool>(mem_tracker().get());
 
     int j = _probe_expr_ctxs.size();
     for (int i = 0; i < _aggregate_evaluators.size(); ++i, ++j) {
@@ -89,7 +91,7 @@ Status AggregationNode::prepare(RuntimeState* state) {
     for (size_t i = 0; i < _aggregate_evaluators.size(); ++i) {
         _offsets_of_aggregate_states[i] = _total_size_of_aggregate_states;
 
-        const auto agg_function = _aggregate_evaluators[i]->function();
+        const auto& agg_function = _aggregate_evaluators[i]->function();
         // aggreate states are aligned based on maximum requirement
         _align_aggregate_states = std::max(_align_aggregate_states, agg_function->alignOfData());
         _total_size_of_aggregate_states += agg_function->sizeOfData();
