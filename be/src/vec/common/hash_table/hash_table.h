@@ -17,9 +17,10 @@
 // #include <IO/ReadBuffer.h>
 // #include <IO/ReadHelpers.h>
 // #include <IO/VarInt.h>
-
 #include <vec/common/hash_table/hash_table_allocator.h>
 #include <vec/common/hash_table/hash_table_key_holder.h>
+
+#include "vec/io/io_helper.h"
 
 #ifdef DBMS_HASH_MAP_DEBUG_RESIZES
 #include <Common/Stopwatch.h>
@@ -50,11 +51,11 @@ extern const int NO_AVAILABLE_DATA;
   */
 struct HashTableNoState {
     /// Serialization, in binary and text form.
-    // void write(doris::vectorized::WriteBuffer &) const         {}
+    void write(std::ostream&) const {}
     // void writeText(doris::vectorized::WriteBuffer &) const     {}
 
     // /// Deserialization, in binary and text form.
-    // void read(doris::vectorized::ReadBuffer &)                 {}
+    void read(std::istream&) {}
     // void readText(doris::vectorized::ReadBuffer &)             {}
 };
 
@@ -197,11 +198,11 @@ struct HashTableCell {
     void setMapped(const value_type& /*value*/) {}
 
     /// Serialization, in binary and text form.
-    // void write(doris::vectorized::WriteBuffer & wb) const         { doris::vectorized::writeBinary(key, wb); }
+    void write(std::ostream& wb) const { doris::vectorized::writeBinary(key, wb); }
     // void writeText(doris::vectorized::WriteBuffer & wb) const     { doris::vectorized::writeDoubleQuoted(key, wb); }
 
     /// Deserialization, in binary and text form.
-    // void read(doris::vectorized::ReadBuffer & rb)        { doris::vectorized::readBinary(key, rb); }
+    void read(std::istream& rb) { doris::vectorized::readBinary(key, rb); }
     // void readText(doris::vectorized::ReadBuffer & rb)    { doris::vectorized::readDoubleQuoted(key, rb); }
 };
 
@@ -844,18 +845,15 @@ public:
         return !buf[place_value].isZero(*this);
     }
 
-    // void write(doris::vectorized::WriteBuffer & wb) const
-    // {
-    //     Cell::State::write(wb);
-    //     doris::vectorized::writeVarUInt(m_size, wb);
+    void write(std::ostream& wb) const {
+        Cell::State::write(wb);
+        doris::vectorized::writeVarUInt(m_size, wb);
 
-    //     if (this->hasZero())
-    //         this->zeroValue()->write(wb);
+        if (this->hasZero()) this->zeroValue()->write(wb);
 
-    //     for (auto ptr = buf, buf_end = buf + grower.bufSize(); ptr < buf_end; ++ptr)
-    //         if (!ptr->isZero(*this))
-    //             ptr->write(wb);
-    // }
+        for (auto ptr = buf, buf_end = buf + grower.bufSize(); ptr < buf_end; ++ptr)
+            if (!ptr->isZero(*this)) ptr->write(wb);
+    }
 
     // void writeText(doris::vectorized::WriteBuffer & wb) const
     // {
@@ -878,29 +876,27 @@ public:
     //     }
     // }
 
-    // void read(doris::vectorized::ReadBuffer & rb)
-    // {
-    //     Cell::State::read(rb);
+    void read(std::istream& rb) {
+        Cell::State::read(rb);
 
-    //     destroyElements();
-    //     this->clearHasZero();
-    //     m_size = 0;
+        destroyElements();
+        this->clearHasZero();
+        m_size = 0;
 
-    //     size_t new_size = 0;
-    //     doris::vectorized::readVarUInt(new_size, rb);
+        size_t new_size = 0;
+        doris::vectorized::readVarUInt(new_size, rb);
 
-    //     free();
-    //     Grower new_grower = grower;
-    //     new_grower.set(new_size);
-    //     alloc(new_grower);
+        free();
+        Grower new_grower = grower;
+        new_grower.set(new_size);
+        alloc(new_grower);
 
-    //     for (size_t i = 0; i < new_size; ++i)
-    //     {
-    //         Cell x;
-    //         x.read(rb);
-    //         insert(Cell::getKey(x.getValue()));
-    //     }
-    // }
+        for (size_t i = 0; i < new_size; ++i) {
+            Cell x;
+            x.read(rb);
+            insert(Cell::getKey(x.getValue()));
+        }
+    }
 
     // void readText(doris::vectorized::ReadBuffer & rb)
     // {
