@@ -99,14 +99,19 @@ void AggFnEvaluator::destroy(AggregateDataPtr place) {
 }
 
 void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place, Arena* arena) {
-    std::vector<const IColumn*> column_arguments(_input_exprs_ctxs.size());
-    auto columns = block->getColumns();
+    std::vector<ColumnPtr> columns(_input_exprs_ctxs.size());
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
         int column_id = -1;
         _input_exprs_ctxs[i]->execute(block, &column_id);
-        column_arguments[i] =
-                block->getByPosition(column_id).column->convertToFullColumnIfConst().get();
+        columns[i] =
+                block->getByPosition(column_id).column->convertToFullColumnIfConst();
     }
+    // Because the `convertToFullColumnIfConst()` may return a temporary variable, so we need keep the reference of it
+    // to make sure program do not destroy it before we call `addBatchSinglePlace`.
+    // WARNING:
+    //      There's danger to call `convertToFullColumnIfConst().get()` to get the `const IColumn*` directly.
+    std::vector<const IColumn*> column_arguments(columns.size());
+    std::transform(columns.cbegin(), columns.cend(), column_arguments.begin(), [](const auto& ptr) {return ptr.get();});
     _function->addBatchSinglePlace(block->rows(), place, column_arguments.data(), nullptr);
 }
 
