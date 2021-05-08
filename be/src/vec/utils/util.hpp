@@ -15,8 +15,8 @@ public:
 
     static ColumnsWithTypeAndName create_columns_with_type_and_name(const RowDescriptor& row_desc) {
         ColumnsWithTypeAndName columns_with_type_and_name;
-        for (const auto tuple_desc : row_desc.tuple_descriptors()) {
-            for (const auto slot_desc : tuple_desc->slots()) {
+        for (const auto& tuple_desc : row_desc.tuple_descriptors()) {
+            for (const auto& slot_desc : tuple_desc->slots()) {
                 columns_with_type_and_name.emplace_back(nullptr, slot_desc->get_data_type_ptr(),
                                                         slot_desc->col_name());
             }
