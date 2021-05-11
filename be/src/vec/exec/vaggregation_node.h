@@ -149,24 +149,29 @@ private:
 
 private:
     Status _create_agg_status(AggregateDataPtr data);
+    Status _destory_agg_status(AggregateDataPtr data);
 
     Status _get_without_key_result(RuntimeState* state, Block* block, bool* eos);
     Status _serialize_without_key(RuntimeState* state, Block* block, bool* eos);
     Status _execute_without_key(Block* block);
     Status _merge_without_key(Block* block);
+    void _close_without_key();
 
     Status _get_with_serialized_key_result(RuntimeState* state, Block* block, bool* eos);
     Status _serialize_with_serialized_key_result(RuntimeState* state, Block* block, bool* eos);
     Status _execute_with_serialized_key(Block* block);
     Status _merge_with_serialized_key(Block* block);
+    void _close_with_serialized_key();
 
     using vectorized_execute = std::function<Status(Block* block)>;
     using vectorized_get_result =
             std::function<Status(RuntimeState* state, Block* block, bool* eos)>;
+    using vectorized_closer = std::function<void()>;
 
     struct executor {
         vectorized_execute execute;
         vectorized_get_result get_result;
+        vectorized_closer close;
     };
 
     executor _executor;
