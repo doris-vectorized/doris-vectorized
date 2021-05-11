@@ -168,19 +168,19 @@ public class BinaryPredicate extends Predicate implements Writable {
     public static void initBuiltins(FunctionSet functionSet) {
         for (Type t: Type.getSupportedTypes()) {
             if (t.isNull()) continue; // NULL is handled through type promotion.
-            functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+            functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                     Operator.EQ.getName(), Lists.newArrayList(t, t), Type.BOOLEAN));
-            functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+            functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                     Operator.NE.getName(), Lists.newArrayList(t, t), Type.BOOLEAN));
-            functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+            functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                     Operator.LE.getName(), Lists.newArrayList(t, t), Type.BOOLEAN));
-            functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+            functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                     Operator.GE.getName(), Lists.newArrayList(t, t), Type.BOOLEAN));
-            functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+            functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                     Operator.LT.getName(), Lists.newArrayList(t, t), Type.BOOLEAN));
-            functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+            functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                     Operator.GT.getName(), Lists.newArrayList(t, t), Type.BOOLEAN));
-            functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+            functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                     Operator.EQ_FOR_NULL.getName(), Lists.newArrayList(t, t), Type.BOOLEAN));
         }
     }
