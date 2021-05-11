@@ -95,22 +95,22 @@ public class ArithmeticExpr extends Expr {
 
     public static void initBuiltins(FunctionSet functionSet) {
         for (Type t : Type.getNumericTypes()) {
-            functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+            functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                     Operator.MULTIPLY.getName(), Lists.newArrayList(t, t), t));
-            functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+            functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                     Operator.ADD.getName(), Lists.newArrayList(t, t), t));
-            functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+            functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                     Operator.SUBTRACT.getName(), Lists.newArrayList(t, t), t));
         }
-        functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+        functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DOUBLE, Type.DOUBLE),
                 Type.DOUBLE));
-        functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+        functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DECIMAL, Type.DECIMAL),
                 Type.DECIMAL));
-        functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+        functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DECIMALV2, Type.DECIMALV2),
                 Type.DECIMALV2));
@@ -118,7 +118,7 @@ public class ArithmeticExpr extends Expr {
         // MOD(), FACTORIAL(), BITAND(), BITOR(), BITXOR(), and BITNOT() are registered as
         // builtins, see palo_functions.py
         for (Type t : Type.getIntegerTypes()) {
-            functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+            functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                     Operator.INT_DIVIDE.getName(), Lists.newArrayList(t, t), t));
         }
     }
