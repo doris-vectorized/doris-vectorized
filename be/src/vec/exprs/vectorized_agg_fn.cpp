@@ -72,7 +72,6 @@ Status AggFnEvaluator::prepare(RuntimeState* state, const RowDescriptor& desc, M
         argument_types.emplace_back(_input_exprs_ctxs[i]->root()->data_type());
         child_expr_name.emplace_back(_input_exprs_ctxs[i]->root()->expr_name());
     }
-
     _function = AggregateFunctionSimpleFactory::instance().get(_fn.name.function_name,
                                                                argument_types, params);
     if (_function == nullptr) {
@@ -103,15 +102,15 @@ void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place, Ar
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
         int column_id = -1;
         _input_exprs_ctxs[i]->execute(block, &column_id);
-        columns[i] =
-                block->getByPosition(column_id).column->convertToFullColumnIfConst();
+        columns[i] = block->getByPosition(column_id).column->convertToFullColumnIfConst();
     }
     // Because the `convertToFullColumnIfConst()` may return a temporary variable, so we need keep the reference of it
     // to make sure program do not destroy it before we call `addBatchSinglePlace`.
     // WARNING:
     //      There's danger to call `convertToFullColumnIfConst().get()` to get the `const IColumn*` directly.
     std::vector<const IColumn*> column_arguments(columns.size());
-    std::transform(columns.cbegin(), columns.cend(), column_arguments.begin(), [](const auto& ptr) {return ptr.get();});
+    std::transform(columns.cbegin(), columns.cend(), column_arguments.begin(),
+                   [](const auto& ptr) { return ptr.get(); });
     _function->addBatchSinglePlace(block->rows(), place, column_arguments.data(), nullptr);
 }
 
