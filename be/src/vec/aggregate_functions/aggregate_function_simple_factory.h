@@ -34,6 +34,8 @@ void registerAggregateFunctionSum(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionCombinatorNull(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionMinMax(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionAvg(AggregateFunctionSimpleFactory& factory);
+void registerAggregateFunctionCount(AggregateFunctionSimpleFactory& factory);
+void registerAggregateFunctionsUniq(AggregateFunctionSimpleFactory& factory);
 
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
@@ -53,7 +55,9 @@ private:
 public:
     void registerNullableFunctionCombinator(Creator creator) {
         for (auto entity : aggregate_functions) {
-            nullable_aggregate_functions[entity.first] = creator;
+            if (nullable_aggregate_functions[entity.first] == nullptr) {
+                nullable_aggregate_functions[entity.first] = creator;
+            }
         }
     }
 
@@ -92,6 +96,8 @@ public:
             registerAggregateFunctionSum(instance);
             registerAggregateFunctionMinMax(instance);
             registerAggregateFunctionAvg(instance);
+            registerAggregateFunctionCount(instance);
+            registerAggregateFunctionsUniq(instance);
             registerAggregateFunctionCombinatorNull(instance);
         });
         return instance;

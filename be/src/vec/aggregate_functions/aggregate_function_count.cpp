@@ -15,27 +15,33 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/aggregate_functions/aggregate_function_simple_factory.h"
 #include <vec/aggregate_functions/aggregate_function_count.h>
 #include <vec/aggregate_functions/factory_helpers.h>
 
+#include "vec/aggregate_functions/aggregate_function_simple_factory.h"
+
 namespace doris::vectorized {
 
-AggregateFunctionPtr createAggregateFunctionCount(const std::string & name, const DataTypes & argument_types, const Array & parameters) {
+AggregateFunctionPtr createAggregateFunctionCount(const std::string& name,
+                                                  const DataTypes& argument_types,
+                                                  const Array& parameters) {
     assertNoParameters(name, parameters);
     assertArityAtMost<1>(name, argument_types);
 
     return std::make_shared<AggregateFunctionCount>(argument_types);
 }
 
-// void registerAggregateFunctionCount(AggregateFunctionFactory & factory)
-// {
-//     factory.registerFunction("count", createAggregateFunctionCount, AggregateFunctionFactory::CaseInsensitive);
-// }
+AggregateFunctionPtr createAggregateFunctionCountNotNullUnary(const std::string& name,
+                                                              const DataTypes& argument_types,
+                                                              const Array& parameters) {
+    assertArityAtMost<1>(name, argument_types);
+
+    return std::make_shared<AggregateFunctionCountNotNullUnary>(argument_types);
+}
 
 void registerAggregateFunctionCount(AggregateFunctionSimpleFactory& factory) {
     factory.registerFunction("count", createAggregateFunctionCount);
+    factory.registerFunction("count", createAggregateFunctionCountNotNullUnary, true);
 }
 
-} // namespace
-
+} // namespace doris::vectorized
