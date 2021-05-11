@@ -42,11 +42,11 @@ public class CompoundPredicate extends Predicate {
     private final Operator op;
 
     public static void initBuiltins(FunctionSet functionSet) {
-        functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+        functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                 Operator.AND.toString(), Lists.newArrayList(Type.BOOLEAN, Type.BOOLEAN), Type.BOOLEAN));
-        functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+        functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                 Operator.OR.toString(), Lists.newArrayList(Type.BOOLEAN, Type.BOOLEAN), Type.BOOLEAN));
-        functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+        functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltinOperator(
                 Operator.NOT.toString(), Lists.newArrayList(Type.BOOLEAN), Type.BOOLEAN));
     }
 
