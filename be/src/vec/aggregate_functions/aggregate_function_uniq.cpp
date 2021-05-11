@@ -42,7 +42,7 @@ void registerAggregateFunctionsUniq(AggregateFunctionSimpleFactory& factory) {
     AggregateFunctionCreator creator =
             createAggregateFunctionUniq<AggregateFunctionUniqExactData,
                                         AggregateFunctionUniqExactData<String>>;
-    factory.registerFunction("uniqExact", creator);
+    factory.registerFunction("multi_distinct_count", creator);
 }
 
 } // namespace doris::vectorized
