@@ -724,7 +724,7 @@ public class Function implements Writable {
         return row;
     }
 
-    public boolean isVectorized() {
+    boolean isVectorized() {
         return vectorized;
     }
 }

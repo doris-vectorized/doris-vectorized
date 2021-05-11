@@ -120,7 +120,7 @@ public class CastExpr extends Expr {
                 }
                 String beSymbol = "doris::" + beClass + "::cast_to_"
                         + typeName;
-                functionSet.addBuiltin(ScalarFunction.createBuiltin(getFnName(toType),
+                functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltin(getFnName(toType),
                         Lists.newArrayList(fromType), false, toType, beSymbol, null, null, true));
             }
         }
