@@ -1112,6 +1112,18 @@ public class FunctionSet {
                     null,
                     prefix + "30count_distinct_string_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                     false, true, true));
+                // vectorized 
+                addBuiltin(AggregateFunction.createBuiltin("multi_distinct_count", Lists.newArrayList(t),
+                    Type.BIGINT,
+                    Type.VARCHAR,
+                    prefix + "",
+                    prefix + "",
+                    prefix + "",
+                    prefix + "",
+                    null,
+                    null,
+                    prefix + "",
+                    false, true, true, true));
             } else if (t.equals(Type.TINYINT) || t.equals(Type.SMALLINT) || t.equals(Type.INT)
                     || t.equals(Type.BIGINT) || t.equals(Type.LARGEINT) || t.equals(Type.DOUBLE)) {
                addBuiltin(AggregateFunction.createBuiltin("multi_distinct_count", Lists.newArrayList(t),
@@ -1125,6 +1137,20 @@ public class FunctionSet {
                     null,
                     prefix + MULTI_DISTINCT_COUNT_FINALIZE_SYMBOL.get(t),
                     false, true, true));
+                // vectorized
+                addBuiltin(AggregateFunction.createBuiltin("multi_distinct_count", Lists.newArrayList(t),
+                    Type.BIGINT,
+                    t,
+                    prefix + MULTI_DISTINCT_INIT_SYMBOL.get(t),
+                    prefix + MULTI_DISTINCT_UPDATE_SYMBOL.get(t),
+                    prefix + MULTI_DISTINCT_MERGE_SYMBOL.get(t),
+                    prefix + MULTI_DISTINCT_SERIALIZE_SYMBOL.get(t),
+                    null,
+                    null,
+                    prefix + MULTI_DISTINCT_COUNT_FINALIZE_SYMBOL.get(t),
+                    false, true, true, true));
+
+                
             } else if (t.equals(Type.DATE) || t.equals(Type.DATETIME)) {
                addBuiltin(AggregateFunction.createBuiltin("multi_distinct_count", Lists.newArrayList(t),
                     Type.BIGINT,
@@ -1137,6 +1163,32 @@ public class FunctionSet {
                     null,
                     prefix + "28count_distinct_date_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                     false, true, true));
+                // vectorized
+                // now we don't support datetime distinct
+            } else if (t.equals(Type.DECIMAL)) {
+               addBuiltin(AggregateFunction.createBuiltin("multi_distinct_count", Lists.newArrayList(t),
+                    Type.BIGINT,
+                    Type.VARCHAR,
+                    prefix + "34count_or_sum_distinct_decimal_initEPN9doris_udf15FunctionContextEPNS1_9StringValE",
+                    prefix + "36count_or_sum_distinct_decimal_updateEPN9doris_udf15FunctionContextERNS1_10DecimalValEPNS1_9StringValE",
+                    prefix + "35count_or_sum_distinct_decimal_mergeEPN9doris_udf15FunctionContextERNS1_9StringValEPS4_",
+                    prefix + "39count_or_sum_distinct_decimal_serializeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                    null,
+                    null,
+                    prefix + "31count_distinct_decimal_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                    false, true, true));
+                // vectorized
+                addBuiltin(AggregateFunction.createBuiltin("multi_distinct_count", Lists.newArrayList(t),
+                    Type.BIGINT,
+                    Type.DECIMAL,
+                    prefix + "",
+                    prefix + "",
+                    prefix + "",
+                    prefix + "",
+                    null,
+                    null,
+                    prefix + "",
+                    false, true, true, true));
             } else if (t.equals(Type.DECIMALV2)) {
                addBuiltin(AggregateFunction.createBuiltin("multi_distinct_count", Lists.newArrayList(t),
                     Type.BIGINT,
@@ -1149,6 +1201,18 @@ public class FunctionSet {
                     null,
                     prefix + "33count_distinct_decimalv2_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                     false, true, true));
+                // vectorized
+                addBuiltin(AggregateFunction.createBuiltin("multi_distinct_count", Lists.newArrayList(t),
+                    Type.BIGINT,
+                    Type.DECIMALV2,
+                    prefix + "",
+                    prefix + "",
+                    prefix + "",
+                    prefix + "",
+                    null,
+                    null,
+                    prefix + "",
+                    false, true, true, true));
             }
 
             // sum in multi distinct
@@ -1164,6 +1228,44 @@ public class FunctionSet {
                     null,
                     prefix + MULTI_DISTINCT_SUM_FINALIZE_SYMBOL.get(t),
                     false, true, true));
+
+                // vectorized 
+                addBuiltin(AggregateFunction.createBuiltin("multi_distinct_sum", Lists.newArrayList(t),
+                    t,
+                    Type.BIGINT,
+                    prefix + MULTI_DISTINCT_INIT_SYMBOL.get(t),
+                    prefix + MULTI_DISTINCT_UPDATE_SYMBOL.get(t),
+                    prefix + MULTI_DISTINCT_MERGE_SYMBOL.get(t),
+                    prefix + MULTI_DISTINCT_SERIALIZE_SYMBOL.get(t),
+                    null,
+                    null,
+                    prefix + MULTI_DISTINCT_SUM_FINALIZE_SYMBOL.get(t),
+                    false, true, true, true));
+            } else if (t.equals(Type.DECIMAL)) {
+               addBuiltin(AggregateFunction.createBuiltin("multi_distinct_sum", Lists.newArrayList(t),
+                    MULTI_DISTINCT_SUM_RETURN_TYPE.get(t),
+                    Type.VARCHAR,
+                    prefix + "34count_or_sum_distinct_decimal_initEPN9doris_udf15FunctionContextEPNS1_9StringValE",
+                    prefix + "36count_or_sum_distinct_decimal_updateEPN9doris_udf15FunctionContextERNS1_10DecimalValEPNS1_9StringValE",
+                    prefix + "35count_or_sum_distinct_decimal_mergeEPN9doris_udf15FunctionContextERNS1_9StringValEPS4_",
+                    prefix + "39count_or_sum_distinct_decimal_serializeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                    null,
+                    null,
+                    prefix + "29sum_distinct_decimal_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
+                    false, true, true));
+
+                // vectorized
+                addBuiltin(AggregateFunction.createBuiltin("multi_distinct_sum", Lists.newArrayList(t),
+                    MULTI_DISTINCT_SUM_RETURN_TYPE.get(t),
+                    Type.DECIMAL,
+                    prefix + "",
+                    prefix + "",
+                    prefix + "",
+                    prefix + "",
+                    null,
+                    null,
+                    prefix + "",
+                    false, true, true, true));
             } else if (t.equals(Type.DECIMALV2)) {
                addBuiltin(AggregateFunction.createBuiltin("multi_distinct_sum", Lists.newArrayList(t),
                     MULTI_DISTINCT_SUM_RETURN_TYPE.get(t),
@@ -1176,6 +1278,18 @@ public class FunctionSet {
                     null,
                     prefix + "31sum_distinct_decimalv2_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                     false, true, true));
+                // vectorized
+                addBuiltin(AggregateFunction.createBuiltin("multi_distinct_sum", Lists.newArrayList(t),
+                    MULTI_DISTINCT_SUM_RETURN_TYPE.get(t),
+                    Type.DECIMALV2,
+                    prefix + "",
+                    prefix + "",
+                    prefix + "",
+                    prefix + "",
+                    null,
+                    null,
+                    prefix + "",
+                    false, true, true, true));
             }
             // Min
             String minMaxInit = t.isStringType() ? initNullString : initNull;

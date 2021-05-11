@@ -22,6 +22,7 @@
 #include "exec/exec_node.h"
 #include "runtime/mem_pool.h"
 #include "runtime/row_batch.h"
+#include "util/defer_op.h"
 #include "vec/core/block.h"
 #include "vec/data_types/data_type_nullable.h"
 #include "vec/exprs/vexpr.h"
@@ -137,6 +138,7 @@ Status AggregationNode::prepare(RuntimeState* state) {
                                                      std::placeholders::_3);
         }
 
+        _executor.close = std::bind<void>(&AggregationNode::_close_without_key, this);
     } else {
         _agg_data.init(AggregatedDataVariants::Type::serialized);
         if (_is_merge) {
@@ -156,6 +158,7 @@ Status AggregationNode::prepare(RuntimeState* state) {
                     &AggregationNode::_serialize_with_serialized_key_result, this,
                     std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
         }
+        _executor.close = std::bind<void>(&AggregationNode::_close_with_serialized_key, this);
     }
 
     return Status::OK();
@@ -201,12 +204,20 @@ Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
 Status AggregationNode::close(RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::close(state));
     VExpr::close(_probe_expr_ctxs, state);
+    _executor.close();
     return Status::OK();
 }
 
 Status AggregationNode::_create_agg_status(AggregateDataPtr data) {
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         _aggregate_evaluators[i]->create(data + _offsets_of_aggregate_states[i]);
+    }
+    return Status::OK();
+}
+
+Status AggregationNode::_destory_agg_status(AggregateDataPtr data) {
+    for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
+        _aggregate_evaluators[i]->function()->destroy(data + _offsets_of_aggregate_states[i]);
     }
     return Status::OK();
 }
@@ -300,11 +311,14 @@ Status AggregationNode::_merge_without_key(Block* block) {
     DCHECK(_agg_data.without_key != nullptr);
     std::unique_ptr<char[]> deserialize_buffer(new char[_total_size_of_aggregate_states]);
     int rows = block->rows();
+    _create_agg_status(deserialize_buffer.get());
+    DeferOp defer([&]() { _destory_agg_status(deserialize_buffer.get()); });
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         auto column = block->getByPosition(i).column;
         if (column->isNullable()) {
             column = ((ColumnNullable*)column.get())->getNestedColumnPtr();
         }
+
         for (int j = 0; j < rows; ++j) {
             std::string data_buffer;
             StringRef ref = column->getDataAt(j);
@@ -321,6 +335,10 @@ Status AggregationNode::_merge_without_key(Block* block) {
         }
     }
     return Status::OK();
+}
+
+void AggregationNode::_close_without_key() {
+    _destory_agg_status(_agg_data.without_key);
 }
 
 Status AggregationNode::_execute_with_serialized_key(Block* block) {
@@ -565,6 +583,17 @@ Status AggregationNode::_merge_with_serialized_key(Block* block) {
         }
     }
     return Status::OK();
+}
+
+void AggregationNode::_close_with_serialized_key() {
+    DCHECK(_agg_data.serialized != nullptr);
+
+    using Method = AggregationMethodSerialized<AggregatedDataWithStringKey>;
+    using AggState = Method::State;
+
+    auto& data = _agg_data.serialized->data;
+
+    data.forEachValue([&](const auto& key, auto& mapped) { _destory_agg_status(mapped); });
 }
 
 } // namespace doris::vectorized
