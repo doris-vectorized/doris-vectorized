@@ -17,6 +17,7 @@
 
 package org.apache.doris.catalog;
 
+import com.google.common.base.Preconditions;
 import org.apache.doris.analysis.ArithmeticExpr;
 import org.apache.doris.analysis.BinaryPredicate;
 import org.apache.doris.analysis.CastExpr;
@@ -73,6 +74,7 @@ public class FunctionSet {
         BinaryPredicate.initBuiltins(this);
         CompoundPredicate.initBuiltins(this);
         CastExpr.initBuiltins(this);
+
         IsNullPredicate.initBuiltins(this);
         ScalarBuiltins.initBuiltins(this);
         LikePredicate.initBuiltins(this);
@@ -1016,6 +1018,34 @@ public class FunctionSet {
     public void addBuiltin(Function fn) {
         addFunction(fn, true);
     }
+
+    /**
+     * Adds a function both in FunctionSet and VecFunctionSet to this database.
+     * The function must not already exist and need to be not vectorized
+     */
+    public void addBuiltinBothScalaAndVectorized(Function fn) {
+        if (getFunction(fn, Function.CompareMode.IS_INDISTINGUISHABLE) != null) {
+            return;
+        }
+        Preconditions.checkState(!fn.isVectorized());
+
+        // add scala function
+        List<Function> fns = functions.get(fn.functionName());
+        if (fns == null) {
+            fns = Lists.newArrayList();
+            functions.put(fn.functionName(), fns);
+        }
+        fns.add(fn);
+
+        // add vectorized function
+        List<Function> vecFns = vectorizedFunctions.get(fn.functionName());
+        if (vecFns == null) {
+            vecFns = Lists.newArrayList();
+            vectorizedFunctions.put(fn.functionName(), vecFns);
+        }
+        vecFns.add(new Function(fn.getFunctionName(), fn.getArgs(), fn.getReturnType(), fn.hasVarArgs(), true));
+    }
+
 
     public static final String COUNT = "count";
     // Populate all the aggregate builtins in the catalog.
