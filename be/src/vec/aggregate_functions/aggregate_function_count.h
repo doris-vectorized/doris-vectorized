@@ -88,6 +88,9 @@ public:
                     ErrorCodes::LOGICAL_ERROR);
     }
 
+    AggregateFunctionCountNotNullUnary(const DataTypes& argument_types_)
+            : IAggregateFunctionDataHelper(argument_types_, {}) {}
+
     String getName() const override { return "count"; }
 
     DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
