@@ -92,7 +92,7 @@ public:
 
     String getName() const override { return Data::getName(); }
 
-    DataTypePtr getReturnType() const override { return std::make_shared<DataTypeUInt64>(); }
+    DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
 
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
@@ -104,15 +104,15 @@ public:
     }
 
     void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
-        // this->data(place).set.write(buf);
+        this->data(place).set.write(buf);
     }
 
     void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
-        // this->data(place).set.read(buf);
+        this->data(place).set.read(buf);
     }
 
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
-        assert_cast<ColumnUInt64&>(to).getData().push_back(this->data(place).set.size());
+        assert_cast<ColumnInt64&>(to).getData().push_back(this->data(place).set.size());
     }
 
     const char* getHeaderFilePath() const override { return __FILE__; }
