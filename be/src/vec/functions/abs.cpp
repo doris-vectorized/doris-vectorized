@@ -47,6 +47,7 @@ struct AbsImpl {
 struct NameAbs {
     static constexpr auto name = "abs";
 };
+
 using FunctionAbs = FunctionUnaryArithmetic<AbsImpl, NameAbs, false>;
 
 //template <> struct FunctionUnaryArithmeticMonotonicity<NameAbs>
