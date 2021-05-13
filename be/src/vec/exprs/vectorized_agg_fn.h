@@ -17,6 +17,7 @@
 
 #pragma once
 #include "runtime/types.h"
+#include "util/runtime_profile.h"
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/core/block.h"
 #include "vec/data_types/data_type.h"
@@ -34,6 +35,11 @@ public:
                    const SlotDescriptor* intermediate_slot_desc,
                    const SlotDescriptor* output_slot_desc,
                    const std::shared_ptr<MemTracker>& mem_tracker);
+
+    void set_timer(RuntimeProfile::Counter* exec_timer, RuntimeProfile::Counter* merge_timer) {
+        _exec_timer = exec_timer;
+        _merge_timer = merge_timer;
+    }
 
     Status open(RuntimeState* state);
 
@@ -70,6 +76,9 @@ private:
 
     const SlotDescriptor* _intermediate_slot_desc;
     const SlotDescriptor* _output_slot_desc;
+
+    RuntimeProfile::Counter* _exec_timer;
+    RuntimeProfile::Counter* _merge_timer;
 
     // input context
     std::vector<VExprContext*> _input_exprs_ctxs;
