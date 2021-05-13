@@ -41,7 +41,10 @@ AggregationNode::AggregationNode(ObjectPool* pool, const TPlanNode& tnode,
           _output_tuple_desc(NULL),
           _needs_finalize(tnode.agg_node.need_finalize),
           _is_merge(false),
-          _agg_data() {}
+          _agg_data(),
+          _build_timer(nullptr),
+          _exec_timer(nullptr),
+          _merge_timer(nullptr) {}
 
 AggregationNode::~AggregationNode() = default;
 
@@ -68,7 +71,9 @@ Status AggregationNode::init(const TPlanNode& tnode, RuntimeState* state) {
 
 Status AggregationNode::prepare(RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::prepare(state));
-
+    _build_timer = ADD_TIMER(runtime_profile(), "BuildTime");
+    _exec_timer = ADD_TIMER(runtime_profile(), "ExecTime");
+    _merge_timer = ADD_TIMER(runtime_profile(), "MergeTime");
     SCOPED_TIMER(_runtime_profile->total_time_counter());
     _intermediate_tuple_desc = state->desc_tbl().get_tuple_descriptor(_intermediate_tuple_id);
     _output_tuple_desc = state->desc_tbl().get_tuple_descriptor(_output_tuple_id);
@@ -85,6 +90,11 @@ Status AggregationNode::prepare(RuntimeState* state) {
         RETURN_IF_ERROR(_aggregate_evaluators[i]->prepare(state, child(0)->row_desc(),
                                                           _mem_pool.get(), intermediate_slot_desc,
                                                           output_slot_desc, mem_tracker()));
+    }
+
+    // set profile timer to evaluators
+    for (auto& evaluator : _aggregate_evaluators) {
+        evaluator->set_timer(_exec_timer, _merge_timer);
     }
 
     _offsets_of_aggregate_states.resize(_aggregate_evaluators.size());
@@ -300,6 +310,8 @@ Status AggregationNode::_serialize_without_key(RuntimeState* state, Block* block
 
 Status AggregationNode::_execute_without_key(Block* block) {
     DCHECK(_agg_data.without_key != nullptr);
+    LOG(WARNING) << "block rows:" << block->rows();
+    SCOPED_TIMER(_build_timer);
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         _aggregate_evaluators[i]->execute_single_add(
                 block, _agg_data.without_key + _offsets_of_aggregate_states[i]);
