@@ -147,6 +147,10 @@ private:
     // add tracker here
     Arena _agg_arena_pool;
 
+    RuntimeProfile::Counter* _build_timer;
+    RuntimeProfile::Counter* _exec_timer;
+    RuntimeProfile::Counter* _merge_timer;
+
 private:
     Status _create_agg_status(AggregateDataPtr data);
     Status _destory_agg_status(AggregateDataPtr data);
