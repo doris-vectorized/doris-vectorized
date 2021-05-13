@@ -29,8 +29,10 @@ AggFnEvaluator::AggFnEvaluator(const TExprNode& desc)
         : _fn(desc.fn),
           _return_type(TypeDescriptor::from_thrift(desc.fn.ret_type)),
           _intermediate_type(TypeDescriptor::from_thrift(desc.fn.aggregate_fn.intermediate_type)),
-          _intermediate_slot_desc(NULL),
-          _output_slot_desc(NULL) {}
+          _intermediate_slot_desc(nullptr),
+          _output_slot_desc(nullptr),
+          _exec_timer(nullptr),
+          _merge_timer(nullptr) {}
 
 Status AggFnEvaluator::create(ObjectPool* pool, const TExpr& desc, AggFnEvaluator** result) {
     *result = pool->add(new AggFnEvaluator(desc.nodes[0]));
@@ -111,6 +113,7 @@ void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place, Ar
     std::vector<const IColumn*> column_arguments(columns.size());
     std::transform(columns.cbegin(), columns.cend(), column_arguments.begin(),
                    [](const auto& ptr) { return ptr.get(); });
+    SCOPED_TIMER(_exec_timer);
     _function->addBatchSinglePlace(block->rows(), place, column_arguments.data(), nullptr);
 }
 
@@ -124,11 +127,13 @@ void AggFnEvaluator::execute_batch_add(Block* block, size_t offset, AggregateDat
         column_arguments[i] =
                 block->getByPosition(column_id).column->convertToFullColumnIfConst().get();
     }
+    SCOPED_TIMER(_exec_timer);
     _function->addBatch(block->rows(), places, offset, column_arguments.data(), arena);
 }
 
 void AggFnEvaluator::execute_single_merge(AggregateDataPtr place, ConstAggregateDataPtr rhs,
                                           Arena* arena) {
+    SCOPED_TIMER(_merge_timer);
     _function->merge(place, rhs, arena);
 }
 
