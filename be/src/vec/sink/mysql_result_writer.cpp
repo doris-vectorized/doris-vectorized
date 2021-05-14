@@ -31,7 +31,7 @@ namespace vectorized {
 MysqlResultWriter::MysqlResultWriter(BufferControlBlock* sinker,
                                      const std::vector<VExprContext*>& output_vexpr_ctxs,
                                      RuntimeProfile* parent_profile)
-        : VResultWriter(!output_vexpr_ctxs.empty()),
+        : VResultWriter(),
           _sinker(sinker),
           _output_vexpr_ctxs(output_vexpr_ctxs),
           _parent_profile(parent_profile) {}
@@ -48,12 +48,11 @@ Status MysqlResultWriter::init(RuntimeState* state) {
         return Status::InternalError("sinker is NULL pointer.");
     }
 
-    if (_is_vec) {
-        _vec_buffers.resize(state->batch_size());
-        for (int i = 0; i < state->batch_size(); ++i) {
-            _vec_buffers[i] = new MysqlRowBuffer();
-        }
+    _vec_buffers.resize(state->batch_size());
+    for (int i = 0; i < state->batch_size(); ++i) {
+        _vec_buffers[i] = new MysqlRowBuffer();
     }
+
     return Status::OK();
 }
 

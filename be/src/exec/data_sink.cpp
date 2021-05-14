@@ -80,7 +80,7 @@ Status DataSink::create_data_sink(ObjectPool* pool, const TDataSink& thrift_sink
         if (is_vec) {
             tmp_sink = new doris::vectorized::ResultSink(row_desc, output_exprs, thrift_sink.result_sink, 1024);
         } else {
-            tmp_sink = new ResultSink(row_desc, output_exprs, thrift_sink.result_sink, 1024, config::is_vec);
+            tmp_sink = new ResultSink(row_desc, output_exprs, thrift_sink.result_sink, 1024);
         }
         sink->reset(tmp_sink);
         break;
