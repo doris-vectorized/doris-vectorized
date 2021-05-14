@@ -33,7 +33,7 @@ namespace vectorized {
 // abstract class of the result writer
 class ResultWriter {
 public:
-    ResultWriter(bool is_vec = false):_is_vec(is_vec) {};
+    ResultWriter() {};
     ~ResultWriter(){};
 
     virtual Status init(RuntimeState* state) = 0;
@@ -52,7 +52,6 @@ public:
 
 protected:
     int64_t _written_rows = 0; // number of rows written
-    bool _is_vec;
 };
 
 } // namespace doris

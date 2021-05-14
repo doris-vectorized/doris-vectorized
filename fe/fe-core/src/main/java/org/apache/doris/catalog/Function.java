@@ -146,6 +146,22 @@ public class Function implements Writable {
         this.vectorized = vectorized;
     }
 
+    public Function(long id, FunctionName name, Type[] argTypes, Type retType, boolean hasVarArgs,
+                    TFunctionBinaryType binaryType, boolean userVisible, boolean vectorized) {
+        this.id = id;
+        this.name = name;
+        this.hasVarArgs = hasVarArgs;
+        if (argTypes == null) {
+            this.argTypes = new Type[0];
+        } else {
+            this.argTypes = argTypes;
+        }
+        this.retType = retType;
+        this.binaryType = binaryType;
+        this.userVisible = userVisible;
+        this.vectorized = vectorized;
+    }
+
     public Function(long id, FunctionName name, List<Type> argTypes, Type retType, boolean hasVarArgs, boolean vectorized) {
         this(id, name, (Type[]) null, retType, hasVarArgs, vectorized);
         if (argTypes.size() > 0) {
