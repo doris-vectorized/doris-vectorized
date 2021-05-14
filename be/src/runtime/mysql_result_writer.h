@@ -40,7 +40,7 @@ namespace vectorized {
 class MysqlResultWriter final : public ResultWriter {
 public:
     MysqlResultWriter(BufferControlBlock* sinker, const std::vector<ExprContext*>& output_expr_ctxs,
-            const std::vector<vectorized::VExprContext*>& output_vexpr_ctxs, RuntimeProfile* parent_profile);
+            RuntimeProfile* parent_profile);
 
     virtual ~MysqlResultWriter();
 
@@ -49,8 +49,6 @@ public:
     // append this batch to the result sink
     virtual Status append_row_batch(const RowBatch* batch) override;
 
-    virtual Status append_block(const vectorized::Block& block);
-
     virtual Status close() override;
 
 private:
@@ -58,14 +56,10 @@ private:
     // convert one tuple row
     Status _add_one_row(TupleRow* row);
 
-    template <PrimitiveType type, bool is_nullable>
-    Status _add_one_column(const vectorized::ColumnPtr& column_ptr);
-
 private:
     BufferControlBlock* _sinker;
     const std::vector<ExprContext*>& _output_expr_ctxs;
 
-    const std::vector<vectorized::VExprContext*>& _output_vexpr_ctxs;
     std::vector<int> _result_column_ids;
 
     MysqlRowBuffer* _row_buffer;

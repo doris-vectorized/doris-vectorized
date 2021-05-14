@@ -21,6 +21,8 @@
 #include "fmt/ranges.h"
 #include "runtime/descriptors.h"
 #include "vec/aggregate_functions/aggregate_function_simple_factory.h"
+#include "vec/columns/column_nullable.h"
+#include "vec/data_types/data_type_nullable.h"
 #include "vec/exprs/vexpr.h"
 
 namespace doris::vectorized {
@@ -71,7 +73,10 @@ Status AggFnEvaluator::prepare(RuntimeState* state, const RowDescriptor& desc, M
     doris::vectorized::Array params;
     // prepare for argument
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
-        argument_types.emplace_back(_input_exprs_ctxs[i]->root()->data_type());
+        // Now, For correctness. We have to treat each AggFn argument as nullable. which will cause execute slowly
+        // TODO: RECHCK THE BEHAVIOR
+        auto data_type = _input_exprs_ctxs[i]->root()->data_type();
+        argument_types.emplace_back(data_type->isNullable() ? data_type : std::make_shared<DataTypeNullable>(data_type));
         child_expr_name.emplace_back(_input_exprs_ctxs[i]->root()->expr_name());
     }
     _function = AggregateFunctionSimpleFactory::instance().get(_fn.name.function_name,
@@ -100,12 +105,7 @@ void AggFnEvaluator::destroy(AggregateDataPtr place) {
 }
 
 void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place, Arena* arena) {
-    std::vector<ColumnPtr> columns(_input_exprs_ctxs.size());
-    for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
-        int column_id = -1;
-        _input_exprs_ctxs[i]->execute(block, &column_id);
-        columns[i] = block->getByPosition(column_id).column->convertToFullColumnIfConst();
-    }
+    auto columns = _get_argment_columns(block);
     // Because the `convertToFullColumnIfConst()` may return a temporary variable, so we need keep the reference of it
     // to make sure program do not destroy it before we call `addBatchSinglePlace`.
     // WARNING:
@@ -119,14 +119,14 @@ void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place, Ar
 
 void AggFnEvaluator::execute_batch_add(Block* block, size_t offset, AggregateDataPtr* places,
                                        Arena* arena) {
-    std::vector<const IColumn*> column_arguments(_input_exprs_ctxs.size());
-    auto columns = block->getColumns();
-    for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
-        int column_id = -1;
-        _input_exprs_ctxs[i]->execute(block, &column_id);
-        column_arguments[i] =
-                block->getByPosition(column_id).column->convertToFullColumnIfConst().get();
-    }
+    auto columns = _get_argment_columns(block);
+    // Because the `convertToFullColumnIfConst()` may return a temporary variable, so we need keep the reference of it
+    // to make sure program do not destroy it before we call `addBatchSinglePlace`.
+    // WARNING:
+    //      There's danger to call `convertToFullColumnIfConst().get()` to get the `const IColumn*` directly.
+    std::vector<const IColumn*> column_arguments(columns.size());
+    std::transform(columns.cbegin(), columns.cend(), column_arguments.begin(),
+                   [](const auto& ptr) { return ptr.get(); });
     SCOPED_TIMER(_exec_timer);
     _function->addBatch(block->rows(), places, offset, column_arguments.data(), arena);
 }
@@ -158,4 +158,16 @@ std::string AggFnEvaluator::debug_string() const {
     out << ")";
     return out.str();
 }
+
+std::vector<ColumnPtr> AggFnEvaluator::_get_argment_columns(Block* block) const {
+    std::vector<ColumnPtr> columns(_input_exprs_ctxs.size());
+    for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
+        int column_id = -1;
+        _input_exprs_ctxs[i]->execute(block, &column_id);
+        auto ptr = block->getByPosition(column_id).column->convertToFullColumnIfConst();
+        columns[i] = makeNullable(ptr);
+    }
+    return columns;
+}
+
 } // namespace doris::vectorized
