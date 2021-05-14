@@ -21,7 +21,7 @@ namespace doris {
 namespace vectorized {
 class VResultWriter : public ResultWriter {
 public:
-    VResultWriter(bool is_vec) : ResultWriter(is_vec) {}
+    VResultWriter() : ResultWriter() {}
 
     virtual Status append_block(Block& block) = 0;
 };
