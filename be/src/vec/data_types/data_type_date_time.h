@@ -58,11 +58,6 @@ public:
 
     const std::string& getTimeZone() const { return time_zone; }
     std::string to_string(const IColumn& column, size_t row_num) const;
-
-private:
-    bool has_explicit_time_zone;
-    const std::string& time_zone;
-    const std::string& utc_time_zone;
 };
 
 } // namespace doris::vectorized

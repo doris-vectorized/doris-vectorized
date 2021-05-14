@@ -22,22 +22,13 @@
 
 namespace doris::vectorized {
 
-DataTypeDateTime::DataTypeDateTime(const std::string& time_zone_name)
-        : has_explicit_time_zone(!time_zone_name.empty()),
-          time_zone(time_zone_name),
-          utc_time_zone("UTC") {}
+DataTypeDateTime::DataTypeDateTime() {}
 
 std::string DataTypeDateTime::doGetName() const {
-    if (!has_explicit_time_zone) return "DateTime";
-
-    std::ostringstream out;
-    out << "DateTime('" << time_zone << "')";
-    return out.str();
+    return "DateTime";
 }
 
 bool DataTypeDateTime::equals(const IDataType& rhs) const {
-    /// DateTime with different timezones are equal, because:
-    /// "all types with different time zones are equivalent and may be used interchangingly."
     return typeid(rhs) == typeid(*this);
 }
 std::string DataTypeDateTime::to_string(const IColumn& column, size_t row_num) const {
