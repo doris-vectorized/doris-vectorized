@@ -31,9 +31,6 @@
 #define ALLOCATOR_ASLR 1
 #endif
 
-//#include <pcg_random.hpp>
-// #include <vec/Common/thread_local_rng.h>
-
 #if !defined(__APPLE__) && !defined(__FreeBSD__)
 #include <malloc.h>
 #endif
@@ -48,13 +45,9 @@
 /// Thread sanitizer does not intercept mremap. The usage of mremap will lead to false positives.
 #define DISABLE_MREMAP 1
 #endif
-#include "vec/common/mremap.h"
-
-// #include <vec/Common/MemoryTracker.h>
-#include "vec/common/exception.h"
-// #include <vec/Common/formatReadable.h>
-
 #include "vec/common/allocator_fwd.h"
+#include "vec/common/exception.h"
+#include "vec/common/mremap.h"
 
 /// Required for older Darwin builds, that lack definition of MAP_ANONYMOUS
 #ifndef MAP_ANONYMOUS
