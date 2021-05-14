@@ -71,6 +71,8 @@ private:
 
     AggFnEvaluator(const TExprNode& desc);
 
+    std::vector<ColumnPtr> _get_argment_columns(Block* block) const;
+
     const TypeDescriptor _return_type;
     const TypeDescriptor _intermediate_type;
 
