@@ -24,7 +24,6 @@
 #include "gen_cpp/data.pb.h"
 #include "vec/common/exception.h"
 #include "vec/common/string_ref.h"
-#include "vec/common/types.h"
 #include "vec/common/uint128.h"
 #include "vec/core/types.h"
 #include "vec/io/var_int.h"
@@ -49,6 +48,26 @@ inline Int128 decimalScaleMultiplier<Int128>(UInt32 scale) {
     return common::exp10_i128(scale);
 }
 
+inline std::string int128_to_string(__int128_t value) {
+    char buffer[128];
+    char* d = std::end(buffer);
+    do {
+        --d;
+        *d = "0123456789"[value % 10];
+        value /= 10;
+    } while (value != 0);
+    if (value < 0) {
+        --d;
+        *d = '-';
+    }
+    int len = std::end(buffer) - d;
+    return std::string(d, len);
+}
+
+inline std::string int128_to_string(UInt128 value) {
+    return value.toHexString();
+}
+
 template <typename T>
 void writeText(Decimal<T> value, UInt32 scale, std::ostream& ostr) {
     if (value < Decimal<T>(0)) {
@@ -57,9 +76,11 @@ void writeText(Decimal<T> value, UInt32 scale, std::ostream& ostr) {
     }
 
     T whole_part = value;
-    if (scale) whole_part = value / decimalScaleMultiplier<T>(scale);
+    if (scale) {
+        whole_part = value / decimalScaleMultiplier<T>(scale);
+    }
     if constexpr (std::is_same<T, __int128_t>::value || std::is_same<T, UInt128>::value) {
-        // int128
+        ostr << int128_to_string(whole_part);
     } else {
         ostr << whole_part;
     }

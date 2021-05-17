@@ -24,13 +24,10 @@
 #include <vector>
 
 #include "vec/common/exception.h"
-#include "vec/common/uint128.h"
-#include "vec/core/defines.h"
-#include "vec/core/types.h"
-//#include <vec/Core/UUID.h>
-#include "vec/common/day_num.h"
 #include "vec/common/int_exp.h"
 #include "vec/common/strong_typedef.h"
+#include "vec/common/uint128.h"
+#include "vec/core/types.h"
 
 namespace doris::vectorized {
 
@@ -780,10 +777,6 @@ struct NearestFieldTypeImpl<UInt32> {
     using Type = UInt64;
 };
 
-template <>
-struct NearestFieldTypeImpl<DayNum> {
-    using Type = UInt64;
-};
 template <>
 struct NearestFieldTypeImpl<UInt128> {
     using Type = UInt128;

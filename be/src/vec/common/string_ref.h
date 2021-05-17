@@ -24,8 +24,8 @@
 #include <string>
 #include <vector>
 
-#include "vec/common/types.h"
 #include "vec/common/unaligned.h"
+#include "vec/core/types.h"
 
 #if defined(__SSE2__)
 #include <emmintrin.h>
@@ -209,24 +209,25 @@ struct StringRefHash64 {
 
 /// Parts are taken from CityHash.
 
-inline UInt64 hashLen16(UInt64 u, UInt64 v) {
+inline doris::vectorized::UInt64 hashLen16(doris::vectorized::UInt64 u,
+                                           doris::vectorized::UInt64 v) {
     return CityHash_v1_0_2::Hash128to64(CityHash_v1_0_2::uint128(u, v));
 }
 
-inline UInt64 shiftMix(UInt64 val) {
+inline doris::vectorized::UInt64 shiftMix(doris::vectorized::UInt64 val) {
     return val ^ (val >> 47);
 }
 
-inline UInt64 rotateByAtLeast1(UInt64 val, int shift) {
+inline doris::vectorized::UInt64 rotateByAtLeast1(doris::vectorized::UInt64 val, int shift) {
     return (val >> shift) | (val << (64 - shift));
 }
 
 inline size_t hashLessThan8(const char* data, size_t size) {
-    static constexpr UInt64 k2 = 0x9ae16a3b2f90404fULL;
-    static constexpr UInt64 k3 = 0xc949d7c7509e6557ULL;
+    static constexpr doris::vectorized::UInt64 k2 = 0x9ae16a3b2f90404fULL;
+    static constexpr doris::vectorized::UInt64 k3 = 0xc949d7c7509e6557ULL;
 
     if (size >= 4) {
-        UInt64 a = unalignedLoad<uint32_t>(data);
+        doris::vectorized::UInt64 a = unalignedLoad<uint32_t>(data);
         return hashLen16(size + (a << 3), unalignedLoad<uint32_t>(data + size - 4));
     }
 
@@ -244,8 +245,8 @@ inline size_t hashLessThan8(const char* data, size_t size) {
 
 inline size_t hashLessThan16(const char* data, size_t size) {
     if (size > 8) {
-        UInt64 a = unalignedLoad<UInt64>(data);
-        UInt64 b = unalignedLoad<UInt64>(data + size - 8);
+        doris::vectorized::UInt64 a = unalignedLoad<doris::vectorized::UInt64>(data);
+        doris::vectorized::UInt64 b = unalignedLoad<doris::vectorized::UInt64>(data + size - 8);
         return hashLen16(a, rotateByAtLeast1(b + size, size)) ^ b;
     }
 
@@ -267,13 +268,14 @@ struct CRC32Hash {
         size_t res = -1ULL;
 
         do {
-            UInt64 word = unalignedLoad<UInt64>(pos);
+            doris::vectorized::UInt64 word = unalignedLoad<doris::vectorized::UInt64>(pos);
             res = _mm_crc32_u64(res, word);
 
             pos += 8;
         } while (pos + 8 < end);
 
-        UInt64 word = unalignedLoad<UInt64>(end - 8); /// I'm not sure if this is normal.
+        doris::vectorized::UInt64 word = unalignedLoad<doris::vectorized::UInt64>(
+                end - 8); /// I'm not sure if this is normal.
         res = _mm_crc32_u64(res, word);
 
         return res;
@@ -286,7 +288,7 @@ struct StringRefHash : CRC32Hash {};
 
 struct CRC32Hash {
     size_t operator()(StringRef /* x */) const {
-        throw std::logic_error {"Not implemented CRC32Hash without SSE"};
+        throw std::logic_error{"Not implemented CRC32Hash without SSE"};
     }
 };
 
