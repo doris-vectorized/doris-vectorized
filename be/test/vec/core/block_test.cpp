@@ -37,6 +37,8 @@
 
 namespace doris {
 
+using vectorized::Int32;
+
 TEST(BlockTest, RowBatchCovertToBlock) {
     SchemaScanner::ColumnDesc column_descs[] = {
             {"k1", TYPE_SMALLINT, sizeof(int16_t), true},
@@ -214,12 +216,12 @@ TEST(BlockTest, SerializeAndDeserializeBlock) {
     // Test Block
     {
         auto column_vector_int32 = vectorized::ColumnVector<Int32>::create();
-        auto column_nullable_vector = makeNullable(std::move(column_vector_int32));
+        auto column_nullable_vector = vectorized::makeNullable(std::move(column_vector_int32));
         auto mutable_nullable_vector = std::move(*column_nullable_vector).mutate();
         for (int i = 0; i < 4096; i++) {
             mutable_nullable_vector->insert(vectorized::castToNearestFieldType(i));
         }
-        auto data_type = makeNullable(std::make_shared<vectorized::DataTypeInt32>());
+        auto data_type = vectorized::makeNullable(std::make_shared<vectorized::DataTypeInt32>());
         vectorized::ColumnWithTypeAndName type_and_name(mutable_nullable_vector->getPtr(),
                                                         data_type, "test_nullable_int32");
         vectorized::Block block({type_and_name});
@@ -264,12 +266,12 @@ TEST(BlockTest, DumpData) {
                                                    "test_decimal");
 
     auto column_vector_int32 = vectorized::ColumnVector<Int32>::create();
-    auto column_nullable_vector = makeNullable(std::move(column_vector_int32));
+    auto column_nullable_vector = vectorized::makeNullable(std::move(column_vector_int32));
     auto mutable_nullable_vector = std::move(*column_nullable_vector).mutate();
     for (int i = 0; i < 4096; i++) {
         mutable_nullable_vector->insert(vectorized::castToNearestFieldType(i));
     }
-    auto nint32_type = makeNullable(std::make_shared<vectorized::DataTypeInt32>());
+    auto nint32_type = vectorized::makeNullable(std::make_shared<vectorized::DataTypeInt32>());
     vectorized::ColumnWithTypeAndName test_nullable_int32(mutable_nullable_vector->getPtr(),
                                                           nint32_type, "test_nullable_int32");
 
