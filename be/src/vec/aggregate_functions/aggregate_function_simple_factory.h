@@ -36,6 +36,7 @@ void registerAggregateFunctionMinMax(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionAvg(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionCount(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionsUniq(AggregateFunctionSimpleFactory& factory);
+void registerAggregateFunctionCombinatorDistinct(AggregateFunctionSimpleFactory& factory);
 
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
@@ -58,6 +59,19 @@ public:
             if (nullable_aggregate_functions[entity.first] == nullptr) {
                 nullable_aggregate_functions[entity.first] = creator;
             }
+        }
+    }
+
+    void registerDistinctFunctionCombinator(Creator creator, const std::string& prefix) {
+        std::vector<std::string> need_insert;
+        for (auto entity : aggregate_functions) {
+            std::string target_value = prefix + entity.first;
+            if (aggregate_functions[target_value] == nullptr) {
+                need_insert.emplace_back(std::move(target_value));
+            }
+        }
+        for (const auto& function_name : need_insert) {
+            aggregate_functions[function_name] = creator;
         }
     }
 
@@ -98,6 +112,7 @@ public:
             registerAggregateFunctionAvg(instance);
             registerAggregateFunctionCount(instance);
             registerAggregateFunctionsUniq(instance);
+            registerAggregateFunctionCombinatorDistinct(instance);
             registerAggregateFunctionCombinatorNull(instance);
         });
         return instance;
