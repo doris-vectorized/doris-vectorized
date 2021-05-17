@@ -67,7 +67,10 @@ def add_function(fn_meta_data, user_visible):
     entry["args"] = fn_meta_data[2]
     entry["symbol"] = fn_meta_data[3]
     if len(fn_meta_data) >= 5:
-        entry["prepare"] = fn_meta_data[4]
+        if fn_meta_data[4] != "vec":
+            entry["prepare"] = fn_meta_data[4]
+        else:
+            entry["vec"] = True
     if len(fn_meta_data) >= 6:
         entry["close"] = fn_meta_data[5]
     entry["user_visible"] = user_visible
@@ -114,7 +117,11 @@ def generate_fe_registry_init(filename):
     for entry in meta_data_entries:
         for name in entry["sql_names"]:
             java_output = generate_fe_entry(entry, name)
-            java_registry_file.write("        functionSet.addScalarBuiltin(%s);\n" % java_output)
+            if ("vec" not in entry):
+                java_registry_file.write("        functionSet.addScalarBuiltin(%s);\n" % java_output)
+            else:
+                java_registry_file.write("        functionSet.addScalarAndVectorizedBuiltin(%s);\n" % java_output)
+
 
     java_registry_file.write("\n")
 
