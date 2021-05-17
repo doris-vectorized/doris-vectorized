@@ -22,9 +22,6 @@
 #include "vec/common/arena.h"
 #include "vec/common/assert_cast.h"
 #include "vec/common/memcmp_small.h"
-#include "vec/core/defines.h"
-//#include <DataStreams/ColumnGathererStream.h>
-
 #include "vec/common/unaligned.h"
 
 namespace doris::vectorized {
@@ -233,25 +230,20 @@ struct ColumnString::less {
     }
 };
 
-void ColumnString::getPermutation(bool reverse, size_t limit, int /*nan_direction_hint*/, Permutation & res) const
-{
+void ColumnString::getPermutation(bool reverse, size_t limit, int /*nan_direction_hint*/,
+                                  Permutation& res) const {
     size_t s = offsets.size();
     res.resize(s);
-    for (size_t i = 0; i < s; ++i)
-        res[i] = i;
+    for (size_t i = 0; i < s; ++i) res[i] = i;
 
-    if (limit >= s)
-        limit = 0;
+    if (limit >= s) limit = 0;
 
-    if (limit)
-    {
+    if (limit) {
         if (reverse)
             std::partial_sort(res.begin(), res.begin() + limit, res.end(), less<false>(*this));
         else
             std::partial_sort(res.begin(), res.begin() + limit, res.end(), less<true>(*this));
-    }
-    else
-    {
+    } else {
         if (reverse)
             std::sort(res.begin(), res.end(), less<false>(*this));
         else
