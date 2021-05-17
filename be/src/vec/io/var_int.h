@@ -19,7 +19,7 @@
 
 #include <iostream>
 
-#include "vec/common/types.h"
+#include "vec/core/types.h"
 
 namespace doris::vectorized {
 namespace ErrorCodes {
@@ -28,12 +28,10 @@ extern const int ATTEMPT_TO_READ_AFTER_EOF;
 
 /** Write UInt64 in variable length format (base128) NOTE Only up to 2^63 - 1 are supported. */
 void writeVarUInt(UInt64 x, std::ostream& ostr);
-// void writeVarUInt(UInt64 x, WriteBuffer & ostr);
 char* writeVarUInt(UInt64 x, char* ostr);
 
 /** Read UInt64, written in variable length format (base128) */
 void readVarUInt(UInt64& x, std::istream& istr);
-// void readVarUInt(UInt64 & x, ReadBuffer & istr);
 const char* readVarUInt(UInt64& x, const char* istr, size_t size);
 
 /** Get the length of UInt64 in VarUInt format */
@@ -71,8 +69,7 @@ inline void writeVarT(UInt64 x, std::ostream& ostr) {
 inline void writeVarT(Int64 x, std::ostream& ostr) {
     writeVarInt(x, ostr);
 }
-// inline void writeVarT(UInt64 x, WriteBuffer & ostr) { writeVarUInt(x, ostr); }
-// inline void writeVarT(Int64 x, WriteBuffer & ostr) { writeVarInt(x, ostr); }
+
 inline char* writeVarT(UInt64 x, char*& ostr) {
     return writeVarUInt(x, ostr);
 }
@@ -86,83 +83,13 @@ inline void readVarT(UInt64& x, std::istream& istr) {
 inline void readVarT(Int64& x, std::istream& istr) {
     readVarInt(x, istr);
 }
-// inline void readVarT(UInt64 & x, ReadBuffer & istr) { readVarUInt(x, istr); }
-// inline void readVarT(Int64 & x, ReadBuffer & istr) { readVarInt(x, istr); }
+
 inline const char* readVarT(UInt64& x, const char* istr, size_t size) {
     return readVarUInt(x, istr, size);
 }
 inline const char* readVarT(Int64& x, const char* istr, size_t size) {
     return readVarInt(x, istr, size);
 }
-
-/// For [U]Int32, [U]Int16, size_t.
-
-// inline void readVarUInt(UInt32 & x, ReadBuffer & istr)
-// {
-//     UInt64 tmp;
-//     readVarUInt(tmp, istr);
-//     x = tmp;
-// }
-
-// inline void readVarInt(Int32 & x, ReadBuffer & istr)
-// {
-//     Int64 tmp;
-//     readVarInt(tmp, istr);
-//     x = tmp;
-// }
-
-// inline void readVarUInt(UInt16 & x, ReadBuffer & istr)
-// {
-//     UInt64 tmp;
-//     readVarUInt(tmp, istr);
-//     x = tmp;
-// }
-
-// inline void readVarInt(Int16 & x, ReadBuffer & istr)
-// {
-//     Int64 tmp;
-//     readVarInt(tmp, istr);
-//     x = tmp;
-// }
-
-// template <typename T>
-// inline std::enable_if_t<!std::is_same_v<T, UInt64>, void>
-// readVarUInt(T & x, ReadBuffer & istr)
-// {
-//     UInt64 tmp;
-//     readVarUInt(tmp, istr);
-//     x = tmp;
-// }
-
-// [[noreturn]] inline void throwReadAfterEOF() {
-//     throw Exception("Attempt to read after eof", ErrorCodes::ATTEMPT_TO_READ_AFTER_EOF);
-// }
-
-// template <bool fast>
-// inline void readVarUIntImpl(UInt64 & x, ReadBuffer & istr)
-// {
-//     x = 0;
-//     for (size_t i = 0; i < 9; ++i)
-//     {
-//         if constexpr (!fast)
-//             if (istr.eof())
-//                 throwReadAfterEOF();
-
-//         UInt64 byte = *istr.position();
-//         ++istr.position();
-//         x |= (byte & 0x7F) << (7 * i);
-
-//         if (!(byte & 0x80))
-//             return;
-//     }
-// }
-
-// inline void readVarUInt(UInt64 & x, ReadBuffer & istr)
-// {
-//     if (istr.buffer().end() - istr.position() >= 9)
-//         return readVarUIntImpl<true>(x, istr);
-//     return readVarUIntImpl<false>(x, istr);
-// }
 
 inline void readVarUInt(UInt64& x, std::istream& istr) {
     x = 0;
@@ -173,41 +100,6 @@ inline void readVarUInt(UInt64& x, std::istream& istr) {
         if (!(byte & 0x80)) return;
     }
 }
-
-// inline const char* readVarUInt(UInt64& x, const char* istr, size_t size) {
-//     const char* end = istr + size;
-
-//     x = 0;
-//     for (size_t i = 0; i < 9; ++i) {
-//         if (istr == end) throwReadAfterEOF();
-
-//         UInt64 byte = *istr;
-//         ++istr;
-//         x |= (byte & 0x7F) << (7 * i);
-
-//         if (!(byte & 0x80)) return istr;
-//     }
-
-//     return istr;
-// }
-
-// inline void writeVarUInt(UInt64 x, WriteBuffer & ostr)
-// {
-//     for (size_t i = 0; i < 9; ++i)
-//     {
-//         uint8_t byte = x & 0x7F;
-//         if (x > 0x7F)
-//             byte |= 0x80;
-
-//         ostr.nextIfAtEnd();
-//         *ostr.position() = byte;
-//         ++ostr.position();
-
-//         x >>= 7;
-//         if (!x)
-//             return;
-//     }
-// }
 
 inline void writeVarUInt(UInt64 x, std::ostream& ostr) {
     for (size_t i = 0; i < 9; ++i) {

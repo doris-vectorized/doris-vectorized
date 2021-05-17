@@ -26,11 +26,10 @@
 #include "runtime/string_value.h"
 #include "runtime/tuple_row.h"
 //#include "runtime/mem_tracker.h"
-#include "vec/columns/column_vector.h"
-#include "vec/core/block.h"
-
 #include "gen_cpp/Data_types.h"
 #include "gen_cpp/data.pb.h"
+#include "vec/columns/column_vector.h"
+#include "vec/core/block.h"
 
 using std::vector;
 
@@ -553,11 +552,12 @@ vectorized::Block RowBatch::convert_to_vec_block() const {
             if (slot_desc->is_nullable() && tuple->is_null(slot_desc->null_indicator_offset())) {
                 columns[i]->insertData(nullptr, 0);
             } else if (slot_desc->type().is_string_type()) {
-                auto string_value = static_cast<const StringValue*>(tuple->get_slot(slot_desc->tuple_offset()));
+                auto string_value =
+                        static_cast<const StringValue*>(tuple->get_slot(slot_desc->tuple_offset()));
                 columns[i]->insertData(string_value->ptr, string_value->len);
             } else {
                 columns[i]->insertData(
-                        static_cast<const char *>(tuple->get_slot(slot_desc->tuple_offset())),
+                        static_cast<const char*>(tuple->get_slot(slot_desc->tuple_offset())),
                         slot_desc->slot_size());
             }
         }

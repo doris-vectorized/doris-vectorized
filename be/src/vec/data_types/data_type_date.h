@@ -17,5 +17,20 @@
 
 #pragma once
 
-/// Enable or disable echoing of typed characters. Throws std::runtime_error on error.
-void setTerminalEcho(bool enable);
+#include "vec/data_types/data_type_number_base.h"
+
+namespace doris::vectorized {
+
+class DataTypeDate final : public DataTypeNumberBase<Int128> {
+public:
+    TypeIndex getTypeId() const override { return TypeIndex::Date; }
+    const char* getFamilyName() const override { return "Date"; }
+
+    bool canBeUsedAsVersion() const override { return true; }
+    bool canBeInsideNullable() const override { return true; }
+
+    bool equals(const IDataType& rhs) const override;
+    std::string to_string(const IColumn& column, size_t row_num) const;
+};
+
+} // namespace doris::vectorized

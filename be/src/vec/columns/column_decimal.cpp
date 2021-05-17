@@ -15,20 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "vec/columns/column_decimal.h"
+
+#include "vec/columns/columns_common.h"
 #include "vec/common/arena.h"
 #include "vec/common/assert_cast.h"
 #include "vec/common/exception.h"
 #include "vec/common/sip_hash.h"
 #include "vec/common/unaligned.h"
 
-//#include <IO/WriteHelpers.h>
-
-#include "vec/columns/column_decimal.h"
-#include "vec/columns/columns_common.h"
-//#include <DataStreams/ColumnGathererStream.h>
-
 template <typename T>
-bool decimalLess(T x, T y, UInt32 x_scale, UInt32 y_scale);
+bool decimalLess(T x, T y, doris::vectorized::UInt32 x_scale, doris::vectorized::UInt32 y_scale);
 
 namespace doris::vectorized {
 
@@ -78,17 +75,15 @@ void ColumnDecimal<T>::updateHashWithValue(size_t n, SipHash& hash) const {
 }
 
 template <typename T>
-void ColumnDecimal<T>::getPermutation(bool reverse, size_t limit, int , IColumn::Permutation & res) const
-{
+void ColumnDecimal<T>::getPermutation(bool reverse, size_t limit, int,
+                                      IColumn::Permutation& res) const {
 #if 1 /// TODO: perf test
-    if (data.size() <= std::numeric_limits<UInt32>::max())
-    {
+    if (data.size() <= std::numeric_limits<UInt32>::max()) {
         PaddedPODArray<UInt32> tmp_res;
         permutation(reverse, limit, tmp_res);
 
         res.resize(tmp_res.size());
-        for (size_t i = 0; i < tmp_res.size(); ++i)
-            res[i] = tmp_res[i];
+        for (size_t i = 0; i < tmp_res.size(); ++i) res[i] = tmp_res[i];
         return;
     }
 #endif

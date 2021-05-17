@@ -15,21 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "vec/data_types/get_least_supertype.h"
+
 #include <unordered_set>
 
-//#include <IO/WriteBufferFromString.h>
-//#include <IO/Operators.h>
-#include <vec/common/typeid_cast.h>
-#include <vec/data_types/get_least_supertype.h>
-
-//#include <vec/DataTypes/DataTypeArray.h>
-//#include <vec/DataTypes/DataTypeTuple.h>
-#include <vec/data_types/data_type_nothing.h>
-#include <vec/data_types/data_type_nullable.h>
-#include <vec/data_types/data_type_string.h>
-//#include <vec/DataTypes/DataTypeDateTime.h>
-#include <vec/data_types/data_types_decimal.h>
-#include <vec/data_types/data_types_number.h>
+#include "vec/common/typeid_cast.h"
+#include "vec/data_types/data_type_date.h"
+#include "vec/data_types/data_type_date_time.h"
+#include "vec/data_types/data_type_nothing.h"
+#include "vec/data_types/data_type_nullable.h"
+#include "vec/data_types/data_type_string.h"
+#include "vec/data_types/data_types_decimal.h"
+#include "vec/data_types/data_types_number.h"
 
 namespace doris::vectorized {
 
@@ -89,78 +86,6 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
         if (non_nothing_types.size() < types.size()) return getLeastSupertype(non_nothing_types);
     }
 
-    //    /// For Arrays
-    //    {
-    //        bool have_array = false;
-    //        bool all_arrays = true;
-    //
-    //        DataTypes nested_types;
-    //        nested_types.reserve(types.size());
-    //
-    //        for (const auto & type : types)
-    //        {
-    //            if (const DataTypeArray * type_array = typeid_cast<const DataTypeArray *>(type.get()))
-    //            {
-    //                have_array = true;
-    //                nested_types.emplace_back(type_array->getNestedType());
-    //            }
-    //            else
-    //                all_arrays = false;
-    //        }
-    //
-    //        if (have_array)
-    //        {
-    //            if (!all_arrays)
-    //                throw Exception(getExceptionMessagePrefix(types) + " because some of them are Array and some of them are not", ErrorCodes::NO_COMMON_TYPE);
-    //
-    //            return std::make_shared<DataTypeArray>(getLeastSupertype(nested_types));
-    //        }
-    //    }
-
-    //    /// For tuples
-    //    {
-    //        bool have_tuple = false;
-    //        bool all_tuples = true;
-    //        size_t tuple_size = 0;
-    //
-    //        std::vector<vec/DataTypes> nested_types;
-    //
-    //        for (const auto & type : types)
-    //        {
-    //            if (const DataTypeTuple * type_tuple = typeid_cast<const DataTypeTuple *>(type.get()))
-    //            {
-    //                if (!have_tuple)
-    //                {
-    //                    tuple_size = type_tuple->getElements().size();
-    //                    nested_types.resize(tuple_size);
-    //                    for (size_t elem_idx = 0; elem_idx < tuple_size; ++elem_idx)
-    //                        nested_types[elem_idx].reserve(types.size());
-    //                }
-    //                else if (tuple_size != type_tuple->getElements().size())
-    //                    throw Exception(getExceptionMessagePrefix(types) + " because Tuples have different sizes", ErrorCodes::NO_COMMON_TYPE);
-    //
-    //                have_tuple = true;
-    //
-    //                for (size_t elem_idx = 0; elem_idx < tuple_size; ++elem_idx)
-    //                    nested_types[elem_idx].emplace_back(type_tuple->getElements()[elem_idx]);
-    //            }
-    //            else
-    //                all_tuples = false;
-    //        }
-    //
-    //        if (have_tuple)
-    //        {
-    //            if (!all_tuples)
-    //                throw Exception(getExceptionMessagePrefix(types) + " because some of them are Tuple and some of them are not", ErrorCodes::NO_COMMON_TYPE);
-    //
-    //            DataTypes common_tuple_types(tuple_size);
-    //            for (size_t elem_idx = 0; elem_idx < tuple_size; ++elem_idx)
-    //                common_tuple_types[elem_idx] = getLeastSupertype(nested_types[elem_idx]);
-    //
-    //            return std::make_shared<DataTypeTuple>(common_tuple_types);
-    //        }
-    //    }
-
     /// For Nullable
     {
         bool have_nullable = false;
@@ -207,20 +132,22 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
         }
     }
 
-    //    /// For Date and DateTime, the common type is DateTime. No other types are compatible.
-    //    {
-    //        UInt32 have_date = type_ids.count(TypeIndex::Date);
-    //        UInt32 have_datetime = type_ids.count(TypeIndex::DateTime);
-    //
-    //        if (have_date || have_datetime)
-    //        {
-    //            bool all_date_or_datetime = type_ids.size() == (have_date + have_datetime);
-    //            if (!all_date_or_datetime)
-    //                throw Exception(getExceptionMessagePrefix(types) + " because some of them are Date/DateTime and some of them are not", ErrorCodes::NO_COMMON_TYPE);
-    //
-    //            return std::make_shared<DataTypeDateTime>();
-    //        }
-    //    }
+    /// For Date and DateTime, the common type is DateTime. No other types are compatible.
+    {
+        UInt32 have_date = type_ids.count(TypeIndex::Date);
+        UInt32 have_datetime = type_ids.count(TypeIndex::DateTime);
+
+        if (have_date || have_datetime) {
+            bool all_date_or_datetime = type_ids.size() == (have_date + have_datetime);
+            if (!all_date_or_datetime)
+                throw Exception(
+                        getExceptionMessagePrefix(types) +
+                                " because some of them are Date/DateTime and some of them are not",
+                        ErrorCodes::NO_COMMON_TYPE);
+
+            return std::make_shared<DataTypeDateTime>();
+        }
+    }
 
     /// Decimals
     {

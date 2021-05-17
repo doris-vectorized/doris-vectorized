@@ -21,17 +21,15 @@
 #include <limits>
 
 #include "vec/common/nan_utils.h"
-#include "vec/common/types.h"
 #include "vec/common/uint128.h"
 #include "vec/core/defines.h"
+#include "vec/core/types.h"
 
 /** Preceptually-correct number comparisons.
   * Example: Int8(-1) != UInt8(255)
 */
 
 namespace accurate {
-
-using doris::vectorized::UInt64;
 
 /** Cases:
     1) Safe conversion (in case of default C++ operators)
@@ -220,7 +218,7 @@ inline bool greaterOp<doris::vectorized::UInt64, doris::vectorized::Float64>(
 
     return (f < 0) || (f < static_cast<doris::vectorized::Float64>(
                                    std::numeric_limits<doris::vectorized::UInt64>::max()) &&
-                       u > static_cast<UInt64>(f));
+                       u > static_cast<doris::vectorized::UInt64>(f));
 }
 
 // Case 3b for float32
@@ -342,7 +340,7 @@ inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Int64, doris::vect
 template <>
 inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::UInt128, doris::vectorized::Float64>(
         doris::vectorized::UInt128 u, doris::vectorized::Float64 f) {
-    return u.low == 0 && equalsOp(static_cast<UInt64>(u.high), f);
+    return u.low == 0 && equalsOp(static_cast<doris::vectorized::UInt64>(u.high), f);
 }
 
 template <>
