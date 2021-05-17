@@ -22,6 +22,7 @@
 #include <iostream>
 
 #include "gen_cpp/data.pb.h"
+#include "vec/common/arena.h"
 #include "vec/common/exception.h"
 #include "vec/common/string_ref.h"
 #include "vec/common/uint128.h"
@@ -206,6 +207,16 @@ inline void readStringBinary(std::string& s, std::istream& buf,
         throw Poco::Exception("Cannot read all data. Bytes read: " + std::to_string(buf.gcount()) +
                               ". Bytes expected: " + std::to_string(size) + ".");
     }
+}
+
+inline StringRef readStringBinaryInto(Arena& arena, std::istream& buf) {
+    size_t size = 0;
+    readVarUInt(size, buf);
+
+    char* data = arena.alloc(size);
+    buf.read(data, size);
+
+    return StringRef(data, size);
 }
 
 template <typename Type>
