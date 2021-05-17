@@ -997,6 +997,11 @@ public class FunctionSet {
         addScalarBuiltin(fnName, symbol, userVisible, null, null, varArgs, retType, args);
     }
 
+    public void addScalarAndVectorizedBuiltin(String fnName, String symbol, boolean userVisible,
+                                 boolean varArgs, PrimitiveType retType, PrimitiveType ... args) {
+        addScalarAndVectorizedBuiltin(fnName, symbol, userVisible, null, null, varArgs, retType, args);
+    }
+
     /**
      * Add a builtin with the specified name and signatures to this db.
      */
@@ -1008,6 +1013,18 @@ public class FunctionSet {
             argsType.add(Type.fromPrimitiveType(type));
         }
         addBuiltin(ScalarFunction.createBuiltin(
+                fnName, argsType, varArgs, Type.fromPrimitiveType(retType),
+                symbol, prepareFnSymbol, closeFnSymbol, userVisible));
+    }
+
+    private void addScalarAndVectorizedBuiltin(String fnName, String symbol, boolean userVisible,
+                                 String prepareFnSymbol, String closeFnSymbol, boolean varArgs,
+                                 PrimitiveType retType, PrimitiveType ... args) {
+        ArrayList<Type> argsType = new ArrayList<Type>();
+        for (PrimitiveType type : args) {
+            argsType.add(Type.fromPrimitiveType(type));
+        }
+        addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltin(
                 fnName, argsType, varArgs, Type.fromPrimitiveType(retType),
                 symbol, prepareFnSymbol, closeFnSymbol, userVisible));
     }

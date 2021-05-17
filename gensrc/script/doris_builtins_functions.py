@@ -390,23 +390,23 @@ visible_functions = [
         '_ZN5doris13MathFunctions1eEPN9doris_udf15FunctionContextE'],
 
     [['abs'], 'DOUBLE', ['DOUBLE'],
-        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['abs'], 'FLOAT', ['FLOAT'],
-        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_8FloatValE'],
+        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_8FloatValE', 'vec'],
     [['abs'], 'LARGEINT', ['LARGEINT'],
-        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_11LargeIntValE'],
+        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_11LargeIntValE', 'vec'],
     [['abs'], 'LARGEINT', ['BIGINT'],
-        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_9BigIntValE'],
+        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_9BigIntValE', 'vec'],
     [['abs'], 'INT', ['SMALLINT'],
-        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_11SmallIntValE'],
+        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_11SmallIntValE', 'vec'],
     [['abs'], 'BIGINT', ['INT'],
-        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_6IntValE'],
+        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_6IntValE', 'vec'],
     [['abs'], 'SMALLINT', ['TINYINT'],
-        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_10TinyIntValE'],
+        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_10TinyIntValE', 'vec'],
     [['abs'], 'DECIMAL', ['DECIMAL'],
-        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_10DecimalValE'],
+        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_10DecimalValE', 'vec'],
     [['abs'], 'DECIMALV2', ['DECIMALV2'],
-        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_12DecimalV2ValE'],
+        '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_12DecimalV2ValE', 'vec'],
 
     [['sign'], 'FLOAT', ['DOUBLE'],
         '_ZN5doris13MathFunctions4signEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
@@ -792,11 +792,11 @@ visible_functions = [
 
     #hll function
     [['hll_cardinality'], 'BIGINT', ['VARCHAR'],
-        '_ZN5doris12HllFunctions15hll_cardinalityEPN9doris_udf15FunctionContextERKNS1_9StringValE'],
+        '_ZN5doris12HllFunctions15hll_cardinalityEPN9doris_udf15FunctionContextERKNS1_9StringValE', 'vec'],
     [['hll_hash'], 'HLL', ['VARCHAR'],
-        '_ZN5doris12HllFunctions8hll_hashEPN9doris_udf15FunctionContextERKNS1_9StringValE'],
+        '_ZN5doris12HllFunctions8hll_hashEPN9doris_udf15FunctionContextERKNS1_9StringValE', 'vec'],
     [['hll_empty'], 'HLL', [],
-        '_ZN5doris12HllFunctions9hll_emptyEPN9doris_udf15FunctionContextE'],
+        '_ZN5doris12HllFunctions9hll_emptyEPN9doris_udf15FunctionContextE', 'vec'],
 
     #bitmap function
 
