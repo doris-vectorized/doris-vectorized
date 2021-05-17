@@ -26,10 +26,9 @@
 #if __has_include(<sanitizer/asan_interface.h>)
 #include <sanitizer/asan_interface.h>
 #endif
+#include "vec/common/allocator.h"
 #include "vec/common/memcpy_small.h"
 #include "vec/core/defines.h"
-//#include <vec/Common/ProfileEvents.h>
-#include "vec/common/allocator.h"
 
 //namespace ProfileEvents
 //{

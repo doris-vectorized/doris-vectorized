@@ -17,21 +17,11 @@
 
 #pragma once
 
-#include "vec/core/defines.h"
+#include <type_traits>
+
 #include "vec/core/types.h"
 #include "vec/data_types/data_type.h"
 #include "vec/functions/function.h"
-//#include <IO/WriteHelpers.h>
-#include <type_traits>
-
-#if USE_EMBEDDED_COMPILER
-#include <vec/data_types/native.h>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#include <llvm/IR/IRBuilder.h>
-#pragma GCC diagnostic pop
-#endif
 
 /** Logical functions AND, OR, XOR and NOT support three-valued (or ternary) logic
   * https://en.wikibooks.org/wiki/Structured_Query_Language/NULLs_and_the_Three_Valued_Logic
@@ -163,7 +153,7 @@ public:
             b.SetInsertPoint(next);
             auto* value = values[i]();
             auto* truth = nativeBoolCast(b, types[i], value);
-            if (!types[i]->equals(DataTypeUInt8 {}))
+            if (!types[i]->equals(DataTypeUInt8{}))
                 value = b.CreateSelect(truth, b.getInt8(1), b.getInt8(0));
             phi->addIncoming(value, b.GetInsertBlock());
             if (i + 1 < types.size()) {
