@@ -51,6 +51,7 @@ public:
             instance.regist_data_type("Date", DataTypePtr(std::make_shared<DataTypeDate>()));
             instance.regist_data_type("DateTime",
                                       DataTypePtr(std::make_shared<DataTypeDateTime>()));
+            instance.regist_data_type("String", DataTypePtr(std::make_shared<DataTypeString>()));
         });
         return instance;
     }

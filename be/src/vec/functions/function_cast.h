@@ -953,8 +953,8 @@ private:
         if (callOnIndexAndDataType<void>(to_type->getTypeId(), make_default_wrapper)) return ret;
 
         switch (to_type->getTypeId()) {
-        // case TypeIndex::String:
-        //     return createStringWrapper(from_type);
+//         case TypeIndex::String:
+//             return createStringWrapper(from_type);
         // case TypeIndex::FixedString:
         //     return createFixedStringWrapper(from_type, checkAndGetDataType<DataTypeFixedString>(to_type.get())->getN());
 

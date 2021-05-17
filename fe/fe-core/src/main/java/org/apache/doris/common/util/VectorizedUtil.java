@@ -15,15 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#pragma once
-#include "runtime/result_writer.h"
-namespace doris {
-namespace vectorized {
-class VResultWriter : public ResultWriter {
-public:
-    VResultWriter() : ResultWriter() {}
+package org.apache.doris.common.util;
 
-    virtual Status append_block(Block& block) = 0;
-};
-} // namespace vectorized
-} // namespace doris
+import org.apache.doris.qe.ConnectContext;
+
+public class VectorizedUtil {
+    public static boolean isVectorized() {
+        if (ConnectContext.get() == null) {
+            return false;
+        }
+        return ConnectContext.get().getSessionVariable().enableVectorizedEngine();
+    }
+}
+

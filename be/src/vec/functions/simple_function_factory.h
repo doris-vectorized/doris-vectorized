@@ -27,6 +27,9 @@ class SimpleFunctionFactory;
 
 void registerFunctionComparison(SimpleFunctionFactory& factory);
 void registerFunctionAbs(SimpleFunctionFactory& factory);
+void registerFunctionHLLCardinality(SimpleFunctionFactory& factory);
+void registerFunctionHLLEmpty(SimpleFunctionFactory& factory);
+void registerFunctionHLLHash(SimpleFunctionFactory& factory);
 void registerFunctionLogical(SimpleFunctionFactory& factory);
 void registerFunctionCast(SimpleFunctionFactory& factory);
 void registerFunctionPlus(SimpleFunctionFactory& factory);
@@ -73,6 +76,9 @@ public:
         static SimpleFunctionFactory instance;
         std::call_once(oc, [&]() {
             registerFunctionAbs(instance);
+            registerFunctionHLLCardinality(instance);
+            registerFunctionHLLEmpty(instance);
+            registerFunctionHLLHash(instance);
             registerFunctionComparison(instance);
             registerFunctionLogical(instance);
             registerFunctionCast(instance);
