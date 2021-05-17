@@ -34,6 +34,7 @@ using ColumnInt8 = ColumnVector<Int8>;
 using ColumnInt16 = ColumnVector<Int16>;
 using ColumnInt32 = ColumnVector<Int32>;
 using ColumnInt64 = ColumnVector<Int64>;
+using ColumnInt128 = ColumnVector<Int128>;
 
 using ColumnFloat32 = ColumnVector<Float32>;
 using ColumnFloat64 = ColumnVector<Float64>;

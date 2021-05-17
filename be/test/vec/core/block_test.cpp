@@ -19,6 +19,7 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <iostream>
 #include <string>
 
@@ -195,10 +196,7 @@ TEST(BlockTest, SerializeAndDeserializeBlock) {
                               decimal_column.get())
                              ->getData();
         for (int i = 0; i < 1024; ++i) {
-            __int128_t value = i;
-            for (int j = 0; j < 9; ++j) {
-                value *= 10;
-            }
+            __int128_t value = i * pow(10, 9) + i * pow(10, 8);
             data.push_back(value);
         }
         vectorized::ColumnWithTypeAndName type_and_name(decimal_column->getPtr(), decimal_data_type,
@@ -259,10 +257,7 @@ TEST(BlockTest, DumpData) {
                                   decimal_column.get())
                                  ->getData();
     for (int i = 0; i < 1024; ++i) {
-        __int128_t value = i;
-        for (int j = 0; j < 9; ++j) {
-            value *= 10;
-        }
+        __int128_t value = i * pow(10, 9) + i * pow(10, 8);
         decimal_data.push_back(value);
     }
     vectorized::ColumnWithTypeAndName test_decimal(decimal_column->getPtr(), decimal_data_type,
@@ -277,7 +272,31 @@ TEST(BlockTest, DumpData) {
     auto nint32_type = makeNullable(std::make_shared<vectorized::DataTypeInt32>());
     vectorized::ColumnWithTypeAndName test_nullable_int32(mutable_nullable_vector->getPtr(),
                                                           nint32_type, "test_nullable_int32");
-    vectorized::Block block({test_int, test_string, test_decimal, test_nullable_int32});
+
+    auto column_vector_date = vectorized::ColumnVector<vectorized::Int128>::create();
+    auto& date_data = column_vector_date->getData();
+    for (int i = 0; i < 1024; ++i) {
+        DateTimeValue value;
+        value.from_date_int64(20210501);
+        date_data.push_back(*reinterpret_cast<vectorized::Int128*>(&value));
+    }
+    vectorized::DataTypePtr date_type(std::make_shared<vectorized::DataTypeDate>());
+    vectorized::ColumnWithTypeAndName test_date(column_vector_date->getPtr(), date_type,
+                                                "test_date");
+
+    auto column_vector_datetime = vectorized::ColumnVector<vectorized::Int128>::create();
+    auto& datetime_data = column_vector_datetime->getData();
+    for (int i = 0; i < 1024; ++i) {
+        DateTimeValue value;
+        value.from_date_int64(20210501080910);
+        datetime_data.push_back(*reinterpret_cast<vectorized::Int128*>(&value));
+    }
+    vectorized::DataTypePtr datetime_type(std::make_shared<vectorized::DataTypeDateTime>());
+    vectorized::ColumnWithTypeAndName test_datetime(column_vector_datetime->getPtr(), datetime_type,
+                                                    "test_datetime");
+
+    vectorized::Block block(
+            {test_int, test_string, test_decimal, test_nullable_int32, test_date, test_datetime});
     EXPECT_GT(block.dumpData().size(), 1);
 }
 } // namespace doris
