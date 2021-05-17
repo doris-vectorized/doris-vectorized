@@ -27,6 +27,8 @@
 #include "olap/hll.h"
 #include "runtime/primitive_type.h"
 #include "thrift/protocol/TDebugProtocol.h"
+#include "vec/data_types/data_type_date.h"
+#include "vec/data_types/data_type_date_time.h"
 #include "vec/data_types/data_type_string.h"
 #include "vec/data_types/data_types_decimal.h"
 #include "vec/data_types/data_types_number.h"
@@ -176,6 +178,8 @@ struct TypeDescriptor {
 
     inline bool is_date_type() const { return type == TYPE_DATE || type == TYPE_DATETIME; }
 
+    inline bool is_datetime_type() const { return type == TYPE_DATETIME; }
+
     inline bool is_decimal_type() const { return (type == TYPE_DECIMAL || type == TYPE_DECIMALV2); }
 
     inline bool is_var_len_string_type() const {
@@ -297,10 +301,11 @@ struct TypeDescriptor {
             return std::make_shared<vectorized::DataTypeInt64>();
 
         case TYPE_LARGEINT:
-        case TYPE_DATE:
-        case TYPE_DATETIME:
             return std::make_shared<vectorized::DataTypeInt128>();
-
+        case TYPE_DATE:
+            return std::make_shared<vectorized::DataTypeDate>();
+        case TYPE_DATETIME:
+            return std::make_shared<vectorized::DataTypeDateTime>();
         case TYPE_DOUBLE:
             return std::make_shared<vectorized::DataTypeFloat64>();
 

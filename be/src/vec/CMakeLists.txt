@@ -56,6 +56,8 @@ set(VEC_FILES
   data_types/data_types_number.cpp
   data_types/get_least_supertype.cpp
   data_types/nested_utils.cpp
+  data_types/data_type_date.cpp
+  data_types/data_type_date_time.cpp
   exec/vaggregation_node.cpp
   exec/volap_scan_node.cpp
   exec/vsort_node.cpp

@@ -21,7 +21,6 @@
 #include <limits>
 #include <string>
 #include <vector>
-#include "vec/common/types.h"
 
 namespace doris::vectorized {
 
@@ -210,6 +209,9 @@ template <>
 struct TypeId<Int128> {
     static constexpr const TypeIndex value = TypeIndex::Int128;
 };
+
+using Date = Int128;
+using DateTime = Int128;
 
 /// Own FieldType for Decimal.
 /// It is only a "storage" for decimal. To perform operations, you also have to provide a scale (number of digits after point).
