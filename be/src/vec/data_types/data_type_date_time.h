@@ -56,7 +56,6 @@ public:
 
     bool equals(const IDataType& rhs) const override;
 
-    const std::string& getTimeZone() const { return time_zone; }
     std::string to_string(const IColumn& column, size_t row_num) const;
 };
 
