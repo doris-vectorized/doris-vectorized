@@ -272,13 +272,15 @@ public:
     int hour() const { return _hour; }
     int minute() const { return _minute; }
     int second() const { return _second; }
+    int microsecond() const { return _microsecond; }
+    int neg() const { return _neg; }
 
     bool check_loss_accuracy_cast_to_date() {
         auto loss_accuracy = _hour != 0 || _minute != 0 || _second != 0 || _microsecond != 0;
         cast_to_date();
         return loss_accuracy;
     }
-    
+
     void cast_to_date() {
         _hour = 0;
         _minute = 0;

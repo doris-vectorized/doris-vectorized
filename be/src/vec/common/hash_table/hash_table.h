@@ -2,23 +2,14 @@
 
 #include <math.h>
 #include <string.h>
-
-#include <boost/noncopyable.hpp>
-#include <utility>
-
-// #include <vec/common/likely.h>
-
 #include <vec/common/exception.h>
+#include <vec/common/hash_table/hash_table_allocator.h>
+#include <vec/common/hash_table/hash_table_key_holder.h>
 #include <vec/core/defines.h>
 #include <vec/core/types.h>
 
-// #include <IO/WriteBuffer.h>
-// #include <IO/WriteHelpers.h>
-// #include <IO/ReadBuffer.h>
-// #include <IO/ReadHelpers.h>
-// #include <IO/VarInt.h>
-#include <vec/common/hash_table/hash_table_allocator.h>
-#include <vec/common/hash_table/hash_table_key_holder.h>
+#include <boost/noncopyable.hpp>
+#include <utility>
 
 #include "vec/io/io_helper.h"
 
@@ -234,7 +225,7 @@ template <size_t initial_size_degree = 8>
 struct HashTableGrower {
     /// The state of this structure is enough to get the buffer size of the hash table.
 
-    UInt8 size_degree = initial_size_degree;
+    doris::vectorized::UInt8 size_degree = initial_size_degree;
 
     /// The size of the hash table in the cells.
     size_t bufSize() const { return 1ULL << size_degree; }
@@ -512,7 +503,7 @@ protected:
         }
 
         auto& operator*() const { return *ptr; }
-        auto* operator-> () const { return ptr; }
+        auto* operator->() const { return ptr; }
 
         auto getPtr() const { return ptr; }
         size_t getHash() const { return ptr->getHash(*container); }

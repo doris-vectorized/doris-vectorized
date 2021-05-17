@@ -20,6 +20,8 @@
 #include <string>
 
 #include "vec/data_types/data_type.h"
+#include "vec/data_types/data_type_date.h"
+#include "vec/data_types/data_type_date_time.h"
 #include "vec/data_types/data_type_nothing.h"
 #include "vec/data_types/data_type_string.h"
 #include "vec/data_types/data_types_decimal.h"
@@ -46,6 +48,9 @@ public:
             instance.regist_data_type("Int64", DataTypePtr(std::make_shared<DataTypeInt64>()));
             instance.regist_data_type("Float32", DataTypePtr(std::make_shared<DataTypeFloat32>()));
             instance.regist_data_type("Float64", DataTypePtr(std::make_shared<DataTypeFloat64>()));
+            instance.regist_data_type("Date", DataTypePtr(std::make_shared<DataTypeDate>()));
+            instance.regist_data_type("DateTime",
+                                      DataTypePtr(std::make_shared<DataTypeDateTime>()));
             instance.regist_data_type("String", DataTypePtr(std::make_shared<DataTypeString>()));
         });
         return instance;

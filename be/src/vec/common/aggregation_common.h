@@ -1,19 +1,16 @@
 #pragma once
 
-#include <vec/columns/column.h>
-#include <vec/columns/columns_number.h>
-#include <vec/common/arena.h>
-#include <vec/common/assert_cast.h>
-#include <vec/common/hash_table/hash.h>
-#include <vec/common/memcpy_small.h>
-#include <vec/common/sip_hash.h>
-#include <vec/common/string_ref.h>
-#include <vec/common/uint128.h>
-#include <vec/core/defines.h>
-
 #include <array>
-// #include <vec/columns/columnFixedString.h>
-// #include <vec/columns/columnLowCardinality.h>
+
+#include "vec/columns/column.h"
+#include "vec/columns/columns_number.h"
+#include "vec/common/arena.h"
+#include "vec/common/assert_cast.h"
+#include "vec/common/hash_table/hash.h"
+#include "vec/common/memcpy_small.h"
+#include "vec/common/sip_hash.h"
+#include "vec/common/string_ref.h"
+#include "vec/common/uint128.h"
 
 template <>
 struct DefaultHash<StringRef> : public StringRefHash {};
