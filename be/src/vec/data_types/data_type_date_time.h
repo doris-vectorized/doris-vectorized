@@ -45,7 +45,7 @@ namespace doris::vectorized {
   */
 class DataTypeDateTime final : public DataTypeNumberBase<Int128> {
 public:
-    DataTypeDateTime(const std::string& time_zone_name = "");
+    DataTypeDateTime();
 
     const char* getFamilyName() const override { return "DateTime"; }
     std::string doGetName() const override;
