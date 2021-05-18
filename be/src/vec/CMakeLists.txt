@@ -30,6 +30,7 @@ set(VEC_FILES
   aggregate_functions/aggregate_function_hll_union_agg.cpp
   columns/collator.cpp
   columns/column.cpp
+  columns/column_complex.cpp
   columns/column_const.cpp
   columns/column_decimal.cpp
   columns/column_nullable.cpp
@@ -48,6 +49,7 @@ set(VEC_FILES
   core/field.cpp
   core/sort_block.cpp
   data_types/data_type.cpp
+  data_types/data_type_bitmap.cpp
   data_types/data_type_nothing.cpp
   data_types/data_type_nothing.cpp
   data_types/data_type_nullable.cpp
