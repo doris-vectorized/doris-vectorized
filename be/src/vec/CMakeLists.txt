@@ -27,6 +27,7 @@ set(VEC_FILES
   aggregate_functions/aggregate_function_min_max.cpp
   aggregate_functions/aggregate_function_null.cpp
   aggregate_functions/aggregate_function_uniq.cpp
+  aggregate_functions/aggregate_function_hll_union_agg.cpp
   columns/collator.cpp
   columns/column.cpp
   columns/column_const.cpp
@@ -98,8 +99,7 @@ set(VEC_FILES
   runtime/vdata_stream_recvr.cpp
   runtime/vdata_stream_mgr.cpp
   runtime/vpartition_info.cpp
-  runtime/vsorted_run_merger.cpp
-)
+  runtime/vsorted_run_merger.cpp)
 
 add_library(Vec STATIC
     ${VEC_FILES}
