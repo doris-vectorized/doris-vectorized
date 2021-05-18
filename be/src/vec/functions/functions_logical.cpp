@@ -28,7 +28,7 @@
 #include "vec/common/field_visitors.h"
 #include "vec/common/typeid_cast.h"
 #include "vec/data_types/data_type_nullable.h"
-#include "vec/data_types/data_types_number.h"
+#include "vec/data_types/data_type_number.h"
 #include "vec/functions/function_helpers.h"
 #include "vec/functions/simple_function_factory.h"
 
@@ -220,7 +220,7 @@ class AssociativeGenericApplierImpl {
 public:
     /// Remembers the last N columns from `in`.
     AssociativeGenericApplierImpl(const ColumnRawPtrs& in)
-            : val_getter {ValueGetterBuilder::build(in[in.size() - N])}, next {in} {}
+            : val_getter{ValueGetterBuilder::build(in[in.size() - N])}, next{in} {}
 
     /// Returns a combination of values in the i-th row of all columns stored in the constructor.
     inline ResultValueType apply(const size_t i) const {
@@ -243,7 +243,7 @@ class AssociativeGenericApplierImpl<Op, 1> {
 public:
     /// Remembers the last N columns from `in`.
     AssociativeGenericApplierImpl(const ColumnRawPtrs& in)
-            : val_getter {ValueGetterBuilder::build(in[in.size() - 1])} {}
+            : val_getter{ValueGetterBuilder::build(in[in.size() - 1])} {}
 
     inline ResultValueType apply(const size_t i) const { return val_getter(i); }
 
