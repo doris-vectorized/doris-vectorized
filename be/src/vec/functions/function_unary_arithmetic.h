@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include "vec/data_types/data_types_decimal.h"
-#include "vec/data_types/data_types_number.h"
+#include "vec/data_types/data_type_decimal.h"
+#include "vec/data_types/data_type_number.h"
 //#include <vec/DataTypes/Native.h>
 #include "vec/columns/column_decimal.h"
 #include "vec/columns/column_vector.h"

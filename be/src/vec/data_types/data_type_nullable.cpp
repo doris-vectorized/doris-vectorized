@@ -23,7 +23,7 @@
 #include "vec/common/typeid_cast.h"
 #include "vec/core/field.h"
 #include "vec/data_types/data_type_nothing.h"
-#include "vec/data_types/data_types_number.h"
+#include "vec/data_types/data_type_number.h"
 
 namespace doris::vectorized {
 
