@@ -29,6 +29,7 @@ set(VEC_FILES
   aggregate_functions/aggregate_function_uniq.cpp
   columns/collator.cpp
   columns/column.cpp
+  columns/column_complex.cpp
   columns/column_const.cpp
   columns/column_decimal.cpp
   columns/column_nullable.cpp
