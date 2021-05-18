@@ -490,42 +490,43 @@ private:
     void executeInternal(Block& block, const ColumnNumbers& arguments, size_t result,
                          size_t input_rows_count) {
         if (!arguments.size())
-            throw Exception {"Function " + getName() + " expects at least 1 arguments",
-                             ErrorCodes::TOO_FEW_ARGUMENTS_FOR_FUNCTION};
+            throw Exception{"Function " + getName() + " expects at least 1 arguments",
+                            ErrorCodes::TOO_FEW_ARGUMENTS_FOR_FUNCTION};
 
-        const IDataType* from_type = block.getByPosition(arguments[0]).type.get();
+        const IDataType *from_type = block.getByPosition(arguments[0]).type.get();
 
-        auto call = [&](const auto& types) -> bool {
-            using Types = std::decay_t<decltype(types)>;
-            using LeftDataType = typename Types::LeftType;
-            using RightDataType = typename Types::RightType;
+        /// Generic conversion of any type to String.
+        if constexpr (std::is_same_v<ToDataType, DataTypeString>) {
+            ConvertImplGenericToString::execute(block, arguments, result);
+        } else {
+            auto call = [&](const auto &types) -> bool {
+                using Types = std::decay_t<decltype(types)>;
+                using LeftDataType = typename Types::LeftType;
+                using RightDataType = typename Types::RightType;
 
-            if constexpr (IsDataTypeDecimal<RightDataType>) {
-                if (arguments.size() != 2)
-                    throw Exception {"Function " + getName() + " expects 2 arguments for Decimal.",
-                                     ErrorCodes::TOO_FEW_ARGUMENTS_FOR_FUNCTION};
+                if constexpr (IsDataTypeDecimal<RightDataType>) {
+                    if (arguments.size() != 2)
+                        throw Exception{"Function " + getName() + " expects 2 arguments for Decimal.",
+                                        ErrorCodes::TOO_FEW_ARGUMENTS_FOR_FUNCTION};
 
-                const ColumnWithTypeAndName& scale_column = block.getByPosition(arguments[1]);
-                UInt32 scale = extractToDecimalScale(scale_column);
+                    const ColumnWithTypeAndName &scale_column = block.getByPosition(arguments[1]);
+                    UInt32 scale = extractToDecimalScale(scale_column);
 
-                ConvertImpl<LeftDataType, RightDataType, Name>::execute(block, arguments, result,
-                                                                        input_rows_count, scale);
-            } else
-                ConvertImpl<LeftDataType, RightDataType, Name>::execute(block, arguments, result,
-                                                                        input_rows_count);
-            return true;
-        };
+                    ConvertImpl<LeftDataType, RightDataType, Name>::execute(block, arguments, result,
+                                                                            input_rows_count, scale);
+                } else
+                    ConvertImpl<LeftDataType, RightDataType, Name>::execute(block, arguments, result,
+                                                                            input_rows_count);
+                return true;
+            };
 
-        bool done = callOnIndexAndDataType<ToDataType>(from_type->getTypeId(), call);
-        if (!done) {
-            /// Generic conversion of any type to String.
-            if (std::is_same_v<ToDataType, DataTypeString>) {
-                ConvertImplGenericToString::execute(block, arguments, result);
-            } else
+            bool done = callOnIndexAndDataType<ToDataType>(from_type->getTypeId(), call);
+            if (!done) {
                 throw Exception("Illegal type " +
-                                        block.getByPosition(arguments[0]).type->getName() +
-                                        " of argument of function " + getName(),
+                                block.getByPosition(arguments[0]).type->getName() +
+                                " of argument of function " + getName(),
                                 ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+            }
         }
     }
 };
@@ -545,7 +546,7 @@ using FunctionToFloat32 =
         FunctionConvert<DataTypeFloat32, NameToFloat32, ToNumberMonotonicity<Float32>>;
 using FunctionToFloat64 =
         FunctionConvert<DataTypeFloat64, NameToFloat64, ToNumberMonotonicity<Float64>>;
-// using FunctionToString = FunctionConvert<DataTypeString, NameToString, ToStringMonotonicity>;
+using FunctionToString = FunctionConvert<DataTypeString, NameToString, ToStringMonotonicity>;
 using FunctionToDecimal32 =
         FunctionConvert<DataTypeDecimal<Decimal32>, NameToDecimal32, UnknownMonotonicity>;
 using FunctionToDecimal64 =
@@ -731,20 +732,20 @@ private:
         };
     }
 
-    // WrapperType createStringWrapper(const DataTypePtr & from_type) const
-    // {
-    //     FunctionPtr function = FunctionToString::create();
+     WrapperType createStringWrapper(const DataTypePtr & from_type) const
+     {
+         FunctionPtr function = FunctionToString::create();
 
-    //     /// Check conversion using underlying function
-    //     {
-    //         function->getReturnType(ColumnsWithTypeAndName(1, { nullptr, from_type, "" }));
-    //     }
+         /// Check conversion using underlying function
+         {
+             function->getReturnType(ColumnsWithTypeAndName(1, { nullptr, from_type, "" }));
+         }
 
-    //     return [function] (Block & block, const ColumnNumbers & arguments, const size_t result, size_t input_rows_count)
-    //     {
-    //         function->execute(block, arguments, result, input_rows_count);
-    //     };
-    // }
+         return [function] (Block & block, const ColumnNumbers & arguments, const size_t result, size_t input_rows_count)
+         {
+             function->execute(block, arguments, result, input_rows_count);
+         };
+     }
 
     template <typename FieldType>
     WrapperType createDecimalWrapper(const DataTypePtr& from_type,
@@ -953,8 +954,8 @@ private:
         if (callOnIndexAndDataType<void>(to_type->getTypeId(), make_default_wrapper)) return ret;
 
         switch (to_type->getTypeId()) {
-//         case TypeIndex::String:
-//             return createStringWrapper(from_type);
+         case TypeIndex::String:
+             return createStringWrapper(from_type);
         // case TypeIndex::FixedString:
         //     return createFixedStringWrapper(from_type, checkAndGetDataType<DataTypeFixedString>(to_type.get())->getN());
 

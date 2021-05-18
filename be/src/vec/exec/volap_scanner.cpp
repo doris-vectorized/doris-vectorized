@@ -116,10 +116,26 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
             break;
         }
         case TYPE_VARCHAR:
-        case TYPE_OBJECT:
-        case TYPE_HLL: {
+        case TYPE_OBJECT: {
             Slice* slice = reinterpret_cast<Slice*>(ptr);
             (*columns)[i]->insertData(slice->data, slice->size);
+            break;
+        }
+        case TYPE_HLL:{
+            Slice* slice = reinterpret_cast<Slice*>(ptr);
+            if (slice->size != 0) {
+                (*columns)[i]->insertData(slice->data, slice->size);
+            // TODO: in vector exec engine, it is diffcult to set hll size = 0
+            // so we have to serialize here. which will cause two problem
+            //      1. some unnecessary mem malloc and delay mem release
+            //      2. some unnecessary CPU cost in serialize
+            } else {
+                auto* dst_hll = reinterpret_cast<HyperLogLog*>(slice->data);
+                std::string result(dst_hll->max_serialized_size(), '0');
+                int size = dst_hll->serialize((uint8_t*)result.c_str());
+                result.resize(size);
+                (*columns)[i]->insertData(result.c_str(), size);
+            }
             break;
         }
         case TYPE_DECIMAL: {
