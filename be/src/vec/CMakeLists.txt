@@ -54,8 +54,8 @@ set(VEC_FILES
   data_types/data_type_nullable.cpp
   data_types/data_type_number_base.cpp
   data_types/data_type_string.cpp
-  data_types/data_types_decimal.cpp
-  data_types/data_types_number.cpp
+  data_types/data_type_decimal.cpp
+  data_types/data_type_number.cpp
   data_types/get_least_supertype.cpp
   data_types/nested_utils.cpp
   data_types/data_type_date.cpp

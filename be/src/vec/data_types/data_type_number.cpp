@@ -15,6 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/data_types/data_types_number.h"
+#include "vec/data_types/data_type_number.h"
 
 namespace doris::vectorized {} // namespace doris::vectorized
