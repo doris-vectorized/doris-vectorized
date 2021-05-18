@@ -1,13 +1,12 @@
 #pragma once
 
-#include "vec/data_types/data_types_number.h"
 #include "vec/columns/columns_number.h"
+#include "vec/data_types/data_type_number.h"
 #include "vec/functions/function.h"
-
 
 namespace doris::vectorized {
 
-template<typename Impl>
+template <typename Impl>
 class FunctionConst : public IFunction {
 public:
     static constexpr auto name = Impl::name;
@@ -19,14 +18,15 @@ private:
 
     size_t getNumberOfArguments() const override { return 0; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes & /*arguments*/) const override {
+    DataTypePtr getReturnTypeImpl(const DataTypes& /*arguments*/) const override {
         return Impl::get_return_type();
     }
 
-    void executeImpl(Block &block, const ColumnNumbers &, size_t result, size_t input_rows_count) override {
-        block.getByPosition(result).column = block.getByPosition(result).type->createColumnConst(input_rows_count,
-                                                                                                 Impl::init_value());
+    void executeImpl(Block& block, const ColumnNumbers&, size_t result,
+                     size_t input_rows_count) override {
+        block.getByPosition(result).column = block.getByPosition(result).type->createColumnConst(
+                input_rows_count, Impl::init_value());
     }
 };
 
-}
+} // namespace doris::vectorized

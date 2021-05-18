@@ -24,7 +24,7 @@
 #include "vec/core/accurate_comparison.h"
 #include "vec/core/block.h"
 #include "vec/core/call_on_type_index.h"
-#include "vec/data_types/data_types_decimal.h"
+#include "vec/data_types/data_type_decimal.h"
 #include "vec/functions/function_helpers.h" /// todo core should not depend on function"
 
 namespace doris::vectorized {

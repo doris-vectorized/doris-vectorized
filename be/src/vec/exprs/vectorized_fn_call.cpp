@@ -22,7 +22,7 @@
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "vec/data_types/data_type_nullable.h"
-#include "vec/data_types/data_types_number.h"
+#include "vec/data_types/data_type_number.h"
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
