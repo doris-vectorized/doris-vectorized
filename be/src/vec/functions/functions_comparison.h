@@ -900,8 +900,8 @@ public:
         return std::make_shared<DataTypeUInt8>();
     }
 
-    void executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
-                     size_t input_rows_count) override {
+    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+                       size_t input_rows_count) override {
         const auto& col_with_type_and_name_left = block.getByPosition(arguments[0]);
         const auto& col_with_type_and_name_right = block.getByPosition(arguments[1]);
         const IColumn* col_left_untyped = col_with_type_and_name_left.column.get();
@@ -921,11 +921,11 @@ public:
                           std::is_same_v<Op<int, int>, GreaterOrEqualsOp<int, int>>) {
                 block.getByPosition(result).column =
                         DataTypeUInt8().createColumnConst(input_rows_count, 1u);
-                return;
+                return Status::OK();
             } else {
                 block.getByPosition(result).column =
                         DataTypeUInt8().createColumnConst(input_rows_count, 0u);
-                return;
+                return Status::OK();
             }
         }
 
@@ -985,6 +985,7 @@ public:
             executeGeneric(block, result, col_with_type_and_name_left,
                            col_with_type_and_name_right);
         }
+        return Status::OK();
     }
 
 #if USE_EMBEDDED_COMPILER

@@ -466,9 +466,10 @@ DataTypePtr FunctionAnyArityLogical<Impl, Name>::getReturnTypeImpl(
 }
 
 template <typename Impl, typename Name>
-void FunctionAnyArityLogical<Impl, Name>::executeImpl(Block& block, const ColumnNumbers& arguments,
-                                                      size_t result_index,
-                                                      size_t input_rows_count) {
+Status FunctionAnyArityLogical<Impl, Name>::executeImpl(Block& block,
+                                                        const ColumnNumbers& arguments,
+                                                        size_t result_index,
+                                                        size_t input_rows_count) {
     ColumnRawPtrs args_in;
     for (const auto arg_index : arguments)
         args_in.push_back(block.getByPosition(arg_index).column.get());
@@ -519,8 +520,8 @@ bool functionUnaryExecuteType(Block& block, const ColumnNumbers& arguments, size
 }
 
 template <template <typename> class Impl, typename Name>
-void FunctionUnaryLogical<Impl, Name>::executeImpl(Block& block, const ColumnNumbers& arguments,
-                                                   size_t result, size_t /*input_rows_count*/) {
+Status FunctionUnaryLogical<Impl, Name>::executeImpl(Block& block, const ColumnNumbers& arguments,
+                                                     size_t result, size_t /*input_rows_count*/) {
     if (!(functionUnaryExecuteType<Impl, UInt8>(block, arguments, result) ||
           functionUnaryExecuteType<Impl, UInt16>(block, arguments, result) ||
           functionUnaryExecuteType<Impl, UInt32>(block, arguments, result) ||
@@ -534,6 +535,7 @@ void FunctionUnaryLogical<Impl, Name>::executeImpl(Block& block, const ColumnNum
         throw Exception("Illegal column " + block.getByPosition(arguments[0]).column->getName() +
                                 " of argument of function " + getName(),
                         ErrorCodes::ILLEGAL_COLUMN);
+    return Status::OK();
 }
 
 void registerFunctionLogical(SimpleFunctionFactory& instance) {
