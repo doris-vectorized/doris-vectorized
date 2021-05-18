@@ -35,6 +35,7 @@ void registerAggregateFunctionCombinatorNull(AggregateFunctionSimpleFactory& fac
 void registerAggregateFunctionMinMax(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionAvg(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionCount(AggregateFunctionSimpleFactory& factory);
+void registerAggregateFunctionHLLUnionAgg(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionsUniq(AggregateFunctionSimpleFactory& factory);
 void registerAggregateFunctionCombinatorDistinct(AggregateFunctionSimpleFactory& factory);
 
@@ -55,7 +56,7 @@ private:
 
 public:
     void registerNullableFunctionCombinator(Creator creator) {
-        for (auto entity : aggregate_functions) {
+        for (const auto& entity : aggregate_functions) {
             if (nullable_aggregate_functions[entity.first] == nullptr) {
                 nullable_aggregate_functions[entity.first] = creator;
             }
@@ -113,6 +114,7 @@ public:
             registerAggregateFunctionCount(instance);
             registerAggregateFunctionsUniq(instance);
             registerAggregateFunctionCombinatorDistinct(instance);
+            registerAggregateFunctionHLLUnionAgg(instance);
             registerAggregateFunctionCombinatorNull(instance);
         });
         return instance;
