@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 
+#include "util/bitmap_value.h"
+
 namespace doris::vectorized {
 
 /// Data types for representing elementary values from a database in RAM.
@@ -60,6 +62,7 @@ enum class TypeIndex {
     Function,
     AggregateFunction,
     LowCardinality,
+    BitMap,
 };
 
 using UInt8 = uint8_t;
@@ -150,6 +153,10 @@ struct TypeName<Float64> {
 template <>
 struct TypeName<String> {
     static const char* get() { return "String"; }
+};
+template <>
+struct TypeName<BitmapValue> {
+    static const char* get() { return "BitMap"; }
 };
 
 template <typename T>
@@ -377,6 +384,8 @@ inline const char* getTypeName(TypeIndex idx) {
         return "AggregateFunction";
     case TypeIndex::LowCardinality:
         return "LowCardinality";
+    case TypeIndex::BitMap:
+        return TypeName<BitmapValue>::get();
     }
 
     __builtin_unreachable();
