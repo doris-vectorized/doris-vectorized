@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/data_types/data_types_decimal.h"
+#include "vec/data_types/data_type_decimal.h"
 
 #include <type_traits>
 
