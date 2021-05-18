@@ -29,6 +29,7 @@ class ColumnComplexType final : public COWHelper<IColumn, ColumnComplexType<T>> 
 private:
     ColumnComplexType() {}
     ColumnComplexType(const size_t n) : data(n) {}
+    friend class COWHelper<IColumn, ColumnComplexType<T>>;
 
 public:
     using Self = ColumnComplexType;

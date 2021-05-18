@@ -48,6 +48,7 @@ set(VEC_FILES
   core/field.cpp
   core/sort_block.cpp
   data_types/data_type.cpp
+  data_types/data_type_bitmap.cpp
   data_types/data_type_nothing.cpp
   data_types/data_type_nothing.cpp
   data_types/data_type_nullable.cpp

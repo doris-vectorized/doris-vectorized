@@ -19,7 +19,10 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <string>
+
+#include "vec/data_types/data_type_bitmap.h"
 namespace doris::vectorized {
 TEST(ColumnComplexTest, BasicTest) {
     using ColumnSTLString = ColumnComplexType<std::string>;
@@ -35,6 +38,10 @@ TEST(ColumnComplexTest, BasicTest) {
     ASSERT_EQ((*reinterpret_cast<const std::string*>(ref.data)), "");
     ref = column->getDataAt(1);
     ASSERT_EQ((*reinterpret_cast<const std::string*>(ref.data)), val1);
+}
+
+TEST(ColumnComplexType, DataTypeBitmapTest) {
+    std::make_shared<DatatTypeBitmap>();
 }
 } // namespace doris::vectorized
 
