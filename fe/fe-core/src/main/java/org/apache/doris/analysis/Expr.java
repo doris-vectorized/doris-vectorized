@@ -1710,4 +1710,13 @@ abstract public class Expr extends TreeNode<Expr> implements ParseNode, Cloneabl
         final Expr newExpr = ExpressionFunctions.INSTANCE.evalExpr(this);
         return newExpr != null ? newExpr : this;
     }
+
+    /**
+     * For excute expr the result is nullable
+     * TODO: Now only SlotRef and LiteralExpr overwrite the method, each child of Expr should
+     * overwrite this method to plan correct
+     */
+    public boolean isNullable() {
+        return true;
+    }
 }
