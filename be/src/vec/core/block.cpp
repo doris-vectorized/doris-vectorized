@@ -32,10 +32,12 @@
 #include "vec/common/exception.h"
 #include "vec/common/field_visitors.h"
 #include "vec/common/typeid_cast.h"
+#include "vec/data_types/data_type_date.h"
+#include "vec/data_types/data_type_date_time.h"
+#include "vec/data_types/data_type_decimal.h"
 #include "vec/data_types/data_type_nullable.h"
+#include "vec/data_types/data_type_number.h"
 #include "vec/data_types/data_type_string.h"
-#include "vec/data_types/data_types_decimal.h"
-#include "vec/data_types/data_types_number.h"
 
 namespace doris::vectorized {
 
@@ -87,6 +89,12 @@ inline DataTypePtr get_data_type(const PColumn& pcolumn) {
     }
     case PColumn::STRING: {
         return std::make_shared<DataTypeString>();
+    }
+    case PColumn::DATE: {
+        return std::make_shared<DataTypeDate>();
+    }
+    case PColumn::DATETIME: {
+        return std::make_shared<DataTypeDateTime>();
     }
     case PColumn::DECIMAL32: {
         return std::make_shared<DataTypeDecimal<Decimal32>>(pcolumn.decimal_param().precision(),
@@ -143,6 +151,10 @@ PColumn::DataType get_pdata_type(DataTypePtr data_type) {
         return PColumn::DECIMAL128;
     case TypeIndex::String:
         return PColumn::STRING;
+    case TypeIndex::Date:
+        return PColumn::DATE;
+    case TypeIndex::DateTime:
+        return PColumn::DATETIME;
     default:
         return PColumn::UNKNOWN;
     }

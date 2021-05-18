@@ -13,7 +13,7 @@
 #include <vec/common/hash_table/hash_set.h>
 
 #include "vec/common/aggregation_common.h"
-#include "vec/data_types/data_types_number.h"
+#include "vec/data_types/data_type_number.h"
 // #include <Common/HyperLogLogWithSmallSetOptimization.h>
 // #include <Common/CombinedCardinalityEstimator.h>
 #include <vec/common/assert_cast.h>
