@@ -190,5 +190,10 @@ public abstract class LiteralExpr extends Expr {
         }
         return this.compareLiteral(((LiteralExpr) obj)) == 0;
     }
+
+    @Override
+    public boolean isNullable() {
+        return this instanceof NullLiteral;
+    }
 }
 
