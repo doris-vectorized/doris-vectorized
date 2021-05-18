@@ -22,7 +22,7 @@
 #include "vec/common/arithmetic_overflow.h"
 #include "vec/common/typeid_cast.h"
 #include "vec/data_types/data_type.h"
-#include "vec/data_types/data_types_number.h"
+#include "vec/data_types/data_type_number.h"
 
 namespace doris::vectorized {
 
