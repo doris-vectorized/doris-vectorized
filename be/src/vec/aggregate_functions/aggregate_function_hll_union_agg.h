@@ -17,18 +17,17 @@
 
 #pragma once
 
-#include <type_traits>
 #include <istream>
 #include <ostream>
+#include <type_traits>
 
 #include "exprs/hll_function.h"
 #include "olap/hll.h"
 #include "util/slice.h"
-
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/columns/column_string.h"
 #include "vec/columns/column_vector.h"
-#include "vec/data_types/data_types_number.h"
+#include "vec/data_types/data_type_number.h"
 #include "vec/data_types/data_type_string.h"
 #include "vec/io/io_helper.h"
 
@@ -37,30 +36,24 @@ namespace doris::vectorized {
 struct AggregateFunctionHLLData {
     doris::HyperLogLog dst_hll{};
 
-    void add(const StringRef& src) {
-        dst_hll.merge(HyperLogLog(Slice(src.data, src.size)));
-    }
+    void add(const StringRef& src) { dst_hll.merge(HyperLogLog(Slice(src.data, src.size))); }
 
-    void merge(const AggregateFunctionHLLData& rhs) {
-        dst_hll.merge(rhs.dst_hll);
-    }
+    void merge(const AggregateFunctionHLLData& rhs) { dst_hll.merge(rhs.dst_hll); }
 
     void write(std::ostream& buf) const {
         std::string result(dst_hll.max_serialized_size(), '0');
         int size = dst_hll.serialize((uint8_t*)result.c_str());
         result.resize(size);
-        writeBinary(result, buf); 
+        writeBinary(result, buf);
     }
 
     void read(std::istream& buf) {
         std::string result;
-        readBinary(result, buf); 
+        readBinary(result, buf);
         dst_hll.deserialize(Slice(result.c_str(), result.length()));
     }
 
-    Int64 get_cardinality() const {
-        return dst_hll.estimate_cardinality();
-    }
+    Int64 get_cardinality() const { return dst_hll.estimate_cardinality(); }
 
     std::string get() const {
         std::string result(dst_hll.max_serialized_size(), '0');
@@ -69,24 +62,21 @@ struct AggregateFunctionHLLData {
 
         return result;
     }
-
 };
 
 class AggregateFunctionHLLUnionAgg
-        : public IAggregateFunctionDataHelper<AggregateFunctionHLLData, AggregateFunctionHLLUnionAgg> {
+        : public IAggregateFunctionDataHelper<AggregateFunctionHLLData,
+                                              AggregateFunctionHLLUnionAgg> {
 public:
     virtual String getName() const override { return "hll_union_agg"; }
 
     AggregateFunctionHLLUnionAgg(const DataTypes& argument_types_)
-            : IAggregateFunctionDataHelper(
-                      argument_types_, {}){}
+            : IAggregateFunctionDataHelper(argument_types_, {}) {}
 
     AggregateFunctionHLLUnionAgg(const IDataType& data_type, const DataTypes& argument_types_)
             : IAggregateFunctionDataHelper(argument_types_, {}) {}
 
-    virtual DataTypePtr getReturnType() const override {
-        return std::make_shared<DataTypeInt64>();
-    }
+    virtual DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
 
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
@@ -112,11 +102,9 @@ public:
     }
 
     const char* getHeaderFilePath() const override { return __FILE__; }
-
 };
 
-class AggregateFunctionHLLUnion final
-        : public AggregateFunctionHLLUnionAgg {
+class AggregateFunctionHLLUnion final : public AggregateFunctionHLLUnionAgg {
 public:
     String getName() const override { return "hll_union"; }
 
@@ -126,9 +114,7 @@ public:
     AggregateFunctionHLLUnion(const IDataType& data_type, const DataTypes& argument_types_)
             : AggregateFunctionHLLUnionAgg(data_type, argument_types_) {}
 
-    DataTypePtr getReturnType() const override {
-        return std::make_shared<DataTypeString>();
-    }
+    DataTypePtr getReturnType() const override { return std::make_shared<DataTypeString>(); }
 
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
         auto& column = static_cast<ColumnString&>(to);

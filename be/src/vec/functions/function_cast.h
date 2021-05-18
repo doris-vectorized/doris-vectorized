@@ -24,12 +24,12 @@
 #include "vec/common/assert_cast.h"
 #include "vec/common/field_visitors.h"
 #include "vec/common/string_buffer.hpp"
+#include "vec/data_types/data_type_decimal.h"
 #include "vec/data_types/data_type_factory.hpp"
 #include "vec/data_types/data_type_nothing.h"
 #include "vec/data_types/data_type_nullable.h"
+#include "vec/data_types/data_type_number.h"
 #include "vec/data_types/data_type_string.h"
-#include "vec/data_types/data_types_decimal.h"
-#include "vec/data_types/data_types_number.h"
 #include "vec/functions/function.h"
 #include "vec/functions/function_helpers.h"
 
@@ -493,38 +493,39 @@ private:
             throw Exception{"Function " + getName() + " expects at least 1 arguments",
                             ErrorCodes::TOO_FEW_ARGUMENTS_FOR_FUNCTION};
 
-        const IDataType *from_type = block.getByPosition(arguments[0]).type.get();
+        const IDataType* from_type = block.getByPosition(arguments[0]).type.get();
 
         /// Generic conversion of any type to String.
         if constexpr (std::is_same_v<ToDataType, DataTypeString>) {
             ConvertImplGenericToString::execute(block, arguments, result);
         } else {
-            auto call = [&](const auto &types) -> bool {
+            auto call = [&](const auto& types) -> bool {
                 using Types = std::decay_t<decltype(types)>;
                 using LeftDataType = typename Types::LeftType;
                 using RightDataType = typename Types::RightType;
 
                 if constexpr (IsDataTypeDecimal<RightDataType>) {
                     if (arguments.size() != 2)
-                        throw Exception{"Function " + getName() + " expects 2 arguments for Decimal.",
-                                        ErrorCodes::TOO_FEW_ARGUMENTS_FOR_FUNCTION};
+                        throw Exception{
+                                "Function " + getName() + " expects 2 arguments for Decimal.",
+                                ErrorCodes::TOO_FEW_ARGUMENTS_FOR_FUNCTION};
 
-                    const ColumnWithTypeAndName &scale_column = block.getByPosition(arguments[1]);
+                    const ColumnWithTypeAndName& scale_column = block.getByPosition(arguments[1]);
                     UInt32 scale = extractToDecimalScale(scale_column);
 
-                    ConvertImpl<LeftDataType, RightDataType, Name>::execute(block, arguments, result,
-                                                                            input_rows_count, scale);
+                    ConvertImpl<LeftDataType, RightDataType, Name>::execute(
+                            block, arguments, result, input_rows_count, scale);
                 } else
-                    ConvertImpl<LeftDataType, RightDataType, Name>::execute(block, arguments, result,
-                                                                            input_rows_count);
+                    ConvertImpl<LeftDataType, RightDataType, Name>::execute(
+                            block, arguments, result, input_rows_count);
                 return true;
             };
 
             bool done = callOnIndexAndDataType<ToDataType>(from_type->getTypeId(), call);
             if (!done) {
                 throw Exception("Illegal type " +
-                                block.getByPosition(arguments[0]).type->getName() +
-                                " of argument of function " + getName(),
+                                        block.getByPosition(arguments[0]).type->getName() +
+                                        " of argument of function " + getName(),
                                 ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
             }
         }
@@ -622,7 +623,7 @@ protected:
     void executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                      size_t input_rows_count) override {
         /// drop second argument, pass others
-        ColumnNumbers new_arguments {arguments.front()};
+        ColumnNumbers new_arguments{arguments.front()};
         if (arguments.size() > 2)
             new_arguments.insert(std::end(new_arguments), std::next(std::begin(arguments), 2),
                                  std::end(arguments));
@@ -732,20 +733,17 @@ private:
         };
     }
 
-     WrapperType createStringWrapper(const DataTypePtr & from_type) const
-     {
-         FunctionPtr function = FunctionToString::create();
+    WrapperType createStringWrapper(const DataTypePtr& from_type) const {
+        FunctionPtr function = FunctionToString::create();
 
-         /// Check conversion using underlying function
-         {
-             function->getReturnType(ColumnsWithTypeAndName(1, { nullptr, from_type, "" }));
-         }
+        /// Check conversion using underlying function
+        { function->getReturnType(ColumnsWithTypeAndName(1, {nullptr, from_type, ""})); }
 
-         return [function] (Block & block, const ColumnNumbers & arguments, const size_t result, size_t input_rows_count)
-         {
-             function->execute(block, arguments, result, input_rows_count);
-         };
-     }
+        return [function](Block& block, const ColumnNumbers& arguments, const size_t result,
+                          size_t input_rows_count) {
+            function->execute(block, arguments, result, input_rows_count);
+        };
+    }
 
     template <typename FieldType>
     WrapperType createDecimalWrapper(const DataTypePtr& from_type,
@@ -760,9 +758,9 @@ private:
         bool ok = which.isNativeInt() || which.isNativeUInt() || which.isDecimal() ||
                   which.isFloat() || which.isDateOrDateTime() || which.isStringOrFixedString();
         if (!ok)
-            throw Exception {"Conversion from " + from_type->getName() + " to " +
-                                     to_type->getName() + " is not supported",
-                             ErrorCodes::CANNOT_CONVERT_TYPE};
+            throw Exception{"Conversion from " + from_type->getName() + " to " +
+                                    to_type->getName() + " is not supported",
+                            ErrorCodes::CANNOT_CONVERT_TYPE};
 
         return [type_index, precision, scale](Block& block, const ColumnNumbers& arguments,
                                               const size_t result, size_t input_rows_count) {
@@ -780,9 +778,9 @@ private:
             /// Additionally check if callOnIndexAndDataType wasn't called at all.
             if (!res) {
                 auto to = DataTypeDecimal<FieldType>(precision, scale);
-                throw Exception {"Conversion from " + std::string(getTypeName(type_index)) +
-                                         " to " + to.getName() + " is not supported",
-                                 ErrorCodes::CANNOT_CONVERT_TYPE};
+                throw Exception{"Conversion from " + std::string(getTypeName(type_index)) + " to " +
+                                        to.getName() + " is not supported",
+                                ErrorCodes::CANNOT_CONVERT_TYPE};
             }
         };
     }
@@ -811,8 +809,8 @@ private:
 
         if (from_type->onlyNull()) {
             if (!to_nested->isNullable())
-                throw Exception {"Cannot convert NULL to a non-nullable type",
-                                 ErrorCodes::CANNOT_CONVERT_TYPE};
+                throw Exception{"Cannot convert NULL to a non-nullable type",
+                                ErrorCodes::CANNOT_CONVERT_TYPE};
 
             return [](Block& block, const ColumnNumbers&, const size_t result,
                       size_t input_rows_count) {
@@ -890,8 +888,8 @@ private:
                     const auto& null_map = nullable_col.getNullMapData();
 
                     if (!memoryIsZero(null_map.data(), null_map.size()))
-                        throw Exception {"Cannot convert NULL value to non-Nullable type",
-                                         ErrorCodes::CANNOT_INSERT_NULL_IN_ORDINARY_COLUMN};
+                        throw Exception{"Cannot convert NULL value to non-Nullable type",
+                                        ErrorCodes::CANNOT_INSERT_NULL_IN_ORDINARY_COLUMN};
                 }
 
                 wrapper(tmp_block, arguments, result, input_rows_count);
@@ -954,8 +952,8 @@ private:
         if (callOnIndexAndDataType<void>(to_type->getTypeId(), make_default_wrapper)) return ret;
 
         switch (to_type->getTypeId()) {
-         case TypeIndex::String:
-             return createStringWrapper(from_type);
+        case TypeIndex::String:
+            return createStringWrapper(from_type);
         // case TypeIndex::FixedString:
         //     return createFixedStringWrapper(from_type, checkAndGetDataType<DataTypeFixedString>(to_type.get())->getN());
 
@@ -970,9 +968,9 @@ private:
             break;
         }
 
-        throw Exception {"Conversion from " + from_type->getName() + " to " + to_type->getName() +
-                                 " is not supported",
-                         ErrorCodes::CANNOT_CONVERT_TYPE};
+        throw Exception{"Conversion from " + from_type->getName() + " to " + to_type->getName() +
+                                " is not supported",
+                        ErrorCodes::CANNOT_CONVERT_TYPE};
     }
 };
 

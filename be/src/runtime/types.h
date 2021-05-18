@@ -29,9 +29,9 @@
 #include "thrift/protocol/TDebugProtocol.h"
 #include "vec/data_types/data_type_date.h"
 #include "vec/data_types/data_type_date_time.h"
+#include "vec/data_types/data_type_decimal.h"
+#include "vec/data_types/data_type_number.h"
 #include "vec/data_types/data_type_string.h"
-#include "vec/data_types/data_types_decimal.h"
-#include "vec/data_types/data_types_number.h"
 
 namespace doris {
 
