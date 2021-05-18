@@ -212,7 +212,7 @@ Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     if (_vconjunct_ctx_ptr) {
         int result_column_id = -1;
         int orig_columns = block->columns();
-        (*bt)->execute(block, &result_column_id);
+        (*_vconjunct_ctx_ptr)->execute(block, &result_column_id);
         Block::filter_block(block, result_column_id, orig_columns);
     }
     return Status::OK();
