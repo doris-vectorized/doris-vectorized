@@ -1826,4 +1826,12 @@ abstract public class Expr extends TreeNode<Expr> implements ParseNode, Cloneabl
         return false;
     }
 
+    /**
+     * For excute expr the result is nullable
+     * TODO: Now only SlotRef and LiteralExpr overwrite the method, each child of Expr should
+     * overwrite this method to plan correct
+     */
+    public boolean isNullable() {
+        return true;
+    }
 }
