@@ -208,7 +208,14 @@ Status AggregationNode::get_next(RuntimeState* state, RowBatch* row_batch, bool*
 Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     SCOPED_TIMER(_runtime_profile->total_time_counter());
     block->clear();
-    return _executor.get_result(state, block, eos);
+    RETURN_IF_ERROR(_executor.get_result(state, block, eos));
+    if (_vconjunct_ctx_ptr) {
+        int result_column_id = -1;
+        int orig_columns = block->columns();
+        (*_vconjunct_ctx_ptr)->execute(block, &result_column_id);
+        Block::filter_block(block, result_column_id, orig_columns);
+    }
+    return Status::OK();
 }
 
 Status AggregationNode::close(RuntimeState* state) {
