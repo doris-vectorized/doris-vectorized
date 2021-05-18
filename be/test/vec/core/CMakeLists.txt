@@ -19,4 +19,5 @@
 set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/test/vec/core")
 
 ADD_BE_TEST(block_test)
+ADD_BE_TEST(column_complex_test)
 
