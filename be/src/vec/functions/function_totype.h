@@ -26,43 +26,43 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int TOO_LARGE_STRING_SIZE;
-extern const int ILLEGAL_COLUMN;
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-extern const int LOGICAL_ERROR;
-extern const int NOT_IMPLEMENTED;
-} // namespace ErrorCodes
-
 template <typename Impl, typename Name>
-class FunctionBitmap : public IFunction {
+class FunctionUnaryToType : public IFunction {
 public:
     static constexpr auto name = Name::name;
-    static FunctionPtr create() { return std::make_shared<FunctionBitmap>(); }
+    static FunctionPtr create() { return std::make_shared<FunctionUnaryToType>(); }
     String getName() const override { return name; }
     size_t getNumberOfArguments() const override { return 1; }
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
-        if (!isStringOrFixedString(arguments[0]))
-            throw Exception("Illegal type " + arguments[0]->getName() +
-                                    " of argument of function " + getName(),
-                            ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
-
-        return std::make_shared<DataTypeBitMap>();
+        return std::make_shared<typename Impl::ReturnType>();
     }
+
     bool useDefaultImplementationForConstants() const override { return true; }
+
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
         const ColumnPtr column = block.getByPosition(arguments[0]).column;
-        if (const ColumnString* col = checkAndGetColumn<ColumnString>(column.get())) {
-            auto col_res = ColumnBitmap::create();
-            RETURN_IF_ERROR(Impl::vector(col->getChars(), col->getOffsets(), col_res->getData()));
-            block.getByPosition(result).column = std::move(col_res);
-        } else
-            throw Exception("Illegal column " +
-                                    block.getByPosition(arguments[0]).column->getName() +
-                                    " of argument of function " + getName(),
-                            ErrorCodes::ILLEGAL_COLUMN);
-        return Status::OK();
+        if constexpr (Impl::TYPE_INDEX == TypeIndex::String) {
+            if (const ColumnString* col = checkAndGetColumn<ColumnString>(column.get())) {
+                auto col_res = Impl::ReturnColumnType::create();
+                RETURN_IF_ERROR(
+                        Impl::vector(col->getChars(), col->getOffsets(), col_res->getData()));
+                block.getByPosition(result).column = std::move(col_res);
+                return Status::OK();
+            }
+        } else if constexpr (is_integer(Impl::TYPE_INDEX)) {
+            if (const auto* col =
+                        checkAndGetColumn<ColumnVector<typename Impl::Type>>(column.get())) {
+                auto col_res = Impl::ReturnColumnType::create();
+                RETURN_IF_ERROR(Impl::vector(col->getData(), col_res->getData()));
+                block.getByPosition(result).column = std::move(col_res);
+                return Status::OK();
+            }
+        }
+
+        return Status::RuntimeError(fmt::format("Illegal column {} of argument of function {}",
+                                                block.getByPosition(arguments[0]).column->getName(),
+                                                getName()));
     }
 };
 } // namespace doris::vectorized

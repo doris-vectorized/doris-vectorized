@@ -14,9 +14,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-#include "vec/functions/function_bitmap.h"
 
 #include "util/string_parser.hpp"
+#include "vec/functions/function_totype.h"
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
@@ -24,7 +24,12 @@ struct NameToBitmap {
     static constexpr auto name = "to_bitmap";
 };
 
-struct to_bitmap {
+struct ToBitmapImpl {
+    using ReturnType = DataTypeBitMap;
+    static constexpr auto TYPE_INDEX = TypeIndex::String;
+    using Type = String;
+    using ReturnColumnType = ColumnBitmap;
+
     static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
                          std::vector<BitmapValue>& res) {
         auto size = offsets.size();
@@ -48,7 +53,9 @@ struct to_bitmap {
         return Status::OK();
     }
 };
-using FunctionToBitmap = FunctionBitmap<to_bitmap, NameToBitmap>;
+// using FunctionToBitmap = FunctionBitmap<ToBitmapImpl, NameToBitmap>;
+
+using FunctionToBitmap = FunctionUnaryToType<ToBitmapImpl, NameToBitmap>;
 
 void registerFunctionBitmap(SimpleFunctionFactory& factory) {
     factory.registerFunction<FunctionToBitmap>();
