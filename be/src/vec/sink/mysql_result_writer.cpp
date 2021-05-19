@@ -87,8 +87,7 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
         }
 
         if constexpr (type == TYPE_TINYINT) {
-            buf_ret = _vec_buffers[i]->push_tinyint(
-                    assert_cast<const ColumnVector<Int8>&>(*column).getData()[i]);
+            buf_ret = _vec_buffers[i]->push_tinyint(static_cast<int8_t>(column->getBool(i)));
         }
         if constexpr (type == TYPE_SMALLINT) {
             buf_ret = _vec_buffers[i]->push_smallint(

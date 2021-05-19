@@ -162,8 +162,8 @@ public:
         size_t size = getNullMapData().size();
         const UInt8* null_pos = getNullMapData().data();
         const UInt8* null_pos_end = getNullMapData().data() + size;
- #ifdef __SSE2__
-    /** A slightly more optimized version.
+#ifdef __SSE2__
+        /** A slightly more optimized version.
         * Based on the assumption that often pieces of consecutive values
         *  completely pass or do not pass the filter.
         * Therefore, we will optimistically check the parts of `SIMD_BYTES` values.
@@ -174,7 +174,7 @@ public:
 
         while (null_pos < null_end_sse) {
             int mask = _mm_movemask_epi8(_mm_cmpgt_epi8(
-                _mm_loadu_si128(reinterpret_cast<const __m128i*>(null_pos)), zero16));
+                    _mm_loadu_si128(reinterpret_cast<const __m128i*>(null_pos)), zero16));
 
             if (0 != mask) {
                 return true;
