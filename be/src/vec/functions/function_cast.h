@@ -453,8 +453,8 @@ public:
     ColumnNumbers getArgumentsThatAreAlwaysConstant() const override { return {1}; }
     bool canBeExecutedOnDefaultArguments() const override { return false; }
 
-    void executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
-                     size_t input_rows_count) override {
+    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+                       size_t input_rows_count) override {
         try {
             executeInternal(block, arguments, result, input_rows_count);
         } catch (Exception& e) {
@@ -477,6 +477,7 @@ public:
 
             throw;
         }
+        return Status::OK();
     }
 
     bool hasInformationAboutMonotonicity() const override { return Monotonic::has(); }
@@ -612,7 +613,7 @@ struct FunctionTo<DataTypeDecimal<Decimal128>> {
 
 class PreparedFunctionCast : public PreparedFunctionImpl {
 public:
-    using WrapperType = std::function<void(Block&, const ColumnNumbers&, size_t, size_t)>;
+    using WrapperType = std::function<Status(Block&, const ColumnNumbers&, size_t, size_t)>;
 
     explicit PreparedFunctionCast(WrapperType&& wrapper_function_, const char* name_)
             : wrapper_function(std::move(wrapper_function_)), name(name_) {}
@@ -620,15 +621,15 @@ public:
     String getName() const override { return name; }
 
 protected:
-    void executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
-                     size_t input_rows_count) override {
+    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+                       size_t input_rows_count) override {
         /// drop second argument, pass others
         ColumnNumbers new_arguments{arguments.front()};
         if (arguments.size() > 2)
             new_arguments.insert(std::end(new_arguments), std::next(std::begin(arguments), 2),
                                  std::end(arguments));
 
-        wrapper_function(block, new_arguments, result, input_rows_count);
+        return wrapper_function(block, new_arguments, result, input_rows_count);
     }
 
     bool useDefaultImplementationForNulls() const override { return false; }
@@ -663,15 +664,15 @@ public:
         throw Exception("not support convert from string", ErrorCodes::NOT_IMPLEMENTED);
     }
 
-    void executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
-                     size_t input_rows_count) override {
+    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+                       size_t input_rows_count) override {
         throw Exception("not support convert from string", ErrorCodes::NOT_IMPLEMENTED);
     }
 };
 
 class FunctionCast final : public IFunctionBase {
 public:
-    using WrapperType = std::function<void(Block&, const ColumnNumbers&, size_t, size_t)>;
+    using WrapperType = std::function<Status(Block&, const ColumnNumbers&, size_t, size_t)>;
     using MonotonicityForRange =
             std::function<Monotonicity(const IDataType&, const Field&, const Field&)>;
 
@@ -729,7 +730,7 @@ private:
 
         return [function](Block& block, const ColumnNumbers& arguments, const size_t result,
                           size_t input_rows_count) {
-            function->execute(block, arguments, result, input_rows_count);
+            return function->execute(block, arguments, result, input_rows_count);
         };
     }
 
@@ -742,6 +743,7 @@ private:
         return [function](Block& block, const ColumnNumbers& arguments, const size_t result,
                           size_t input_rows_count) {
             function->execute(block, arguments, result, input_rows_count);
+            return Status::OK();
         };
     }
 
@@ -782,6 +784,7 @@ private:
                                         to.getName() + " is not supported",
                                 ErrorCodes::CANNOT_CONVERT_TYPE};
             }
+            return Status::OK();
         };
     }
 
@@ -789,6 +792,7 @@ private:
         return [](Block& block, const ColumnNumbers& arguments, const size_t result,
                   size_t /*input_rows_count*/) {
             block.getByPosition(result).column = block.getByPosition(arguments.front()).column;
+            return Status::OK();
         };
     }
 
@@ -799,6 +803,7 @@ private:
             /// Column of Nothing type is trivially convertible to any other column
             block.getByPosition(result).column =
                     res->cloneResized(input_rows_count)->convertToFullColumnIfConst();
+            return Status::OK();
         };
     }
 
@@ -817,6 +822,7 @@ private:
                 auto& res = block.getByPosition(result);
                 res.column = res.type->createColumnConstWithDefaultValue(input_rows_count)
                                      ->convertToFullColumnIfConst();
+                return Status::OK();
             };
         }
 
@@ -871,6 +877,7 @@ private:
                 res.column = wrapInNullable(tmp_res.column,
                                             Block({block.getByPosition(arguments[0]), tmp_res}),
                                             {0}, 1, input_rows_count);
+                return Status::OK();
             };
         } else if (source_is_nullable) {
             /// Conversion from Nullable to non-Nullable.
@@ -894,6 +901,7 @@ private:
 
                 wrapper(tmp_block, arguments, result, input_rows_count);
                 block.getByPosition(result).column = tmp_block.getByPosition(result).column;
+                return Status::OK();
             };
         } else
             return wrapper;
