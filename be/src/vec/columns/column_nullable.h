@@ -101,7 +101,6 @@ public:
     size_t allocatedBytes() const override;
     void protect() override;
     ColumnPtr replicate(const Offsets& replicate_offsets) const override;
-    ColumnPtr convertToRealColumnIfNullable() const override { return nested_column; };
     void updateHashWithValue(size_t n, SipHash& hash) const override;
     void getExtremes(Field& min, Field& max) const override;
 

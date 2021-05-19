@@ -725,12 +725,7 @@ void Block::updateHash(SipHash& hash) const {
         for (const auto& col : data) col.column->updateHashWithValue(row_no, hash);
 }
 
-void Block::filter_block(Block* block, int filter_column_id, int column_to_keep) {
-    ColumnPtr filter_column = block->getByPosition(filter_column_id).column;
-    const IColumn::Filter& filter = assert_cast<const doris::vectorized::ColumnVector<UInt8>&>(
-                                            *filter_column->convertToRealColumnIfNullable())
-                                            .getData();
-
+void filter_block_internal(Block* block, const IColumn::Filter& filter, int column_to_keep) {
     auto count = countBytesInFilter(filter);
     if (count == 0) {
         block->getByPosition(0).column = block->getByPosition(0).column->cloneEmpty();
@@ -743,6 +738,22 @@ void Block::filter_block(Block* block, int filter_column_id, int column_to_keep)
         for (size_t i = column_to_keep; i < block->columns(); ++i) {
             block->erase(i);
         }
+    }
+}
+
+void Block::filter_block(Block* block, int filter_column_id, int column_to_keep) {
+    ColumnPtr filter_column = block->getByPosition(filter_column_id).column;
+    if (filter_column->isNullable()) {
+        IColumn::Filter filter(filter_column->size());
+        for (size_t i = 0; i < filter_column->size(); ++i) {
+            filter[i] = filter_column->getBool(i);
+        }
+        filter_block_internal(block, filter, column_to_keep);
+    } else {
+        const IColumn::Filter& filter =
+                assert_cast<const doris::vectorized::ColumnVector<UInt8>&>(*filter_column)
+                        .getData();
+        filter_block_internal(block, filter, column_to_keep);
     }
 }
 void Block::serialize(PBlock* pblock) const {

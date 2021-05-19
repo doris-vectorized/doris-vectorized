@@ -66,10 +66,6 @@ public:
     /// If column is ColumnLowCardinality, transforms is to full column.
     virtual Ptr convertToFullColumnIfLowCardinality() const { return getPtr(); }
 
-    /// If column isn't ColumnNullable, return itself.
-    /// If column is ColumnNullable, return the nested column.
-    virtual Ptr convertToRealColumnIfNullable() const { return getPtr(); }
-
     /// Creates empty column with the same type.
     virtual MutablePtr cloneEmpty() const { return cloneResized(0); }
 
