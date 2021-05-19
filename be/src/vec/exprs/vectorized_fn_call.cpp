@@ -70,7 +70,8 @@ doris::Status VectorizedFnCall::execute(doris::vectorized::Block* block, int* re
     size_t num_columns_without_result = block->columns();
     // prepare a column to save result
     block->insert({nullptr, _data_type, _expr_name});
-    _function->execute(*block, arguments, num_columns_without_result, block->rows(), false);
+    RETURN_IF_ERROR(_function->execute(*block, arguments, num_columns_without_result, block->rows(),
+                                       false));
     *result_column_id = num_columns_without_result;
     return Status::OK();
 }
@@ -80,7 +81,7 @@ const std::string& VectorizedFnCall::expr_name() const {
 }
 std::string VectorizedFnCall::debug_string() const {
     std::stringstream out;
-    out << "VAggFn(";
+    out << "VectorizedFn(";
     for (VExpr* input_expr : children()) {
         out << " " << input_expr->debug_string() << ")";
     }
