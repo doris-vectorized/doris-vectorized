@@ -66,6 +66,10 @@ public:
     /// If column is ColumnLowCardinality, transforms is to full column.
     virtual Ptr convertToFullColumnIfLowCardinality() const { return getPtr(); }
 
+    /// If column isn't ColumnNullable, return itself.
+    /// If column is ColumnNullable, return the nested column.
+    virtual Ptr convertToRealColumnIfNullable() const { return getPtr(); }
+
     /// Creates empty column with the same type.
     virtual MutablePtr cloneEmpty() const { return cloneResized(0); }
 
@@ -240,7 +244,8 @@ public:
       * limit - if isn't 0, then only first limit elements of the result column could be sorted.
       * nan_direction_hint - see above.
       */
-    virtual void getPermutation(bool reverse, size_t limit, int nan_direction_hint, Permutation & res) const = 0;
+    virtual void getPermutation(bool reverse, size_t limit, int nan_direction_hint,
+                                Permutation& res) const = 0;
 
     /** Copies each element according offsets parameter.
       * (i-th element should be copied offsets[i] - offsets[i - 1] times.)

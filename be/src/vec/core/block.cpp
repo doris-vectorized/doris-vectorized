@@ -427,7 +427,10 @@ std::string Block::dumpData(size_t row_limit) const {
     // content
     for (size_t row_num = 0; row_num < rows() && row_num < row_limit; ++row_num) {
         for (size_t i = 0; i < columns(); ++i) {
-            std::string s = data[i].to_string(row_num);
+            std::string s = "";
+            if (data[i].column) {
+                s = data[i].to_string(row_num);
+            }
             if (s.length() > headers_size[i]) {
                 s = s.substr(0, headers_size[i] - 3) + "...";
             }
@@ -724,8 +727,9 @@ void Block::updateHash(SipHash& hash) const {
 
 void Block::filter_block(Block* block, int filter_column_id, int column_to_keep) {
     ColumnPtr filter_column = block->getByPosition(filter_column_id).column;
-    const IColumn::Filter& filter =
-            assert_cast<const doris::vectorized::ColumnVector<UInt8>&>(*filter_column).getData();
+    const IColumn::Filter& filter = assert_cast<const doris::vectorized::ColumnVector<UInt8>&>(
+                                            *filter_column->convertToRealColumnIfNullable())
+                                            .getData();
 
     auto count = countBytesInFilter(filter);
     if (count == 0) {

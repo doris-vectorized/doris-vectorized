@@ -528,7 +528,7 @@ public:
     //        check_decimal_overflow(decimalCheckComparisonOverflow(context))
     FunctionComparison() {}
 
-    bool useDefaultImplementationForNulls() const override { return false; }
+    // bool useDefaultImplementationForNulls() const override { return false; }
 
 private:
     //    const Context & context;
