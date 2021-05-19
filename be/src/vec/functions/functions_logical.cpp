@@ -479,6 +479,7 @@ Status FunctionAnyArityLogical<Impl, Name>::executeImpl(Block& block,
         executeForTernaryLogicImpl<Impl>(std::move(args_in), result_info, input_rows_count);
     else
         basicExecuteImpl<Impl>(std::move(args_in), result_info, input_rows_count);
+    return Status::OK();
 }
 
 template <typename A, typename Op>

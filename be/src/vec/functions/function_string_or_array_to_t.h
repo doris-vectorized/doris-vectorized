@@ -100,6 +100,7 @@ public:
                                     block.getByPosition(arguments[0]).column->getName() +
                                     " of argument of function " + getName(),
                             ErrorCodes::ILLEGAL_COLUMN);
+        return Status::OK();
     }
 };
 
