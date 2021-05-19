@@ -17,11 +17,13 @@
 
 #include "vec/core/block.h"
 
+#include <fmt/format.h>
+
 #include <iomanip>
 #include <iterator>
 #include <memory>
 
-#include "fmt/format.h"
+#include "common/status.h"
 #include "gen_cpp/data.pb.h"
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_nullable.h"
@@ -427,7 +429,10 @@ std::string Block::dumpData(size_t row_limit) const {
     // content
     for (size_t row_num = 0; row_num < rows() && row_num < row_limit; ++row_num) {
         for (size_t i = 0; i < columns(); ++i) {
-            std::string s = data[i].to_string(row_num);
+            std::string s = "";
+            if (data[i].column) {
+                s = data[i].to_string(row_num);
+            }
             if (s.length() > headers_size[i]) {
                 s = s.substr(0, headers_size[i] - 3) + "...";
             }
@@ -722,11 +727,7 @@ void Block::updateHash(SipHash& hash) const {
         for (const auto& col : data) col.column->updateHashWithValue(row_no, hash);
 }
 
-void Block::filter_block(Block* block, int filter_column_id, int column_to_keep) {
-    ColumnPtr filter_column = block->getByPosition(filter_column_id).column;
-    const IColumn::Filter& filter =
-            assert_cast<const doris::vectorized::ColumnVector<UInt8>&>(*filter_column).getData();
-
+void filter_block_internal(Block* block, const IColumn::Filter& filter, int column_to_keep) {
     auto count = countBytesInFilter(filter);
     if (count == 0) {
         block->getByPosition(0).column = block->getByPosition(0).column->cloneEmpty();
@@ -740,6 +741,36 @@ void Block::filter_block(Block* block, int filter_column_id, int column_to_keep)
             block->erase(i);
         }
     }
+}
+
+Status Block::filter_block(Block* block, int filter_column_id, int column_to_keep) {
+    ColumnPtr filter_column = block->getByPosition(filter_column_id).column;
+    if (auto* nullable_column = checkAndGetColumn<ColumnNullable>(*filter_column)) {
+        ColumnPtr nested_column = nullable_column->getNestedColumnPtr();
+
+        MutableColumnPtr mutable_holder = (*std::move(nested_column)).mutate();
+
+        ColumnUInt8* concrete_column = typeid_cast<ColumnUInt8*>(mutable_holder.get());
+        if (!concrete_column) {
+            return Status::InvalidArgument(
+                    "Illegal type " + filter_column->getName() +
+                    " of column for filter. Must be UInt8 or Nullable(UInt8).");
+        }
+        const NullMap& null_map = nullable_column->getNullMapData();
+        IColumn::Filter& filter = concrete_column->getData();
+
+        size_t size = filter.size();
+        for (size_t i = 0; i < size; ++i) {
+            filter[i] = filter[i] && !null_map[i];
+        }
+        filter_block_internal(block, filter, column_to_keep);
+    } else {
+        const IColumn::Filter& filter =
+                assert_cast<const doris::vectorized::ColumnVector<UInt8>&>(*filter_column)
+                        .getData();
+        filter_block_internal(block, filter, column_to_keep);
+    }
+    return Status::OK();
 }
 void Block::serialize(PBlock* pblock) const {
     for (auto c = cbegin(); c != cend(); ++c) {

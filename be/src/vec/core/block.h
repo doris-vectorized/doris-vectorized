@@ -28,7 +28,9 @@
 #include "vec/core/columns_with_type_and_name.h"
 #include "vec/core/names_and_types.h"
 
-namespace doris::vectorized {
+namespace doris {
+class Status;
+namespace vectorized {
 
 /** Container for set of columns for bunch of rows in memory.
   * This is unit of data processing.
@@ -158,7 +160,7 @@ public:
     /** Get block data in string. */
     std::string dumpData(size_t row_limit = 100) const;
 
-    static void filter_block(Block* block, int filter_conlumn_id, int column_to_keep);
+    static Status filter_block(Block* block, int filter_conlumn_id, int column_to_keep);
     // serialize block to PRowBatch
     void serialize(PBlock* pblock) const;
 
@@ -263,4 +265,5 @@ public:
     // add_rows(Block* block,PODArray<Int32>& group, int group_num);
 };
 
-} // namespace doris::vectorized
+} // namespace vectorized
+} // namespace doris
