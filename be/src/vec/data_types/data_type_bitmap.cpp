@@ -29,6 +29,6 @@ void DataTypeBitMap::deserialize(const PColumn& pcolumn, IColumn* column) const 
 }
 
 MutableColumnPtr DataTypeBitMap::createColumn() const {
-    return ColumnBitMap::create();
+    return ColumnBitmap::create();
 }
 } // namespace doris::vectorized

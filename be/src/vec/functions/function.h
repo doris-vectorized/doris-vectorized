@@ -113,13 +113,14 @@ protected:
     virtual bool canBeExecutedOnDefaultArguments() const { return true; }
 
 private:
-    bool defaultImplementationForNulls(Block& block, const ColumnNumbers& args, size_t result,
-                                       size_t input_rows_count, bool dry_run);
-    bool defaultImplementationForConstantArguments(Block& block, const ColumnNumbers& args,
-                                                   size_t result, size_t input_rows_count,
-                                                   bool dry_run);
-    void executeWithoutLowCardinalityColumns(Block& block, const ColumnNumbers& arguments,
-                                             size_t result, size_t input_rows_count, bool dry_run);
+    Status defaultImplementationForNulls(Block& block, const ColumnNumbers& args, size_t result,
+                                         size_t input_rows_count, bool dry_run, bool* executed);
+    Status defaultImplementationForConstantArguments(Block& block, const ColumnNumbers& args,
+                                                     size_t result, size_t input_rows_count,
+                                                     bool dry_run, bool* executed);
+    Status executeWithoutLowCardinalityColumns(Block& block, const ColumnNumbers& arguments,
+                                               size_t result, size_t input_rows_count,
+                                               bool dry_run);
 
     /// Cache is created by function createLowCardinalityResultCache()
     PreparedFunctionLowCardinalityResultCachePtr low_cardinality_result_cache;
