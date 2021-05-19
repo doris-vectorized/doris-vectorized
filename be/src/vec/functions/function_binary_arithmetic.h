@@ -745,8 +745,8 @@ public:
         return type_res;
     }
 
-    void executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
-                     size_t input_rows_count) override {
+    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+                       size_t input_rows_count) override {
         //        /// Special case when multiply aggregate function state
         //        if (isAggregateMultiply(block.getByPosition(arguments[0]).type, block.getByPosition(arguments[1]).type))
         //        {
@@ -922,6 +922,7 @@ public:
         if (!valid)
             throw Exception(getName() + "'s arguments do not match the expected data types",
                             ErrorCodes::LOGICAL_ERROR);
+        return Status::OK();
     }
 
 #if USE_EMBEDDED_COMPILER

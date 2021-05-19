@@ -22,10 +22,11 @@ private:
         return Impl::get_return_type();
     }
 
-    void executeImpl(Block& block, const ColumnNumbers&, size_t result,
-                     size_t input_rows_count) override {
+    Status executeImpl(Block& block, const ColumnNumbers&, size_t result,
+                       size_t input_rows_count) override {
         block.getByPosition(result).column = block.getByPosition(result).type->createColumnConst(
                 input_rows_count, Impl::init_value());
+        return Status::OK();
     }
 };
 

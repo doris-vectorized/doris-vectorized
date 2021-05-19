@@ -397,8 +397,8 @@ void PreparedFunctionImpl::executeWithoutLowCardinalityColumns(Block& block,
 //    }
 //}
 
-void PreparedFunctionImpl::execute(Block& block, const ColumnNumbers& args, size_t result,
-                                   size_t input_rows_count, bool dry_run) {
+Status PreparedFunctionImpl::execute(Block& block, const ColumnNumbers& args, size_t result,
+                                     size_t input_rows_count, bool dry_run) {
     if (useDefaultImplementationForLowCardinalityColumns()) {
         auto& res = block.safeGetByPosition(result);
         Block block_without_low_cardinality = block.cloneWithoutColumns();
@@ -471,6 +471,7 @@ void PreparedFunctionImpl::execute(Block& block, const ColumnNumbers& args, size
         }
     } else
         executeWithoutLowCardinalityColumns(block, args, result, input_rows_count, dry_run);
+    return Status::OK();
 }
 
 void FunctionBuilderImpl::checkNumberOfArguments(size_t number_of_arguments) const {

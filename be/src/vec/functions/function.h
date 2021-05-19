@@ -20,6 +20,7 @@
 #include <memory>
 
 //#include "config_core.h"
+#include "common/status.h"
 #include "vec/core/block.h"
 #include "vec/core/column_numbers.h"
 #include "vec/core/names.h"
@@ -52,8 +53,8 @@ public:
     /// Get the main function name.
     virtual String getName() const = 0;
 
-    virtual void execute(Block& block, const ColumnNumbers& arguments, size_t result,
-                         size_t input_rows_count, bool dry_run) = 0;
+    virtual Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
+                           size_t input_rows_count, bool dry_run) = 0;
 };
 
 using PreparedFunctionPtr = std::shared_ptr<IPreparedFunction>;
@@ -65,8 +66,8 @@ using PreparedFunctionLowCardinalityResultCachePtr =
 
 class PreparedFunctionImpl : public IPreparedFunction {
 public:
-    void execute(Block& block, const ColumnNumbers& arguments, size_t result,
-                 size_t input_rows_count, bool dry_run = false) final;
+    Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
+                   size_t input_rows_count, bool dry_run = false) final;
 
     /// Create cache which will be used to store result of function executed on LowCardinality column.
     /// Only for default LowCardinality implementation.
@@ -74,11 +75,11 @@ public:
     void createLowCardinalityResultCache(size_t cache_size);
 
 protected:
-    virtual void executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
-                             size_t input_rows_count) = 0;
-    virtual void executeImplDryRun(Block& block, const ColumnNumbers& arguments, size_t result,
-                                   size_t input_rows_count) {
-        executeImpl(block, arguments, result, input_rows_count);
+    virtual Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+                               size_t input_rows_count) = 0;
+    virtual Status executeImplDryRun(Block& block, const ColumnNumbers& arguments, size_t result,
+                                     size_t input_rows_count) {
+        return executeImpl(block, arguments, result, input_rows_count);
     }
 
     /** Default implementation in presence of Nullable arguments or NULL constants as arguments is the following:
@@ -143,8 +144,8 @@ public:
                                         size_t result) const = 0;
 
     /// TODO: make const
-    virtual void execute(Block& block, const ColumnNumbers& arguments, size_t result,
-                         size_t input_rows_count, bool dry_run = false) {
+    virtual Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
+                           size_t input_rows_count, bool dry_run = false) {
         return prepare(block, arguments, result)
                 ->execute(block, arguments, result, input_rows_count, dry_run);
     }
@@ -381,8 +382,8 @@ public:
     bool isStateful() const override { return false; }
 
     /// TODO: make const
-    void executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
-                     size_t input_rows_count) override = 0;
+    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+                       size_t input_rows_count) override = 0;
 
     /// Override this functions to change default implementation behavior. See details in IMyFunction.
     bool useDefaultImplementationForNulls() const override { return true; }
@@ -469,12 +470,12 @@ public:
     String getName() const override { return function->getName(); }
 
 protected:
-    void executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
-                     size_t input_rows_count) final {
+    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+                       size_t input_rows_count) final {
         return function->executeImpl(block, arguments, result, input_rows_count);
     }
-    void executeImplDryRun(Block& block, const ColumnNumbers& arguments, size_t result,
-                           size_t input_rows_count) final {
+    Status executeImplDryRun(Block& block, const ColumnNumbers& arguments, size_t result,
+                             size_t input_rows_count) final {
         return function->executeImplDryRun(block, arguments, result, input_rows_count);
     }
     bool useDefaultImplementationForNulls() const final {
