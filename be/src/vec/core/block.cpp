@@ -17,11 +17,13 @@
 
 #include "vec/core/block.h"
 
+#include <fmt/format.h>
+
 #include <iomanip>
 #include <iterator>
 #include <memory>
 
-#include "fmt/format.h"
+#include "common/status.h"
 #include "gen_cpp/data.pb.h"
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_nullable.h"
@@ -741,12 +743,25 @@ void filter_block_internal(Block* block, const IColumn::Filter& filter, int colu
     }
 }
 
-void Block::filter_block(Block* block, int filter_column_id, int column_to_keep) {
+Status Block::filter_block(Block* block, int filter_column_id, int column_to_keep) {
     ColumnPtr filter_column = block->getByPosition(filter_column_id).column;
-    if (filter_column->isNullable()) {
-        IColumn::Filter filter(filter_column->size());
-        for (size_t i = 0; i < filter_column->size(); ++i) {
-            filter[i] = filter_column->getBool(i);
+    if (auto* nullable_column = checkAndGetColumn<ColumnNullable>(*filter_column)) {
+        ColumnPtr nested_column = nullable_column->getNestedColumnPtr();
+
+        MutableColumnPtr mutable_holder = (*std::move(nested_column)).mutate();
+
+        ColumnUInt8* concrete_column = typeid_cast<ColumnUInt8*>(mutable_holder.get());
+        if (!concrete_column) {
+            return Status::InvalidArgument(
+                    "Illegal type " + filter_column->getName() +
+                    " of column for filter. Must be UInt8 or Nullable(UInt8).");
+        }
+        const NullMap& null_map = nullable_column->getNullMapData();
+        IColumn::Filter& filter = concrete_column->getData();
+
+        size_t size = filter.size();
+        for (size_t i = 0; i < size; ++i) {
+            filter[i] = filter[i] && !null_map[i];
         }
         filter_block_internal(block, filter, column_to_keep);
     } else {
@@ -755,6 +770,7 @@ void Block::filter_block(Block* block, int filter_column_id, int column_to_keep)
                         .getData();
         filter_block_internal(block, filter, column_to_keep);
     }
+    return Status::OK();
 }
 void Block::serialize(PBlock* pblock) const {
     for (auto c = cbegin(); c != cend(); ++c) {
