@@ -202,11 +202,10 @@ bool allArgumentsAreConstants(const Block& block, const ColumnNumbers& args) {
 }
 } // namespace
 
-bool PreparedFunctionImpl::defaultImplementationForConstantArguments(Block& block,
-                                                                     const ColumnNumbers& args,
-                                                                     size_t result,
-                                                                     size_t input_rows_count,
-                                                                     bool dry_run) {
+Status PreparedFunctionImpl::defaultImplementationForConstantArguments(
+        Block& block, const ColumnNumbers& args, size_t result, size_t input_rows_count,
+        bool dry_run, bool* executed) {
+    *executed = false;
     ColumnNumbers arguments_to_remain_constants = getArgumentsThatAreAlwaysConstant();
 
     /// Check that these arguments are really constant.
@@ -218,7 +217,7 @@ bool PreparedFunctionImpl::defaultImplementationForConstantArguments(Block& bloc
 
     if (args.empty() || !useDefaultImplementationForConstants() ||
         !allArgumentsAreConstants(block, args))
-        return false;
+        return Status::OK();
 
     Block temporary_block;
     bool have_converted_columns = false;
@@ -252,8 +251,9 @@ bool PreparedFunctionImpl::defaultImplementationForConstantArguments(Block& bloc
     ColumnNumbers temporary_argument_numbers(arguments_size);
     for (size_t i = 0; i < arguments_size; ++i) temporary_argument_numbers[i] = i;
 
-    executeWithoutLowCardinalityColumns(temporary_block, temporary_argument_numbers, arguments_size,
-                                        temporary_block.rows(), dry_run);
+    RETURN_IF_ERROR(executeWithoutLowCardinalityColumns(temporary_block, temporary_argument_numbers,
+                                                        arguments_size, temporary_block.rows(),
+                                                        dry_run));
 
     ColumnPtr result_column;
     /// extremely rare case, when we have function with completely const arguments
@@ -264,49 +264,60 @@ bool PreparedFunctionImpl::defaultImplementationForConstantArguments(Block& bloc
         result_column = temporary_block.getByPosition(arguments_size).column;
 
     block.getByPosition(result).column = ColumnConst::create(result_column, input_rows_count);
-    return true;
+    *executed = true;
+    return Status::OK();
 }
 
-bool PreparedFunctionImpl::defaultImplementationForNulls(Block& block, const ColumnNumbers& args,
-                                                         size_t result, size_t input_rows_count,
-                                                         bool dry_run) {
-    if (args.empty() || !useDefaultImplementationForNulls()) return false;
+Status PreparedFunctionImpl::defaultImplementationForNulls(Block& block, const ColumnNumbers& args,
+                                                           size_t result, size_t input_rows_count,
+                                                           bool dry_run, bool* executed) {
+    *executed = false;
+    if (args.empty() || !useDefaultImplementationForNulls()) return Status::OK();
 
     NullPresence null_presence = getNullPresense(block, args);
 
     if (null_presence.has_null_constant) {
         block.getByPosition(result).column =
                 block.getByPosition(result).type->createColumnConst(input_rows_count, Null());
-        return true;
+        *executed = true;
+        return Status::OK();
     }
 
     if (null_presence.has_nullable) {
         Block temporary_block = createBlockWithNestedColumns(block, args, result);
-        executeWithoutLowCardinalityColumns(temporary_block, args, result, temporary_block.rows(),
-                                            dry_run);
+        RETURN_IF_ERROR(executeWithoutLowCardinalityColumns(temporary_block, args, result,
+                                                            temporary_block.rows(), dry_run));
         block.getByPosition(result).column =
                 wrapInNullable(temporary_block.getByPosition(result).column, block, args, result,
                                input_rows_count);
-        return true;
+        *executed = true;
+        return Status::OK();
     }
-
-    return false;
+    *executed = false;
+    return Status::OK();
 }
 
-void PreparedFunctionImpl::executeWithoutLowCardinalityColumns(Block& block,
-                                                               const ColumnNumbers& args,
-                                                               size_t result,
-                                                               size_t input_rows_count,
-                                                               bool dry_run) {
-    if (defaultImplementationForConstantArguments(block, args, result, input_rows_count, dry_run))
-        return;
-
-    if (defaultImplementationForNulls(block, args, result, input_rows_count, dry_run)) return;
+Status PreparedFunctionImpl::executeWithoutLowCardinalityColumns(Block& block,
+                                                                 const ColumnNumbers& args,
+                                                                 size_t result,
+                                                                 size_t input_rows_count,
+                                                                 bool dry_run) {
+    bool executed = false;
+    RETURN_IF_ERROR(defaultImplementationForConstantArguments(block, args, result, input_rows_count,
+                                                              dry_run, &executed));
+    if (executed) {
+        return Status::OK();
+    }
+    RETURN_IF_ERROR(defaultImplementationForNulls(block, args, result, input_rows_count, dry_run,
+                                                  &executed));
+    if (executed) {
+        return Status::OK();
+    }
 
     if (dry_run)
-        executeImplDryRun(block, args, result, input_rows_count);
+        return executeImplDryRun(block, args, result, input_rows_count);
     else
-        executeImpl(block, args, result, input_rows_count);
+        return executeImpl(block, args, result, input_rows_count);
 }
 
 //static const ColumnLowCardinality * findLowCardinalityArgument(const Block & block, const ColumnNumbers & args)
@@ -465,8 +476,8 @@ Status PreparedFunctionImpl::execute(Block& block, const ColumnNumbers& args, si
         //        else
         {
             //            convertLowCardinalityColumnsToFull(block_without_low_cardinality, args);
-            executeWithoutLowCardinalityColumns(block_without_low_cardinality, args, result,
-                                                input_rows_count, dry_run);
+            RETURN_IF_ERROR(executeWithoutLowCardinalityColumns(block_without_low_cardinality, args,
+                                                                result, input_rows_count, dry_run));
             res.column = block_without_low_cardinality.safeGetByPosition(result).column;
         }
     } else

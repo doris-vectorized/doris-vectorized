@@ -260,5 +260,5 @@ ColumnPtr ColumnComplexType<T>::replicate(const IColumn::Offsets& offsets) const
     return res;
 }
 
-using ColumnBitMap = ColumnComplexType<BitmapValue>;
+using ColumnBitmap = ColumnComplexType<BitmapValue>;
 } // namespace doris::vectorized
