@@ -177,7 +177,7 @@ Status MysqlResultWriter::append_block(Block& block) {
     for (int i = 0; i < _output_vexpr_ctxs.size(); i++) {
         const auto& vexpr_ctx = _output_vexpr_ctxs[i];
         int result_column_id = -1;
-        vexpr_ctx->execute(&block, &result_column_id);
+        RETURN_IF_ERROR(vexpr_ctx->execute(&block, &result_column_id));
         DCHECK(result_column_id != -1);
         result_column_ids[i] = result_column_id;
     }
