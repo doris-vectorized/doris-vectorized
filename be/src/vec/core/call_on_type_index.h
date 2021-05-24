@@ -224,6 +224,8 @@ bool callOnIndexAndDataType(TypeIndex number, F&& f) {
         return f(TypePair<DataTypeNumber<Int32>, T>());
     case TypeIndex::Int64:
         return f(TypePair<DataTypeNumber<Int64>, T>());
+    case TypeIndex::Int128:
+         return f(TypePair<DataTypeNumber<Int128>, T>());
 
     case TypeIndex::Float32:
         return f(TypePair<DataTypeNumber<Float32>, T>());
@@ -237,10 +239,10 @@ bool callOnIndexAndDataType(TypeIndex number, F&& f) {
     case TypeIndex::Decimal128:
         return f(TypePair<DataTypeDecimal<Decimal128>, T>());
 
-        // case TypeIndex::Date:
-        //     return f(TypePair<DataTypeDate, T>());
-        // case TypeIndex::DateTime:
-        //     return f(TypePair<DataTypeDateTime, T>());
+    case TypeIndex::Date:
+        return f(TypePair<DataTypeDate, T>());
+    case TypeIndex::DateTime:
+        return f(TypePair<DataTypeDateTime, T>());
 
     case TypeIndex::String:
         return f(TypePair<DataTypeString, T>());

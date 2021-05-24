@@ -109,6 +109,7 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
             (*columns)[i]->insertData(nullptr, 0);
             continue;
         }
+
         char* ptr = (char*)_read_row_cursor.cell_ptr(cid);
         size_t len = _read_row_cursor.column_size(cid);
         switch (slot_desc->type().type) {
@@ -190,8 +191,9 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
             value |= *(unsigned char*)(ptr + 1);
             value <<= 8;
             value |= *(unsigned char*)(ptr);
-            DateTimeValue data(value);
-            (*columns)[i]->insertData(reinterpret_cast<char*>(&data), slot_desc->slot_size());
+            DateTimeValue date;
+            date.from_olap_date(value);
+            (*columns)[i]->insertData(reinterpret_cast<char *>(&date), slot_desc->slot_size());
             break;
         }
         default: {

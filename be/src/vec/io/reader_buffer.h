@@ -17,28 +17,30 @@
 
 #pragma once
 
-#include "vec/data_types/data_type_number_base.h"
+#include "vec/common/string_utils/string_utils.h"
 
 namespace doris::vectorized {
 
-class DataTypeDate final : public DataTypeNumberBase<Int128> {
+class ReadBuffer {
 public:
-    TypeIndex getTypeId() const override { return TypeIndex::Date; }
-    const char* getFamilyName() const override { return "Date"; }
+    ReadBuffer(char* d, size_t n) :
+         _start(d), _end(d + n) {}
 
-    bool canBeUsedAsVersion() const override { return true; }
-    bool canBeInsideNullable() const override { return true; }
+    ReadBuffer(const unsigned char* d, size_t n) :
+         _start((char*)(d)), _end((char*)(d) + n) {}
 
-    bool equals(const IDataType& rhs) const override;
-    std::string to_string(const IColumn& column, size_t row_num) const;
-    void to_string(const IColumn &column, size_t row_num, BufferWritable &ostr) const override;
+    bool eof() { return _start == _end; }
 
-    static void cast_to_date(Int128& x);
+    char*& position() {
+        return _start;
+    }
+
+    char* end() { return _end; }
+
+    size_t count() { return _end - _start; }
+private:
+    char* _start;
+    char* _end;
 };
 
-template <typename DataType>
-constexpr bool IsDateType = false;
-template <>
-inline constexpr bool IsDateType<DataTypeDate> = true;
-
-} // namespace doris::vectorized
+}

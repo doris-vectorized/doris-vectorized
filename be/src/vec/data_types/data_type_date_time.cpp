@@ -71,4 +71,19 @@ std::string DataTypeDateTime::to_string(const IColumn& column, size_t row_num) c
     return ss.str();
 }
 
+void DataTypeDateTime::to_string(const IColumn & column, size_t row_num, BufferWritable & ostr) const {
+    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convertToFullColumnIfConst().get())
+                             .getData()[row_num];
+    doris::DateTimeValue value = *reinterpret_cast<doris::DateTimeValue*>(&int_val);
+
+    char buf[64];
+    char* pos = value.to_string(buf);
+    ostr.write(buf, pos - buf);
+}
+
+void DataTypeDateTime::cast_to_date_time(Int128 &x) {
+    auto& value = reinterpret_cast<doris::DateTimeValue&>(x);
+    value.to_datetime();
+}
+
 } // namespace doris::vectorized
