@@ -939,6 +939,9 @@ public:
 
     size_t getBufferSizeInCells() const { return grower.bufSize(); }
 
+    bool add_elem_size_overflow(size_t add_size) const {
+        return grower.overflow(add_size + m_size);
+    }
 #ifdef DBMS_HASH_MAP_COUNT_COLLISIONS
     size_t getCollisions() const { return collisions; }
 #endif
