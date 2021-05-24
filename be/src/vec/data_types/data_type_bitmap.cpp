@@ -18,17 +18,48 @@
 #include "vec/data_types/data_type_bitmap.h"
 
 #include "vec/columns/column_complex.h"
+#include "vec/common/assert_cast.h"
+#include "vec/io/io_helper.h"
 
 namespace doris::vectorized {
 void DataTypeBitMap::serialize(const IColumn& column, PColumn* pcolumn) const {
-    throw Exception("DataTypeBitMap serialize not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    std::ostringstream buf;
+    auto& data_column = assert_cast<const ColumnBitmap&>(*column.convertToFullColumnIfConst());
+    // TODO: remove std::string as memory buffer to avoid memory copy
+    std::string memory_buffer;
+    for (size_t i = 0; i < column.size(); ++i) {
+        auto& bitmap = const_cast<BitmapValue&>(data_column.getElement(i));
+        int bytesize = bitmap.getSizeInBytes();
+        writeIntBinary(bytesize, buf);
+        memory_buffer.resize(bytesize);
+        bitmap.write(const_cast<char*>(memory_buffer.data()));
+        writeBinary(memory_buffer, buf);
+        memory_buffer.clear();
+    }
+    write_binary(buf, pcolumn);
 }
 
 void DataTypeBitMap::deserialize(const PColumn& pcolumn, IColumn* column) const {
-    throw Exception("DataTypeBitMap deserialize not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    auto& data_column = assert_cast<ColumnBitmap&>(*column);
+    auto& data = data_column.getData();
+
+    std::string uncompressed;
+    read_binary(pcolumn, &uncompressed);
+
+    std::istringstream istr(uncompressed);
+    std::string memory_buffer;
+    while (istr.peek() != EOF) {
+        int bytesize = 0;
+        readIntBinary(bytesize, istr);
+        readBinary(memory_buffer, istr);
+
+        data.emplace_back();
+        data.back().deserialize(memory_buffer.data());
+        memory_buffer.clear();
+    }
 }
 
 MutableColumnPtr DataTypeBitMap::createColumn() const {
-    return ColumnBitMap::create();
+    return ColumnBitmap::create();
 }
 } // namespace doris::vectorized

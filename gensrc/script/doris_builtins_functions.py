@@ -801,7 +801,7 @@ visible_functions = [
     #bitmap function
 
     [['to_bitmap'], 'BITMAP', ['VARCHAR'],
-        '_ZN5doris15BitmapFunctions9to_bitmapEPN9doris_udf15FunctionContextERKNS1_9StringValE'],
+        '_ZN5doris15BitmapFunctions9to_bitmapEPN9doris_udf15FunctionContextERKNS1_9StringValE', 'vec'],
     [['bitmap_hash'], 'BITMAP', ['VARCHAR'],
         '_ZN5doris15BitmapFunctions11bitmap_hashEPN9doris_udf15FunctionContextERKNS1_9StringValE'],
     [['bitmap_count'], 'BIGINT', ['BITMAP'],
