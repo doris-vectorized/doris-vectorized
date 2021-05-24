@@ -151,7 +151,18 @@ private:
     RuntimeProfile::Counter* _exec_timer;
     RuntimeProfile::Counter* _merge_timer;
 
+    bool _is_streaming_preagg;
+    bool _should_expand_hash_table = true;
+    char* _streaming_pre_agg_buffer = nullptr;
+    size_t _max_size_of_stream_pre_agg_buffer = 0;
+
+    /// Expose the minimum reduction factor to continue growing the hash tables.
+    RuntimeProfile::Counter* preagg_streaming_ht_min_reduction_;
 private:
+    /// Return true if we should keep expanding hash tables in the preagg. If false,
+    /// the preagg should pass through any rows it can't fit in its tables.
+    bool _should_expand_preagg_hash_tables();
+        
     Status _create_agg_status(AggregateDataPtr data);
     Status _destory_agg_status(AggregateDataPtr data);
 
@@ -163,17 +174,20 @@ private:
 
     Status _get_with_serialized_key_result(RuntimeState* state, Block* block, bool* eos);
     Status _serialize_with_serialized_key_result(RuntimeState* state, Block* block, bool* eos);
+    Status _pre_agg_with_serialized_key(Block* in_block, Block* out_block);
     Status _execute_with_serialized_key(Block* block);
     Status _merge_with_serialized_key(Block* block);
     void _close_with_serialized_key();
 
     using vectorized_execute = std::function<Status(Block* block)>;
+    using vectorized_pre_agg = std::function<Status(Block* in_block, Block* out_block)>;
     using vectorized_get_result =
             std::function<Status(RuntimeState* state, Block* block, bool* eos)>;
     using vectorized_closer = std::function<void()>;
 
     struct executor {
         vectorized_execute execute;
+        vectorized_pre_agg pre_agg;
         vectorized_get_result get_result;
         vectorized_closer close;
     };
