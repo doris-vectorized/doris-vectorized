@@ -27,6 +27,7 @@
 #include "olap/hll.h"
 #include "runtime/primitive_type.h"
 #include "thrift/protocol/TDebugProtocol.h"
+#include "vec/data_types/data_type_bitmap.h"
 #include "vec/data_types/data_type_date.h"
 #include "vec/data_types/data_type_date_time.h"
 #include "vec/data_types/data_type_decimal.h"
@@ -312,8 +313,9 @@ struct TypeDescriptor {
         case TYPE_CHAR:
         case TYPE_VARCHAR:
         case TYPE_HLL:
-        case TYPE_OBJECT:
             return std::make_shared<vectorized::DataTypeString>();
+        case TYPE_OBJECT:
+            return std::make_shared<vectorized::DataTypeBitMap>();
 
         case TYPE_DECIMALV2:
         case TYPE_DECIMAL:
