@@ -17,6 +17,8 @@
 
 #include "vec/exec/volap_scanner.h"
 
+#include "vec/columns/column_complex.h"
+#include "vec/columns/column_nullable.h"
 #include "vec/columns/column_vector.h"
 #include "vec/common/assert_cast.h"
 #include "vec/core/block.h"
@@ -115,20 +117,43 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
             (*columns)[i]->insertData(slice->data, strnlen(slice->data, slice->size));
             break;
         }
-        case TYPE_VARCHAR:
-        case TYPE_OBJECT: {
+        case TYPE_VARCHAR: {
             Slice* slice = reinterpret_cast<Slice*>(ptr);
             (*columns)[i]->insertData(slice->data, slice->size);
             break;
         }
-        case TYPE_HLL:{
+        case TYPE_OBJECT: {
+            Slice* slice = reinterpret_cast<Slice*>(ptr);
+            // insertDefault()
+            auto& target_column = (*columns)[i];
+            target_column->insertDefault();
+            BitmapValue* pvalue = nullptr;
+            int pos = target_column->size() - 1;
+            if (target_column->isNullable()) {
+                auto& nullable_column = assert_cast<ColumnNullable&>(*target_column);
+                auto& bitmap_column = assert_cast<ColumnBitmap&>(nullable_column.getNestedColumn());
+                pvalue = &bitmap_column.getElement(pos);
+            } else {
+                auto& bitmap_column = assert_cast<ColumnBitmap&>(*target_column);
+                pvalue = &bitmap_column.getElement(pos);
+            }
+            if (slice->size != 0) {
+                BitmapValue value;
+                value.deserialize(slice->data);
+                *pvalue = std::move(value);
+            } else {
+                *pvalue = std::move(*reinterpret_cast<BitmapValue*>(slice->data));
+            }
+            break;
+        }
+        case TYPE_HLL: {
             Slice* slice = reinterpret_cast<Slice*>(ptr);
             if (slice->size != 0) {
                 (*columns)[i]->insertData(slice->data, slice->size);
-            // TODO: in vector exec engine, it is diffcult to set hll size = 0
-            // so we have to serialize here. which will cause two problem
-            //      1. some unnecessary mem malloc and delay mem release
-            //      2. some unnecessary CPU cost in serialize
+                // TODO: in vector exec engine, it is diffcult to set hll size = 0
+                // so we have to serialize here. which will cause two problem
+                //      1. some unnecessary mem malloc and delay mem release
+                //      2. some unnecessary CPU cost in serialize
             } else {
                 auto* dst_hll = reinterpret_cast<HyperLogLog*>(slice->data);
                 std::string result(dst_hll->max_serialized_size(), '0');

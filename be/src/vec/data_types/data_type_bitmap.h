@@ -27,7 +27,8 @@ public:
     DataTypeBitMap() = default;
     ~DataTypeBitMap() = default;
 
-    std::string doGetName() const override { return "BitMap"; }
+    std::string doGetName() const override { return getFamilyName(); }
+    const char* getFamilyName() const override { return "BitMap"; }
 
     TypeIndex getTypeId() const override { return TypeIndex::BitMap; }
 
@@ -59,5 +60,10 @@ public:
     bool canBeInsideLowCardinality() const override { return false; }
 
     std::string to_string(const IColumn& column, size_t row_num) const { return "BitMap()"; }
+
+    virtual Field getDefault() const {
+        throw Exception("Method getDefault() is not implemented for data type " + getName(),
+                        ErrorCodes::NOT_IMPLEMENTED);
+    }
 };
 } // namespace doris::vectorized

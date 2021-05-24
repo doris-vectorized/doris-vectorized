@@ -34,6 +34,7 @@
 #include "vec/common/exception.h"
 #include "vec/common/field_visitors.h"
 #include "vec/common/typeid_cast.h"
+#include "vec/data_types/data_type_bitmap.h"
 #include "vec/data_types/data_type_date.h"
 #include "vec/data_types/data_type_date_time.h"
 #include "vec/data_types/data_type_decimal.h"
@@ -110,6 +111,9 @@ inline DataTypePtr get_data_type(const PColumn& pcolumn) {
         return std::make_shared<DataTypeDecimal<Decimal128>>(pcolumn.decimal_param().precision(),
                                                              pcolumn.decimal_param().scale());
     }
+    case PColumn::BITMAP: {
+        return std::make_shared<DataTypeBitMap>();
+    }
     default: {
         throw Exception("Unknown data type: " + std::to_string(pcolumn.type()) +
                                 ", data type name: " + PColumn::DataType_Name(pcolumn.type()),
@@ -157,6 +161,8 @@ PColumn::DataType get_pdata_type(DataTypePtr data_type) {
         return PColumn::DATE;
     case TypeIndex::DateTime:
         return PColumn::DATETIME;
+    case TypeIndex::BitMap:
+        return PColumn::BITMAP;
     default:
         return PColumn::UNKNOWN;
     }
