@@ -53,12 +53,42 @@ struct ToBitmapImpl {
         return Status::OK();
     }
 };
-// using FunctionToBitmap = FunctionBitmap<ToBitmapImpl, NameToBitmap>;
+
+// B00LEAN BITMAP_CONTAINS(BITMAP bitmap, BIGINT input)
+// B00LEAN BITMAP_HAS_ANY(BITMAP lhs, BITMAP rhs)
+// BITMAP BITMAP_OR(BITMAP lhs, BITMAP rhs)
+// BITMAP BITMAP_XOR(BITMAP lhs, BITMAP rhs)
+// BITMAP BITMAP_NOT(BITMAP lhs, BITMAP rhs)
+// BITMAP BITMAP_XOR(BITMAP lhs, BITMAP rhs)
+
+struct NameBitmapAnd {
+    static constexpr auto name = "bitmap_and";
+};
+
+template <typename LeftDataType, typename RightDataType>
+struct BitmapAnd {
+    using ResultDataType = DataTypeBitMap;
+    using T0 = typename LeftDataType::FieldType;
+    using T1 = typename RightDataType::FieldType;
+    using TData = std::vector<BitmapValue>;
+
+    static Status vector_vector(const TData& lvec, const TData& rvec, TData& res) {
+        int size = lvec.size();
+        for (int i = 0; i < size; ++i) {
+            res[i] = lvec[i];
+            res[i] &= rvec[i];
+        }
+        return Status::OK();
+    }
+};
 
 using FunctionToBitmap = FunctionUnaryToType<ToBitmapImpl, NameToBitmap>;
+using FunctionBitmapAnd =
+        FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapAnd, NameBitmapAnd>;
 
 void registerFunctionBitmap(SimpleFunctionFactory& factory) {
     factory.registerFunction<FunctionToBitmap>();
+    factory.registerFunction<FunctionBitmapAnd>();
 }
 
 } // namespace doris::vectorized
