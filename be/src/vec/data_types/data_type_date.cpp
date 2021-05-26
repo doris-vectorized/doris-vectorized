@@ -42,4 +42,20 @@ std::string DataTypeDate::to_string(const IColumn& column, size_t row_num) const
     ss << (char)('0' + (value.day() / 10)) << (char)('0' + (value.day() % 10));
     return ss.str();
 }
+
+void DataTypeDate::to_string(const IColumn & column, size_t row_num, BufferWritable & ostr) const {
+    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convertToFullColumnIfConst().get())
+                             .getData()[row_num];
+    doris::DateTimeValue value = *reinterpret_cast<doris::DateTimeValue*>(&int_val);
+
+    char buf[64];
+    char* pos = value.to_string(buf);
+    ostr.write(buf, pos - buf);
+}
+
+void DataTypeDate::cast_to_date(Int128 &x) {
+    auto& value = reinterpret_cast<doris::DateTimeValue&>(x);
+    value.cast_to_date();
+}
+
 } // namespace doris::vectorized
