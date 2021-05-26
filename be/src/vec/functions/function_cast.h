@@ -62,7 +62,6 @@ extern const int CANNOT_INSERT_NULL_IN_ORDINARY_COLUMN;
 /** Type conversion functions.
   * toType - conversion in "natural way";
   */
-
 inline UInt32 extractToDecimalScale(const ColumnWithTypeAndName& named_column) {
     const auto* arg_type = named_column.type.get();
     bool ok = checkAndGetDataType<DataTypeUInt64>(arg_type) ||
@@ -132,14 +131,19 @@ struct ConvertImpl {
                                        IsDataTypeDecimal<ToDataType>)
                         vec_to[i] = convertToDecimal<FromDataType, ToDataType>(vec_from[i],
                                                                                vec_to.getScale());
+                } else if constexpr (IsTimeType<FromDataType>) {
+                    if constexpr (IsTimeType<ToDataType>) {
+                        vec_to[i] = static_cast<ToFieldType>(vec_from[i]);
+                        if constexpr (IsDateType<FromDataType> && IsDateTimeType<ToDataType>) {
+                            DataTypeDateTime::cast_to_date_time(vec_to[i]);
+                        } else {
+                            DataTypeDate::cast_to_date(vec_to[i]);
+                        }
+                    } else {
+                        vec_to[i] = reinterpret_cast<const DateTimeValue&>(vec_from[i]).to_int64();
+                    }
                 } else
                     vec_to[i] = static_cast<ToFieldType>(vec_from[i]);
-
-                 if constexpr (IsDateType<FromDataType> && IsDateTimeType<ToDataType>) {
-                    DataTypeDateTime::cast_to_date_time(vec_to[i]);
-                } else if constexpr (IsDateTimeType<FromDataType> && IsDateType<ToDataType>) {
-                    DataTypeDate::cast_to_date(vec_to[i]);
-                }
             }
 
             block.getByPosition(result).column = std::move(col_to);
@@ -160,7 +164,51 @@ struct ConvertImpl<std::enable_if_t<!T::is_parametric, T>, T, Name> {
     }
 };
 
+// using other type cast to Date/DateTime, unless String
 // Date/DateTime
+template <typename FromDataType, typename ToDataType, typename Name>
+struct ConvertImplToTimeType {
+    using FromFieldType = typename FromDataType::FieldType;
+    using ToFieldType = typename ToDataType::FieldType;
+
+    static void NO_SANITIZE_UNDEFINED execute(Block& block, const ColumnNumbers& arguments,
+                                              size_t result, size_t /*input_rows_count*/) {
+        const ColumnWithTypeAndName& named_from = block.getByPosition(arguments[0]);
+
+        using ColVecFrom =
+                std::conditional_t<IsDecimalNumber<FromFieldType>, ColumnDecimal<FromFieldType>,
+                                   ColumnVector<FromFieldType>>;
+        using ColVecTo = ColumnVector<Int128>;
+
+        if (const ColVecFrom* col_from = checkAndGetColumn<ColVecFrom>(named_from.column.get())) {
+            const auto& vec_from = col_from->getData();
+            size_t size = vec_from.size();
+
+            // create nested column
+            auto col_to = ColVecTo::create(size);
+            auto& vec_to = col_to->getData();
+
+            // create null column
+            ColumnUInt8::MutablePtr col_null_map_to;
+            col_null_map_to = ColumnUInt8::create(size);
+            auto& vec_null_map_to = col_null_map_to->getData();
+
+            for (size_t i = 0; i < size; ++i) {
+                auto& date_value = reinterpret_cast<DateTimeValue&>(vec_to[i]);                                                                 \
+                vec_null_map_to[i] = !date_value.from_date_int64(vec_from[i]);
+
+                // DateType of DateTimeValue should cast to date
+                if constexpr (IsDateType<ToDataType>) {
+                    date_value.cast_to_date();
+                }
+            }
+            block.getByPosition(result).column = ColumnNullable::create(std::move(col_to), std::move(col_null_map_to));
+        } else
+            throw Exception("Illegal column " + named_from.column->getName() +
+                                    " of first argument of function " + Name::name,
+                            ErrorCodes::ILLEGAL_COLUMN);
+    }
+};
 
 // Generic conversion of any type to String.
 struct ConvertImplGenericToString {
@@ -432,8 +480,6 @@ struct ToStringMonotonicity {
     }
 };
 
-// Not Support Datetime
-// Not Support Convert From String
 template <typename ToDataType, typename Name, typename MonotonicityImpl>
 class FunctionConvert : public IFunction {
 public:
@@ -452,36 +498,10 @@ public:
     size_t getNumberOfArguments() const override { return 0; }
     bool isInjective(const Block&) override { return std::is_same_v<Name, NameToString>; }
 
+    // This function should not be called for get DateType Ptr
+    // using the FunctionCast::getReturnTypeImpl
     DataTypePtr getReturnTypeImpl(const ColumnsWithTypeAndName& arguments) const override {
-        if (to_decimal && arguments.size() != 2) {
-            throw Exception("Number of arguments for function " + getName() +
-                                    " doesn't match: passed " + std::to_string(arguments.size()) +
-                                    ", should be 2.",
-                            ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
-        } else if (arguments.size() != 1 && arguments.size() != 2)
-            throw Exception("Number of arguments for function " + getName() +
-                                    " doesn't match: passed " + std::to_string(arguments.size()) +
-                                    ", should be 1 or 2. Second argument (time zone) is optional "
-                                    "only make sense for DateTime.",
-                            ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
-        else if constexpr (to_decimal) {
-            if (!arguments[1].column)
-                throw Exception("Second argument for function " + getName() + " must be constant",
-                                ErrorCodes::ILLEGAL_COLUMN);
-
-            UInt64 scale = extractToDecimalScale(arguments[1]);
-
-            if constexpr (std::is_same_v<Name, NameToDecimal32>)
-                return createDecimal(9, scale);
-            else if constexpr (std::is_same_v<Name, NameToDecimal64>)
-                return createDecimal(18, scale);
-            else if constexpr (std::is_same_v<Name, NameToDecimal128>)
-                return createDecimal(38, scale);
-
-            throw Exception("Someting wrong with toDecimalNN()", ErrorCodes::LOGICAL_ERROR);
-        } else {
-            return std::make_shared<ToDataType>();
-        }
+        return std::make_shared<ToDataType>();
     }
 
     bool useDefaultImplementationForConstants() const override { return true; }
@@ -540,6 +560,7 @@ private:
                 using LeftDataType = typename Types::LeftType;
                 using RightDataType = typename Types::RightType;
 
+                // now, cast to decimal do not execute the code
                 if constexpr (IsDataTypeDecimal<RightDataType>) {
                     if (arguments.size() != 2)
                         throw Exception{
@@ -866,47 +887,12 @@ public:
     bool useDefaultImplementationForConstants() const override { return true; }
     ColumnNumbers getArgumentsThatAreAlwaysConstant() const override { return {1}; }
 
+    // This function should not be called for get DateType Ptr
+    // using the FunctionCast::getReturnTypeImpl
     DataTypePtr getReturnTypeImpl(const ColumnsWithTypeAndName& arguments) const override {
-//        if ((arguments.size() != 1 && arguments.size() != 2) || (to_decimal && arguments.size() != 2))
-        if ((arguments.size() != 1 && arguments.size() != 2))
-            throw Exception("Number of arguments for function " + getName() + " doesn't match: passed " + std::to_string(arguments.size()) +
-                ", should be 1 or 2. Second argument only make sense for DateTime (time zone, optional) and Decimal (scale).",
-                ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
-
-        if (!isStringOrFixedString(arguments[0].type))
-            throw Exception("Illegal type " + arguments[0].type->getName() + " of first argument of function " + getName(),
-                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
-
-//        if (arguments.size() == 2)
-//        {
-//            if constexpr (std::is_same_v<ToDataType, DataTypeDateTime>)
-//            {
-//                if (!isString(arguments[1].type))
-//                    throw Exception("Illegal type " + arguments[1].type->getName() + " of 2nd argument of function " + getName(),
-//                        ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
-//            }
-//            else if constexpr (to_decimal)
-//            {
-//                if (!isInteger(arguments[1].type))
-//                    throw Exception("Illegal type " + arguments[1].type->getName() + " of 2nd argument of function " + getName(),
-//                        ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
-//                if (!arguments[1].column)
-//                    throw Exception("Second argument for function " + getName() + " must be constant", ErrorCodes::ILLEGAL_COLUMN);
-//            }
-//            else
-//            {
-//                throw Exception("Number of arguments for function " + getName() + " doesn't match: passed "
-//                    + toString(arguments.size()) + ", should be 1. Second argument makes sense only for DateTime and Decimal.",
-//                    ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
-//            }
-//        }
-
         DataTypePtr res;
-
-//        if constexpr (std::is_same_v<ToDataType, DataTypeDateTime>)
-//            res = std::make_shared<DataTypeDateTime>(extractTimeZoneNameFromFunctionArguments(arguments, 1, 0));
-//        else if constexpr (to_decimal)
-//        {
+        if constexpr (IsDataTypeDecimal<ToDataType>)
+        {
 //            UInt64 scale = extractToDecimalScale(arguments[1]);
 //
 //            if constexpr (std::is_same_v<ToDataType, DataTypeDecimal<Decimal32>>)
@@ -914,18 +900,12 @@ public:
 //            else if constexpr (std::is_same_v<ToDataType, DataTypeDecimal<Decimal64>>)
 //                res = createDecimal(18, scale);
 //            else if constexpr (std::is_same_v<ToDataType, DataTypeDecimal<Decimal128>>)
-//                res = createDecimal(38, scale);
-//
-//            if (!res)
-//                throw Exception("Someting wrong with toDecimalNNOrZero() or toDecimalNNOrNull()", ErrorCodes::LOGICAL_ERROR);
-//        }
-        if constexpr ((IsDataTypeDecimal<ToDataType>)) {
-            res = createDecimal(27, 9);
-        } else {
-            res = std::make_shared<ToDataType>();
-        }
+                res = createDecimal(27, 9);
 
-        res = std::make_shared<DataTypeNullable>(res);
+            if (!res)
+                throw Exception("Someting wrong with toDecimalNNOrZero() or toDecimalNNOrNull()", ErrorCodes::LOGICAL_ERROR);
+        } else
+            res = std::make_shared<ToDataType>();
 
         return res;
     }
@@ -983,6 +963,53 @@ public:
     }
 };
 
+template <typename ToDataType, typename Name>
+class FunctionConvertToTimeType : public IFunction {
+public:
+    static constexpr auto name = Name::name;
+    static FunctionPtr create() { return std::make_shared<FunctionConvertToTimeType>(); }
+
+    String getName() const override { return name; }
+
+    bool isVariadic() const override { return true; }
+    size_t getNumberOfArguments() const override { return 0; }
+
+    bool useDefaultImplementationForConstants() const override { return true; }
+    ColumnNumbers getArgumentsThatAreAlwaysConstant() const override { return {1}; }
+
+    // This function should not be called for get DateType Ptr
+    // using the FunctionCast::getReturnTypeImpl
+    DataTypePtr getReturnTypeImpl(const ColumnsWithTypeAndName& arguments) const override {
+        auto res = std::make_shared<ToDataType>();
+        return res;
+    }
+
+    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+                       size_t input_rows_count) override {
+        const IDataType* from_type = block.getByPosition(arguments[0]).type.get();
+        auto call = [&](const auto& types) -> bool {
+            using Types = std::decay_t<decltype(types)>;
+            using LeftDataType = typename Types::LeftType;
+            using RightDataType = typename Types::RightType;
+
+
+            ConvertImplToTimeType<LeftDataType, RightDataType, Name>::execute(
+                    block, arguments, result, input_rows_count);
+            return true;
+        };
+
+        bool done = callOnIndexAndNumberDataType<ToDataType>(from_type->getTypeId(), call);
+        if (!done) {
+            throw Exception("Illegal type " +
+                            block.getByPosition(arguments[0]).type->getName() +
+                            " of argument of function " + getName(),
+                            ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        }
+
+        return Status::OK();
+    }
+};
+
 class FunctionCast final : public IFunctionBase {
 public:
     using WrapperType = std::function<Status(Block&, const ColumnNumbers&, size_t, size_t)>;
@@ -1035,6 +1062,8 @@ private:
             /// In case when converting to Nullable type, we apply different parsing rule,
             /// that will not throw an exception but return NULL in case of malformed input.
             function = FunctionConvertFromString<DataType, NameCast>::create();
+        } else if (requested_result_is_nullable && IsTimeType<DataType>) {
+            function = FunctionConvertToTimeType<DataType, NameCast>::create();
         } else
             function = FunctionTo<DataType>::Type::create();
 
@@ -1341,14 +1370,22 @@ protected:
             throw Exception("Second argument to " + getName() +
                                     " must be a constant string describing type",
                             ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
-
         auto type = DataTypeFactory::instance().get(type_col->getValue<String>());
-        bool from_is_nullable = arguments[0].type->isNullable();
-        bool to_is_nullable = type->isNullable();
-        if (from_is_nullable && !to_is_nullable) {
-            return std::make_shared<DataTypeNullable>(type);
+
+        bool need_to_be_nullable = false;
+        // 1. from_type is nullable
+        need_to_be_nullable |= arguments[0].type->isNullable();
+        // 2. from_type is string, to_type is not string
+        need_to_be_nullable |= (arguments[0].type->getTypeId() == TypeIndex::String) && (
+                type->getTypeId() != TypeIndex::String) ;
+        // 3. from_type is not DateTime/Date, to_type is DateTime/Date
+        need_to_be_nullable |=
+                (arguments[0].type->getTypeId() != TypeIndex::Date && arguments[0].type->getTypeId() != TypeIndex::DateTime) &&
+                (type->getTypeId() == TypeIndex::Date || type->getTypeId() == TypeIndex::DateTime);
+        if (need_to_be_nullable) {
+            return makeNullable(type);
         }
-        // TODO: handle string convert to other type;
+        
         return type;
     }
 

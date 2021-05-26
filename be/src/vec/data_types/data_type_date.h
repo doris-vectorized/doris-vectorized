@@ -36,9 +36,4 @@ public:
     static void cast_to_date(Int128& x);
 };
 
-template <typename DataType>
-constexpr bool IsDateType = false;
-template <>
-inline constexpr bool IsDateType<DataTypeDate> = true;
-
 } // namespace doris::vectorized

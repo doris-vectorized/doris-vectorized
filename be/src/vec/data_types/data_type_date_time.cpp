@@ -34,6 +34,7 @@ bool DataTypeDateTime::equals(const IDataType& rhs) const {
 std::string DataTypeDateTime::to_string(const IColumn& column, size_t row_num) const {
     Int128 int_val = assert_cast<const ColumnInt128&>(*column.convertToFullColumnIfConst().get())
                              .getData()[row_num];
+    // TODO: Rethink we really need to do copy replace const reference here?
     doris::DateTimeValue value = *reinterpret_cast<doris::DateTimeValue*>(&int_val);
     std::stringstream ss;
     // Year
@@ -74,6 +75,7 @@ std::string DataTypeDateTime::to_string(const IColumn& column, size_t row_num) c
 void DataTypeDateTime::to_string(const IColumn & column, size_t row_num, BufferWritable & ostr) const {
     Int128 int_val = assert_cast<const ColumnInt128&>(*column.convertToFullColumnIfConst().get())
                              .getData()[row_num];
+    // TODO: Rethink we really need to do copy replace const reference here?
     doris::DateTimeValue value = *reinterpret_cast<doris::DateTimeValue*>(&int_val);
 
     char buf[64];

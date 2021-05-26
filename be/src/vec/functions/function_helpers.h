@@ -32,6 +32,11 @@ class IFunction;
 
 /// Methods, that helps dispatching over real column types.
 
+template <typename ... Type>
+bool checkDataType(const IDataType* data_type) {
+    return ((typeid_cast<const Type*>(data_type)) || ...);
+}
+
 template <typename Type>
 const Type* checkAndGetDataType(const IDataType* data_type) {
     return typeid_cast<const Type*>(data_type);

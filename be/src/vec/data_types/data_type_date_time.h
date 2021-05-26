@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "vec/data_types/data_type_date.h"
 #include "vec/data_types/data_type_number_base.h"
 
 class DateLUTImpl;
@@ -67,5 +68,13 @@ template <typename DataType>
 constexpr bool IsDateTimeType = false;
 template <>
 inline constexpr bool IsDateTimeType<DataTypeDateTime> = true;
+
+template <typename DataType>
+constexpr bool IsDateType = false;
+template <>
+inline constexpr bool IsDateType<DataTypeDate> = true;
+
+template <typename DataType>
+constexpr bool IsTimeType = IsDateTimeType<DataType> || IsDateType<DataType>;
 
 } // namespace doris::vectorized

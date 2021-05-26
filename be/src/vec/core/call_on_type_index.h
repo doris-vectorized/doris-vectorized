@@ -260,7 +260,46 @@ bool callOnIndexAndDataType(TypeIndex number, F&& f) {
     default:
         break;
     }
+    return false;
+}
 
+template <typename T, typename F>
+bool callOnIndexAndNumberDataType(TypeIndex number, F&& f) {
+    switch (number) {
+    case TypeIndex::UInt8:
+        return f(TypePair<DataTypeNumber<UInt8>, T>());
+    case TypeIndex::UInt16:
+        return f(TypePair<DataTypeNumber<UInt16>, T>());
+    case TypeIndex::UInt32:
+        return f(TypePair<DataTypeNumber<UInt32>, T>());
+    case TypeIndex::UInt64:
+        return f(TypePair<DataTypeNumber<UInt64>, T>());
+
+    case TypeIndex::Int8:
+        return f(TypePair<DataTypeNumber<Int8>, T>());
+    case TypeIndex::Int16:
+        return f(TypePair<DataTypeNumber<Int16>, T>());
+    case TypeIndex::Int32:
+        return f(TypePair<DataTypeNumber<Int32>, T>());
+    case TypeIndex::Int64:
+        return f(TypePair<DataTypeNumber<Int64>, T>());
+    case TypeIndex::Int128:
+         return f(TypePair<DataTypeNumber<Int128>, T>());
+
+    case TypeIndex::Float32:
+        return f(TypePair<DataTypeNumber<Float32>, T>());
+    case TypeIndex::Float64:
+        return f(TypePair<DataTypeNumber<Float64>, T>());
+
+    case TypeIndex::Decimal32:
+        return f(TypePair<DataTypeDecimal<Decimal32>, T>());
+    case TypeIndex::Decimal64:
+        return f(TypePair<DataTypeDecimal<Decimal64>, T>());
+    case TypeIndex::Decimal128:
+        return f(TypePair<DataTypeDecimal<Decimal128>, T>());
+    default:
+        break;
+    }
     return false;
 }
 
