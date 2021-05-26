@@ -15,6 +15,32 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/data_types/data_type_number.h"
+#pragma once
 
-namespace doris::vectorized {} // namespace doris::vectorized
+#include "vec/common/string_utils/string_utils.h"
+
+namespace doris::vectorized {
+
+class ReadBuffer {
+public:
+    ReadBuffer(char* d, size_t n) :
+         _start(d), _end(d + n) {}
+
+    ReadBuffer(const unsigned char* d, size_t n) :
+         _start((char*)(d)), _end((char*)(d) + n) {}
+
+    bool eof() { return _start == _end; }
+
+    char*& position() {
+        return _start;
+    }
+
+    char* end() { return _end; }
+
+    size_t count() { return _end - _start; }
+private:
+    char* _start;
+    char* _end;
+};
+
+}
