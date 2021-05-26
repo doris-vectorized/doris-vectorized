@@ -57,6 +57,16 @@ std::string DataTypeDecimal<T>::to_string(const IColumn& column, size_t row_num)
 }
 
 template <typename T>
+void DataTypeDecimal<T>::to_string(const IColumn& column, size_t row_num,
+                                      BufferWritable& ostr) const {
+    // TODO: Reduce the copy in std::string mem to ostr, like DataTypeNumber
+    DecimalV2Value value = (DecimalV2Value)assert_cast<const ColumnType&>(*column.convertToFullColumnIfConst().get())
+                      .getData()[row_num];
+    auto str = value.to_string();
+    ostr.write(str.data(), str.size());
+}
+
+template <typename T>
 void DataTypeDecimal<T>::serialize(const IColumn& column, PColumn* pcolumn) const {
     std::ostringstream buf;
     for (size_t i = 0; i < column.size(); ++i) {
