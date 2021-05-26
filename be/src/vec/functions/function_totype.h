@@ -22,6 +22,8 @@
 #include "vec/columns/column_vector.h"
 #include "vec/data_types/data_type.h"
 #include "vec/data_types/data_type_bitmap.h"
+#include "vec/data_types/data_type_number.h"
+#include "vec/functions/cast_type_to_either.h"
 #include "vec/functions/function.h"
 
 namespace doris::vectorized {
@@ -65,4 +67,62 @@ public:
                                                 getName()));
     }
 };
+
+template <typename LeftDataType,typename RightDataType, template <typename, typename> typename Impl, typename Name>
+class FunctionBinaryToType : public IFunction {
+
+public:
+    static constexpr auto name = Name::name;
+    static FunctionPtr create() { return std::make_shared<FunctionBinaryToType>(); }
+    String getName() const override { return name; }
+    size_t getNumberOfArguments() const override { return 2; }
+    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+        using ResultDataType = typename Impl<LeftDataType,RightDataType>::ResultDataType;
+        return std::make_shared<ResultDataType>();
+    }
+
+    bool useDefaultImplementationForConstants() const override { return true; }
+
+    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+                       size_t /*input_rows_count*/) override {
+        DCHECK_EQ(arguments.size(), 2);
+        const auto& left = block.getByPosition(arguments[0]);
+        const auto& right = block.getByPosition(arguments[1]);
+        const auto& left_type = left.type;
+        const auto& right_type = left.type;
+
+        using ResultDataType = typename Impl<LeftDataType, RightDataType>::ResultDataType;
+        
+        using T0 = typename LeftDataType::FieldType;
+        using T1 = typename RightDataType::FieldType;
+        using ResultType = typename ResultDataType::FieldType;
+
+        using ColVecLeft = std::conditional_t<is_complex_v<T0>, ColumnComplexType<T0>,
+                                                            ColumnVector<T0>>;
+        using ColVecRight = std::conditional_t<is_complex_v<T1>, ColumnComplexType<T1>,
+                                                            ColumnVector<T1>>;
+
+        using ColVecResult = std::conditional_t<is_complex_v<ResultType>,
+                                                                ColumnComplexType<ResultType>,
+                                                                ColumnVector<ResultType>>;
+        
+        
+        typename ColVecResult::MutablePtr col_res = nullptr;
+
+        col_res = ColVecResult::create();
+        auto& vec_res = col_res->getData();
+        vec_res.resize(block.rows());
+
+        if (auto col_left = checkAndGetColumn<ColVecLeft>(left.column.get())) {
+            if (auto col_right = checkAndGetColumn<ColVecRight>(right.column.get())) {
+                  Impl<LeftDataType, RightDataType>::vector_vector(col_left->getData(), col_right->getData(),
+                                              vec_res);
+                  block.getByPosition(result).column = std::move(col_res);
+            }
+        }
+
+        return Status::OK();
+    }
+};
+
 } // namespace doris::vectorized
