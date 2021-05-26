@@ -38,8 +38,10 @@ void registerFunctionMultiply(SimpleFunctionFactory& factory);
 void registerFunctionDivide(SimpleFunctionFactory& factory);
 void registerFunctionIntDiv(SimpleFunctionFactory& factory);
 void registerFunctionModulo(SimpleFunctionFactory& factory);
+void registerFunctionBitmap(SimpleFunctionFactory& factory);
 void registerFunctionIsNull(SimpleFunctionFactory& factory);
 void registerFunctionIsNotNull(SimpleFunctionFactory& factory);
+
 
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
@@ -78,6 +80,7 @@ public:
         static SimpleFunctionFactory instance;
         std::call_once(oc, [&]() {
             registerFunctionAbs(instance);
+            registerFunctionBitmap(instance);
             registerFunctionHLLCardinality(instance);
             registerFunctionHLLEmpty(instance);
             registerFunctionHLLHash(instance);

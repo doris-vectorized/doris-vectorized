@@ -78,6 +78,7 @@ set(VEC_FILES
   exprs/vslot_ref.cpp
   exprs/vcast_expr.cpp
   functions/abs.cpp
+  functions/function_bitmap.cpp
   functions/comparison.cpp
   functions/comparison_less.cpp
   functions/comparison_equels.cpp
