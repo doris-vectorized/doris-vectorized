@@ -137,6 +137,8 @@ public:
     bool canBeUsedInBooleanContext() const override { return true; }
     bool canBeInsideNullable() const override { return true; }
     std::string to_string(const IColumn& column, size_t row_num) const;
+    void to_string(const IColumn& column, size_t row_num, BufferWritable& ostr) const;
+
 
     /// Decimal specific
 

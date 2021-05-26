@@ -31,6 +31,9 @@ public:
 
     bool equals(const IDataType& rhs) const override;
     std::string to_string(const IColumn& column, size_t row_num) const;
+    void to_string(const IColumn &column, size_t row_num, BufferWritable &ostr) const override;
+
+    static void cast_to_date(Int128& x);
 };
 
 } // namespace doris::vectorized

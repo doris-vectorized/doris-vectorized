@@ -75,12 +75,12 @@ public:
     void createLowCardinalityResultCache(size_t cache_size);
 
 protected:
-    virtual Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
-                               size_t input_rows_count) = 0;
     virtual Status executeImplDryRun(Block& block, const ColumnNumbers& arguments, size_t result,
                                      size_t input_rows_count) {
         return executeImpl(block, arguments, result, input_rows_count);
     }
+    virtual Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+                               size_t input_rows_count) = 0;
 
     /** Default implementation in presence of Nullable arguments or NULL constants as arguments is the following:
       *  if some of arguments are NULL constants then return NULL constant,

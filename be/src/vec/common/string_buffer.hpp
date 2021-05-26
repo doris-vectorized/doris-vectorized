@@ -29,7 +29,6 @@ public:
     void write_number(T data) {
         fmt::memory_buffer buffer;
         fmt::format_to(buffer, "{}", data);
-        buffer.push_back('\0');
         write(buffer.data(), buffer.size());
     }
 
@@ -49,7 +48,8 @@ public:
 
     void write(const char* data, int len) {
         _vector.insert(data, data + len);
-        update_writer_counter(len);
+        _vector.emplace_back(0);
+        update_writer_counter(len + 1);
     }
 
 private:
