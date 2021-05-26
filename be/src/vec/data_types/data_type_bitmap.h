@@ -27,6 +27,8 @@ public:
     DataTypeBitMap() = default;
     ~DataTypeBitMap() = default;
 
+    using FieldType = BitmapValue;
+
     std::string doGetName() const override { return getFamilyName(); }
     const char* getFamilyName() const override { return "BitMap"; }
 
@@ -66,4 +68,14 @@ public:
                         ErrorCodes::NOT_IMPLEMENTED);
     }
 };
+
+template <typename T>
+struct is_complex : std::false_type {};
+
+template <>
+struct is_complex<DataTypeBitMap::FieldType> : std::true_type {};
+
+template <class T>
+constexpr bool is_complex_v = is_complex<T>::value;
+
 } // namespace doris::vectorized
