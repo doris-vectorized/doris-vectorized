@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "vec/data_types/data_type_date.h"
 #include "vec/data_types/data_type_number_base.h"
 
 class DateLUTImpl;
@@ -57,6 +58,23 @@ public:
     bool equals(const IDataType& rhs) const override;
 
     std::string to_string(const IColumn& column, size_t row_num) const;
+
+    void to_string(const IColumn &column, size_t row_num, BufferWritable &ostr) const override;
+
+    static void cast_to_date_time(Int128 &x);
 };
+
+template <typename DataType>
+constexpr bool IsDateTimeType = false;
+template <>
+inline constexpr bool IsDateTimeType<DataTypeDateTime> = true;
+
+template <typename DataType>
+constexpr bool IsDateType = false;
+template <>
+inline constexpr bool IsDateType<DataTypeDate> = true;
+
+template <typename DataType>
+constexpr bool IsTimeType = IsDateTimeType<DataType> || IsDateType<DataType>;
 
 } // namespace doris::vectorized

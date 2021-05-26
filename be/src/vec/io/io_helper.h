@@ -22,11 +22,13 @@
 #include <iostream>
 
 #include "gen_cpp/data.pb.h"
+#include "util/string_parser.hpp"
 #include "vec/common/arena.h"
 #include "vec/common/exception.h"
 #include "vec/common/string_ref.h"
 #include "vec/common/uint128.h"
 #include "vec/core/types.h"
+#include "vec/io/reader_buffer.h"
 #include "vec/io/var_int.h"
 
 #define DEFAULT_MAX_STRING_SIZE (1ULL << 30)
@@ -262,5 +264,108 @@ inline void read_binary(const PColumn& pcolumn, std::string* data) {
     } else {
         *data = pcolumn.binary();
     }
+}
+
+template <typename T>
+bool readFloatTextFastImpl(T & x, ReadBuffer & in) {
+    static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>, "Argument for readFloatTextImpl must be float or double");
+    static_assert('a' > '.' && 'A' > '.' && '\n' < '.' && '\t' < '.' && '\'' < '.' && '"' < '.', "Layout of char is not like ASCII"); //-V590
+
+    StringParser::ParseResult result;
+    x = StringParser::string_to_float<T>(in.position(), in.count(), &result);
+
+    if (UNLIKELY(result != StringParser::PARSE_SUCCESS || std::isnan(x) || std::isinf(x))) {                                                    \
+        return false;
+    }
+
+    // only to match the isAllRead() check to prevent return null
+    in.position() = in.end();
+    return true;
+}
+
+template <typename T>
+bool readIntTextImpl(T & x, ReadBuffer & buf) {
+    bool negative = false;
+    std::make_unsigned_t<T> res = 0;
+    if (buf.eof()) {
+        return false;
+    }
+
+    while (!buf.eof())
+    {
+        switch (*buf.position())
+        {
+            case '+':
+                break;
+            case '-':
+                if (std::is_signed_v<T>)
+                    negative = true;
+                else
+                {
+                    return false;
+                }
+                break;
+            case '0': [[fallthrough]];
+            case '1': [[fallthrough]];
+            case '2': [[fallthrough]];
+            case '3': [[fallthrough]];
+            case '4': [[fallthrough]];
+            case '5': [[fallthrough]];
+            case '6': [[fallthrough]];
+            case '7': [[fallthrough]];
+            case '8': [[fallthrough]];
+            case '9':
+                res *= 10;
+                res += *buf.position() - '0';
+                break;
+            default:
+                x = negative ? -res : res;
+                return true;
+        }
+        ++buf.position();
+    }
+
+    x = negative ? -res : res;
+    return true;
+}
+
+template <typename T>
+bool readDateTimeTextImpl(T& x, ReadBuffer & buf) {
+    auto& dv = (DateTimeValue&)x;
+    auto ans = dv.from_date_str(buf.position(), buf.count());
+
+    // only to match the isAllRead() check to prevent return null
+    buf.position() = buf.end();
+    return ans;
+}
+
+template <typename T>
+bool readDecimalTextImpl(T& x, ReadBuffer & buf) {
+    auto& dv = (DecimalV2Value&)x.value;
+    auto ans = dv.parse_from_str((const char *) buf.position(), buf.count()) == 0;
+
+    // only to match the isAllRead() check to prevent return null
+    buf.position() = buf.end();
+    return ans;
+}
+
+template <typename T>
+bool tryReadIntText(T & x, ReadBuffer & buf) {
+    return readIntTextImpl<T>(x, buf);
+}
+
+template <typename T>
+bool tryReadFloatText(T & x, ReadBuffer & in) {
+    return readFloatTextFastImpl<T>(x, in);
+}
+
+template <typename T>
+bool tryReadDecimalText(T & x, ReadBuffer & in) {
+    return readDecimalTextImpl<T>(x, in);
+}
+
+template <typename T>
+bool tryReadDateTimeText(T & x, ReadBuffer & in) {
+    return readDateTimeTextImpl<T>(x, in);
 }
 } // namespace doris::vectorized

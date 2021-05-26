@@ -30,8 +30,8 @@
 namespace doris::vectorized {
 
 class DataTypeFactory {
-    using DataTypeMap = std::unordered_map<std::string, DataTypePtr>;
-    using InvertedDataTypeMap = std::vector<std::pair<DataTypePtr, std::string>>;
+using DataTypeMap = std::unordered_map<std::string, DataTypePtr>;
+using InvertedDataTypeMap = std::vector<std::pair<DataTypePtr, std::string>>;
 
 public:
     static DataTypeFactory& instance() {
@@ -46,12 +46,15 @@ public:
             instance.regist_data_type("Int16", DataTypePtr(std::make_shared<DataTypeInt16>()));
             instance.regist_data_type("Int32", DataTypePtr(std::make_shared<DataTypeInt32>()));
             instance.regist_data_type("Int64", DataTypePtr(std::make_shared<DataTypeInt64>()));
+            instance.regist_data_type("Int128", DataTypePtr(std::make_shared<DataTypeInt128>()));
             instance.regist_data_type("Float32", DataTypePtr(std::make_shared<DataTypeFloat32>()));
             instance.regist_data_type("Float64", DataTypePtr(std::make_shared<DataTypeFloat64>()));
             instance.regist_data_type("Date", DataTypePtr(std::make_shared<DataTypeDate>()));
             instance.regist_data_type("DateTime",
                                       DataTypePtr(std::make_shared<DataTypeDateTime>()));
             instance.regist_data_type("String", DataTypePtr(std::make_shared<DataTypeString>()));
+            instance.regist_data_type("Decimal",
+                    DataTypePtr(std::make_shared<DataTypeDecimal<Decimal128>>(27, 9)));
         });
         return instance;
     }
@@ -70,6 +73,7 @@ private:
         _data_type_map.emplace(name, data_type);
         _invert_data_type_map.emplace_back(data_type, name);
     }
+    // TODO: Here is a little trick here, use bimap to replace map and vector
     DataTypeMap _data_type_map;
     InvertedDataTypeMap _invert_data_type_map;
     std::string _empty_string;
