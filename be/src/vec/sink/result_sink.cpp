@@ -101,7 +101,7 @@ Status ResultSink::send(RuntimeState* state, Block* block) {
 }
 
 Status ResultSink::close(RuntimeState* state, Status exec_status) {
-    if (_closed) {
+    if (_closed || _writer == nullptr|| _sender == nullptr) {
         return Status::OK();
     }
 
