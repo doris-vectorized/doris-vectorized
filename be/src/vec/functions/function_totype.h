@@ -52,9 +52,17 @@ public:
                 block.getByPosition(result).column = std::move(col_res);
                 return Status::OK();
             }
-        } else if constexpr (is_integer(Impl::TYPE_INDEX)) {
+        } else if constexpr (std::is_integer(Impl::TYPE_INDEX)) {
             if (const auto* col =
                         checkAndGetColumn<ColumnVector<typename Impl::Type>>(column.get())) {
+                auto col_res = Impl::ReturnColumnType::create();
+                RETURN_IF_ERROR(Impl::vector(col->getData(), col_res->getData()));
+                block.getByPosition(result).column = std::move(col_res);
+                return Status::OK();
+            }
+        } else if constexpr (is_complex_v<typename Impl::Type>) {
+            if (const auto* col =
+                        checkAndGetColumn<ColumnComplexType<typename Impl::Type>>(column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
                 RETURN_IF_ERROR(Impl::vector(col->getData(), col_res->getData()));
                 block.getByPosition(result).column = std::move(col_res);
@@ -68,16 +76,16 @@ public:
     }
 };
 
-template <typename LeftDataType,typename RightDataType, template <typename, typename> typename Impl, typename Name>
+template <typename LeftDataType, typename RightDataType,
+          template <typename, typename> typename Impl, typename Name>
 class FunctionBinaryToType : public IFunction {
-
 public:
     static constexpr auto name = Name::name;
     static FunctionPtr create() { return std::make_shared<FunctionBinaryToType>(); }
     String getName() const override { return name; }
     size_t getNumberOfArguments() const override { return 2; }
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
-        using ResultDataType = typename Impl<LeftDataType,RightDataType>::ResultDataType;
+        using ResultDataType = typename Impl<LeftDataType, RightDataType>::ResultDataType;
         return std::make_shared<ResultDataType>();
     }
 
@@ -88,25 +96,22 @@ public:
         DCHECK_EQ(arguments.size(), 2);
         const auto& left = block.getByPosition(arguments[0]);
         const auto& right = block.getByPosition(arguments[1]);
-        const auto& left_type = left.type;
-        const auto& right_type = left.type;
 
         using ResultDataType = typename Impl<LeftDataType, RightDataType>::ResultDataType;
-        
+
         using T0 = typename LeftDataType::FieldType;
         using T1 = typename RightDataType::FieldType;
         using ResultType = typename ResultDataType::FieldType;
 
-        using ColVecLeft = std::conditional_t<is_complex_v<T0>, ColumnComplexType<T0>,
-                                                            ColumnVector<T0>>;
-        using ColVecRight = std::conditional_t<is_complex_v<T1>, ColumnComplexType<T1>,
-                                                            ColumnVector<T1>>;
+        using ColVecLeft =
+                std::conditional_t<is_complex_v<T0>, ColumnComplexType<T0>, ColumnVector<T0>>;
+        using ColVecRight =
+                std::conditional_t<is_complex_v<T1>, ColumnComplexType<T1>, ColumnVector<T1>>;
 
-        using ColVecResult = std::conditional_t<is_complex_v<ResultType>,
-                                                                ColumnComplexType<ResultType>,
-                                                                ColumnVector<ResultType>>;
-        
-        
+        using ColVecResult =
+                std::conditional_t<is_complex_v<ResultType>, ColumnComplexType<ResultType>,
+                                   ColumnVector<ResultType>>;
+
         typename ColVecResult::MutablePtr col_res = nullptr;
 
         col_res = ColVecResult::create();
@@ -115,9 +120,9 @@ public:
 
         if (auto col_left = checkAndGetColumn<ColVecLeft>(left.column.get())) {
             if (auto col_right = checkAndGetColumn<ColVecRight>(right.column.get())) {
-                  Impl<LeftDataType, RightDataType>::vector_vector(col_left->getData(), col_right->getData(),
-                                              vec_res);
-                  block.getByPosition(result).column = std::move(col_res);
+                Impl<LeftDataType, RightDataType>::vector_vector(col_left->getData(),
+                                                                 col_right->getData(), vec_res);
+                block.getByPosition(result).column = std::move(col_res);
             }
         }
 
