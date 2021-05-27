@@ -132,6 +132,7 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
             int pos = target_column->size() - 1;
             if (target_column->isNullable()) {
                 auto& nullable_column = assert_cast<ColumnNullable&>(*target_column);
+                nullable_column.getNullMapData()[pos] = 0;
                 auto& bitmap_column = assert_cast<ColumnBitmap&>(nullable_column.getNestedColumn());
                 pvalue = &bitmap_column.getElement(pos);
             } else {
