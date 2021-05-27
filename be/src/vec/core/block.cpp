@@ -770,6 +770,19 @@ Status Block::filter_block(Block* block, int filter_column_id, int column_to_kee
             filter[i] = filter[i] && !null_map[i];
         }
         filter_block_internal(block, filter, column_to_keep);
+    } else if (auto* const_column = checkAndGetColumn<ColumnConst>(*filter_column)) {
+        UInt64 ret = const_column->getUInt(0);
+        if (ret == 0) {
+            block->getByPosition(0).column = block->getByPosition(0).column->cloneEmpty();
+        } else if (ret == 1) {
+            for (size_t i = column_to_keep; i < block->columns(); ++i) {
+                block->erase(i);
+            }
+        } else {
+            std::stringstream ss;
+            ss << "invalid const value for filter block, value = " << ret;
+            return Status::InternalError(ss.str());
+        }
     } else {
         const IColumn::Filter& filter =
                 assert_cast<const doris::vectorized::ColumnVector<UInt8>&>(*filter_column)
