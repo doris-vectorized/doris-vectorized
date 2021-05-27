@@ -134,28 +134,28 @@ visible_functions = [
         '_ZN5doris18TimestampFunctions7to_daysEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE'],
 
     [['year'], 'INT', ['DATETIME'],
-        '_ZN5doris18TimestampFunctions4yearEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE'],
+        '_ZN5doris18TimestampFunctions4yearEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE', 'vec'],
     [['month'], 'INT', ['DATETIME'],
-        '_ZN5doris18TimestampFunctions5monthEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE'],
+        '_ZN5doris18TimestampFunctions5monthEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE', 'vec'],
     [['quarter'], 'INT', ['DATETIME'],
-        '_ZN5doris18TimestampFunctions7quarterEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE'],
+        '_ZN5doris18TimestampFunctions7quarterEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE', 'vec'],
     [['dayofweek'], 'INT', ['DATETIME'],
-        '_ZN5doris18TimestampFunctions11day_of_weekEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE'],
+        '_ZN5doris18TimestampFunctions11day_of_weekEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE', 'vec'],
     [['day', 'dayofmonth'], 'INT', ['DATETIME'],
         '_ZN5doris18TimestampFunctions12day_of_monthEPN9doris_udf'
-        '15FunctionContextERKNS1_11DateTimeValE'],
+        '15FunctionContextERKNS1_11DateTimeValE', 'vec'],
     [['dayofyear'], 'INT', ['DATETIME'],
         '_ZN5doris18TimestampFunctions11day_of_yearEPN9doris_udf'
-        '15FunctionContextERKNS1_11DateTimeValE'],
+        '15FunctionContextERKNS1_11DateTimeValE', 'vec'],
     [['weekofyear'], 'INT', ['DATETIME'],
         '_ZN5doris18TimestampFunctions12week_of_yearEPN9doris_udf'
-        '15FunctionContextERKNS1_11DateTimeValE'],
+        '15FunctionContextERKNS1_11DateTimeValE', 'vec'],
     [['hour'], 'INT', ['DATETIME'],
-        '_ZN5doris18TimestampFunctions4hourEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE'],
+        '_ZN5doris18TimestampFunctions4hourEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE', 'vec'],
     [['minute'], 'INT', ['DATETIME'],
-        '_ZN5doris18TimestampFunctions6minuteEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE'],
+        '_ZN5doris18TimestampFunctions6minuteEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE', 'vec'],
     [['second'], 'INT', ['DATETIME'],
-        '_ZN5doris18TimestampFunctions6secondEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE'],
+        '_ZN5doris18TimestampFunctions6secondEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE', 'vec'],
 
     [['years_add'], 'DATETIME', ['DATETIME', 'INT'],
         '_ZN5doris18TimestampFunctions9years_addEPN9doris_udf'

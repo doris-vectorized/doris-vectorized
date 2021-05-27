@@ -268,6 +268,7 @@ public:
 
     int year() const { return _year; }
     int month() const { return _month; }
+    int quarter() const { return  (_month - 1) / 3 + 1; }
     int day() const { return _day; }
     int hour() const { return _hour; }
     int minute() const { return _minute; }
@@ -300,6 +301,7 @@ public:
 
     // Weekday, from 0(Mon) to 6(Sun)
     inline uint8_t weekday() const { return calc_weekday(daynr(), false); }
+    inline auto day_of_week() const { return (weekday() + 1) % 7 + 1; }
 
     // The bits in week_format has the following meaning:
     // WEEK_MONDAY_FIRST (0)
