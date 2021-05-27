@@ -153,6 +153,7 @@ public abstract class AggregateInfoBase {
                 if (aggExpr.getFnName().getFunction().equals(FunctionSet.COUNT)
                         || aggExpr.getFnName().getFunction().equals("ndv")
                         || aggExpr.getFnName().getFunction().equals(FunctionSet.BITMAP_UNION_INT)
+                        || aggExpr.getFnName().getFunction().equals(FunctionSet.BITMAP_UNION_COUNT)
                         || aggExpr.getFnName().getFunction().equals("ndv_no_finalize")) {
                     // TODO: Consider making nullability a property of types or of builtin agg fns.
                     // row_number(), rank(), and dense_rank() are non-nullable as well.
