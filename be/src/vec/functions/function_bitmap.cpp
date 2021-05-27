@@ -35,8 +35,8 @@ struct ToBitmapImpl {
         auto size = offsets.size();
         res.reserve(size);
         for (int i = 0; i < size; ++i) {
-            const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i]]);
-            int str_size = offsets[i] - offsets[i - 1];
+            const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            int str_size = offsets[i] - offsets[i - 1] - 1;
             StringParser::ParseResult parse_result = StringParser::PARSE_SUCCESS;
             uint64_t int_value = StringParser::string_to_unsigned_int<uint64_t>(raw_str, str_size,
                                                                                 &parse_result);
@@ -54,12 +54,26 @@ struct ToBitmapImpl {
     }
 };
 
-// B00LEAN BITMAP_CONTAINS(BITMAP bitmap, BIGINT input)
-// B00LEAN BITMAP_HAS_ANY(BITMAP lhs, BITMAP rhs)
-// BITMAP BITMAP_OR(BITMAP lhs, BITMAP rhs)
-// BITMAP BITMAP_XOR(BITMAP lhs, BITMAP rhs)
-// BITMAP BITMAP_NOT(BITMAP lhs, BITMAP rhs)
-// BITMAP BITMAP_XOR(BITMAP lhs, BITMAP rhs)
+struct NameBitmapCount {
+    static constexpr auto name = "bitmap_count";
+};
+
+struct BitmapCount {
+    using ReturnType = DataTypeInt64;
+    static constexpr auto TYPE_INDEX = TypeIndex::BitMap;
+    using Type = DataTypeBitMap::FieldType;
+    using ReturnColumnType = ColumnVector<Int64>;
+    using ReturnColumnContainer = ColumnVector<Int64>::Container;
+
+    static Status vector(const std::vector<BitmapValue>& data, ReturnColumnContainer& res) {
+        int size = data.size();
+        res.reserve(size);
+        for (int i = 0; i < size; ++i) {
+            res.push_back(data[i].cardinality());
+        }
+        return Status::OK();
+    }
+};
 
 struct NameBitmapAnd {
     static constexpr auto name = "bitmap_and";
@@ -82,13 +96,141 @@ struct BitmapAnd {
     }
 };
 
+struct NameBitmapOr {
+    static constexpr auto name = "bitmap_or";
+};
+
+template <typename LeftDataType, typename RightDataType>
+struct BitmapOr {
+    using ResultDataType = DataTypeBitMap;
+    using T0 = typename LeftDataType::FieldType;
+    using T1 = typename RightDataType::FieldType;
+    using TData = std::vector<BitmapValue>;
+
+    static Status vector_vector(const TData& lvec, const TData& rvec, TData& res) {
+        int size = lvec.size();
+        for (int i = 0; i < size; ++i) {
+            res[i] = lvec[i];
+            res[i] |= rvec[i];
+        }
+        return Status::OK();
+    }
+};
+
+struct NameBitmapXor {
+    static constexpr auto name = "bitmap_xor";
+};
+
+template <typename LeftDataType, typename RightDataType>
+struct BitmapXor {
+    using ResultDataType = DataTypeBitMap;
+    using T0 = typename LeftDataType::FieldType;
+    using T1 = typename RightDataType::FieldType;
+    using TData = std::vector<BitmapValue>;
+
+    static Status vector_vector(const TData& lvec, const TData& rvec, TData& res) {
+        int size = lvec.size();
+        for (int i = 0; i < size; ++i) {
+            res[i] = lvec[i];
+            res[i] ^= rvec[i];
+        }
+        return Status::OK();
+    }
+};
+
+struct NameBitmapNot {
+    static constexpr auto name = "bitmap_not";
+};
+
+template <typename LeftDataType, typename RightDataType>
+struct BitmapNot {
+    using ResultDataType = DataTypeBitMap;
+    using T0 = typename LeftDataType::FieldType;
+    using T1 = typename RightDataType::FieldType;
+    using TData = std::vector<BitmapValue>;
+
+    static Status vector_vector(const TData& lvec, const TData& rvec, TData& res) {
+        int size = lvec.size();
+        for (int i = 0; i < size; ++i) {
+            res[i] = lvec[i];
+            res[i] -= rvec[i];
+        }
+        return Status::OK();
+    }
+};
+
+struct NameBitmapContains {
+    static constexpr auto name = "bitmap_contains";
+};
+
+template <typename LeftDataType, typename RightDataType>
+struct BitmapContains {
+    using ResultDataType = DataTypeInt8;
+    using T0 = typename LeftDataType::FieldType;
+    using T1 = typename RightDataType::FieldType;
+    using LTData = std::vector<BitmapValue>;
+    using RTData = typename ColumnVector<T1>::Container;
+    using ResTData = typename ColumnVector<Int8>::Container;
+
+    static Status vector_vector(const LTData& lvec, const RTData& rvec, ResTData& res) {
+        int size = lvec.size();
+        for (int i = 0; i < size; ++i) {
+            res[i] = lvec[i].contains(rvec[i]);
+        }
+        return Status::OK();
+    }
+};
+
+struct NameBitmapHasAny {
+    static constexpr auto name = "bitmap_has_any";
+};
+
+template <typename LeftDataType, typename RightDataType>
+struct BitmapHasAny {
+    using ResultDataType = DataTypeInt8;
+    using T0 = typename LeftDataType::FieldType;
+    using T1 = typename RightDataType::FieldType;
+    using TData = std::vector<BitmapValue>;
+    using ResTData = typename ColumnVector<Int8>::Container;
+
+    static Status vector_vector(const TData& lvec, const TData& rvec, ResTData& res) {
+        int size = lvec.size();
+        for (int i = 0; i < size; ++i) {
+            BitmapValue bitmap = lvec[i];
+            bitmap &= rvec[i];
+            res[i] = bitmap.cardinality() != 0;
+        }
+        return Status::OK();
+    }
+};
+
 using FunctionToBitmap = FunctionUnaryToType<ToBitmapImpl, NameToBitmap>;
+using FunctionBitmapCount = FunctionUnaryToType<BitmapCount, NameBitmapCount>;
+
 using FunctionBitmapAnd =
         FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapAnd, NameBitmapAnd>;
+using FunctionBitmapOr =
+        FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapOr, NameBitmapOr>;
+using FunctionBitmapXor =
+        FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapXor, NameBitmapXor>;
+using FunctionBitmapNot =
+        FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapNot, NameBitmapNot>;
+
+using FunctionBitmapContains =
+        FunctionBinaryToType<DataTypeBitMap, DataTypeInt64, BitmapContains, NameBitmapContains>;
+
+using FunctionBitmapHasAny =
+        FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapHasAny, NameBitmapHasAny>;
 
 void registerFunctionBitmap(SimpleFunctionFactory& factory) {
     factory.registerFunction<FunctionToBitmap>();
+    factory.registerFunction<FunctionBitmapCount>();
     factory.registerFunction<FunctionBitmapAnd>();
+    factory.registerFunction<FunctionBitmapOr>();
+    factory.registerFunction<FunctionBitmapXor>();
+    factory.registerFunction<FunctionBitmapNot>();
+    factory.registerFunction<FunctionBitmapContains>();
+    factory.registerFunction<FunctionBitmapHasAny>();
 }
 
 } // namespace doris::vectorized
