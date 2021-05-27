@@ -39,6 +39,9 @@ void registerFunctionDivide(SimpleFunctionFactory& factory);
 void registerFunctionIntDiv(SimpleFunctionFactory& factory);
 void registerFunctionModulo(SimpleFunctionFactory& factory);
 void registerFunctionBitmap(SimpleFunctionFactory& factory);
+void registerFunctionIsNull(SimpleFunctionFactory& factory);
+void registerFunctionIsNotNull(SimpleFunctionFactory& factory);
+
 
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
@@ -90,6 +93,8 @@ public:
             registerFunctionDivide(instance);
             registerFunctionIntDiv(instance);
             registerFunctionModulo(instance);
+            registerFunctionIsNull(instance);
+            registerFunctionIsNotNull(instance);
         });
         return instance;
     }

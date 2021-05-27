@@ -397,7 +397,6 @@ Status AggregationNode::_serialize_without_key(RuntimeState* state, Block* block
 
 Status AggregationNode::_execute_without_key(Block* block) {
     DCHECK(_agg_data.without_key != nullptr);
-    LOG(WARNING) << "block rows:" << block->rows();
     SCOPED_TIMER(_build_timer);
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         _aggregate_evaluators[i]->execute_single_add(
