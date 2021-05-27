@@ -67,6 +67,11 @@ public class ScalarFunction extends Function {
         super(fnName, argTypes, retType, hasVarArgs);
     }
 
+    public ScalarFunction(
+            FunctionName fnName, ArrayList<Type> argTypes, Type retType, boolean hasVarArgs, boolean isVec) {
+        super(fnName, argTypes, retType, hasVarArgs, isVec);
+    }
+
     public ScalarFunction(FunctionName fnName, List<Type> argTypes,
                           Type retType, HdfsURI location, String symbolName, String initFnSymbol,
                           String closeFnSymbol) {
@@ -214,6 +219,22 @@ public class ScalarFunction extends Function {
 //                    + " not found!" + e.getStackTrace());
 //            throw new RuntimeException("Builtin symbol not found!", e);
 //        }
+        return fn;
+    }
+
+    public static ScalarFunction createBuiltinVecOperator(
+            String name, String symbol, ArrayList<Type> argTypes, Type retType) {
+        return createVecBuiltin(name, symbol, argTypes, false, retType, false);
+    }
+
+    public static ScalarFunction createVecBuiltin(
+            String name, String symbol, ArrayList<Type> argTypes,
+            boolean hasVarArgs, Type retType, boolean userVisible) {
+        ScalarFunction fn = new ScalarFunction(
+                new FunctionName(name), argTypes, retType, hasVarArgs, true);
+        fn.setBinaryType(TFunctionBinaryType.BUILTIN);
+        fn.setUserVisible(userVisible);
+        fn.symbolName = symbol;
         return fn;
     }
 
