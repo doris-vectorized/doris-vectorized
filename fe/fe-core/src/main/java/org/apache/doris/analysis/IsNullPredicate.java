@@ -51,8 +51,15 @@ public class IsNullPredicate extends Predicate {
             functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
                     IS_NULL, isNullSymbol, Lists.newArrayList(t), Type.BOOLEAN));
 
+            // vectorized version
+            functionSet.addBuiltin(ScalarFunction.createBuiltinVecOperator(
+                    IS_NULL, isNullSymbol, Lists.newArrayList(t), Type.BOOLEAN));
+
             String isNotNullSymbol = isNullSymbol.replace("7is_null", "11is_not_null");
             functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
+                    IS_NOT_NULL, isNotNullSymbol, Lists.newArrayList(t), Type.BOOLEAN));
+            // vectorized version
+            functionSet.addBuiltin(ScalarFunction.createBuiltinVecOperator(
                     IS_NOT_NULL, isNotNullSymbol, Lists.newArrayList(t), Type.BOOLEAN));
         }
     }
