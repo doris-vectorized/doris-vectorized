@@ -33,7 +33,7 @@
 
 namespace doris::vectorized {
 
- /// The minimum reduction factor (input rows divided by output rows) to grow hash tables
+/// The minimum reduction factor (input rows divided by output rows) to grow hash tables
 /// in a streaming preaggregation, given that the hash tables are currently the given
 /// size or above. The sizes roughly correspond to hash table sizes where the bucket
 /// arrays will fit in  a cache level. Intuitively, we don't want the working set of the
@@ -213,8 +213,9 @@ Status AggregationNode::prepare(RuntimeState* state) {
         }
 
         if (_is_streaming_preagg) {
-            _executor.pre_agg = std::bind<Status>(&AggregationNode::_pre_agg_with_serialized_key, this,
-                                                  std::placeholders::_1, std::placeholders::_2);
+            _executor.pre_agg =
+                    std::bind<Status>(&AggregationNode::_pre_agg_with_serialized_key, this,
+                                      std::placeholders::_1, std::placeholders::_2);
             _max_size_of_stream_pre_agg_buffer = state->batch_size();
         }
 
@@ -277,7 +278,7 @@ Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         RETURN_IF_CANCELLED(state);
         do {
             RETURN_IF_ERROR(_children[0]->get_next(state, &in_block, &child_eos));
-        } while(in_block.rows() == 0 && !child_eos);
+        } while (in_block.rows() == 0 && !child_eos);
 
         if (in_block.rows() != 0) {
             RETURN_IF_ERROR(_executor.pre_agg(&in_block, block));
@@ -410,7 +411,7 @@ Status AggregationNode::_merge_without_key(Block* block) {
     std::unique_ptr<char[]> deserialize_buffer(new char[_total_size_of_aggregate_states]);
     int rows = block->rows();
     _create_agg_status(deserialize_buffer.get());
-    DeferOp defer([&]() { _destory_agg_status(deserialize_buffer.get()); });
+    Defer defer([&]() { _destory_agg_status(deserialize_buffer.get()); });
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         auto column = block->getByPosition(i).column;
         if (column->isNullable()) {
@@ -480,14 +481,14 @@ bool AggregationNode::_should_expand_preagg_hash_tables() {
     double min_reduction = STREAMING_HT_MIN_REDUCTION[cache_level].streaming_ht_min_reduction;
 
     //  COUNTER_SET(preagg_estimated_reduction_, estimated_reduction);
-//    COUNTER_SET(preagg_streaming_ht_min_reduction_, min_reduction);
+    //    COUNTER_SET(preagg_streaming_ht_min_reduction_, min_reduction);
     //  return estimated_reduction > min_reduction;
     _should_expand_hash_table = current_reduction > min_reduction;
     return _should_expand_hash_table;
 }
 
-Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block *in_block,
-                                                     doris::vectorized::Block *out_block) {
+Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* in_block,
+                                                     doris::vectorized::Block* out_block) {
     DCHECK(!_probe_expr_ctxs.empty());
     // now we only support serialized key
     // TODO:
@@ -521,7 +522,8 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block *i
         if (!_should_expand_preagg_hash_tables()) {
             if (_streaming_pre_agg_buffer == nullptr) {
                 _streaming_pre_agg_buffer = _agg_arena_pool.alignedAlloc(
-                        _total_size_of_aggregate_states * _max_size_of_stream_pre_agg_buffer, _align_aggregate_states);
+                        _total_size_of_aggregate_states * _max_size_of_stream_pre_agg_buffer,
+                        _align_aggregate_states);
             }
 
             auto aggregate_data = _streaming_pre_agg_buffer;
@@ -531,8 +533,8 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block *i
                 aggregate_data += _total_size_of_aggregate_states;
             }
             for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
-                _aggregate_evaluators[i]->execute_batch_add(in_block, _offsets_of_aggregate_states[i],
-                                                            places.data(), &_agg_arena_pool);
+                _aggregate_evaluators[i]->execute_batch_add(
+                        in_block, _offsets_of_aggregate_states[i], places.data(), &_agg_arena_pool);
             }
 
             out_block->clear();
@@ -545,8 +547,9 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block *i
             aggregate_data = _streaming_pre_agg_buffer;
             for (size_t j = 0; j < rows; ++j) {
                 for (size_t i = 0; i < _aggregate_evaluators.size(); ++i) {
-                    _aggregate_evaluators[i]->insert_result_info(aggregate_data + _offsets_of_aggregate_states[i],
-                                                                 value_columns[i].get());
+                    _aggregate_evaluators[i]->insert_result_info(
+                            aggregate_data + _offsets_of_aggregate_states[i],
+                            value_columns[i].get());
                 }
                 aggregate_data += _total_size_of_aggregate_states;
             }
