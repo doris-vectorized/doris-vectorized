@@ -1381,6 +1381,16 @@ public class FunctionSet {
                     "_ZN5doris15BitmapFunctions16bitmap_serializeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                     "_ZN5doris15BitmapFunctions15bitmap_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                     true, false, true));
+            // vectorized
+            addBuiltin(AggregateFunction.createBuiltin(BITMAP_UNION_INT,
+                    Lists.newArrayList(t), Type.BIGINT, t,
+                    "",
+                    BITMAP_UNION_INT_SYMBOL.get(t),
+                    "",
+                    "",
+                    "",
+                    true, false, true, true));
+
 
             // INTERSECT_COUNT
             addBuiltin(AggregateFunction.createBuiltin(INTERSECT_COUNT,
