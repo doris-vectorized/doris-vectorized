@@ -17,9 +17,23 @@
 
 #include "util/string_parser.hpp"
 #include "vec/functions/function_totype.h"
+#include "vec/functions/function_const.h"
 #include "vec/functions/simple_function_factory.h"
+#include "gutil/strings/split.h"
 
 namespace doris::vectorized {
+
+struct BitmapEmpty {
+    static constexpr auto name = "bitmap_empty";
+    using ReturnColVec = ColumnBitmap;
+    static DataTypePtr get_return_type() {
+        return std::make_shared<DataTypeBitMap>();
+    }
+    static auto init_value() {
+        return BitmapValue{};
+    }
+};
+
 struct NameToBitmap {
     static constexpr auto name = "to_bitmap";
 };
@@ -49,6 +63,60 @@ struct ToBitmapImpl {
             }
             res.emplace_back();
             res.back().add(int_value);
+        }
+        return Status::OK();
+    }
+};
+
+struct NameBitmapFromString {
+    static constexpr auto name = "bitmap_from_string";
+};
+
+struct BitmapFromString {
+    using ReturnType = DataTypeBitMap;
+    static constexpr auto TYPE_INDEX = TypeIndex::String;
+    using Type = String;
+    using ReturnColumnType = ColumnBitmap;
+    static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
+                         std::vector<BitmapValue>& res) {
+        auto size = offsets.size();
+        res.reserve(size);
+        std::vector<uint64_t> bits;
+        for (int i = 0; i < size; ++i) {
+            const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            int str_size = offsets[i] - offsets[i - 1] - 1;
+            if (SplitStringAndParse({raw_str, str_size},
+                                                        ",", &safe_strtou64, &bits)) {
+                res.emplace_back(bits);
+            } else {
+                res.emplace_back();
+            }
+            bits.clear();
+        }
+        return Status::OK();
+    }
+};
+
+struct NameBitmapHash {
+    static constexpr auto name = "bitmap_hash";
+};
+
+struct BitmapHash {
+    using ReturnType = DataTypeBitMap;
+    static constexpr auto TYPE_INDEX = TypeIndex::String;
+    using Type = String;
+    using ReturnColumnType = ColumnBitmap;
+    static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
+                         std::vector<BitmapValue>& res) {
+        auto size = offsets.size();
+        res.reserve(size);
+        for (int i = 0; i < size; ++i) {
+            const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            int str_size = offsets[i] - offsets[i - 1] - 1;
+            uint32_t hash_value =
+                HashUtil::murmur_hash3_32(raw_str, str_size, HashUtil::MURMUR3_32_SEED);
+            res.emplace_back();
+            res.back().add(hash_value);
         }
         return Status::OK();
     }
@@ -204,7 +272,11 @@ struct BitmapHasAny {
     }
 };
 
+using FunctionBitmapEmpty = FunctionConst<BitmapEmpty,false>;
 using FunctionToBitmap = FunctionUnaryToType<ToBitmapImpl, NameToBitmap>;
+using FunctionBitmapFromString = FunctionUnaryToType<BitmapFromString,NameBitmapFromString>;
+using FunctionBitmapHash = FunctionUnaryToType<BitmapHash, NameBitmapHash>;
+
 using FunctionBitmapCount = FunctionUnaryToType<BitmapCount, NameBitmapCount>;
 
 using FunctionBitmapAnd =
@@ -223,7 +295,10 @@ using FunctionBitmapHasAny =
         FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapHasAny, NameBitmapHasAny>;
 
 void registerFunctionBitmap(SimpleFunctionFactory& factory) {
+    factory.registerFunction<FunctionBitmapEmpty>();
     factory.registerFunction<FunctionToBitmap>();
+    factory.registerFunction<FunctionBitmapFromString>();
+    factory.registerFunction<FunctionBitmapHash>();
     factory.registerFunction<FunctionBitmapCount>();
     factory.registerFunction<FunctionBitmapAnd>();
     factory.registerFunction<FunctionBitmapOr>();
