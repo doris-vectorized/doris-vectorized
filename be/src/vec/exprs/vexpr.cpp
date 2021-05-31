@@ -22,6 +22,7 @@
 #include "gen_cpp/Exprs_types.h"
 #include "vec/exprs/vcast_expr.h"
 #include "vec/exprs/vectorized_fn_call.h"
+#include "vec/exprs/vin_predicate.h"
 #include "vec/exprs/vliteral.h"
 #include "vec/exprs/vslot_ref.h"
 
@@ -76,7 +77,8 @@ Status VExpr::create_expr(doris::ObjectPool* pool, const doris::TExprNode& texpr
     case TExprNodeType::FLOAT_LITERAL:
     case TExprNodeType::DECIMAL_LITERAL:
     case TExprNodeType::DATE_LITERAL:
-    case TExprNodeType::STRING_LITERAL: {
+    case TExprNodeType::STRING_LITERAL:
+    case TExprNodeType::NULL_LITERAL: {
         *expr = pool->add(new VLiteral(texpr_node));
         return Status::OK();
     }
@@ -93,6 +95,10 @@ Status VExpr::create_expr(doris::ObjectPool* pool, const doris::TExprNode& texpr
     }
     case doris::TExprNodeType::CAST_EXPR: {
         *expr = pool->add(new VCastExpr(texpr_node));
+        break;
+    }
+    case doris::TExprNodeType::IN_PRED: {
+        *expr = pool->add(new VInPredicate(texpr_node));
         break;
     }
     default:
