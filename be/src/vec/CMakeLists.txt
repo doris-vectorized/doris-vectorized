@@ -97,6 +97,8 @@ set(VEC_FILES
   functions/divide.cpp
   functions/is_null.cpp
   functions/is_not_null.cpp
+  functions/to_time_function.cpp
+  functions/time_of_function.cpp
   sink/mysql_result_writer.cpp
   sink/result_sink.cpp
   sink/vdata_stream_sender.cpp
