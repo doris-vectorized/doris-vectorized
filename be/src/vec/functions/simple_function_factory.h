@@ -54,6 +54,8 @@ void registerFunctionDayOfWeek(SimpleFunctionFactory& factory);
 void registerFunctionDayOfMonth(SimpleFunctionFactory& factory);
 void registerFunctionString(SimpleFunctionFactory& factory);
 void registerFunctionIn(SimpleFunctionFactory& factory);
+void registerFunctionIf(SimpleFunctionFactory& factory);
+
 
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
@@ -120,6 +122,7 @@ public:
             registerFunctionDayOfMonth(instance);
             registerFunctionString(instance);
             registerFunctionIn(instance);
+            registerFunctionIf(instance);
         });
         return instance;
     }

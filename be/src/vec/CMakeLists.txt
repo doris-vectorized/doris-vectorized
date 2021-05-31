@@ -102,6 +102,7 @@ set(VEC_FILES
   functions/in.cpp
   functions/to_time_function.cpp
   functions/time_of_function.cpp
+  functions/if.cpp
   sink/mysql_result_writer.cpp
   sink/result_sink.cpp
   sink/vdata_stream_sender.cpp
