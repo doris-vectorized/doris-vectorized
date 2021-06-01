@@ -21,6 +21,7 @@
 
 #include "vec/core/field.h"
 #include "vec/columns/column_set.h"
+#include "vec/data_types/data_type_nullable.h"
 #include "vec/data_types/data_type_factory.hpp"
 #include "vec/functions/simple_function_factory.h"
 
@@ -48,6 +49,8 @@ doris::Status VInPredicate::prepare(doris::RuntimeState* state, const doris::Row
         return Status::InternalError("Unknown column type.");
     }
 
+    // expr data_type
+    _data_type = makeNullable(std::make_shared<DataTypeUInt8>());
     _expr_name = fmt::format("({} {} set)", _children[0]->expr_name(), _is_not_in ? "not_in" : "in");
     _is_prepare = true;
     return Status::OK();
@@ -89,6 +92,7 @@ doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* conte
     ColumnsWithTypeAndName argument_template;
     argument_template.reserve(2);
     argument_template.emplace_back(std::move(child_column), child->data_type(), child_name);
+    // here we should use column_set type, to simplify the code. we dirrect use the child->data_type()
     argument_template.emplace_back(std::move(child_column), child->data_type(), child_name);
 
     // contruct the proper function_name
@@ -100,9 +104,6 @@ doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* conte
         return Status::NotSupported(
                 fmt::format("Function {} is not implemented", _fn.name.function_name));
     }
-
-    // expr data_type
-    _data_type = _function->getReturnType();
 
     return Status::OK();
 }
@@ -119,6 +120,7 @@ doris::Status VInPredicate::execute(doris::vectorized::Block* block, int* result
     arguments[0] = column_id;
 
     size_t const_param_id = block->columns();
+    // here we should use column_set type, to simplify the code. we dirrect use the DataTypeInt64
     block->insert({_set_param, std::make_shared<DataTypeInt64>(), "set"});
     arguments[1] = const_param_id;
 

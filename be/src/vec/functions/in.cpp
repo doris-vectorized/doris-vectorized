@@ -72,9 +72,10 @@ public:
 
     DataTypePtr getReturnTypeImpl(const DataTypes & /*arguments*/) const override
     {
-        return null_in_set ? makeNullable(std::make_shared<DataTypeUInt8>())
-            : std::make_shared<DataTypeUInt8>();
+        return makeNullable(std::make_shared<DataTypeUInt8>());
     }
+
+    bool useDefaultImplementationForNulls() const override { return false; }
 
     Status executeImpl(Block & block, const ColumnNumbers & arguments, size_t result, size_t /*input_rows_count*/) override
     {
@@ -107,25 +108,38 @@ public:
         } else {
            auto materialized_column = left_arg.column->convertToFullColumnIfConst();
            auto size = materialized_column->size();
-           /// For all rows
-           for (size_t i = 0; i < size; ++i) {
-               const auto& ref_data = materialized_column->getDataAt(i);
-               vec_res[i] = negative ^ set->find((void *)ref_data.data, ref_data.size);
-               if constexpr (null_in_set) {
-                   vec_null_map_to[i] = negative == vec_res[i];
+
+           if (auto * nullable = checkAndGetColumn<ColumnNullable>(*materialized_column)) {
+               const auto& nested_column = nullable->getNestedColumn();
+               const auto& null_map = nullable->getNullMapColumn().getData();
+
+               for (size_t i = 0; i < size; ++i) {
+                   vec_null_map_to[i] = null_map[i];
+                   if (null_map[i]) { continue;}
+                   const auto &ref_data = nested_column.getDataAt(i);
+                   vec_res[i] = negative ^ set->find((void *) ref_data.data, ref_data.size);
+                   if constexpr (null_in_set) {
+                       vec_null_map_to[i] = negative == vec_res[i];
+                   }
+               }
+           } else {
+               /// For all rows
+               for (size_t i = 0; i < size; ++i) {
+                   const auto &ref_data = materialized_column->getDataAt(i);
+                   vec_res[i] = negative ^ set->find((void *) ref_data.data, ref_data.size);
+                   if constexpr (null_in_set) {
+                       vec_null_map_to[i] = negative == vec_res[i];
+                   } else {
+                       vec_null_map_to[i] = 0;
+                   }
                }
            }
        }
 
-       if constexpr (null_in_set) {
-           block.getByPosition(result).column = ColumnNullable::create(std::move(res), std::move(col_null_map_to));
-       } else {
-           block.getByPosition(result).column = std::move(res);
-       }
+       block.getByPosition(result).column = ColumnNullable::create(std::move(res), std::move(col_null_map_to));
        return Status::OK();
     }
 };
-
 
 void registerFunctionIn(SimpleFunctionFactory & factory)
 {
