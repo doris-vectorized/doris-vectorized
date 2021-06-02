@@ -52,6 +52,7 @@ void registerFunctionWeekOfYear(SimpleFunctionFactory& factory);
 void registerFunctionDayOfYear(SimpleFunctionFactory& factory);
 void registerFunctionDayOfWeek(SimpleFunctionFactory& factory);
 void registerFunctionDayOfMonth(SimpleFunctionFactory& factory);
+void registerFunctionString(SimpleFunctionFactory& factory);
 void registerFunctionIn(SimpleFunctionFactory& factory);
 
 class SimpleFunctionFactory {
@@ -117,6 +118,7 @@ public:
             registerFunctionDayOfYear(instance);
             registerFunctionDayOfWeek(instance);
             registerFunctionDayOfMonth(instance);
+            registerFunctionString(instance);
             registerFunctionIn(instance);
         });
         return instance;
