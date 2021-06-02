@@ -16,21 +16,24 @@
 // under the License.
 
 #pragma once
+
+#include "exprs/hybrid_set.h"
+
 #include "vec/exprs/vexpr.h"
 #include "vec/functions/function.h"
 
 namespace doris::vectorized {
-class VCastExpr final: public VExpr {
+class VInPredicate final: public VExpr {
 public:
-    VCastExpr(const TExprNode& node) : VExpr(node) {}
-    ~VCastExpr() = default;
+    VInPredicate(const TExprNode& node);
+    ~VInPredicate() = default;
     virtual doris::Status execute(doris::vectorized::Block* block, int* result_column_id);
     virtual doris::Status prepare(doris::RuntimeState* state, const doris::RowDescriptor& desc,
                                   VExprContext* context);
     virtual doris::Status open(doris::RuntimeState* state, VExprContext* context);
     virtual void close(doris::RuntimeState* state, VExprContext* context);
     virtual VExpr* clone(doris::ObjectPool* pool) const override {
-        return pool->add(new VCastExpr(*this));
+        return pool->add(new VInPredicate(*this));
     }
     virtual const std::string& expr_name() const override;
 
@@ -38,13 +41,14 @@ private:
     FunctionBasePtr _function;
     std::string _expr_name;
 
-    DataTypePtr _target_data_type;
-    std::string _target_data_type_name;
+    ColumnPtr _set_param;
 
-    DataTypePtr _cast_param_data_type;
-    ColumnPtr _cast_param;
+    const bool _is_not_in;
+    bool _is_prepare;
+    bool _null_in_set;
+    std::shared_ptr<HybridSetBase> _hybrid_set;
 
 private:
-    static const constexpr char* function_name = "CAST";
+    static const constexpr char* function_name = "in";
 };
 } // namespace doris::vectorized
