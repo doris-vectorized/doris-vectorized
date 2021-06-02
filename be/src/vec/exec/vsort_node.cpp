@@ -157,7 +157,7 @@ Status VSortNode::pretreat_block(doris::vectorized::Block& block) {
         RETURN_IF_ERROR(ordering_expr->execute(&block, &_sort_description[i].column_number));
 
         _sort_description[i].direction = _is_asc_order[i] ? 1 : -1;
-        _sort_description[i].nulls_direction = _nulls_first[i] ? 1 : -1;
+        _sort_description[i].nulls_direction = _nulls_first[i] ? -1 : 1;
     }
 
     sortBlock(block, _sort_description, _offset + _limit);
