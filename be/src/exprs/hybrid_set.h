@@ -36,11 +36,15 @@ public:
     HybridSetBase() {}
     virtual ~HybridSetBase() {}
     virtual void insert(void* data) = 0;
+    // use in vectorize execute engine
+    virtual void insert(void* data, size_t) = 0;
 
     virtual void insert(HybridSetBase* set) = 0;
 
     virtual int size() = 0;
     virtual bool find(void* data) = 0;
+    // use in vectorize execute engine
+    virtual bool find(void* data, size_t) = 0;
 
     static HybridSetBase* create_set(PrimitiveType type);
     class IteratorBase {
@@ -62,7 +66,7 @@ public:
 
     virtual ~HybridSet() {}
 
-    virtual void insert(void* data) {
+    void insert(void* data) override {
         if (sizeof(T) >= 16) {
             // for largeint, it will core dump with no memcpy
             T value;
@@ -73,22 +77,24 @@ public:
         }
     }
 
+    void insert(void* data, size_t) override {
+        insert(data);
+    }
+
     virtual void insert(HybridSetBase* set) {
         HybridSet<T>* hybrid_set = reinterpret_cast<HybridSet<T>*>(set);
         _set.insert(hybrid_set->_set.begin(), hybrid_set->_set.end());
     }
 
     virtual int size() { return _set.size(); }
-    virtual bool find(void* data) {
-        typename std::unordered_set<T>::const_iterator it = _set.find(*reinterpret_cast<T*>(data));
 
-        if (it == _set.end()) {
-            return false;
-        } else {
-            return true;
-        }
+    bool find(void* data) override {
+        auto it = _set.find(*reinterpret_cast<T*>(data));
+        return !(it == _set.end());
+    }
 
-        return false;
+    bool find(void* data, size_t) override {
+        return find(data);
     }
 
     template <class _iT>
@@ -122,11 +128,17 @@ public:
 
     virtual ~StringValueSet() {}
 
-    virtual void insert(void* data) {
+    void insert(void* data) override {
         StringValue* value = reinterpret_cast<StringValue*>(data);
         std::string str_value(value->ptr, value->len);
         _set.insert(str_value);
     }
+
+    void insert(void* data, size_t size) override {
+        std::string str_value(reinterpret_cast<char*>(data), size);
+        _set.insert(str_value);
+    }
+
 
     void insert(HybridSetBase* set) {
         StringValueSet* string_set = reinterpret_cast<StringValueSet*>(set);
@@ -134,18 +146,19 @@ public:
     }
 
     virtual int size() { return _set.size(); }
-    virtual bool find(void* data) {
+
+    bool find(void* data) override {
         StringValue* value = reinterpret_cast<StringValue*>(data);
-        std::string str_value(value->ptr, value->len);
-        typename std::unordered_set<std::string>::iterator it = _set.find(str_value);
+        std::string str_value(const_cast<const char*>(value->ptr), value->len);
+        auto it = _set.find(str_value);
 
-        if (it == _set.end()) {
-            return false;
-        } else {
-            return true;
-        }
+        return !(it == _set.end());
+    }
 
-        return false;
+    bool find(void* data, size_t size) override {
+        std::string str_value(reinterpret_cast<char*>(data), size);
+        auto it = _set.find(str_value);
+        return !(it == _set.end());
     }
 
     class Iterator : public IteratorBase {
