@@ -272,7 +272,7 @@ struct BitmapHasAny {
     }
 };
 
-using FunctionBitmapEmpty = FunctionConst<BitmapEmpty,false>;
+using FunctionBitmapEmpty = FunctionConst<BitmapEmpty, false>;
 using FunctionToBitmap = FunctionUnaryToType<ToBitmapImpl, NameToBitmap>;
 using FunctionBitmapFromString = FunctionUnaryToType<BitmapFromString,NameBitmapFromString>;
 using FunctionBitmapHash = FunctionUnaryToType<BitmapHash, NameBitmapHash>;
