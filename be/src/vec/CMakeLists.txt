@@ -74,6 +74,7 @@ set(VEC_FILES
   exprs/vexpr.cpp
   exprs/vexpr_context.cpp
   exprs/vliteral.cpp
+  exprs/vin_predicate.cpp
   exprs/vslot_ref.cpp
   exprs/vcast_expr.cpp
   functions/abs.cpp
@@ -98,6 +99,7 @@ set(VEC_FILES
   functions/divide.cpp
   functions/is_null.cpp
   functions/is_not_null.cpp
+  functions/in.cpp
   functions/to_time_function.cpp
   functions/time_of_function.cpp
   sink/mysql_result_writer.cpp
@@ -106,7 +108,7 @@ set(VEC_FILES
   runtime/vdata_stream_recvr.cpp
   runtime/vdata_stream_mgr.cpp
   runtime/vpartition_info.cpp
-  runtime/vsorted_run_merger.cpp)
+  runtime/vsorted_run_merger.cpp )
 
 add_library(Vec STATIC
     ${VEC_FILES}
