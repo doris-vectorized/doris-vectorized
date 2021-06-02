@@ -24,14 +24,16 @@
 
 namespace doris::vectorized {
 
-#define REGISTER_TIME_FUNCTION(CLASS, IMPL)                                         \
-using CLASS = FunctionDateOrDateTimeToSomething<DataTypeInt32, IMPL>;               \
-void register##CLASS(SimpleFunctionFactory& factory) {                              \
-    factory.registerFunction<CLASS>();                                              \
-}
+using FunctionWeekOfYear = FunctionDateOrDateTimeToSomething<DataTypeInt32, WeekOfYearImpl>;
+using FunctionDayOfYear = FunctionDateOrDateTimeToSomething<DataTypeInt32, DayOfYearImpl>;
+using FunctionDayOfWeek = FunctionDateOrDateTimeToSomething<DataTypeInt32, DayOfWeekImpl>;
+using FunctionDayOfMonth = FunctionDateOrDateTimeToSomething<DataTypeInt32, DayOfMonthImpl>;
 
-REGISTER_TIME_FUNCTION(FunctionWeekOfYear, WeekOfYearImpl);
-REGISTER_TIME_FUNCTION(FunctionDayOfYear, DayOfYearImpl);
-REGISTER_TIME_FUNCTION(FunctionDayOfWeek, DayOfWeekImpl);
-REGISTER_TIME_FUNCTION(FunctionDayOfMonth, DayOfMonthImpl);
+void registerFunctionTimeOfFuction(SimpleFunctionFactory & factory)
+{
+    factory.registerFunction<FunctionDayOfWeek>();
+    factory.registerFunction<FunctionDayOfMonth>();
+    factory.registerFunction<FunctionDayOfYear>();
+    factory.registerFunction<FunctionWeekOfYear>();
+}
 }
