@@ -43,6 +43,7 @@ void registerFunctionIsNull(SimpleFunctionFactory& factory);
 void registerFunctionIsNotNull(SimpleFunctionFactory& factory);
 void registerFunctionToTimeFuction(SimpleFunctionFactory & factory);
 void registerFunctionTimeOfFuction(SimpleFunctionFactory & factory);
+void registerFunctionString(SimpleFunctionFactory& factory);
 void registerFunctionIn(SimpleFunctionFactory& factory);
 void registerFunctionDateTimeComputation(SimpleFunctionFactory& factory);
 
@@ -100,6 +101,7 @@ public:
             registerFunctionIsNotNull(instance);
             registerFunctionToTimeFuction(instance);
             registerFunctionTimeOfFuction(instance);
+            registerFunctionString(instance);
             registerFunctionIn(instance);
             registerFunctionDateTimeComputation(instance);
         });

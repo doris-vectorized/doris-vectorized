@@ -87,6 +87,7 @@ set(VEC_FILES
   functions/function_helpers.cpp
   functions/functions_logical.cpp
   functions/function_cast.cpp
+  functions/function_string.cpp
   functions/hll_cardinality.cpp
   functions/hll_empty.cpp
   functions/hll_hash.cpp
