@@ -307,6 +307,7 @@ struct TypeDescriptor {
             return std::make_shared<vectorized::DataTypeDate>();
         case TYPE_DATETIME:
             return std::make_shared<vectorized::DataTypeDateTime>();
+        case TYPE_TIME:
         case TYPE_DOUBLE:
             return std::make_shared<vectorized::DataTypeFloat64>();
 
