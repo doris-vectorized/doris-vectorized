@@ -23,17 +23,25 @@
 
 namespace doris::vectorized {
 
-#define REGISTER_TIME_FUNCTION(CLASS, IMPL)                                    \
-using CLASS = FunctionDateOrDateTimeToSomething<DataTypeInt32, IMPL>;               \
-void register##CLASS(SimpleFunctionFactory& factory) {                              \
-    factory.registerFunction<CLASS>();                                              \
+using FunctionYear = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToYearImpl>;
+using FunctionQuarter = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToQuarterImpl>;
+using FunctionMonth = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToMonthImpl>;
+using FunctionDay = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToDayImpl>;
+using FunctionHour = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToHourImpl>;
+using FunctionMinute = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToMinuteImpl>;
+using FunctionSecond = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToSecondImpl>;
+using FunctionToDays = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToDaysImpl>;
+
+void registerFunctionToTimeFuction(SimpleFunctionFactory & factory)
+{
+    factory.registerFunction<FunctionSecond>();
+    factory.registerFunction<FunctionMinute>();
+    factory.registerFunction<FunctionHour>();
+    factory.registerFunction<FunctionDay>();
+    factory.registerFunction<FunctionMonth>();
+    factory.registerFunction<FunctionYear>();
+    factory.registerFunction<FunctionQuarter>();
+    factory.registerFunction<FunctionToDays>();
 }
 
-REGISTER_TIME_FUNCTION(FunctionYear, ToYearImpl);
-REGISTER_TIME_FUNCTION(FunctionQuarter, ToQuarterImpl);
-REGISTER_TIME_FUNCTION(FunctionMonth, ToMonthImpl);
-REGISTER_TIME_FUNCTION(FunctionDay, ToDayImpl);
-REGISTER_TIME_FUNCTION(FunctionHour, ToHourImpl);
-REGISTER_TIME_FUNCTION(FunctionMinute, ToMinuteImpl);
-REGISTER_TIME_FUNCTION(FunctionSecond, ToSecondImpl);
 }

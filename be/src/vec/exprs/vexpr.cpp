@@ -89,7 +89,8 @@ Status VExpr::create_expr(doris::ObjectPool* pool, const doris::TExprNode& texpr
     case doris::TExprNodeType::ARITHMETIC_EXPR:
     case doris::TExprNodeType::COMPOUND_PRED:
     case doris::TExprNodeType::BINARY_PRED:
-    case doris::TExprNodeType::FUNCTION_CALL: {
+    case doris::TExprNodeType::FUNCTION_CALL:
+    case doris::TExprNodeType::COMPUTE_FUNCTION_CALL: {
         *expr = pool->add(new VectorizedFnCall(texpr_node));
         break;
     }
