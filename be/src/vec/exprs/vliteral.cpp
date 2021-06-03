@@ -77,7 +77,7 @@ VLiteral::VLiteral(const TExprNode& node) : VExpr(node) {
                 field = Float32(node.float_literal.value);
                 break;
             }
-                // case TYPE_TIME:
+            case TYPE_TIME:
             case TYPE_DOUBLE: {
                 DCHECK_EQ(node.node_type, TExprNodeType::FLOAT_LITERAL);
                 DCHECK(node.__isset.float_literal);

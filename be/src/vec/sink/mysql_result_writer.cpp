@@ -19,6 +19,7 @@
 
 #include "runtime/buffer_control_block.h"
 #include "runtime/runtime_state.h"
+#include "util/date_func.h"
 #include "util/mysql_row_buffer.h"
 #include "vec/columns/column_nullable.h"
 #include "vec/columns/column_vector.h"
@@ -115,6 +116,11 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
         if constexpr (type == TYPE_DOUBLE) {
             buf_ret = _vec_buffers[i]->push_double(
                     assert_cast<const ColumnVector<Float64>&>(*column).getData()[i]);
+        }
+        if constexpr (type == TYPE_TIME) {
+            auto time = assert_cast<const ColumnVector<Float64>&>(*column).getData()[i];
+            std::string time_str = time_str_from_double(time);
+            buf_ret = _vec_buffers[i]->push_string(time_str.c_str(), time_str.size());
         }
         if constexpr (type == TYPE_DATETIME) {
             char buf[64];
@@ -253,6 +259,14 @@ Status MysqlResultWriter::append_block(Block& block) {
                 status = _add_one_column<PrimitiveType::TYPE_DOUBLE, true>(column_ptr);
             } else {
                 status = _add_one_column<PrimitiveType::TYPE_DOUBLE, false>(column_ptr);
+            }
+            break;
+        }
+        case TYPE_TIME: {
+            if (type_ptr->isNullable()) {
+                status = _add_one_column<PrimitiveType::TYPE_TIME, true>(column_ptr);
+            } else {
+                status = _add_one_column<PrimitiveType::TYPE_TIME, false>(column_ptr);
             }
             break;
         }

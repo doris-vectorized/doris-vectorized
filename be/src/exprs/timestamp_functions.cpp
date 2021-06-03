@@ -438,61 +438,7 @@ BigIntVal TimestampFunctions::timestamp_diff(FunctionContext* ctx, const DateTim
     DateTimeValue ts_value1 = DateTimeValue::from_datetime_val(ts_val1);
     DateTimeValue ts_value2 = DateTimeValue::from_datetime_val(ts_val2);
 
-    switch (unit) {
-    case YEAR: {
-        int year = (ts_value2.year() - ts_value1.year());
-        if (year > 0) {
-            year -= (ts_value2.to_int64() % 10000000000 - ts_value1.to_int64() % 10000000000) < 0;
-        } else if (year < 0) {
-            year += (ts_value2.to_int64() % 10000000000 - ts_value1.to_int64() % 10000000000) > 0;
-        }
-        return year;
-    }
-    case MONTH: {
-        int month = (ts_value2.year() - ts_value1.year()) * 12 +
-                    (ts_value2.month() - ts_value1.month());
-        if (month > 0) {
-            month -= (ts_value2.to_int64() % 100000000 - ts_value1.to_int64() % 100000000) < 0;
-        } else if (month < 0) {
-            month += (ts_value2.to_int64() % 100000000 - ts_value1.to_int64() % 100000000) > 0;
-        }
-        return month;
-    }
-    case WEEK: {
-        int day = ts_value2.daynr() - ts_value1.daynr();
-        if (day > 0) {
-            day -= ts_value2.time_part_diff(ts_value1) < 0;
-        } else if (day < 0) {
-            day += ts_value2.time_part_diff(ts_value1) > 0;
-        }
-        return day / 7;
-    }
-    case DAY: {
-        int day = ts_value2.daynr() - ts_value1.daynr();
-        if (day > 0) {
-            day -= ts_value2.time_part_diff(ts_value1) < 0;
-        } else if (day < 0) {
-            day += ts_value2.time_part_diff(ts_value1) > 0;
-        }
-        return day;
-    }
-    case HOUR: {
-        int64_t second = ts_value2.second_diff(ts_value1);
-        int64_t hour = second / 60 / 60;
-        return hour;
-    }
-    case MINUTE: {
-        int64_t second = ts_value2.second_diff(ts_value1);
-        int64_t minute = second / 60;
-        return minute;
-    }
-    case SECOND: {
-        int64_t second = ts_value2.second_diff(ts_value1);
-        return second;
-    }
-    default:
-        return BigIntVal::null();
-    }
+    return DateTimeValue::datetime_diff<unit>(ts_value1, ts_value2);
 }
 
 void TimestampFunctions::format_prepare(doris_udf::FunctionContext* context,
