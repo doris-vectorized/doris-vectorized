@@ -41,19 +41,11 @@ void registerFunctionModulo(SimpleFunctionFactory& factory);
 void registerFunctionBitmap(SimpleFunctionFactory& factory);
 void registerFunctionIsNull(SimpleFunctionFactory& factory);
 void registerFunctionIsNotNull(SimpleFunctionFactory& factory);
-void registerFunctionYear(SimpleFunctionFactory& factory);
-void registerFunctionDay(SimpleFunctionFactory& factory);
-void registerFunctionMonth(SimpleFunctionFactory& factory);
-void registerFunctionQuarter(SimpleFunctionFactory& factory);
-void registerFunctionHour(SimpleFunctionFactory& factory);
-void registerFunctionMinute(SimpleFunctionFactory& factory);
-void registerFunctionSecond(SimpleFunctionFactory& factory);
-void registerFunctionWeekOfYear(SimpleFunctionFactory& factory);
-void registerFunctionDayOfYear(SimpleFunctionFactory& factory);
-void registerFunctionDayOfWeek(SimpleFunctionFactory& factory);
-void registerFunctionDayOfMonth(SimpleFunctionFactory& factory);
+void registerFunctionToTimeFuction(SimpleFunctionFactory & factory);
+void registerFunctionTimeOfFuction(SimpleFunctionFactory & factory);
 void registerFunctionString(SimpleFunctionFactory& factory);
 void registerFunctionIn(SimpleFunctionFactory& factory);
+void registerFunctionDateTimeComputation(SimpleFunctionFactory& factory);
 
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
@@ -107,19 +99,11 @@ public:
             registerFunctionModulo(instance);
             registerFunctionIsNull(instance);
             registerFunctionIsNotNull(instance);
-            registerFunctionYear(instance);
-            registerFunctionDay(instance);
-            registerFunctionMonth(instance);
-            registerFunctionQuarter(instance);
-            registerFunctionHour(instance);
-            registerFunctionMinute(instance);
-            registerFunctionSecond(instance);
-            registerFunctionWeekOfYear(instance);
-            registerFunctionDayOfYear(instance);
-            registerFunctionDayOfWeek(instance);
-            registerFunctionDayOfMonth(instance);
+            registerFunctionToTimeFuction(instance);
+            registerFunctionTimeOfFuction(instance);
             registerFunctionString(instance);
             registerFunctionIn(instance);
+            registerFunctionDateTimeComputation(instance);
         });
         return instance;
     }
