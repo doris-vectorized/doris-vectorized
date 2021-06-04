@@ -23,7 +23,6 @@
 #include "runtime/result_buffer_mgr.h"
 #include "runtime/runtime_state.h"
 #include "vec/exprs/vexpr.h"
-#include "vec/exprs/vexpr_context.h"
 #include "vec/sink/mysql_result_writer.h"
 
 namespace doris {
