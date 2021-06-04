@@ -45,6 +45,7 @@ void registerFunctionToTimeFuction(SimpleFunctionFactory & factory);
 void registerFunctionTimeOfFuction(SimpleFunctionFactory & factory);
 void registerFunctionString(SimpleFunctionFactory& factory);
 void registerFunctionIn(SimpleFunctionFactory& factory);
+void registerFunctionIf(SimpleFunctionFactory& factory);
 void registerFunctionDateTimeComputation(SimpleFunctionFactory& factory);
 
 class SimpleFunctionFactory {
@@ -103,6 +104,7 @@ public:
             registerFunctionTimeOfFuction(instance);
             registerFunctionString(instance);
             registerFunctionIn(instance);
+            registerFunctionIf(instance);
             registerFunctionDateTimeComputation(instance);
         });
         return instance;
