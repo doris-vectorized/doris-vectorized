@@ -137,6 +137,28 @@ const int TIME_MAX_SECOND = 59;
 const int TIME_MAX_VALUE = 10000 * TIME_MAX_HOUR + 100 * TIME_MAX_MINUTE + TIME_MAX_SECOND;
 const int TIME_MAX_VALUE_SECONDS = 3600 * TIME_MAX_HOUR + 60 * TIME_MAX_MINUTE + TIME_MAX_SECOND;
 
+constexpr size_t const_length(const char* str) {
+    return (str == nullptr || *str == 0) ? 0 : const_length(str + 1) + 1;
+}
+
+constexpr size_t max_char_length(const char* const* name, size_t end) {
+    size_t res = 0;
+    for (int i = 0; i < end; ++i) {
+        res = std::max(const_length(name[i]), res);
+    }
+    return res;
+}
+
+static constexpr const char* s_month_name[] = {
+        "",     "January", "February",  "March",   "April",    "May",      "June",
+        "July", "August",  "September", "October", "November", "December", NULL};
+
+static constexpr const char* s_day_name[] = {"Monday", "Tuesday",  "Wednesday", "Thursday",
+                                             "Friday", "Saturday", "Sunday",    NULL};
+
+static constexpr size_t MAX_DAY_NAME_LEN = max_char_length(s_day_name, std::size(s_day_name));
+static constexpr size_t MAX_MONTH_NAME_LEN = max_char_length(s_month_name, std::size(s_month_name));
+
 uint8_t mysql_week_mode(uint32_t mode);
 
 class DateTimeValue {
@@ -258,57 +280,59 @@ public:
     template <TimeUnit unit>
     static int64_t datetime_diff(const DateTimeValue& ts_value1, const DateTimeValue& ts_value2) {
         switch (unit) {
-            case YEAR: {
-                int year = (ts_value2.year() - ts_value1.year());
-                if (year > 0) {
-                    year -= (ts_value2.to_int64() % 10000000000 - ts_value1.to_int64() % 10000000000) < 0;
-                } else if (year < 0) {
-                    year += (ts_value2.to_int64() % 10000000000 - ts_value1.to_int64() % 10000000000) > 0;
-                }
-                return year;
+        case YEAR: {
+            int year = (ts_value2.year() - ts_value1.year());
+            if (year > 0) {
+                year -= (ts_value2.to_int64() % 10000000000 - ts_value1.to_int64() % 10000000000) <
+                        0;
+            } else if (year < 0) {
+                year += (ts_value2.to_int64() % 10000000000 - ts_value1.to_int64() % 10000000000) >
+                        0;
             }
-            case MONTH: {
-                int month = (ts_value2.year() - ts_value1.year()) * 12 +
-                            (ts_value2.month() - ts_value1.month());
-                if (month > 0) {
-                    month -= (ts_value2.to_int64() % 100000000 - ts_value1.to_int64() % 100000000) < 0;
-                } else if (month < 0) {
-                    month += (ts_value2.to_int64() % 100000000 - ts_value1.to_int64() % 100000000) > 0;
-                }
-                return month;
+            return year;
+        }
+        case MONTH: {
+            int month = (ts_value2.year() - ts_value1.year()) * 12 +
+                        (ts_value2.month() - ts_value1.month());
+            if (month > 0) {
+                month -= (ts_value2.to_int64() % 100000000 - ts_value1.to_int64() % 100000000) < 0;
+            } else if (month < 0) {
+                month += (ts_value2.to_int64() % 100000000 - ts_value1.to_int64() % 100000000) > 0;
             }
-            case WEEK: {
-                int day = ts_value2.daynr() - ts_value1.daynr();
-                if (day > 0) {
-                    day -= ts_value2.time_part_diff(ts_value1) < 0;
-                } else if (day < 0) {
-                    day += ts_value2.time_part_diff(ts_value1) > 0;
-                }
-                return day / 7;
+            return month;
+        }
+        case WEEK: {
+            int day = ts_value2.daynr() - ts_value1.daynr();
+            if (day > 0) {
+                day -= ts_value2.time_part_diff(ts_value1) < 0;
+            } else if (day < 0) {
+                day += ts_value2.time_part_diff(ts_value1) > 0;
             }
-            case DAY: {
-                int day = ts_value2.daynr() - ts_value1.daynr();
-                if (day > 0) {
-                    day -= ts_value2.time_part_diff(ts_value1) < 0;
-                } else if (day < 0) {
-                    day += ts_value2.time_part_diff(ts_value1) > 0;
-                }
-                return day;
+            return day / 7;
+        }
+        case DAY: {
+            int day = ts_value2.daynr() - ts_value1.daynr();
+            if (day > 0) {
+                day -= ts_value2.time_part_diff(ts_value1) < 0;
+            } else if (day < 0) {
+                day += ts_value2.time_part_diff(ts_value1) > 0;
             }
-            case HOUR: {
-                int64_t second = ts_value2.second_diff(ts_value1);
-                int64_t hour = second / 60 / 60;
-                return hour;
-            }
-            case MINUTE: {
-                int64_t second = ts_value2.second_diff(ts_value1);
-                int64_t minute = second / 60;
-                return minute;
-            }
-            case SECOND: {
-                int64_t second = ts_value2.second_diff(ts_value1);
-                return second;
-            }
+            return day;
+        }
+        case HOUR: {
+            int64_t second = ts_value2.second_diff(ts_value1);
+            int64_t hour = second / 60 / 60;
+            return hour;
+        }
+        case MINUTE: {
+            int64_t second = ts_value2.second_diff(ts_value1);
+            int64_t minute = second / 60;
+            return minute;
+        }
+        case SECOND: {
+            int64_t second = ts_value2.second_diff(ts_value1);
+            return second;
+        }
         }
         // Rethink the default return value
         return 0;
@@ -328,7 +352,7 @@ public:
 
     int year() const { return _year; }
     int month() const { return _month; }
-    int quarter() const { return  (_month - 1) / 3 + 1; }
+    int quarter() const { return (_month - 1) / 3 + 1; }
     int day() const { return _day; }
     int hour() const { return _hour; }
     int minute() const { return _minute; }

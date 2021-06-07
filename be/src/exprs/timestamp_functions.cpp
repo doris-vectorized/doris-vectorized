@@ -62,6 +62,29 @@ bool TimestampFunctions::check_format(const StringVal& format, DateTimeValue& t)
     return false;
 }
 
+std::string TimestampFunctions::convert_format(const std::string& format) {
+    switch (format.size()) {
+    case 8:
+        if (strncmp(format.c_str(), "yyyyMMdd", 8) == 0) {
+            return std::string("%Y%m%d");
+        }
+        break;
+    case 10:
+        if (strncmp(format.c_str(), "yyyy-MM-dd", 10) == 0) {
+            return std::string("%Y-%m-%d");
+        }
+        break;
+    case 19:
+        if (strncmp(format.c_str(), "yyyy-MM-dd HH:mm:ss", 19) == 0) {
+            return std::string("%Y-%m-%d %H:%i:%s");
+        }
+        break;
+    default:
+        break;
+    }
+    return format;
+}
+
 StringVal TimestampFunctions::convert_format(FunctionContext* ctx, const StringVal& format) {
     switch (format.len) {
     case 8:
@@ -521,10 +544,10 @@ DateTimeVal from_olap_datetime(uint64_t datetime) {
 static const DateTimeVal FIRST_DAY = from_olap_datetime(19700101000000);
 static const DateTimeVal FIRST_SUNDAY = from_olap_datetime(19700104000000);
 
-#define TIME_ROUND(UNIT, unit, ORIGIN)                                    \
-    _TR_4(FLOOR, floor, UNIT, unit)                                       \
-    _TR_4(CEIL, ceil, UNIT, unit) _TR_5(FLOOR, floor, UNIT, unit, ORIGIN) \
-            _TR_5(CEIL, ceil, UNIT, unit, ORIGIN)
+#define TIME_ROUND(UNIT, unit, ORIGIN) \
+    _TR_4(FLOOR, floor, UNIT, unit)    \
+    _TR_4(CEIL, ceil, UNIT, unit)      \
+    _TR_5(FLOOR, floor, UNIT, unit, ORIGIN) _TR_5(CEIL, ceil, UNIT, unit, ORIGIN)
 
 TIME_ROUND(YEAR, year, FIRST_DAY)
 TIME_ROUND(MONTH, month, FIRST_DAY)
