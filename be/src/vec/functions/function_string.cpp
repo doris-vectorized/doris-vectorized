@@ -1,3 +1,5 @@
+#include "vec/functions/function_string.h"
+
 #include <re2/re2.h>
 
 #include <cstddef>
@@ -11,24 +13,28 @@
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
+struct NameStringASCII {
+    static constexpr auto name = "ascii";
+};
 
-inline size_t get_utf8_byte_length(unsigned char byte) {
-    size_t char_size = 0;
-    if (byte >= 0xFC) {
-        char_size = 6;
-    } else if (byte >= 0xF8) {
-        char_size = 5;
-    } else if (byte >= 0xF0) {
-        char_size = 4;
-    } else if (byte >= 0xE0) {
-        char_size = 3;
-    } else if (byte >= 0xC0) {
-        char_size = 2;
-    } else {
-        char_size = 1;
+struct StringASCII {
+    using ReturnType = DataTypeInt32;
+    static constexpr auto TYPE_INDEX = TypeIndex::String;
+    using Type = String;
+    using ReturnColumnType = ColumnVector<Int32>;
+
+    static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
+                         PaddedPODArray<Int32>& res) {
+        auto size = offsets.size();
+        res.resize(size);
+        for (int i = 0; i < size; ++i) {
+            const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            // if strlen(raw_str) == 0, raw_str[0] is '\0'
+            res[i] = raw_str[0];
+        }
+        return Status::OK();
     }
-    return char_size;
-}
+};
 
 struct NameStringLenght {
     static constexpr auto name = "length";
@@ -82,32 +88,6 @@ struct StringUtf8LengthImpl {
     }
 };
 
-struct StringEndWithImpl {
-    using ReturnType = DataTypeInt32;
-    static constexpr auto TYPE_INDEX = TypeIndex::String;
-    using Type = String;
-    using ReturnColumnType = ColumnVector<Int32>;
-    static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
-                         PaddedPODArray<Int32>& res) {
-        auto size = offsets.size();
-        res.resize(size);
-
-        for (int i = 0; i < size; ++i) {
-            const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
-            int str_size = offsets[i] - offsets[i - 1] - 1;
-
-            size_t char_len = 0;
-            for (size_t i = 0, char_size = 0; i < str_size; i += char_size) {
-                char_size = get_utf8_byte_length((unsigned)(raw_str)[i]);
-                ++char_len;
-            }
-
-            res[i] = char_len;
-        }
-        return Status::OK();
-    }
-};
-
 struct NameStartsWith {
     static constexpr auto name = "starts_with";
 };
@@ -117,8 +97,8 @@ struct StartsWithOp {
     using ResultPaddedPODArray = PaddedPODArray<Int8>;
 
     static void execute(const std::string_view& strl, const std::string_view& strr, int8_t& res) {
-        re2::StringPiece str_sp(reinterpret_cast<char*>(strl.data(), strl.length()));
-        re2::StringPiece prefix_sp(reinterpret_cast<char*>(strr.data(), strr.length()));
+        re2::StringPiece str_sp(const_cast<char*>(strl.data()), strl.length());
+        re2::StringPiece prefix_sp(const_cast<char*>(strr.data()), strr.length());
         res = str_sp.starts_with(prefix_sp);
     }
 };
@@ -132,9 +112,48 @@ struct EndsWithOp {
     using ResultPaddedPODArray = PaddedPODArray<Int8>;
 
     static void execute(const std::string_view& strl, const std::string_view& strr, int8_t& res) {
-        re2::StringPiece str_sp(reinterpret_cast<char*>(strl.data(), strl.length()));
-        re2::StringPiece prefix_sp(reinterpret_cast<char*>(strr.data(), strr.length()));
+        re2::StringPiece str_sp(const_cast<char*>(strl.data()), strl.length());
+        re2::StringPiece prefix_sp(const_cast<char*>(strr.data()), strr.length());
         res = str_sp.ends_with(prefix_sp);
+    }
+};
+
+struct NameFindInSet {
+    static constexpr auto name = "find_in_set";
+};
+
+struct FindInSetOp {
+    using ResultDataType = DataTypeInt32;
+    using ResultPaddedPODArray = PaddedPODArray<Int32>;
+    static void execute(const std::string_view& strl, const std::string_view& strr, int32_t& res) {
+        for (int i = 0; i < strl.length(); ++i) {
+            if (strl[i] == ',') {
+                res = 0;
+                return;
+            }
+        }
+
+        int32_t token_index = 1;
+        int32_t start = 0;
+        int32_t end;
+
+        do {
+            end = start;
+            // Position end.
+            while (strr[end] != ',' && end < strr.length()) {
+                ++end;
+            }
+
+            if (strl == std::string_view{strr.data() + start, (size_t)end - start}) {
+                res = token_index;
+                return;
+            }
+
+            // Re-position start and end past ','
+            start = end + 1;
+            ++token_index;
+        } while (start < strr.length());
+        res = 0;
     }
 };
 
@@ -217,7 +236,7 @@ struct ReverseImpl {
         for (int i = 0; i < size; ++i) {
             res_offsets[i] = offsets[i];
         }
-        
+
         size_t data_length = data.size();
         res_data.resize(data_length);
         for (int i = 0; i < size; ++i) {
@@ -290,7 +309,6 @@ struct TrimImpl {
             const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
             int str_size = offsets[i] - offsets[i - 1] - 1;
 
-
             int32_t begin = 0;
             if constexpr (is_ltrim) {
                 while (begin < str_size && raw_str[begin] == ' ') {
@@ -315,6 +333,74 @@ struct TrimImpl {
     }
 };
 
+struct NameStringSpace {
+    static constexpr auto name = "space";
+};
+
+struct StringSpace {
+    using ReturnType = DataTypeString;
+    static constexpr auto TYPE_INDEX = TypeIndex::Int32;
+    using Type = Int32;
+    using ReturnColumnType = ColumnString;
+
+    static Status vector(const ColumnInt32::Container& data, ColumnString::Chars& res_data,
+                         ColumnString::Offsets& res_offsets) {
+        res_offsets.resize(data.size());
+        size_t input_size = res_offsets.size();
+        fmt::memory_buffer buffer;
+        for(size_t i = 0;i < input_size;++i) {
+            buffer.clear();
+            if (data[i] > 0) {
+                for(size_t j = 0;j < data[i]; ++j) {
+                    buffer.push_back(' ');
+                }
+                StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i,
+                                            res_data, res_offsets);
+            } else {
+                StringOP::push_empty_string(i, res_data, res_offsets);
+            }
+        }
+        return Status::OK();
+    }
+};
+
+struct StringAppendTrailingCharIfAbsent {
+    static constexpr auto name = "append_trailing_char_if_absent";
+    using Chars = ColumnString::Chars;
+    using Offsets = ColumnString::Offsets;
+    using ReturnType = DataTypeString;
+    using ColumnType = ColumnString;
+    static void vector_vector(const Chars& ldata, const Offsets& loffsets, const Chars& rdata,
+                              const Offsets& roffsets, Chars& res_data, Offsets& res_offsets,
+                              NullMap& null_map_data) {
+        DCHECK_EQ(loffsets.size(), roffsets.size());
+        size_t input_rows_count = loffsets.size();
+        res_offsets.resize(input_rows_count);
+        for (size_t i = 0; i < input_rows_count; ++i) {
+            int l_size = loffsets[i] - loffsets[i - 1] - 1;
+            const auto l_raw = reinterpret_cast<const char*>(&ldata[loffsets[i - 1]]);
+
+            int r_size = roffsets[i] - roffsets[i - 1] - 1;
+            const auto r_raw = reinterpret_cast<const char*>(&rdata[loffsets[i - 1]]);
+
+            if (r_size == 0) {
+                StringOP::push_null_string(i, res_data, res_offsets,
+                                           null_map_data);
+                continue;
+            }
+            if (l_raw[l_size - 1] == r_raw[0]) {
+                StringOP::push_value_string(std::string_view(l_raw, l_size), i,
+                                            res_data, res_offsets);
+                continue;
+            }
+            StringOP::push_value_string(std::string_view(l_raw, l_size), i,
+                                        res_data, res_offsets);
+            res_data[res_data.size() - 1] = *r_raw;
+            res_data.push_back('\0');
+        }
+    }
+};
+
 template <typename LeftDataType, typename RightDataType>
 using StringStartsWithImpl = StringFunctionImpl<LeftDataType, RightDataType, StartsWithOp>;
 
@@ -324,10 +410,14 @@ using StringEndsWithImpl = StringFunctionImpl<LeftDataType, RightDataType, EndsW
 template <typename LeftDataType, typename RightDataType>
 using StringInstrImpl = StringFunctionImpl<LeftDataType, RightDataType, InStrOP>;
 
+template <typename LeftDataType, typename RightDataType>
+using StringFindInSetImpl = StringFunctionImpl<LeftDataType, RightDataType, FindInSetOp>;
+
 // ready for regist function
+using FunctionStringASCII = FunctionUnaryToType<StringASCII, NameStringASCII>;
 using FunctionStringLength = FunctionUnaryToType<StringLengthImpl, NameStringLenght>;
 using FunctionStringUTF8Length = FunctionUnaryToType<StringUtf8LengthImpl, NameStringUtf8Length>;
-
+using FunctionStringSpace = FunctionUnaryToType<StringSpace,NameStringSpace>;
 using FunctionStringStartsWith =
         FunctionBinaryToType<DataTypeString, DataTypeString, StringStartsWithImpl, NameStartsWith>;
 using FunctionStringEndsWith =
@@ -336,6 +426,9 @@ using FunctionStringInstr =
         FunctionBinaryToType<DataTypeString, DataTypeString, StringInstrImpl, NameInstr>;
 using FunctionStringLocate =
         FunctionBinaryToType<DataTypeString, DataTypeString, StringInstrImpl, NameLocate>;
+using FunctionStringFindInSet =
+        FunctionBinaryToType<DataTypeString, DataTypeString, StringFindInSetImpl, NameFindInSet>;
+
 using FunctionReverse = FunctionStringToString<ReverseImpl, NameReverse>;
 
 using FunctionToLower = FunctionStringToString<TransferImpl<::tolower>, NameToLower>;
@@ -346,15 +439,21 @@ using FunctionLTrim = FunctionStringToString<TrimImpl<true, false>, NameLTrim>;
 
 using FunctionRTrim = FunctionStringToString<TrimImpl<false, true>, NameRTrim>;
 
-using FunctionTrim = FunctionStringToString<TrimImpl<true,true>, NameTrim>;
+using FunctionTrim = FunctionStringToString<TrimImpl<true, true>, NameTrim>;
+
+using FunctionStringAppendTrailingCharIfAbsent =
+        FunctionBinaryStringOperateToNullType<StringAppendTrailingCharIfAbsent>;
 
 void registerFunctionString(SimpleFunctionFactory& factory) {
     // factory.registerFunction<>();
+    factory.registerFunction<FunctionStringASCII>();
     factory.registerFunction<FunctionStringLength>();
     factory.registerFunction<FunctionStringUTF8Length>();
+    factory.registerFunction<FunctionStringSpace>();
     factory.registerFunction<FunctionStringStartsWith>();
     factory.registerFunction<FunctionStringEndsWith>();
     factory.registerFunction<FunctionStringInstr>();
+    factory.registerFunction<FunctionStringFindInSet>();
     factory.registerFunction<FunctionStringLocate>();
     factory.registerFunction<FunctionReverse>();
     factory.registerFunction<FunctionToLower>();
@@ -362,6 +461,19 @@ void registerFunctionString(SimpleFunctionFactory& factory) {
     factory.registerFunction<FunctionLTrim>();
     factory.registerFunction<FunctionRTrim>();
     factory.registerFunction<FunctionTrim>();
+    factory.registerFunction<FunctionSubstring>();
+    factory.registerFunction<FunctionLeft>();
+    factory.registerFunction<FunctionRight>();
+    factory.registerFunction<FunctionNullOrEmpty>();
+    factory.registerFunction<FunctionStringConcat>();
+    factory.registerFunction<FunctionStringConcatWs>();
+    factory.registerFunction<FunctionStringAppendTrailingCharIfAbsent>();
+    factory.registerFunction<FunctionStringRepeat>();
+
+    factory.registerAlias(FunctionLeft::name, "strleft");
+    factory.registerAlias(FunctionRight::name, "strright");
+    factory.registerAlias(FunctionSubstring::name, "substr");
+    factory.registerAlias(FunctionToLower::name, "lcase");
 }
 
 } // namespace doris::vectorized
