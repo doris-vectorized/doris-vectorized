@@ -47,6 +47,8 @@ void registerFunctionNullIf(SimpleFunctionFactory& factory);
 void registerFunctionToTimeFuction(SimpleFunctionFactory & factory);
 void registerFunctionTimeOfFuction(SimpleFunctionFactory & factory);
 void registerFunctionString(SimpleFunctionFactory& factory);
+void registerFunctionDateTimeToString(SimpleFunctionFactory& factory);
+void registerFunctionDateTimeStringToString(SimpleFunctionFactory& factory);
 void registerFunctionIn(SimpleFunctionFactory& factory);
 void registerFunctionDateTimeComputation(SimpleFunctionFactory& factory);
 
@@ -66,7 +68,7 @@ public:
             registerFunction(Function::name, &Function::create);
     }
 
-    void registerAlias(const std::string &name, const std::string &alias) {
+    void registerAlias(const std::string& name, const std::string& alias) {
         function_creators[alias] = function_creators[name];
     }
 
@@ -115,6 +117,8 @@ public:
             registerFunctionString(instance);
             registerFunctionIn(instance);
             registerFunctionDateTimeComputation(instance);
+            registerFunctionDateTimeToString(instance);
+            registerFunctionDateTimeStringToString(instance);
         });
         return instance;
     }

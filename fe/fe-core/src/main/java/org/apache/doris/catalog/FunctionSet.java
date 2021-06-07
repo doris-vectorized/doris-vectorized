@@ -1017,7 +1017,7 @@ public class FunctionSet {
                 symbol, prepareFnSymbol, closeFnSymbol, userVisible));
     }
 
-    private void addScalarAndVectorizedBuiltin(String fnName, String symbol, boolean userVisible,
+    public void addScalarAndVectorizedBuiltin(String fnName, String symbol, boolean userVisible,
                                  String prepareFnSymbol, String closeFnSymbol, boolean varArgs,
                                  PrimitiveType retType, PrimitiveType ... args) {
         ArrayList<Type> argsType = new ArrayList<Type>();
