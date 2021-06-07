@@ -63,6 +63,10 @@ public:
             registerFunction(Function::name, &Function::create);
     }
 
+    void registerAlias(const std::string &name, const std::string &alias) {
+        function_creators[alias] = function_creators[name];
+    }
+
     FunctionBasePtr get_function(const std::string& name, const ColumnsWithTypeAndName& arguments) {
         auto iter = function_creators.find(name);
         if (iter != function_creators.end()) {
