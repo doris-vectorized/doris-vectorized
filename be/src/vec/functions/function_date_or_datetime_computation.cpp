@@ -15,12 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/functions/function.h"
-#include "vec/functions/simple_function_factory.h"
 #include "vec/functions/function_date_or_datetime_computation.h"
 
-namespace doris::vectorized
-{
+#include "vec/functions/simple_function_factory.h"
+
+namespace doris::vectorized {
 
 using FunctionAddSeconds = FunctionDateOrDateTimeComputation<AddSecondsImpl>;
 using FunctionAddMinutes = FunctionDateOrDateTimeComputation<AddMinutesImpl>;
@@ -50,8 +49,7 @@ using FunctionHoursDiff = FunctionDateOrDateTimeComputation<HoursDiffImpl>;
 using FunctionMinutesDiff = FunctionDateOrDateTimeComputation<MintueSDiffImpl>;
 using FunctionSecondsDiff = FunctionDateOrDateTimeComputation<SecondsDiffImpl>;
 
-void registerFunctionDateTimeComputation(SimpleFunctionFactory & factory)
-{
+void registerFunctionDateTimeComputation(SimpleFunctionFactory& factory) {
     factory.registerFunction<FunctionAddSeconds>();
     factory.registerFunction<FunctionAddMinutes>();
     factory.registerFunction<FunctionAddHours>();
@@ -81,4 +79,4 @@ void registerFunctionDateTimeComputation(SimpleFunctionFactory & factory)
     factory.registerFunction<FunctionSecondsDiff>();
 }
 
-}
+} // namespace doris::vectorized
