@@ -59,7 +59,7 @@ meta_data_entries = []
 def add_function(fn_meta_data, user_visible):
     """add function
     """
-    assert 4 <= len(fn_meta_data) <= 6, \
+    assert 4 <= len(fn_meta_data) <= 7, \
             "Invalid function entry in doris_builtins_functions.py:\n\t" + repr(fn_meta_data)
     entry = {}
     entry["sql_names"] = fn_meta_data[0]
@@ -67,12 +67,14 @@ def add_function(fn_meta_data, user_visible):
     entry["args"] = fn_meta_data[2]
     entry["symbol"] = fn_meta_data[3]
     if len(fn_meta_data) >= 5:
-        if fn_meta_data[4] != "vec":
-            entry["prepare"] = fn_meta_data[4]
-        else:
-            entry["vec"] = True
+	if fn_meta_data[4] != "vec":
+		entry["prepare"] = fn_meta_data[4]
     if len(fn_meta_data) >= 6:
         entry["close"] = fn_meta_data[5]
+    
+    if fn_meta_data[-1] == 'vec':
+	entry['vec'] = True
+
     entry["user_visible"] = user_visible
     meta_data_entries.append(entry)
 
