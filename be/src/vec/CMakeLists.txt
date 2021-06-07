@@ -103,6 +103,8 @@ set(VEC_FILES
   functions/to_time_function.cpp
   functions/time_of_function.cpp
   functions/if.cpp
+  functions/ifnull.cpp
+  functions/nullif.cpp
   functions/function_date_or_datetime_computation.cpp
   sink/mysql_result_writer.cpp
   sink/result_sink.cpp

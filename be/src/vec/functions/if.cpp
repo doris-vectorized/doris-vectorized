@@ -317,15 +317,15 @@ public:
         auto * then_is_nullable = checkAndGetColumn<ColumnNullable>(*arg_then.column);
         auto * else_is_nullable = checkAndGetColumn<ColumnNullable>(*arg_else.column);
 
-        if (!then_is_nullable && !else_is_nullable)
+        if (!then_is_nullable && !else_is_nullable) {
             return false;
+        }
 
         /** Calculate null mask of result and nested column separately.
           */
         ColumnPtr result_null_mask;
         {
-            Block temporary_block(
-            {
+            Block temporary_block({
                 arg_cond,
                 {
                     then_is_nullable
@@ -356,8 +356,7 @@ public:
         ColumnPtr result_nested_column;
 
         {
-            Block temporary_block(
-            {
+            Block temporary_block({
                 arg_cond,
                 {
                     getNestedColumn(arg_then.column),
@@ -386,14 +385,29 @@ public:
         return true;
     }
     
-    bool executeForNullCondition(Block & block, const ColumnWithTypeAndName & arg_cond, 
-            const ColumnWithTypeAndName & arg_then,
-            const ColumnWithTypeAndName & arg_else,
-            size_t result) {
+    bool executeForNullableCondition(Block & block,
+            const ColumnNumbers & arguments,
+            size_t result,
+            Status& status) {
+        const ColumnWithTypeAndName & arg_cond = block.getByPosition(arguments[0]);
         bool cond_is_null = arg_cond.column->onlyNull();
 
-        if (cond_is_null){
-            block.getByPosition(result).column = std::move(arg_else.column);
+        if (cond_is_null) {
+            block.getByPosition(result).column = std::move(block.getByPosition(arguments[2]).column);
+            return true;
+        }
+
+        if (auto * nullable = checkAndGetColumn<ColumnNullable>(*arg_cond.column)) {
+            Block temporary_block {
+                { nullable->getNestedColumnPtr(), removeNullable(arg_cond.type), arg_cond.name },
+                block.getByPosition(arguments[1]),
+                block.getByPosition(arguments[2]),
+                block.getByPosition(result)
+            };
+
+            status = executeImpl(temporary_block, {0, 1, 2}, 3, temporary_block.rows());
+
+            block.getByPosition(result).column = std::move(temporary_block.getByPosition(3).column);
             return true;
         }
 
@@ -413,7 +427,7 @@ public:
         }
 
         Status ret = Status::OK();
-        if (executeForNullCondition(block, arg_cond, arg_then, arg_else, result)
+        if (executeForNullableCondition(block, arguments, result, ret)
             || executeForNullThenElse(block, arg_cond, arg_then, arg_else, result, input_rows_count, ret)
             || executeForNullableThenElse(block, arg_cond, arg_then, arg_else, result, input_rows_count)) {
             return ret;
