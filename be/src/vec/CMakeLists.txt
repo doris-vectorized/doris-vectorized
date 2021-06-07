@@ -104,6 +104,8 @@ set(VEC_FILES
   functions/time_of_function.cpp
   functions/if.cpp
   functions/function_date_or_datetime_computation.cpp
+  functions/function_date_or_datetime_to_string.cpp
+  functions/function_datetime_string_to_string.cpp
   sink/mysql_result_writer.cpp
   sink/result_sink.cpp
   sink/vdata_stream_sender.cpp
