@@ -288,7 +288,8 @@ public:
             Impl::vector_vector(ldata, loffsets, rdata, roffsets, res_data, res_offsets,
                                 null_map->getData());
         } else {
-            Impl::vector_vector(ldata, loffsets, rdata, roffsets, res->getData());
+            Impl::vector_vector(ldata, loffsets, rdata, roffsets, res->getData(),
+                                null_map->getData());
         }
 
         block.getByPosition(result).column =

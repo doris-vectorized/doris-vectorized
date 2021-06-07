@@ -215,7 +215,7 @@ visible_functions = [
 
     [['str_to_date'], 'DATETIME', ['VARCHAR', 'VARCHAR'],
         '_ZN5doris18TimestampFunctions11str_to_dateEPN9doris_udf'
-        '15FunctionContextERKNS1_9StringValES6_'],
+        '15FunctionContextERKNS1_9StringValES6_', 'vec'],
     [['date_format'], 'VARCHAR', ['DATETIME', 'VARCHAR'],
         '_ZN5doris18TimestampFunctions11date_formatEPN9doris_udf'
         '15FunctionContextERKNS1_11DateTimeValERKNS1_9StringValE',
