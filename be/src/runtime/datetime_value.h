@@ -154,7 +154,7 @@ static constexpr const char* s_month_name[] = {
         "July", "August",  "September", "October", "November", "December", NULL};
 
 static constexpr const char* s_day_name[] = {"Monday", "Tuesday",  "Wednesday", "Thursday",
-                                             "Friday", "Saturday", "Sunday",    NULL};
+                                             "Friday", "Saturday", "Sunday", NULL};
 
 static constexpr size_t MAX_DAY_NAME_LEN = max_char_length(s_day_name, std::size(s_day_name));
 static constexpr size_t MAX_MONTH_NAME_LEN = max_char_length(s_month_name, std::size(s_month_name));
