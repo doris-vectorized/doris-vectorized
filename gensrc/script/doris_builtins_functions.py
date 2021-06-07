@@ -668,24 +668,24 @@ visible_functions = [
         '9doris_udf15FunctionContextERKNS1_9StringValERKNS1_6IntValE'],
     [['substr', 'substring'], 'VARCHAR', ['VARCHAR', 'INT', 'INT'],
         '_ZN5doris15StringFunctions9substringEPN'
-        '9doris_udf15FunctionContextERKNS1_9StringValERKNS1_6IntValES9_'],
+        '9doris_udf15FunctionContextERKNS1_9StringValERKNS1_6IntValES9_', 'vec'],
     [['strleft', 'left'], 'VARCHAR', ['VARCHAR', 'INT'],
         '_ZN5doris15StringFunctions4leftEPN9doris_udf'
-        '15FunctionContextERKNS1_9StringValERKNS1_6IntValE'],
+        '15FunctionContextERKNS1_9StringValERKNS1_6IntValE', 'vec'],
     [['strright', 'right'], 'VARCHAR', ['VARCHAR', 'INT'],
         '_ZN5doris15StringFunctions5rightEPN9doris_udf'
-        '15FunctionContextERKNS1_9StringValERKNS1_6IntValE'],
+        '15FunctionContextERKNS1_9StringValERKNS1_6IntValE', 'vec'],
     [['ends_with'], 'BOOLEAN', ['VARCHAR', 'VARCHAR'],
         '_ZN5doris15StringFunctions9ends_withEPN9doris_udf15FunctionContextERKNS1_9StringValES6_', 'vec'],
     [['starts_with'], 'BOOLEAN', ['VARCHAR', 'VARCHAR'],
         '_ZN5doris15StringFunctions11starts_withEPN9doris_udf15FunctionContextERKNS1_9StringValES6_', 'vec'],
     [['null_or_empty'], 'BOOLEAN', ['VARCHAR'],
-        '_ZN5doris15StringFunctions13null_or_emptyEPN9doris_udf15FunctionContextERKNS1_9StringValE'],
+        '_ZN5doris15StringFunctions13null_or_emptyEPN9doris_udf15FunctionContextERKNS1_9StringValE', 'vec'],
     [['space'], 'VARCHAR', ['INT'],
-        '_ZN5doris15StringFunctions5spaceEPN9doris_udf15FunctionContextERKNS1_6IntValE'],
+        '_ZN5doris15StringFunctions5spaceEPN9doris_udf15FunctionContextERKNS1_6IntValE', 'vec'],
     [['repeat'], 'VARCHAR', ['VARCHAR', 'INT'],
         '_ZN5doris15StringFunctions6repeatEPN9doris_udf'
-        '15FunctionContextERKNS1_9StringValERKNS1_6IntValE'],
+        '15FunctionContextERKNS1_9StringValERKNS1_6IntValE', 'vec'],
     [['lpad'], 'VARCHAR', ['VARCHAR', 'INT', 'VARCHAR'],
             '_ZN5doris15StringFunctions4lpadEPN9doris_udf'
             '15FunctionContextERKNS1_9StringValERKNS1_6IntValES6_'],
@@ -693,7 +693,7 @@ visible_functions = [
             '_ZN5doris15StringFunctions4rpadEPN9doris_udf'
             '15FunctionContextERKNS1_9StringValERKNS1_6IntValES6_'],
     [['append_trailing_char_if_absent'], 'VARCHAR', ['VARCHAR', 'VARCHAR'],
-	'_ZN5doris15StringFunctions30append_trailing_char_if_absentEPN9doris_udf15FunctionContextERKNS1_9StringValES6_'],
+	'_ZN5doris15StringFunctions30append_trailing_char_if_absentEPN9doris_udf15FunctionContextERKNS1_9StringValES6_', 'vec'],
     [['length'], 'INT', ['VARCHAR'],
             '_ZN5doris15StringFunctions6lengthEPN9doris_udf15FunctionContextERKNS1_9StringValE', 'vec'],
     [['char_length', 'character_length'], 'INT', ['VARCHAR'],
@@ -711,7 +711,7 @@ visible_functions = [
     [['rtrim'], 'VARCHAR', ['VARCHAR'],
             '_ZN5doris15StringFunctions5rtrimEPN9doris_udf15FunctionContextERKNS1_9StringValE', 'vec'],
     [['ascii'], 'INT', ['VARCHAR'],
-            '_ZN5doris15StringFunctions5asciiEPN9doris_udf15FunctionContextERKNS1_9StringValE'],
+            '_ZN5doris15StringFunctions5asciiEPN9doris_udf15FunctionContextERKNS1_9StringValE', 'vec'],
     [['instr'], 'INT', ['VARCHAR', 'VARCHAR'],
             '_ZN5doris15StringFunctions5instrEPN9doris_udf15FunctionContextERKNS1_9StringValES6_', 'vec'],
     [['locate'], 'INT', ['VARCHAR', 'VARCHAR'],
@@ -734,15 +734,15 @@ visible_functions = [
             '_ZN5doris15StringFunctions12regexp_closeEPN9doris_udf'
             '15FunctionContextENS2_18FunctionStateScopeE'],
     [['concat'], 'VARCHAR', ['VARCHAR', '...'],
-            '_ZN5doris15StringFunctions6concatEPN9doris_udf15FunctionContextEiPKNS1_9StringValE'],
+            '_ZN5doris15StringFunctions6concatEPN9doris_udf15FunctionContextEiPKNS1_9StringValE', 'vec'],
     [['replace'], 'VARCHAR', ['VARCHAR', 'VARCHAR', 'VARCHAR'],
             '_ZN5doris15StringFunctions7replaceEPN9doris_udf15FunctionContextERKNS1_9StringValES6_S6_'],
     [['concat_ws'], 'VARCHAR', ['VARCHAR', 'VARCHAR', '...'],
             '_ZN5doris15StringFunctions9concat_wsEPN9doris_udf'
-            '15FunctionContextERKNS1_9StringValEiPS5_'],
+            '15FunctionContextERKNS1_9StringValEiPS5_', 'vec'],
     [['find_in_set'], 'INT', ['VARCHAR', 'VARCHAR'],
             '_ZN5doris15StringFunctions11find_in_setEPN9doris_udf'
-            '15FunctionContextERKNS1_9StringValES6_'],
+            '15FunctionContextERKNS1_9StringValES6_', 'vec'],
     [['parse_url'], 'VARCHAR', ['VARCHAR', 'VARCHAR'],
             '_ZN5doris15StringFunctions9parse_urlEPN9doris_udf'
             '15FunctionContextERKNS1_9StringValES6_',
