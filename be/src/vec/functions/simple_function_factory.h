@@ -26,7 +26,6 @@ namespace doris::vectorized {
 class SimpleFunctionFactory;
 
 void registerFunctionComparison(SimpleFunctionFactory& factory);
-void registerFunctionAbs(SimpleFunctionFactory& factory);
 void registerFunctionHLLCardinality(SimpleFunctionFactory& factory);
 void registerFunctionHLLEmpty(SimpleFunctionFactory& factory);
 void registerFunctionHLLHash(SimpleFunctionFactory& factory);
@@ -37,12 +36,13 @@ void registerFunctionMinus(SimpleFunctionFactory& factory);
 void registerFunctionMultiply(SimpleFunctionFactory& factory);
 void registerFunctionDivide(SimpleFunctionFactory& factory);
 void registerFunctionIntDiv(SimpleFunctionFactory& factory);
+void registerFunctionMath(SimpleFunctionFactory& factory);
 void registerFunctionModulo(SimpleFunctionFactory& factory);
 void registerFunctionBitmap(SimpleFunctionFactory& factory);
 void registerFunctionIsNull(SimpleFunctionFactory& factory);
 void registerFunctionIsNotNull(SimpleFunctionFactory& factory);
-void registerFunctionToTimeFuction(SimpleFunctionFactory & factory);
-void registerFunctionTimeOfFuction(SimpleFunctionFactory & factory);
+void registerFunctionToTimeFuction(SimpleFunctionFactory& factory);
+void registerFunctionTimeOfFuction(SimpleFunctionFactory& factory);
 void registerFunctionString(SimpleFunctionFactory& factory);
 void registerFunctionIn(SimpleFunctionFactory& factory);
 void registerFunctionIf(SimpleFunctionFactory& factory);
@@ -63,7 +63,7 @@ public:
             registerFunction(Function::name, &Function::create);
     }
 
-    void registerAlias(const std::string &name, const std::string &alias) {
+    void registerAlias(const std::string& name, const std::string& alias) {
         function_creators[alias] = function_creators[name];
     }
 
@@ -88,7 +88,6 @@ public:
         static std::once_flag oc;
         static SimpleFunctionFactory instance;
         std::call_once(oc, [&]() {
-            registerFunctionAbs(instance);
             registerFunctionBitmap(instance);
             registerFunctionHLLCardinality(instance);
             registerFunctionHLLEmpty(instance);
@@ -98,6 +97,7 @@ public:
             registerFunctionCast(instance);
             registerFunctionPlus(instance);
             registerFunctionMinus(instance);
+            registerFunctionMath(instance);
             registerFunctionMultiply(instance);
             registerFunctionDivide(instance);
             registerFunctionIntDiv(instance);
