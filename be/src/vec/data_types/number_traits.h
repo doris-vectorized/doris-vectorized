@@ -167,7 +167,8 @@ struct ResultOfModulo {
 
 template <typename A>
 struct ResultOfNegate {
-    using Type = typename Construct<true, std::is_floating_point_v<A>, sizeof(Int64)>::Type;
+    using Type = typename Construct<true, std::is_floating_point_v<A>,
+                                    std::is_signed_v<A> ? sizeof(A) : nextSize(sizeof(A))>::Type;
 };
 
 template <typename A>
