@@ -44,6 +44,8 @@ void registerFunctionIsNotNull(SimpleFunctionFactory& factory);
 void registerFunctionToTimeFuction(SimpleFunctionFactory& factory);
 void registerFunctionTimeOfFuction(SimpleFunctionFactory& factory);
 void registerFunctionString(SimpleFunctionFactory& factory);
+void registerFunctionDateTimeToString(SimpleFunctionFactory& factory);
+void registerFunctionDateTimeStringToString(SimpleFunctionFactory& factory);
 void registerFunctionIn(SimpleFunctionFactory& factory);
 void registerFunctionIf(SimpleFunctionFactory& factory);
 void registerFunctionDateTimeComputation(SimpleFunctionFactory& factory);
@@ -112,6 +114,8 @@ public:
             registerFunctionIf(instance);
             registerFunctionDateTimeComputation(instance);
             registerFunctionStrToDate(instance);
+            registerFunctionDateTimeToString(instance);
+            registerFunctionDateTimeStringToString(instance);
         });
         return instance;
     }

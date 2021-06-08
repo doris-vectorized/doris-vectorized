@@ -31,9 +31,12 @@ using FunctionHour = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToHourImpl
 using FunctionMinute = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToMinuteImpl>;
 using FunctionSecond = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToSecondImpl>;
 using FunctionToDays = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToDaysImpl>;
+using FunctionToDate = FunctionDateOrDateTimeToSomething<DataTypeDateTime, ToDateImpl>;
+using FunctionDate = FunctionDateOrDateTimeToSomething<DataTypeDateTime, DateImpl>;
+using FunctionTimeStamp = FunctionDateOrDateTimeToSomething<DataTypeDateTime, TimeStampImpl>;
+using FunctionUnixTimeStamp = FunctionDateOrDateTimeToSomething<DataTypeInt32, UnixTimeStampImpl>;
 
-void registerFunctionToTimeFuction(SimpleFunctionFactory & factory)
-{
+void registerFunctionToTimeFuction(SimpleFunctionFactory& factory) {
     factory.registerFunction<FunctionSecond>();
     factory.registerFunction<FunctionMinute>();
     factory.registerFunction<FunctionHour>();
@@ -42,6 +45,10 @@ void registerFunctionToTimeFuction(SimpleFunctionFactory & factory)
     factory.registerFunction<FunctionYear>();
     factory.registerFunction<FunctionQuarter>();
     factory.registerFunction<FunctionToDays>();
+    factory.registerFunction<FunctionToDate>();
+    factory.registerFunction<FunctionDate>();
+    factory.registerFunction<FunctionTimeStamp>();
+    factory.registerFunction<FunctionUnixTimeStamp>();
 }
 
-}
+} // namespace doris::vectorized
