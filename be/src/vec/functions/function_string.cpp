@@ -416,6 +416,16 @@ struct StringAppendTrailingCharIfAbsent {
     }
 };
 
+struct StringLPad {
+    static constexpr auto name = "lpad";
+    static constexpr auto is_lpad = true;
+};
+
+struct StringRPad {
+    static constexpr auto name = "rpad";
+    static constexpr auto is_lpad = false;
+};
+
 template <typename LeftDataType, typename RightDataType>
 using StringStartsWithImpl = StringFunctionImpl<LeftDataType, RightDataType, StartsWithOp>;
 
@@ -459,6 +469,9 @@ using FunctionTrim = FunctionStringToString<TrimImpl<true, true>, NameTrim>;
 using FunctionStringAppendTrailingCharIfAbsent =
         FunctionBinaryStringOperateToNullType<StringAppendTrailingCharIfAbsent>;
 
+using FunctionStringLPad = FunctionStringPad<StringLPad>;
+using FunctionStringRPad = FunctionStringPad<StringRPad>;
+
 void registerFunctionString(SimpleFunctionFactory& factory) {
     // factory.registerFunction<>();
     factory.registerFunction<FunctionStringASCII>();
@@ -484,6 +497,8 @@ void registerFunctionString(SimpleFunctionFactory& factory) {
     factory.registerFunction<FunctionStringConcatWs>();
     factory.registerFunction<FunctionStringAppendTrailingCharIfAbsent>();
     factory.registerFunction<FunctionStringRepeat>();
+    factory.registerFunction<FunctionStringLPad>();
+    factory.registerFunction<FunctionStringRPad>();
 
     factory.registerAlias(FunctionLeft::name, "strleft");
     factory.registerAlias(FunctionRight::name, "strright");

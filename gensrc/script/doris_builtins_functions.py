@@ -678,10 +678,10 @@ visible_functions = [
         '15FunctionContextERKNS1_9StringValERKNS1_6IntValE', 'vec'],
     [['lpad'], 'VARCHAR', ['VARCHAR', 'INT', 'VARCHAR'],
             '_ZN5doris15StringFunctions4lpadEPN9doris_udf'
-            '15FunctionContextERKNS1_9StringValERKNS1_6IntValES6_'],
+            '15FunctionContextERKNS1_9StringValERKNS1_6IntValES6_', 'vec'],
     [['rpad'], 'VARCHAR', ['VARCHAR', 'INT', 'VARCHAR'],
             '_ZN5doris15StringFunctions4rpadEPN9doris_udf'
-            '15FunctionContextERKNS1_9StringValERKNS1_6IntValES6_'],
+            '15FunctionContextERKNS1_9StringValERKNS1_6IntValES6_', 'vec'],
     [['append_trailing_char_if_absent'], 'VARCHAR', ['VARCHAR', 'VARCHAR'],
 	'_ZN5doris15StringFunctions30append_trailing_char_if_absentEPN9doris_udf15FunctionContextERKNS1_9StringValES6_', 'vec'],
     [['length'], 'INT', ['VARCHAR'],
