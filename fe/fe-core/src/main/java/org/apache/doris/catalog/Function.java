@@ -83,6 +83,16 @@ public class Function implements Writable {
         IS_MATCHABLE
     }
 
+    public enum NullableMode {
+        // Whether output column is nullable is depend on the input column is nullable
+        DEPEND_ON_ARGUMENT,
+        // like 'str_to_date', 'cast', 'date_format' etc, the output column is nullable
+        // depend on input content
+        ALWAYS_NULLABLE,
+        // like 'count', the output column is always not nullable
+        ALWAYS_NOT_NULLABLE
+    }
+
     public static final long UNIQUE_FUNCTION_ID = 0;
     // Function id, every function has a unique id. Now all built-in functions' id is 0
     private long id = 0;
@@ -104,6 +114,8 @@ public class Function implements Writable {
     // e.g. /udfs/udfs.jar
     private HdfsURI location;
     private TFunctionBinaryType binaryType;
+
+    private NullableMode nullableMode = NullableMode.DEPEND_ON_ARGUMENT;
 
     private boolean vectorized;
 
@@ -733,5 +745,9 @@ public class Function implements Writable {
 
     boolean isVectorized() {
         return vectorized;
+    }
+
+    public NullableMode getNullableMode() {
+        return nullableMode;
     }
 }
