@@ -49,6 +49,7 @@ void registerFunctionDateTimeStringToString(SimpleFunctionFactory& factory);
 void registerFunctionIn(SimpleFunctionFactory& factory);
 void registerFunctionIf(SimpleFunctionFactory& factory);
 void registerFunctionDateTimeComputation(SimpleFunctionFactory& factory);
+void registerFunctionStrToDate(SimpleFunctionFactory& factory);
 
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
@@ -112,6 +113,7 @@ public:
             registerFunctionIn(instance);
             registerFunctionIf(instance);
             registerFunctionDateTimeComputation(instance);
+            registerFunctionStrToDate(instance);
             registerFunctionDateTimeToString(instance);
             registerFunctionDateTimeStringToString(instance);
         });
