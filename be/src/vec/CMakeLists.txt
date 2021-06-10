@@ -88,6 +88,7 @@ set(VEC_FILES
   functions/functions_logical.cpp
   functions/function_cast.cpp
   functions/function_string.cpp
+  functions/function_timestamp.cpp
   functions/hll_cardinality.cpp
   functions/hll_empty.cpp
   functions/hll_hash.cpp
