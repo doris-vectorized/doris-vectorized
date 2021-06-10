@@ -125,11 +125,13 @@ public:
     }
 
     void deserialize(AggregateDataPtr place, std::istream& buf, Arena* arena) const override {
-        bool flag = 1;
+        bool flag = true;
         if (result_is_nullable) readBinary(flag, buf);
         if (flag) {
             setFlag(place);
             nested_function->deserialize(nestedPlace(place), buf, arena);
+        } else {
+            initFlag(place);
         }
     }
 

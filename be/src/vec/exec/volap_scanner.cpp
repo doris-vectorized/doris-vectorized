@@ -50,7 +50,7 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
         block->clear();
         std::vector<vectorized::MutableColumnPtr> columns;
         for (auto slot : get_query_slots()) {
-            columns.emplace_back(slot->get_empty_mutable_column());
+            columns.emplace_back(slot->get_empty_mutable_column())->reserve(state->batch_size());
         }
         while (true) {
             // block is full, break

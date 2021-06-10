@@ -302,7 +302,7 @@ Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
 Status AggregationNode::close(RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::close(state));
     VExpr::close(_probe_expr_ctxs, state);
-    _executor.close();
+    if (_executor.close) _executor.close();
     return Status::OK();
 }
 

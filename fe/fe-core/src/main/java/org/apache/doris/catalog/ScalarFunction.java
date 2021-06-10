@@ -227,6 +227,7 @@ public class ScalarFunction extends Function {
         return createVecBuiltin(name, symbol, argTypes, false, retType, false);
     }
 
+    //TODO: This method should not be here, move to other place in the future
     public static ScalarFunction createVecBuiltin(
             String name, String symbol, ArrayList<Type> argTypes,
             boolean hasVarArgs, Type retType, boolean userVisible) {

@@ -1717,6 +1717,16 @@ abstract public class Expr extends TreeNode<Expr> implements ParseNode, Cloneabl
      * overwrite this method to plan correct
      */
     public boolean isNullable() {
+        if (fn != null) {
+            if (fn.getNullableMode().equals(Function.NullableMode.DEPEND_ON_ARGUMENT)) {
+                for (Expr expr : children) {
+                    if (expr.isNullable()) return true;
+                }
+                return false;
+            } else {
+                return fn.getNullableMode().equals(Function.NullableMode.ALWAYS_NULLABLE);
+            }
+        }
         return true;
     }
 }
