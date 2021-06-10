@@ -1060,8 +1060,9 @@ public class FunctionSet {
             vecFns = Lists.newArrayList();
             vectorizedFunctions.put(fn.functionName(), vecFns);
         }
-        vecFns.add(new Function(fn.getId(), fn.getFunctionName(), fn.getArgs(), fn.getReturnType(), fn.hasVarArgs(),
-                fn.getBinaryType(), fn.isUserVisible(), true));
+        ScalarFunction scalarFunction = (ScalarFunction)fn;
+        vecFns.add(ScalarFunction.createVecBuiltin(scalarFunction.functionName(), scalarFunction.getSymbolName(),
+                Lists.newArrayList(scalarFunction.getArgs()), scalarFunction.hasVarArgs(), scalarFunction.getReturnType(), scalarFunction.isUserVisible()));
     }
 
 
