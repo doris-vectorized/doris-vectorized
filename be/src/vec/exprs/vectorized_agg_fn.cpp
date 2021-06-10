@@ -76,7 +76,8 @@ Status AggFnEvaluator::prepare(RuntimeState* state, const RowDescriptor& desc, M
         // Now, For correctness. We have to treat each AggFn argument as nullable. which will cause execute slowly
         // TODO: RECHCK THE BEHAVIOR
         auto data_type = _input_exprs_ctxs[i]->root()->data_type();
-        argument_types.emplace_back(data_type->isNullable() ? data_type : std::make_shared<DataTypeNullable>(data_type));
+//        argument_types.emplace_back(data_type->isNullable() ? data_type : std::make_shared<DataTypeNullable>(data_type));
+        argument_types.emplace_back(data_type);
         child_expr_name.emplace_back(_input_exprs_ctxs[i]->root()->expr_name());
     }
     _function = AggregateFunctionSimpleFactory::instance().get(_fn.name.function_name,
@@ -165,7 +166,7 @@ std::vector<ColumnPtr> AggFnEvaluator::_get_argment_columns(Block* block) const 
         int column_id = -1;
         _input_exprs_ctxs[i]->execute(block, &column_id);
         auto ptr = block->getByPosition(column_id).column->convertToFullColumnIfConst();
-        columns[i] = makeNullable(ptr);
+        columns[i] = ptr;
     }
     return columns;
 }
