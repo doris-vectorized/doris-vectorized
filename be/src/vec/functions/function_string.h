@@ -53,6 +53,16 @@ inline size_t get_utf8_byte_length(unsigned char byte) {
     return char_size;
 }
 
+inline size_t get_char_len(const std::string_view& str, std::vector<size_t>* str_index) {
+    size_t char_len = 0;
+    for (size_t i = 0, char_size = 0; i < str.length(); i += char_size) {
+        char_size = get_utf8_byte_length(str[i]);
+        str_index->push_back(i);
+        ++char_len;
+    }
+    return char_len;
+}
+
 struct StringOP {
     static void push_empty_string(int index, ColumnString::Chars& chars,
                                   ColumnString::Offsets& offsets) {
@@ -67,8 +77,7 @@ struct StringOP {
     }
 
     static void push_value_string(const std::string_view& string_value, int index,
-                                  ColumnString::Chars& chars,
-                                  ColumnString::Offsets& offsets) {
+                                  ColumnString::Chars& chars, ColumnString::Offsets& offsets) {
         chars.insert(string_value.data(), string_value.data() + string_value.size());
         chars.push_back('\0');
         offsets[index] = chars.size();
@@ -469,7 +478,8 @@ public:
                 }
             }
             fmt::format_to(buffer, "{}", fmt::join(views, seq));
-            StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i, res_data, res_offset);
+            StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i, res_data,
+                                        res_offset);
         }
 
         block.getByPosition(result).column =
@@ -509,7 +519,7 @@ public:
 
         return Status::RuntimeError(fmt::format("not support {}", getName()));
     }
-    
+
     void vector_vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
                        const ColumnInt32::Container& repeats, ColumnString::Chars& res_data,
                        ColumnString::Offsets& res_offsets) {
@@ -527,8 +537,128 @@ public:
             for (int i = 0; i < repeat; ++i) {
                 buffer.append(raw_str, raw_str + size);
             }
-            StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i, res_data, res_offsets);
+            StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i, res_data,
+                                        res_offsets);
         }
+    }
+};
+
+template <typename Impl>
+class FunctionStringPad : public IFunction {
+public:
+    static constexpr auto name = Impl::name;
+    static FunctionPtr create() { return std::make_shared<FunctionStringPad>(); }
+    String getName() const override { return name; }
+    size_t getNumberOfArguments() const override { return 3; }
+
+    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+        return makeNullable(std::make_shared<DataTypeString>());
+    }
+    bool useDefaultImplementationForNulls() const override { return false; }
+    bool useDefaultImplementationForConstants() const override { return true; }
+
+    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+                       size_t input_rows_count) override {
+        DCHECK_GE(arguments.size(), 3);
+        auto null_map = ColumnUInt8::create(input_rows_count, 0);
+        // we create a zero column to simply implement
+        auto const_null_map = ColumnUInt8::create(input_rows_count, 0);
+        auto res = ColumnString::create();
+
+        size_t argument_size = arguments.size();
+        ColumnPtr argument_columns[argument_size];
+        for (size_t i = 0; i < argument_size; ++i) {
+            argument_columns[i] =
+                    block.getByPosition(arguments[i]).column->convertToFullColumnIfConst();
+            if (auto* nullable = checkAndGetColumn<const ColumnNullable>(*argument_columns[i])) {
+                argument_columns[i] = nullable->getNestedColumnPtr();
+                VectorizedUtils::update_null_map(null_map->getData(), nullable->getNullMapData());
+            }
+        }
+
+        auto& null_map_data = null_map->getData();
+        auto& res_offsets = res->getOffsets();
+        auto& res_chars = res->getChars();
+        res_offsets.resize(input_rows_count);
+
+        auto strcol = assert_cast<const ColumnString*>(argument_columns[0].get());
+        auto& strcol_offsets = strcol->getOffsets();
+        auto& strcol_chars = strcol->getChars();
+
+        auto col_len = assert_cast<const ColumnInt32*>(argument_columns[1].get());
+        auto& col_len_data = col_len->getData();
+
+        auto padcol = assert_cast<const ColumnString*>(argument_columns[2].get());
+        auto& padcol_offsets = padcol->getOffsets();
+        auto& padcol_chars = padcol->getChars();
+
+        std::vector<size_t> str_index;
+        std::vector<size_t> pad_index;
+
+        fmt::memory_buffer buffer;
+
+        for (size_t i = 0; i < input_rows_count; ++i) {
+            str_index.clear();
+            pad_index.clear();
+            buffer.clear();
+            if (null_map_data[i] || col_len_data[i] < 0) {
+                StringOP::push_empty_string(i, res_chars, res_offsets);
+            } else {
+                int str_len = strcol_offsets[i] - strcol_offsets[i - 1] - 1;
+                const char* str_data =
+                        reinterpret_cast<const char*>(&strcol_chars[strcol_offsets[i - 1]]);
+
+                int pad_len = padcol_offsets[i] - padcol_offsets[i - 1] - 1;
+                const char* pad_data =
+                        reinterpret_cast<const char*>(&padcol_chars[padcol_offsets[i - 1]]);
+
+                size_t str_char_size =
+                        get_char_len(std::string_view(str_data, str_len), &str_index);
+                size_t pad_char_size =
+                        get_char_len(std::string_view(pad_data, pad_len), &pad_index);
+
+                int32_t pad_byte_len = 0;
+                int32_t pad_times = (col_len_data[i] - str_char_size) / pad_char_size;
+                int32_t pad_remainder = (col_len_data[i] - str_char_size) % pad_char_size;
+                pad_byte_len = pad_times * pad_len;
+                pad_byte_len += pad_index[pad_remainder];
+                int32_t byte_len = str_len + pad_byte_len;
+                // StringVal result(context, byte_len);
+                if constexpr (Impl::is_lpad) {
+                    int pad_idx = 0;
+                    int result_index = 0;
+
+                    // Prepend chars of pad.
+                    while (result_index++ < pad_byte_len) {
+                        buffer.push_back(pad_data[pad_idx++]);
+                        pad_idx = pad_idx % pad_len;
+                    }
+
+                    // Append given string.
+                    buffer.append(str_data, str_data + str_len);
+                    StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i,
+                                                res_chars, res_offsets);
+
+                } else {
+                    // is rpad
+                    buffer.append(str_data, str_data + str_len);
+
+                    // Append chars of pad until desired length
+                    int pad_idx = 0;
+                    int result_len = str_len;
+                    while (result_len++ < byte_len) {
+                        buffer.push_back(pad_data[pad_idx++]);
+                        pad_idx = pad_idx % pad_len;
+                    }
+                    StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i,
+                                                res_chars, res_offsets);
+                }
+            }
+        }
+
+        block.getByPosition(result).column =
+                ColumnNullable::create(std::move(res), std::move(null_map));
+        return Status::OK();
     }
 };
 
