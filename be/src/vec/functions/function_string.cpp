@@ -1,3 +1,20 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/functions/function_string.h"
 
 #include <re2/re2.h>
@@ -348,10 +365,10 @@ struct StringSpace {
         res_offsets.resize(data.size());
         size_t input_size = res_offsets.size();
         fmt::memory_buffer buffer;
-        for(size_t i = 0;i < input_size;++i) {
+        for (size_t i = 0; i < input_size; ++i) {
             buffer.clear();
             if (data[i] > 0) {
-                for(size_t j = 0;j < data[i]; ++j) {
+                for (size_t j = 0; j < data[i]; ++j) {
                     buffer.push_back(' ');
                 }
                 StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i,
@@ -384,21 +401,29 @@ struct StringAppendTrailingCharIfAbsent {
             const auto r_raw = reinterpret_cast<const char*>(&rdata[loffsets[i - 1]]);
 
             if (r_size == 0) {
-                StringOP::push_null_string(i, res_data, res_offsets,
-                                           null_map_data);
+                StringOP::push_null_string(i, res_data, res_offsets, null_map_data);
                 continue;
             }
             if (l_raw[l_size - 1] == r_raw[0]) {
-                StringOP::push_value_string(std::string_view(l_raw, l_size), i,
-                                            res_data, res_offsets);
+                StringOP::push_value_string(std::string_view(l_raw, l_size), i, res_data,
+                                            res_offsets);
                 continue;
             }
-            StringOP::push_value_string(std::string_view(l_raw, l_size), i,
-                                        res_data, res_offsets);
+            StringOP::push_value_string(std::string_view(l_raw, l_size), i, res_data, res_offsets);
             res_data[res_data.size() - 1] = *r_raw;
             res_data.push_back('\0');
         }
     }
+};
+
+struct StringLPad {
+    static constexpr auto name = "lpad";
+    static constexpr auto is_lpad = true;
+};
+
+struct StringRPad {
+    static constexpr auto name = "rpad";
+    static constexpr auto is_lpad = false;
 };
 
 template <typename LeftDataType, typename RightDataType>
@@ -417,7 +442,7 @@ using StringFindInSetImpl = StringFunctionImpl<LeftDataType, RightDataType, Find
 using FunctionStringASCII = FunctionUnaryToType<StringASCII, NameStringASCII>;
 using FunctionStringLength = FunctionUnaryToType<StringLengthImpl, NameStringLenght>;
 using FunctionStringUTF8Length = FunctionUnaryToType<StringUtf8LengthImpl, NameStringUtf8Length>;
-using FunctionStringSpace = FunctionUnaryToType<StringSpace,NameStringSpace>;
+using FunctionStringSpace = FunctionUnaryToType<StringSpace, NameStringSpace>;
 using FunctionStringStartsWith =
         FunctionBinaryToType<DataTypeString, DataTypeString, StringStartsWithImpl, NameStartsWith>;
 using FunctionStringEndsWith =
@@ -444,6 +469,9 @@ using FunctionTrim = FunctionStringToString<TrimImpl<true, true>, NameTrim>;
 using FunctionStringAppendTrailingCharIfAbsent =
         FunctionBinaryStringOperateToNullType<StringAppendTrailingCharIfAbsent>;
 
+using FunctionStringLPad = FunctionStringPad<StringLPad>;
+using FunctionStringRPad = FunctionStringPad<StringRPad>;
+
 void registerFunctionString(SimpleFunctionFactory& factory) {
     // factory.registerFunction<>();
     factory.registerFunction<FunctionStringASCII>();
@@ -469,6 +497,8 @@ void registerFunctionString(SimpleFunctionFactory& factory) {
     factory.registerFunction<FunctionStringConcatWs>();
     factory.registerFunction<FunctionStringAppendTrailingCharIfAbsent>();
     factory.registerFunction<FunctionStringRepeat>();
+    factory.registerFunction<FunctionStringLPad>();
+    factory.registerFunction<FunctionStringRPad>();
 
     factory.registerAlias(FunctionLeft::name, "strleft");
     factory.registerAlias(FunctionRight::name, "strright");
