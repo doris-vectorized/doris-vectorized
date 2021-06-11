@@ -130,8 +130,6 @@ public:
         if (flag) {
             setFlag(place);
             nested_function->deserialize(nestedPlace(place), buf, arena);
-        } else {
-            initFlag(place);
         }
     }
 
