@@ -26,7 +26,6 @@ namespace doris::vectorized {
 class SimpleFunctionFactory;
 
 void registerFunctionComparison(SimpleFunctionFactory& factory);
-void registerFunctionAbs(SimpleFunctionFactory& factory);
 void registerFunctionHLLCardinality(SimpleFunctionFactory& factory);
 void registerFunctionHLLEmpty(SimpleFunctionFactory& factory);
 void registerFunctionHLLHash(SimpleFunctionFactory& factory);
@@ -37,6 +36,7 @@ void registerFunctionMinus(SimpleFunctionFactory& factory);
 void registerFunctionMultiply(SimpleFunctionFactory& factory);
 void registerFunctionDivide(SimpleFunctionFactory& factory);
 void registerFunctionIntDiv(SimpleFunctionFactory& factory);
+void registerFunctionMath(SimpleFunctionFactory& factory);
 void registerFunctionModulo(SimpleFunctionFactory& factory);
 void registerFunctionBitmap(SimpleFunctionFactory& factory);
 void registerFunctionIsNull(SimpleFunctionFactory& factory);
@@ -92,7 +92,6 @@ public:
         static std::once_flag oc;
         static SimpleFunctionFactory instance;
         std::call_once(oc, [&]() {
-            registerFunctionAbs(instance);
             registerFunctionBitmap(instance);
             registerFunctionHLLCardinality(instance);
             registerFunctionHLLEmpty(instance);
@@ -102,6 +101,7 @@ public:
             registerFunctionCast(instance);
             registerFunctionPlus(instance);
             registerFunctionMinus(instance);
+            registerFunctionMath(instance);
             registerFunctionMultiply(instance);
             registerFunctionDivide(instance);
             registerFunctionIntDiv(instance);
