@@ -50,6 +50,7 @@ void registerFunctionIn(SimpleFunctionFactory& factory);
 void registerFunctionIf(SimpleFunctionFactory& factory);
 void registerFunctionDateTimeComputation(SimpleFunctionFactory& factory);
 void registerFunctionStrToDate(SimpleFunctionFactory& factory);
+void registerFunctionJson(SimpleFunctionFactory& factory);
 
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
@@ -116,6 +117,7 @@ public:
             registerFunctionStrToDate(instance);
             registerFunctionDateTimeToString(instance);
             registerFunctionDateTimeStringToString(instance);
+            registerFunctionJson(instance);
         });
         return instance;
     }
