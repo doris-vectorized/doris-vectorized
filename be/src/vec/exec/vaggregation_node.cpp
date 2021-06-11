@@ -820,6 +820,7 @@ Status AggregationNode::_merge_with_serialized_key(Block* block) {
     }
 
     std::unique_ptr<char[]> deserialize_buffer(new char[_total_size_of_aggregate_states]);
+
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         auto column = block->getByPosition(i + key_size).column;
         if (column->isNullable()) {
@@ -831,6 +832,8 @@ Status AggregationNode::_merge_with_serialized_key(Block* block) {
             data_buffer.assign(ref.data, ref.size);
             std::istringstream buf(data_buffer);
 
+            _create_agg_status(deserialize_buffer.get());
+
             _aggregate_evaluators[i]->function()->deserialize(
                     deserialize_buffer.get() + _offsets_of_aggregate_states[i], buf,
                     &_agg_arena_pool);
@@ -838,6 +841,8 @@ Status AggregationNode::_merge_with_serialized_key(Block* block) {
             _aggregate_evaluators[i]->function()->merge(
                     places.data()[j] + _offsets_of_aggregate_states[i],
                     deserialize_buffer.get() + _offsets_of_aggregate_states[i], &_agg_arena_pool);
+
+            _destory_agg_status(deserialize_buffer.get());
         }
     }
     return Status::OK();
