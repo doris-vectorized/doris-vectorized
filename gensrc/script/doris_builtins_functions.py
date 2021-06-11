@@ -385,9 +385,9 @@ visible_functions = [
 
     # Math builtin functions
     [['pi'], 'DOUBLE', [],
-        '_ZN5doris13MathFunctions2piEPN9doris_udf15FunctionContextE'],
+        '_ZN5doris13MathFunctions2piEPN9doris_udf15FunctionContextE', 'vec'],
     [['e'], 'DOUBLE', [],
-        '_ZN5doris13MathFunctions1eEPN9doris_udf15FunctionContextE'],
+        '_ZN5doris13MathFunctions1eEPN9doris_udf15FunctionContextE', 'vec'],
 
     [['abs'], 'DOUBLE', ['DOUBLE'],
         '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
@@ -409,23 +409,23 @@ visible_functions = [
         '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_12DecimalV2ValE', 'vec'],
 
     [['sign'], 'FLOAT', ['DOUBLE'],
-        '_ZN5doris13MathFunctions4signEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+        '_ZN5doris13MathFunctions4signEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
 
     [['sin'], 'DOUBLE', ['DOUBLE'],
-        '_ZN5doris13MathFunctions3sinEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+        '_ZN5doris13MathFunctions3sinEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['asin'], 'DOUBLE', ['DOUBLE'],
-        '_ZN5doris13MathFunctions4asinEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+        '_ZN5doris13MathFunctions4asinEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['cos'], 'DOUBLE', ['DOUBLE'],
-        '_ZN5doris13MathFunctions3cosEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+        '_ZN5doris13MathFunctions3cosEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['acos'], 'DOUBLE', ['DOUBLE'],
-        '_ZN5doris13MathFunctions4acosEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+        '_ZN5doris13MathFunctions4acosEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['tan'], 'DOUBLE', ['DOUBLE'],
-            '_ZN5doris13MathFunctions3tanEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+            '_ZN5doris13MathFunctions3tanEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['atan'], 'DOUBLE', ['DOUBLE'],
-            '_ZN5doris13MathFunctions4atanEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+            '_ZN5doris13MathFunctions4atanEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
 
     [['ceil', 'ceiling', 'dceil'], 'BIGINT', ['DOUBLE'],
-            '_ZN5doris13MathFunctions4ceilEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+            '_ZN5doris13MathFunctions4ceilEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['floor', 'dfloor'], 'BIGINT', ['DOUBLE'],
             '_ZN5doris13MathFunctions5floorEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
     [['round', 'dround'], 'BIGINT', ['DOUBLE'],
@@ -438,15 +438,15 @@ visible_functions = [
             '15FunctionContextERKNS1_9DoubleValERKNS1_6IntValE'],
 
     [['ln', 'dlog1'], 'DOUBLE', ['DOUBLE'],
-            '_ZN5doris13MathFunctions2lnEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+            '_ZN5doris13MathFunctions2lnEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['log'], 'DOUBLE', ['DOUBLE', 'DOUBLE'],
             '_ZN5doris13MathFunctions3logEPN9doris_udf15FunctionContextERKNS1_9DoubleValES6_'],
     [['log2'], 'DOUBLE', ['DOUBLE'],
-            '_ZN5doris13MathFunctions4log2EPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+            '_ZN5doris13MathFunctions4log2EPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['log10', 'dlog10'], 'DOUBLE', ['DOUBLE'],
-            '_ZN5doris13MathFunctions5log10EPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+            '_ZN5doris13MathFunctions5log10EPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['exp', 'dexp'], 'DOUBLE', ['DOUBLE'],
-            '_ZN5doris13MathFunctions3expEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+            '_ZN5doris13MathFunctions3expEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
 
     [['radians'], 'DOUBLE', ['DOUBLE'],
             '_ZN5doris13MathFunctions7radiansEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
@@ -454,9 +454,9 @@ visible_functions = [
             '_ZN5doris13MathFunctions7degreesEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
 
     [['sqrt', 'dsqrt'], 'DOUBLE', ['DOUBLE'],
-            '_ZN5doris13MathFunctions4sqrtEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+            '_ZN5doris13MathFunctions4sqrtEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['pow', 'power', 'dpow', 'fpow'], 'DOUBLE', ['DOUBLE', 'DOUBLE'],
-            '_ZN5doris13MathFunctions3powEPN9doris_udf15FunctionContextERKNS1_9DoubleValES6_'],
+            '_ZN5doris13MathFunctions3powEPN9doris_udf15FunctionContextERKNS1_9DoubleValES6_', 'vec'],
 
     [['rand', 'random'], 'DOUBLE', [],
             '_ZN5doris13MathFunctions4randEPN9doris_udf15FunctionContextE',
@@ -521,28 +521,28 @@ visible_functions = [
 
     [['positive'], 'BIGINT', ['BIGINT'],
             '_ZN5doris13MathFunctions15positive_bigintEPN9doris_udf'
-            '15FunctionContextERKNS1_9BigIntValE'],
+            '15FunctionContextERKNS1_9BigIntValE', 'vec'],
     [['positive'], 'DOUBLE', ['DOUBLE'],
             '_ZN5doris13MathFunctions15positive_doubleEPN9doris_udf'
-            '15FunctionContextERKNS1_9DoubleValE'],
+            '15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['positive'], 'DECIMAL', ['DECIMAL'],
             '_ZN5doris13MathFunctions16positive_decimalEPN9doris_udf'
-            '15FunctionContextERKNS1_10DecimalValE'],
+            '15FunctionContextERKNS1_10DecimalValE', 'vec'],
     [['positive'], 'DECIMALV2', ['DECIMALV2'],
             '_ZN5doris13MathFunctions16positive_decimalEPN9doris_udf'
-            '15FunctionContextERKNS1_12DecimalV2ValE'],
+            '15FunctionContextERKNS1_12DecimalV2ValE', 'vec'],
     [['negative'], 'BIGINT', ['BIGINT'],
             '_ZN5doris13MathFunctions15negative_bigintEPN9doris_udf'
-            '15FunctionContextERKNS1_9BigIntValE'],
+            '15FunctionContextERKNS1_9BigIntValE', 'vec'],
     [['negative'], 'DOUBLE', ['DOUBLE'],
             '_ZN5doris13MathFunctions15negative_doubleEPN9doris_udf'
-            '15FunctionContextERKNS1_9DoubleValE'],
+            '15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['negative'], 'DECIMAL', ['DECIMAL'],
             '_ZN5doris13MathFunctions16negative_decimalEPN9doris_udf'
-            '15FunctionContextERKNS1_10DecimalValE'],
+            '15FunctionContextERKNS1_10DecimalValE', 'vec'],
     [['negative'], 'DECIMALV2', ['DECIMALV2'],
             '_ZN5doris13MathFunctions16negative_decimalEPN9doris_udf'
-            '15FunctionContextERKNS1_12DecimalV2ValE'],
+            '15FunctionContextERKNS1_12DecimalV2ValE', 'vec'],
 
     [['least'], 'TINYINT', ['TINYINT', '...'],
             '_ZN5doris13MathFunctions5leastEPN9doris_udf15FunctionContextEiPKNS1_10TinyIntValE'],
