@@ -40,6 +40,8 @@
 #include "util/priority_thread_pool.hpp"
 #include "util/runtime_profile.h"
 
+#include "vec/exprs/vexpr_context.h"
+
 namespace doris {
 
 #define DS_SUCCESS(x) ((x) >= 0)
@@ -446,6 +448,14 @@ void OlapScanNode::remove_pushed_conjuncts(RuntimeState* state) {
 
     _conjunct_ctxs = std::move(new_conjunct_ctxs);
     _direct_conjunct_size = new_direct_conjunct_size;
+
+    // set vconjunct_ctx is empty, if all conjunct
+    if (_direct_conjunct_size == 0) {
+        if (_vconjunct_ctx_ptr.get() != nullptr) {
+            (*_vconjunct_ctx_ptr.get())->close(state);
+            _vconjunct_ctx_ptr = nullptr;
+        }
+    }
 }
 
 void OlapScanNode::eval_const_conjuncts() {

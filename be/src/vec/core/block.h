@@ -19,7 +19,7 @@
 
 #include <initializer_list>
 #include <list>
-#include <map>
+#include <parallel_hashmap/phmap.h>
 #include <set>
 #include <vector>
 
@@ -44,7 +44,7 @@ class Context;
 class Block {
 private:
     using Container = ColumnsWithTypeAndName;
-    using IndexByName = std::map<String, size_t>;
+    using IndexByName = phmap::flat_hash_map<String, size_t>;
 
     Container data;
     IndexByName index_by_name;

@@ -982,10 +982,8 @@ public class FunctionSet {
                 functions.put(fn.functionName(), fns);
             }
         }
-        if (fns.add(fn)) {
-            return true;
-        }
-        return false;
+        fns.add(fn);
+        return true;
     }
 
     /**
