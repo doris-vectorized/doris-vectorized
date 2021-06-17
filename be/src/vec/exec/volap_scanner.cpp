@@ -127,42 +127,42 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
         char* ptr = (char*)_read_row_cursor.cell_ptr(cid);
         switch (slot_desc->type().type) {
         case TYPE_TINYINT: {
-            reinterpret_cast<ColumnVector<Int8>*>(column_ptr)->insertData(ptr, 0);
+            assert_cast<ColumnVector<Int8>*>(column_ptr)->insertData(ptr, 0);
             break;
         }
         case TYPE_SMALLINT: {
-            reinterpret_cast<ColumnVector<Int16>*>(column_ptr)->insertData(ptr, 0);
+            assert_cast<ColumnVector<Int16>*>(column_ptr)->insertData(ptr, 0);
             break;
         }
         case TYPE_INT: {
-            reinterpret_cast<ColumnVector<Int32>*>(column_ptr)->insertData(ptr, 0);
+            assert_cast<ColumnVector<Int32>*>(column_ptr)->insertData(ptr, 0);
             break;
         }
         case TYPE_BIGINT: {
-            reinterpret_cast<ColumnVector<Int64>*>(column_ptr)->insertData(ptr, 0);
+            assert_cast<ColumnVector<Int64>*>(column_ptr)->insertData(ptr, 0);
             break;
         }
         case TYPE_LARGEINT: {
-            reinterpret_cast<ColumnVector<Int128>*>(column_ptr)->insertData(ptr, 0);
+            assert_cast<ColumnVector<Int128>*>(column_ptr)->insertData(ptr, 0);
             break;
         }
         case TYPE_FLOAT: {
-            reinterpret_cast<ColumnVector<Float32>*>(column_ptr)->insertData(ptr, 0);
+            assert_cast<ColumnVector<Float32>*>(column_ptr)->insertData(ptr, 0);
             break;
         }
         case TYPE_DOUBLE: {
-            reinterpret_cast<ColumnVector<Float64>*>(column_ptr)->insertData(ptr, 0);
+            assert_cast<ColumnVector<Float64>*>(column_ptr)->insertData(ptr, 0);
             break;
         }
         case TYPE_CHAR: {
             Slice* slice = reinterpret_cast<Slice*>(ptr);
-            reinterpret_cast<ColumnString*>(column_ptr)->insertData(
+            assert_cast<ColumnString*>(column_ptr)->insertData(
                     slice->data, strnlen(slice->data, slice->size));
             break;
         }
         case TYPE_VARCHAR: {
             Slice* slice = reinterpret_cast<Slice*>(ptr);
-            reinterpret_cast<ColumnString*>(column_ptr)->insertData(
+            assert_cast<ColumnString*>(column_ptr)->insertData(
                     slice->data, slice->size);
             break;
         }
@@ -187,7 +187,7 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
         case TYPE_HLL: {
             Slice* slice = reinterpret_cast<Slice*>(ptr);
             if (slice->size != 0) {
-                reinterpret_cast<ColumnString*>(column_ptr)->insertData(
+                assert_cast<ColumnString*>(column_ptr)->insertData(
                     slice->data, slice->size);
                 // TODO: in vector exec engine, it is diffcult to set hll size = 0
                 // so we have to serialize here. which will cause two problem
@@ -198,7 +198,7 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
                 std::string result(dst_hll->max_serialized_size(), '0');
                 int size = dst_hll->serialize((uint8_t*)result.c_str());
                 result.resize(size);
-                reinterpret_cast<ColumnString*>(column_ptr)->insertData(
+                assert_cast<ColumnString*>(column_ptr)->insertData(
                         result.c_str(), size);
             }
             break;
@@ -215,14 +215,14 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
             int32_t frac_value = *(int32_t*)(ptr + sizeof(int64_t));
             DecimalV2Value data(int_value, frac_value);
 
-            reinterpret_cast<ColumnDecimal<Decimal128>*>(column_ptr)->insertData(reinterpret_cast<char*>(&data), 0);
+            assert_cast<ColumnDecimal<Decimal128>*>(column_ptr)->insertData(reinterpret_cast<char*>(&data), 0);
             break;
         }
         case TYPE_DATETIME: {
             uint64_t value = *reinterpret_cast<uint64_t*>(ptr);
             DateTimeValue data(value);
 
-            reinterpret_cast<ColumnVector<Int128>*>(column_ptr)->insertData(reinterpret_cast<char*>(&data), 0);
+            assert_cast<ColumnVector<Int128>*>(column_ptr)->insertData(reinterpret_cast<char*>(&data), 0);
             break;
         }
         case TYPE_DATE: {
@@ -235,7 +235,7 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
             DateTimeValue date;
             date.from_olap_date(value);
 
-            reinterpret_cast<ColumnVector<Int128>*>(column_ptr)->insertData(reinterpret_cast<char*>(&date), 0);
+            assert_cast<ColumnVector<Int128>*>(column_ptr)->insertData(reinterpret_cast<char*>(&date), 0);
             break;
         }
         default: {
