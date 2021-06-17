@@ -561,7 +561,11 @@ public class FunctionCallExpr extends Expr {
             if (this.children.isEmpty()) {
                 throw new AnalysisException("The " + fnName + " function must has one input param");
             }
-            Type type = getChild(0).type.getMaxResolutionType();
+            // Prevent the cast type in vector exec engine
+            Type type = getChild(0).type;
+            if (!ConnectContext.get().getSessionVariable().enableVectorizedEngine()) {
+                type = getChild(0).type.getMaxResolutionType();
+            }
             fn = getBuiltinFunction(analyzer, fnName.getFunction(), new Type[]{type},
                 Function.CompareMode.IS_NONSTRICT_SUPERTYPE_OF);
         } else if (fnName.getFunction().equalsIgnoreCase("count_distinct")) {
