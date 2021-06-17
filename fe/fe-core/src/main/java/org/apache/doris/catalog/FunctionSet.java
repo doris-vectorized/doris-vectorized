@@ -1598,6 +1598,27 @@ public class FunctionSet {
                     null, false, true, false));
             // vectorized
             addBuiltin(AggregateFunction.createBuiltin(name,
+                    Lists.<Type>newArrayList(Type.TINYINT), Type.BIGINT, Type.BIGINT, initNull,
+                    prefix + "3sumIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    prefix + "3sumIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, null,
+                    prefix + "10sum_removeIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, false, true, false, true));
+            addBuiltin(AggregateFunction.createBuiltin(name,
+                    Lists.<Type>newArrayList(Type.SMALLINT), Type.BIGINT, Type.BIGINT, initNull,
+                    prefix + "3sumIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    prefix + "3sumIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, null,
+                    prefix + "10sum_removeIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, false, true, false, true));
+            addBuiltin(AggregateFunction.createBuiltin(name,
+                    Lists.<Type>newArrayList(Type.INT), Type.BIGINT, Type.BIGINT, initNull,
+                    prefix + "3sumIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    prefix + "3sumIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, null,
+                    prefix + "10sum_removeIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
+                    null, false, true, false, true));
+            addBuiltin(AggregateFunction.createBuiltin(name,
                     Lists.<Type>newArrayList(Type.BIGINT), Type.BIGINT, Type.BIGINT, initNull,
                     prefix + "3sumIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
                     prefix + "3sumIN9doris_udf9BigIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
