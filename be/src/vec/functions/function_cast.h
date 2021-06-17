@@ -147,7 +147,8 @@ struct ConvertImpl {
             }
 
             block.getByPosition(result).column = std::move(col_to);
-        } else
+        }
+        else
             throw Exception("Illegal column " + named_from.column->getName() +
                                     " of first argument of function " + Name::name,
                             ErrorCodes::ILLEGAL_COLUMN);

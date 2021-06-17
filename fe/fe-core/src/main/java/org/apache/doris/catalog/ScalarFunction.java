@@ -196,6 +196,75 @@ public class ScalarFunction extends Function {
         return createBuiltinOperator(name, symbol, argTypes, retType);
     }
 
+    /**
+     * Creates a builtin scala vec operator function. This is a helper that wraps a few steps
+     * into one call.
+     * TODO: this needs to be kept in sync with what generates the be operator
+     * implementations. (gen_functions.py). Is there a better way to coordinate this.
+     */
+    public static ScalarFunction createVecBuiltinOperator(
+            String name, ArrayList<Type> argTypes, Type retType) {
+        StringBuilder beFn = new StringBuilder(name);
+        boolean usesDecimal = false;
+        boolean usesDecimalV2 = false;
+
+        // just mock a fake symbol for vec function, we treat
+        // all argument is same as first argument
+        for (int i = 0; i < argTypes.size(); ++i) {
+            switch (argTypes.get(0).getPrimitiveType()) {
+                case BOOLEAN:
+                    beFn.append("_boolean_val");
+                    break;
+                case TINYINT:
+                    beFn.append("_tiny_int_val");
+                    break;
+                case SMALLINT:
+                    beFn.append("_small_int_val");
+                    break;
+                case INT:
+                    beFn.append("_int_val");
+                    break;
+                case BIGINT:
+                    beFn.append("_big_int_val");
+                    break;
+                case LARGEINT:
+                    beFn.append("_large_int_val");
+                    break;
+                case FLOAT:
+                    beFn.append("_float_val");
+                    break;
+                case DOUBLE:
+                case TIME:
+                    beFn.append("_double_val");
+                    break;
+                case CHAR:
+                case VARCHAR:
+                case HLL:
+                case BITMAP:
+                    beFn.append("_string_val");
+                    break;
+                case DATE:
+                case DATETIME:
+                    beFn.append("_datetime_val");
+                    break;
+                case DECIMAL:
+                    beFn.append("_decimal_val");
+                    usesDecimal = true;
+                    break;
+                case DECIMALV2:
+                    beFn.append("_decimalv2_val");
+                    usesDecimalV2 = true;
+                    break;
+                default:
+                    Preconditions.checkState(false, "Argument type not supported: " + argTypes.get(i));
+            }
+        }
+        String beClass = usesDecimal ? "DecimalOperators" : "Operators";
+        if (usesDecimalV2) beClass = "DecimalV2Operators";
+        String symbol = "doris::" + beClass + "::" + beFn;
+        return createVecBuiltinOperator(name, symbol, argTypes, retType);
+    }
+
     public static ScalarFunction createBuiltinOperator(
             String name, String symbol, ArrayList<Type> argTypes, Type retType) {
         return createBuiltin(name, symbol, argTypes, false, retType, false);
@@ -222,7 +291,7 @@ public class ScalarFunction extends Function {
         return fn;
     }
 
-    public static ScalarFunction createBuiltinVecOperator(
+    public static ScalarFunction createVecBuiltinOperator(
             String name, String symbol, ArrayList<Type> argTypes, Type retType) {
         return createVecBuiltin(name, symbol, argTypes, false, retType, false);
     }
