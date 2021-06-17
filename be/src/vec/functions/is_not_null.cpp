@@ -23,18 +23,15 @@ namespace doris::vectorized {
 
 /// Implements the function isNotNull which returns true if a value
 /// is not null, false otherwise.
-class FunctionIsNotNull : public IFunction
-{
+class FunctionIsNotNull : public IFunction {
 public:
     static constexpr auto name = "is_not_null_pred";
 
-    static FunctionPtr create()
-    {
+    static FunctionPtr create() {
         return std::make_shared<FunctionIsNotNull>();
     }
 
-    std::string getName() const override
-    {
+    std::string getName() const override {
         return name;
     }
 
@@ -43,16 +40,13 @@ public:
     bool useDefaultImplementationForConstants() const override { return true; }
     ColumnNumbers getArgumentsThatDontImplyNullableReturnType(size_t /*number_of_arguments*/) const override { return {0}; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes &) const override
-    {
+    DataTypePtr getReturnTypeImpl(const DataTypes &) const override {
         return std::make_shared<DataTypeUInt8>();
     }
 
-    Status executeImpl(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) override
-    {
+    Status executeImpl(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) override {
         const ColumnWithTypeAndName & elem = block.getByPosition(arguments[0]);
-        if (auto * nullable = checkAndGetColumn<ColumnNullable>(*elem.column))
-        {
+        if (auto * nullable = checkAndGetColumn<ColumnNullable>(*elem.column)) {
             /// Return the negated null map.
             auto res_column = ColumnUInt8::create(input_rows_count);
             const auto & src_data = nullable->getNullMapData();
@@ -63,8 +57,7 @@ public:
 
             block.getByPosition(result).column = std::move(res_column);
         }
-        else
-        {
+        else {
             /// Since no element is nullable, return a constant one.
             block.getByPosition(result).column = DataTypeUInt8().createColumnConst(elem.column->size(), 1u);
         }
@@ -72,8 +65,7 @@ public:
     }
 };
 
-void registerFunctionIsNotNull(SimpleFunctionFactory & factory)
-{
+void registerFunctionIsNotNull(SimpleFunctionFactory & factory) {
     factory.registerFunction<FunctionIsNotNull>();
 }
 

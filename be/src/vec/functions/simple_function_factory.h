@@ -41,16 +41,19 @@ void registerFunctionModulo(SimpleFunctionFactory& factory);
 void registerFunctionBitmap(SimpleFunctionFactory& factory);
 void registerFunctionIsNull(SimpleFunctionFactory& factory);
 void registerFunctionIsNotNull(SimpleFunctionFactory& factory);
-void registerFunctionToTimeFuction(SimpleFunctionFactory& factory);
-void registerFunctionTimeOfFuction(SimpleFunctionFactory& factory);
+void registerFunctionIf(SimpleFunctionFactory& factory);
+void registerFunctionIfNull(SimpleFunctionFactory& factory);
+void registerFunctionNullIf(SimpleFunctionFactory& factory);
+void registerFunctionToTimeFuction(SimpleFunctionFactory & factory);
+void registerFunctionTimeOfFuction(SimpleFunctionFactory & factory);
 void registerFunctionString(SimpleFunctionFactory& factory);
 void registerFunctionDateTimeToString(SimpleFunctionFactory& factory);
 void registerFunctionDateTimeStringToString(SimpleFunctionFactory& factory);
 void registerFunctionIn(SimpleFunctionFactory& factory);
-void registerFunctionIf(SimpleFunctionFactory& factory);
 void registerFunctionDateTimeComputation(SimpleFunctionFactory& factory);
 void registerFunctionStrToDate(SimpleFunctionFactory& factory);
 void registerFunctionJson(SimpleFunctionFactory& factory);
+
 
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
@@ -108,11 +111,13 @@ public:
             registerFunctionModulo(instance);
             registerFunctionIsNull(instance);
             registerFunctionIsNotNull(instance);
+            registerFunctionIf(instance);
+            registerFunctionIfNull(instance);
+            registerFunctionNullIf(instance);
             registerFunctionToTimeFuction(instance);
             registerFunctionTimeOfFuction(instance);
             registerFunctionString(instance);
             registerFunctionIn(instance);
-            registerFunctionIf(instance);
             registerFunctionDateTimeComputation(instance);
             registerFunctionStrToDate(instance);
             registerFunctionDateTimeToString(instance);
