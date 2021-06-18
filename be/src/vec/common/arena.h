@@ -28,7 +28,6 @@
 #endif
 #include "vec/common/allocator.h"
 #include "vec/common/memcpy_small.h"
-#include "vec/core/defines.h"
 
 //namespace ProfileEvents
 //{

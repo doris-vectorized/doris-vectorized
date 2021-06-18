@@ -274,9 +274,8 @@ private:
     }
 
     template <bool scale_left>
-    static NO_SANITIZE_UNDEFINED NativeResultType applyScaled(NativeResultType a,
-                                                              NativeResultType b,
-                                                              NativeResultType scale) {
+    static NativeResultType applyScaled(NativeResultType a, NativeResultType b,
+                                        NativeResultType scale) {
         if constexpr (is_plus_minus_compare) {
             NativeResultType res;
 
@@ -306,9 +305,8 @@ private:
         }
     }
 
-    static NO_SANITIZE_UNDEFINED NativeResultType applyScaledDiv(NativeResultType a,
-                                                                 NativeResultType b,
-                                                                 NativeResultType scale) {
+    static NativeResultType applyScaledDiv(NativeResultType a, NativeResultType b,
+                                           NativeResultType scale) {
         if constexpr (is_division) {
             if constexpr (_check_overflow) {
                 bool overflow = false;

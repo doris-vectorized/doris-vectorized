@@ -2,15 +2,14 @@
 
 #include <math.h>
 #include <string.h>
-#include <vec/common/exception.h>
-#include <vec/common/hash_table/hash_table_allocator.h>
-#include <vec/common/hash_table/hash_table_key_holder.h>
-#include <vec/core/defines.h>
-#include <vec/core/types.h>
 
 #include <boost/noncopyable.hpp>
 #include <utility>
 
+#include "vec/common/exception.h"
+#include "vec/common/hash_table/hash_table_allocator.h"
+#include "vec/common/hash_table/hash_table_key_holder.h"
+#include "vec/core/types.h"
 #include "vec/io/io_helper.h"
 
 #ifdef DBMS_HASH_MAP_DEBUG_RESIZES

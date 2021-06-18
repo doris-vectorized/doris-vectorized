@@ -40,7 +40,7 @@
 #include <algorithm>
 #include <cstdlib>
 
-#include "vec/core/defines.h"
+#include "common/compiler_util.h"
 #ifdef THREAD_SANITIZER
 /// Thread sanitizer does not intercept mremap. The usage of mremap will lead to false positives.
 #define DISABLE_MREMAP 1
