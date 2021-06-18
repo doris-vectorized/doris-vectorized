@@ -115,16 +115,6 @@ public:
     /// Inserts results into a column.
     virtual void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const = 0;
 
-    /// Used for machine learning methods. Predict result from trained model.
-    /// Will insert result into `to` column for rows in range [offset, offset + limit).
-    virtual void predictValues(ConstAggregateDataPtr /* place */, IColumn& /*to*/, Block& /*block*/,
-                               size_t /*offset*/, size_t /*limit*/,
-                               const ColumnNumbers& /*arguments*/,
-                               const Context& /*context*/) const {
-        throw Exception("Method predictValues is not supported for " + getName(),
-                        ErrorCodes::NOT_IMPLEMENTED);
-    }
-
     /** Returns true for aggregate functions of type -State.
       * They are executed as other aggregate functions, but not finalized (return an aggregation state that can be combined with another).
       */
