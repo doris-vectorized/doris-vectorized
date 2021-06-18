@@ -22,7 +22,6 @@
 
 #include "vec/common/nan_utils.h"
 #include "vec/common/uint128.h"
-#include "vec/core/defines.h"
 #include "vec/core/types.h"
 
 /** Preceptually-correct number comparisons.
@@ -282,63 +281,63 @@ inline bool_if_safe_conversion<A, B> equalsOp(A a, B b) {
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Float64, doris::vectorized::UInt64>(
+inline bool equalsOp<doris::vectorized::Float64, doris::vectorized::UInt64>(
         doris::vectorized::Float64 f, doris::vectorized::UInt64 u) {
     return static_cast<doris::vectorized::UInt64>(f) == u &&
            f == static_cast<doris::vectorized::Float64>(u);
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::UInt64, doris::vectorized::Float64>(
+inline bool equalsOp<doris::vectorized::UInt64, doris::vectorized::Float64>(
         doris::vectorized::UInt64 u, doris::vectorized::Float64 f) {
     return u == static_cast<doris::vectorized::UInt64>(f) &&
            static_cast<doris::vectorized::Float64>(u) == f;
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Float64, doris::vectorized::Int64>(
+inline bool equalsOp<doris::vectorized::Float64, doris::vectorized::Int64>(
         doris::vectorized::Float64 f, doris::vectorized::Int64 u) {
     return static_cast<doris::vectorized::Int64>(f) == u &&
            f == static_cast<doris::vectorized::Float64>(u);
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Int64, doris::vectorized::Float64>(
+inline bool equalsOp<doris::vectorized::Int64, doris::vectorized::Float64>(
         doris::vectorized::Int64 u, doris::vectorized::Float64 f) {
     return u == static_cast<doris::vectorized::Int64>(f) &&
            static_cast<doris::vectorized::Float64>(u) == f;
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Float32, doris::vectorized::UInt64>(
+inline bool equalsOp<doris::vectorized::Float32, doris::vectorized::UInt64>(
         doris::vectorized::Float32 f, doris::vectorized::UInt64 u) {
     return static_cast<doris::vectorized::UInt64>(f) == u &&
            f == static_cast<doris::vectorized::Float32>(u);
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::UInt64, doris::vectorized::Float32>(
+inline bool equalsOp<doris::vectorized::UInt64, doris::vectorized::Float32>(
         doris::vectorized::UInt64 u, doris::vectorized::Float32 f) {
     return u == static_cast<doris::vectorized::UInt64>(f) &&
            static_cast<doris::vectorized::Float32>(u) == f;
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Float32, doris::vectorized::Int64>(
+inline bool equalsOp<doris::vectorized::Float32, doris::vectorized::Int64>(
         doris::vectorized::Float32 f, doris::vectorized::Int64 u) {
     return static_cast<doris::vectorized::Int64>(f) == u &&
            f == static_cast<doris::vectorized::Float32>(u);
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::Int64, doris::vectorized::Float32>(
+inline bool equalsOp<doris::vectorized::Int64, doris::vectorized::Float32>(
         doris::vectorized::Int64 u, doris::vectorized::Float32 f) {
     return u == static_cast<doris::vectorized::Int64>(f) &&
            static_cast<doris::vectorized::Float32>(u) == f;
 }
 
 template <>
-inline bool NO_SANITIZE_UNDEFINED equalsOp<doris::vectorized::UInt128, doris::vectorized::Float64>(
+inline bool equalsOp<doris::vectorized::UInt128, doris::vectorized::Float64>(
         doris::vectorized::UInt128 u, doris::vectorized::Float64 f) {
     return u.low == 0 && equalsOp(static_cast<doris::vectorized::UInt64>(u.high), f);
 }
@@ -361,8 +360,7 @@ inline bool equalsOp<doris::vectorized::Float32, doris::vectorized::UInt128>(
     return equalsOp(static_cast<doris::vectorized::Float64>(f), u);
 }
 
-inline bool NO_SANITIZE_UNDEFINED greaterOp(doris::vectorized::Int128 i,
-                                            doris::vectorized::Float64 f) {
+inline bool greaterOp(doris::vectorized::Int128 i, doris::vectorized::Float64 f) {
     static constexpr __int128 min_int128 = __int128(0x8000000000000000ll) << 64;
     static constexpr __int128 max_int128 =
             (__int128(0x7fffffffffffffffll) << 64) + 0xffffffffffffffffll;
@@ -375,8 +373,7 @@ inline bool NO_SANITIZE_UNDEFINED greaterOp(doris::vectorized::Int128 i,
             i > static_cast<doris::vectorized::Int128>(f));
 }
 
-inline bool NO_SANITIZE_UNDEFINED greaterOp(doris::vectorized::Float64 f,
-                                            doris::vectorized::Int128 i) {
+inline bool greaterOp(doris::vectorized::Float64 f, doris::vectorized::Int128 i) {
     static constexpr __int128 min_int128 = __int128(0x8000000000000000ll) << 64;
     static constexpr __int128 max_int128 =
             (__int128(0x7fffffffffffffffll) << 64) + 0xffffffffffffffffll;
@@ -396,13 +393,11 @@ inline bool greaterOp(doris::vectorized::Float32 f, doris::vectorized::Int128 i)
     return greaterOp(static_cast<doris::vectorized::Float64>(f), i);
 }
 
-inline bool NO_SANITIZE_UNDEFINED equalsOp(doris::vectorized::Int128 i,
-                                           doris::vectorized::Float64 f) {
+inline bool equalsOp(doris::vectorized::Int128 i, doris::vectorized::Float64 f) {
     return i == static_cast<doris::vectorized::Int128>(f) &&
            static_cast<doris::vectorized::Float64>(i) == f;
 }
-inline bool NO_SANITIZE_UNDEFINED equalsOp(doris::vectorized::Int128 i,
-                                           doris::vectorized::Float32 f) {
+inline bool equalsOp(doris::vectorized::Int128 i, doris::vectorized::Float32 f) {
     return i == static_cast<doris::vectorized::Int128>(f) &&
            static_cast<doris::vectorized::Float32>(i) == f;
 }
@@ -457,7 +452,7 @@ inline bool_if_safe_conversion<A, B> greaterOrEqualsOp(A a, B b) {
 
 /// Converts numeric to an equal numeric of other type.
 template <typename From, typename To>
-inline bool NO_SANITIZE_UNDEFINED convertNumeric(From value, To& result) {
+inline bool convertNumeric(From value, To& result) {
     /// If the type is actually the same it's not necessary to do any checks.
     if constexpr (std::is_same_v<From, To>) {
         result = value;
