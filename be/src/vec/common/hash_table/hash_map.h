@@ -45,7 +45,7 @@ struct HashMapCell {
     Mapped& getSecond() { return value.second; }
     const Mapped& getSecond() const { return value.second; }
 
-    const value_type& getValue() const { return value; }
+    const value_type& get_value() const { return value; }
 
     static const Key& getKey(const value_type& value) { return value.first; }
 
@@ -75,11 +75,11 @@ struct HashMapCell {
     // /// Serialization, in binary and text form.
     // void write(DB::WriteBuffer & wb) const
     // {
-    //     DB::writeBinary(value.first, wb);
-    //     DB::writeBinary(value.second, wb);
+    //     DB::write_binary(value.first, wb);
+    //     DB::write_binary(value.second, wb);
     // }
 
-    // void writeText(DB::WriteBuffer & wb) const
+    // void write_text(DB::WriteBuffer & wb) const
     // {
     //     DB::writeDoubleQuoted(value.first, wb);
     //     DB::writeChar(',', wb);
@@ -89,8 +89,8 @@ struct HashMapCell {
     // /// Deserialization, in binary and text form.
     // void read(DB::ReadBuffer & rb)
     // {
-    //     DB::readBinary(value.first, rb);
-    //     DB::readBinary(value.second, rb);
+    //     DB::read_binary(value.first, rb);
+    //     DB::read_binary(value.second, rb);
     // }
 
     // void readText(DB::ReadBuffer & rb)

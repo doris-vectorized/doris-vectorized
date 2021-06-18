@@ -44,11 +44,11 @@ const Type* checkAndGetDataType(const IDataType* data_type) {
 
 template <typename Type>
 const ColumnConst* checkAndGetColumnConst(const IColumn* column) {
-    if (!column || !isColumnConst(*column)) return {};
+    if (!column || !is_column_const(*column)) return {};
 
     const ColumnConst* res = assert_cast<const ColumnConst*>(column);
 
-    if (!checkColumn<Type>(&res->getDataColumn())) return {};
+    if (!check_column<Type>(&res->get_data_column())) return {};
 
     return res;
 }
@@ -59,7 +59,7 @@ const Type* checkAndGetColumnConstData(const IColumn* column) {
 
     if (!res) return {};
 
-    return static_cast<const Type*>(&res->getDataColumn());
+    return static_cast<const Type*>(&res->get_data_column());
 }
 
 template <typename Type>

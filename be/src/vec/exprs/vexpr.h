@@ -66,7 +66,7 @@ public:
 
     static void close(const std::vector<VExprContext*>& ctxs, RuntimeState* state);
 
-    bool is_nullable() const { return _data_type->isNullable(); }
+    bool is_nullable() const { return _data_type->is_nullable(); }
 
     PrimitiveType result_type() const { return _type.type; }
 

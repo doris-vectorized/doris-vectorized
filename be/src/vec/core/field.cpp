@@ -27,12 +27,12 @@
 //#include <vec/Common/FieldVisitors.h>
 
 namespace doris::vectorized {
-//    void readBinary(Array & x, ReadBuffer & buf)
+//    void read_binary(Array & x, ReadBuffer & buf)
 //    {
 //        size_t size;
 //        UInt8 type;
-//        doris::vectorized::readBinary(type, buf);
-//        doris::vectorized::readBinary(size, buf);
+//        doris::vectorized::read_binary(type, buf);
+//        doris::vectorized::read_binary(size, buf);
 //
 //        for (size_t index = 0; index < size; ++index)
 //        {
@@ -46,57 +46,57 @@ namespace doris::vectorized {
 //                case Field::Types::UInt64:
 //                {
 //                    UInt64 value;
-//                    doris::vectorized::readVarUInt(value, buf);
+//                    doris::vectorized::read_var_uint(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::UInt128:
 //                {
 //                    UInt128 value;
-//                    doris::vectorized::readBinary(value, buf);
+//                    doris::vectorized::read_binary(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::Int64:
 //                {
 //                    Int64 value;
-//                    doris::vectorized::readVarInt(value, buf);
+//                    doris::vectorized::read_var_int(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::Float64:
 //                {
 //                    Float64 value;
-//                    doris::vectorized::readFloatBinary(value, buf);
+//                    doris::vectorized::read_float_binary(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::String:
 //                {
 //                    std::string value;
-//                    doris::vectorized::readStringBinary(value, buf);
+//                    doris::vectorized::read_string_binary(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::Array:
 //                {
 //                    Array value;
-//                    doris::vectorized::readBinary(value, buf);
+//                    doris::vectorized::read_binary(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::Tuple:
 //                {
 //                    Tuple value;
-//                    doris::vectorized::readBinary(value, buf);
+//                    doris::vectorized::read_binary(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::AggregateFunctionState:
 //                {
 //                    AggregateFunctionStateData value;
-//                    doris::vectorized::readStringBinary(value.name, buf);
-//                    doris::vectorized::readStringBinary(value.data, buf);
+//                    doris::vectorized::read_string_binary(value.name, buf);
+//                    doris::vectorized::read_string_binary(value.data, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
@@ -104,14 +104,14 @@ namespace doris::vectorized {
 //        }
 //    }
 //
-//    void writeBinary(const Array & x, WriteBuffer & buf)
+//    void write_binary(const Array & x, WriteBuffer & buf)
 //    {
 //        UInt8 type = Field::Types::Null;
 //        size_t size = x.size();
 //        if (size)
 //            type = x.front().getType();
-//        doris::vectorized::writeBinary(type, buf);
-//        doris::vectorized::writeBinary(size, buf);
+//        doris::vectorized::write_binary(type, buf);
+//        doris::vectorized::write_binary(size, buf);
 //
 //        for (Array::const_iterator it = x.begin(); it != x.end(); ++it)
 //        {
@@ -120,64 +120,64 @@ namespace doris::vectorized {
 //                case Field::Types::Null: break;
 //                case Field::Types::UInt64:
 //                {
-//                    doris::vectorized::writeVarUInt(get<UInt64>(*it), buf);
+//                    doris::vectorized::write_var_uint(get<UInt64>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::UInt128:
 //                {
-//                    doris::vectorized::writeBinary(get<UInt128>(*it), buf);
+//                    doris::vectorized::write_binary(get<UInt128>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::Int64:
 //                {
-//                    doris::vectorized::writeVarInt(get<Int64>(*it), buf);
+//                    doris::vectorized::write_var_int(get<Int64>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::Float64:
 //                {
-//                    doris::vectorized::writeFloatBinary(get<Float64>(*it), buf);
+//                    doris::vectorized::write_float_binary(get<Float64>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::String:
 //                {
-//                    doris::vectorized::writeStringBinary(get<std::string>(*it), buf);
+//                    doris::vectorized::write_string_binary(get<std::string>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::Array:
 //                {
-//                    doris::vectorized::writeBinary(get<Array>(*it), buf);
+//                    doris::vectorized::write_binary(get<Array>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::Tuple:
 //                {
-//                    doris::vectorized::writeBinary(get<Tuple>(*it), buf);
+//                    doris::vectorized::write_binary(get<Tuple>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::AggregateFunctionState:
 //                {
-//                    doris::vectorized::writeStringBinary(it->get<AggregateFunctionStateData>().name, buf);
-//                    doris::vectorized::writeStringBinary(it->get<AggregateFunctionStateData>().data, buf);
+//                    doris::vectorized::write_string_binary(it->get<AggregateFunctionStateData>().name, buf);
+//                    doris::vectorized::write_string_binary(it->get<AggregateFunctionStateData>().data, buf);
 //                    break;
 //                }
 //            }
 //        }
 //    }
 //
-//    void writeText(const Array & x, WriteBuffer & buf)
+//    void write_text(const Array & x, WriteBuffer & buf)
 //    {
 //        doris::vectorized::String res = applyVisitor(doris::vectorized::FieldVisitorToString(), doris::vectorized::Field(x));
 //        buf.write(res.data(), res.size());
 //    }
 //
-//    void readBinary(Tuple & x, ReadBuffer & buf)
+//    void read_binary(Tuple & x, ReadBuffer & buf)
 //    {
 //        size_t size;
-//        doris::vectorized::readBinary(size, buf);
+//        doris::vectorized::read_binary(size, buf);
 //
 //        for (size_t index = 0; index < size; ++index)
 //        {
 //            UInt8 type;
-//            doris::vectorized::readBinary(type, buf);
+//            doris::vectorized::read_binary(type, buf);
 //
 //            switch (type)
 //            {
@@ -189,57 +189,57 @@ namespace doris::vectorized {
 //                case Field::Types::UInt64:
 //                {
 //                    UInt64 value;
-//                    doris::vectorized::readVarUInt(value, buf);
+//                    doris::vectorized::read_var_uint(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::UInt128:
 //                {
 //                    UInt128 value;
-//                    doris::vectorized::readBinary(value, buf);
+//                    doris::vectorized::read_binary(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::Int64:
 //                {
 //                    Int64 value;
-//                    doris::vectorized::readVarInt(value, buf);
+//                    doris::vectorized::read_var_int(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::Float64:
 //                {
 //                    Float64 value;
-//                    doris::vectorized::readFloatBinary(value, buf);
+//                    doris::vectorized::read_float_binary(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::String:
 //                {
 //                    std::string value;
-//                    doris::vectorized::readStringBinary(value, buf);
+//                    doris::vectorized::read_string_binary(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::Array:
 //                {
 //                    Array value;
-//                    doris::vectorized::readBinary(value, buf);
+//                    doris::vectorized::read_binary(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::Tuple:
 //                {
 //                    Tuple value;
-//                    doris::vectorized::readBinary(value, buf);
+//                    doris::vectorized::read_binary(value, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
 //                case Field::Types::AggregateFunctionState:
 //                {
 //                    AggregateFunctionStateData value;
-//                    doris::vectorized::readStringBinary(value.name, buf);
-//                    doris::vectorized::readStringBinary(value.data, buf);
+//                    doris::vectorized::read_string_binary(value.name, buf);
+//                    doris::vectorized::read_string_binary(value.data, buf);
 //                    x.push_back(value);
 //                    break;
 //                }
@@ -247,65 +247,65 @@ namespace doris::vectorized {
 //        }
 //    }
 //
-//    void writeBinary(const Tuple & x, WriteBuffer & buf)
+//    void write_binary(const Tuple & x, WriteBuffer & buf)
 //    {
 //        const size_t size = x.size();
-//        doris::vectorized::writeBinary(size, buf);
+//        doris::vectorized::write_binary(size, buf);
 //
 //        for (auto it = x.begin(); it != x.end(); ++it)
 //        {
 //            const UInt8 type = it->getType();
-//            doris::vectorized::writeBinary(type, buf);
+//            doris::vectorized::write_binary(type, buf);
 //
 //            switch (type)
 //            {
 //                case Field::Types::Null: break;
 //                case Field::Types::UInt64:
 //                {
-//                    doris::vectorized::writeVarUInt(get<UInt64>(*it), buf);
+//                    doris::vectorized::write_var_uint(get<UInt64>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::UInt128:
 //                {
-//                    doris::vectorized::writeBinary(get<UInt128>(*it), buf);
+//                    doris::vectorized::write_binary(get<UInt128>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::Int64:
 //                {
-//                    doris::vectorized::writeVarInt(get<Int64>(*it), buf);
+//                    doris::vectorized::write_var_int(get<Int64>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::Float64:
 //                {
-//                    doris::vectorized::writeFloatBinary(get<Float64>(*it), buf);
+//                    doris::vectorized::write_float_binary(get<Float64>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::String:
 //                {
-//                    doris::vectorized::writeStringBinary(get<std::string>(*it), buf);
+//                    doris::vectorized::write_string_binary(get<std::string>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::Array:
 //                {
-//                    doris::vectorized::writeBinary(get<Array>(*it), buf);
+//                    doris::vectorized::write_binary(get<Array>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::Tuple:
 //                {
-//                    doris::vectorized::writeBinary(get<Tuple>(*it), buf);
+//                    doris::vectorized::write_binary(get<Tuple>(*it), buf);
 //                    break;
 //                }
 //                case Field::Types::AggregateFunctionState:
 //                {
-//                    doris::vectorized::writeStringBinary(it->get<AggregateFunctionStateData>().name, buf);
-//                    doris::vectorized::writeStringBinary(it->get<AggregateFunctionStateData>().data, buf);
+//                    doris::vectorized::write_string_binary(it->get<AggregateFunctionStateData>().name, buf);
+//                    doris::vectorized::write_string_binary(it->get<AggregateFunctionStateData>().data, buf);
 //                    break;
 //                }
 //            }
 //        }
 //    }
 //
-//    void writeText(const Tuple & x, WriteBuffer & buf)
+//    void write_text(const Tuple & x, WriteBuffer & buf)
 //    {
 //        writeFieldText(doris::vectorized::Field(x), buf);
 //    }
@@ -318,8 +318,8 @@ namespace doris::vectorized {
 void readBinary(Array& x, std::istream& buf) {
     size_t size;
     UInt8 type;
-    doris::vectorized::readBinary(type, buf);
-    doris::vectorized::readBinary(size, buf);
+        doris::vectorized::read_binary(type, buf);
+        doris::vectorized::read_binary(size, buf);
 
     for (size_t index = 0; index < size; ++index) {
         switch (type) {
@@ -329,50 +329,50 @@ void readBinary(Array& x, std::istream& buf) {
         }
         case Field::Types::UInt64: {
             UInt64 value;
-            doris::vectorized::readVarUInt(value, buf);
+            doris::vectorized::read_var_uint(value, buf);
             x.push_back(value);
             break;
         }
         case Field::Types::UInt128: {
             UInt128 value;
-            doris::vectorized::readBinary(value, buf);
+            doris::vectorized::read_binary(value, buf);
             x.push_back(value);
             break;
         }
         case Field::Types::Int64: {
             Int64 value;
-            doris::vectorized::readVarInt(value, buf);
+            doris::vectorized::read_var_int(value, buf);
             x.push_back(value);
             break;
         }
         case Field::Types::Float64: {
             Float64 value;
-            doris::vectorized::readFloatBinary(value, buf);
+            doris::vectorized::read_float_binary(value, buf);
             x.push_back(value);
             break;
         }
         case Field::Types::String: {
             std::string value;
-            doris::vectorized::readStringBinary(value, buf);
+            doris::vectorized::read_string_binary(value, buf);
             x.push_back(value);
             break;
         }
         // case Field::Types::Array: {
         //     Array value;
-        //     doris::vectorized::readBinary(value, buf);
+        //     doris::vectorized::read_binary(value, buf);
         //     x.push_back(value);
         //     break;
         // }
         // case Field::Types::Tuple: {
         //     Tuple value;
-        //     doris::vectorized::readBinary(value, buf);
+        //     doris::vectorized::read_binary(value, buf);
         //     x.push_back(value);
         //     break;
         // }
         case Field::Types::AggregateFunctionState: {
             AggregateFunctionStateData value;
-            doris::vectorized::readStringBinary(value.name, buf);
-            doris::vectorized::readStringBinary(value.data, buf);
+            doris::vectorized::read_string_binary(value.name, buf);
+            doris::vectorized::read_string_binary(value.data, buf);
             x.push_back(value);
             break;
         }
@@ -392,36 +392,36 @@ void writeBinary(const Array& x, std::ostream& buf) {
         case Field::Types::Null:
             break;
         case Field::Types::UInt64: {
-            doris::vectorized::writeVarUInt(get<UInt64>(*it), buf);
+            doris::vectorized::write_var_uint(get<UInt64>(*it), buf);
             break;
         }
         case Field::Types::UInt128: {
-            doris::vectorized::writeBinary(get<UInt128>(*it), buf);
+            doris::vectorized::write_binary(get<UInt128>(*it), buf);
             break;
         }
         case Field::Types::Int64: {
-            doris::vectorized::writeVarInt(get<Int64>(*it), buf);
+            doris::vectorized::write_var_int(get<Int64>(*it), buf);
             break;
         }
         case Field::Types::Float64: {
-            doris::vectorized::writeFloatBinary(get<Float64>(*it), buf);
+            doris::vectorized::write_float_binary(get<Float64>(*it), buf);
             break;
         }
         case Field::Types::String: {
-            doris::vectorized::writeStringBinary(get<std::string>(*it), buf);
+            doris::vectorized::write_string_binary(get<std::string>(*it), buf);
             break;
         }
         // case Field::Types::Array: {
-        //     doris::vectorized::writeBinary(get<Array>(*it), buf);
+        //     doris::vectorized::write_binary(get<Array>(*it), buf);
         //     break;
         // }
         // case Field::Types::Tuple: {
-        //     doris::vectorized::writeBinary(get<Tuple>(*it), buf);
+        //     doris::vectorized::write_binary(get<Tuple>(*it), buf);
         //     break;
         // }
         case Field::Types::AggregateFunctionState: {
-            doris::vectorized::writeStringBinary(it->get<AggregateFunctionStateData>().name, buf);
-            doris::vectorized::writeStringBinary(it->get<AggregateFunctionStateData>().data, buf);
+            doris::vectorized::write_string_binary(it->get<AggregateFunctionStateData>().name, buf);
+            doris::vectorized::write_string_binary(it->get<AggregateFunctionStateData>().data, buf);
             break;
         }
         }

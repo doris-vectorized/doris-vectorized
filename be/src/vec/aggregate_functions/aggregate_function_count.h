@@ -46,7 +46,7 @@ public:
     AggregateFunctionCount(const DataTypes& argument_types_)
             : IAggregateFunctionDataHelper(argument_types_, {}) {}
 
-    String getName() const override { return "count"; }
+    String get_name() const override { return "count"; }
 
     DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
 
@@ -59,15 +59,15 @@ public:
     }
 
     void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
-        writeVarUInt(data(place).count, buf);
+        write_var_uint(data(place).count, buf);
     }
 
     void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
-        readVarUInt(data(place).count, buf);
+        read_var_uint(data(place).count, buf);
     }
 
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
-        assert_cast<ColumnInt64&>(to).getData().push_back(data(place).count);
+        assert_cast<ColumnInt64&>(to).get_data().push_back(data(place).count);
     }
 
     const char* getHeaderFilePath() const override { return __FILE__; }
@@ -81,7 +81,7 @@ public:
     AggregateFunctionCountNotNullUnary(const DataTypePtr& argument, const Array& params)
             : IAggregateFunctionDataHelper<AggregateFunctionCountData,
                                            AggregateFunctionCountNotNullUnary>({argument}, params) {
-        if (!argument->isNullable())
+        if (!argument->is_nullable())
             throw Exception(
                     "Logical error: not Nullable data type passed to "
                     "AggregateFunctionCountNotNullUnary",
@@ -91,13 +91,13 @@ public:
     AggregateFunctionCountNotNullUnary(const DataTypes& argument_types_)
             : IAggregateFunctionDataHelper(argument_types_, {}) {}
 
-    String getName() const override { return "count"; }
+    String get_name() const override { return "count"; }
 
     DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
 
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
-        data(place).count += !assert_cast<const ColumnNullable&>(*columns[0]).isNullAt(row_num);
+        data(place).count += !assert_cast<const ColumnNullable&>(*columns[0]).is_null_at(row_num);
     }
 
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {
@@ -105,15 +105,15 @@ public:
     }
 
     void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
-        writeVarUInt(data(place).count, buf);
+        write_var_uint(data(place).count, buf);
     }
 
     void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
-        readVarUInt(data(place).count, buf);
+        read_var_uint(data(place).count, buf);
     }
 
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
-        assert_cast<ColumnInt64&>(to).getData().push_back(data(place).count);
+        assert_cast<ColumnInt64&>(to).get_data().push_back(data(place).count);
     }
 
     const char* getHeaderFilePath() const override { return __FILE__; }

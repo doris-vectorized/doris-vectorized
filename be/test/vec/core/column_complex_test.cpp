@@ -31,12 +31,12 @@ TEST(ColumnComplexTest, BasicTest) {
     std::string val0 = "";
     std::string val1 = "str-1";
 
-    column->insertData(reinterpret_cast<const char*>(&val0), sizeof(val0));
-    column->insertData(reinterpret_cast<const char*>(&val1), sizeof(val1));
+    column->insert_data(reinterpret_cast<const char*>(&val0), sizeof(val0));
+    column->insert_data(reinterpret_cast<const char*>(&val1), sizeof(val1));
 
-    StringRef ref = column->getDataAt(0);
+    StringRef ref = column->get_data_at(0);
     ASSERT_EQ((*reinterpret_cast<const std::string*>(ref.data)), "");
-    ref = column->getDataAt(1);
+    ref = column->get_data_at(1);
     ASSERT_EQ((*reinterpret_cast<const std::string*>(ref.data)), val1);
 }
 

@@ -38,17 +38,17 @@
 namespace doris::vectorized {
 
 template <typename T>
-inline T decimalScaleMultiplier(UInt32 scale);
+inline T decimal_scale_multiplier(UInt32 scale);
 template <>
-inline Int32 decimalScaleMultiplier<Int32>(UInt32 scale) {
+inline Int32 decimal_scale_multiplier<Int32>(UInt32 scale) {
     return common::exp10_i32(scale);
 }
 template <>
-inline Int64 decimalScaleMultiplier<Int64>(UInt32 scale) {
+inline Int64 decimal_scale_multiplier<Int64>(UInt32 scale) {
     return common::exp10_i64(scale);
 }
 template <>
-inline Int128 decimalScaleMultiplier<Int128>(UInt32 scale) {
+inline Int128 decimal_scale_multiplier<Int128>(UInt32 scale) {
     return common::exp10_i128(scale);
 }
 
@@ -73,7 +73,7 @@ inline std::string int128_to_string(UInt128 value) {
 }
 
 template <typename T>
-void writeText(Decimal<T> value, UInt32 scale, std::ostream& ostr) {
+void write_text(Decimal<T> value, UInt32 scale, std::ostream& ostr) {
     if (value < Decimal<T>(0)) {
         value *= Decimal<T>(-1);
         ostr << '-';
@@ -81,7 +81,7 @@ void writeText(Decimal<T> value, UInt32 scale, std::ostream& ostr) {
 
     T whole_part = value;
     if (scale) {
-        whole_part = value / decimalScaleMultiplier<T>(scale);
+        whole_part = value / decimal_scale_multiplier<T>(scale);
     }
     if constexpr (std::is_same<T, __int128_t>::value || std::is_same<T, UInt128>::value) {
         ostr << int128_to_string(whole_part);
@@ -100,69 +100,69 @@ void writeText(Decimal<T> value, UInt32 scale, std::ostream& ostr) {
 
 /// Write POD-type in native format. It's recommended to use only with packed (dense) data types.
 template <typename Type>
-inline void writePODBinary(const Type& x, std::ostream& buf) {
+inline void write_pod_binary(const Type& x, std::ostream& buf) {
     buf.write(reinterpret_cast<const char*>(&x), sizeof(x));
 }
 
 template <typename Type>
-inline void writeIntBinary(const Type& x, std::ostream& buf) {
-    writePODBinary(x, buf);
+inline void write_int_binary(const Type& x, std::ostream& buf) {
+    write_pod_binary(x, buf);
 }
 
 template <typename Type>
-inline void writeFloatBinary(const Type& x, std::ostream& buf) {
-    writePODBinary(x, buf);
+inline void write_float_binary(const Type& x, std::ostream& buf) {
+    write_pod_binary(x, buf);
 }
 
-inline void writeStringBinary(const std::string& s, std::ostream& buf) {
-    writeVarUInt(s.size(), buf);
+inline void write_string_binary(const std::string& s, std::ostream& buf) {
+    write_var_uint(s.size(), buf);
     buf.write(s.data(), s.size());
 }
 
-inline void writeStringBinary(const StringRef& s, std::ostream& buf) {
-    writeVarUInt(s.size, buf);
+inline void write_string_binary(const StringRef& s, std::ostream& buf) {
+    write_var_uint(s.size, buf);
     buf.write(s.data, s.size);
 }
 
-inline void writeStringBinary(const char* s, std::ostream& buf) {
-    writeStringBinary(StringRef{s}, buf);
+inline void write_string_binary(const char* s, std::ostream& buf) {
+    write_string_binary(StringRef{s}, buf);
 }
 
 template <typename Type>
-void writeVectorBinary(const std::vector<Type>& v, std::ostream& buf) {
-    writeVarUInt(v.size(), buf);
+void write_vector_binary(const std::vector<Type>& v, std::ostream& buf) {
+    write_var_uint(v.size(), buf);
 
     for (typename std::vector<Type>::const_iterator it = v.begin(); it != v.end(); ++it)
-        writeBinary(*it, buf);
+        write_binary(*it, buf);
 }
 
 template <typename Type>
 inline std::enable_if_t<std::is_arithmetic_v<Type>, void> writeBinary(const Type& x,
                                                                       std::ostream& buf) {
-    writePODBinary(x, buf);
+    write_pod_binary(x, buf);
 }
 
-inline void writeBinary(const String& x, std::ostream& buf) {
-    writeStringBinary(x, buf);
+inline void write_binary(const String& x, std::ostream& buf) {
+    write_string_binary(x, buf);
 }
-inline void writeBinary(const StringRef& x, std::ostream& buf) {
-    writeStringBinary(x, buf);
+inline void write_binary(const StringRef& x, std::ostream& buf) {
+    write_string_binary(x, buf);
 }
-inline void writeBinary(const Int128& x, std::ostream& buf) {
-    writePODBinary(x, buf);
+inline void write_binary(const Int128& x, std::ostream& buf) {
+    write_pod_binary(x, buf);
 }
-inline void writeBinary(const UInt128& x, std::ostream& buf) {
-    writePODBinary(x, buf);
+inline void write_binary(const UInt128& x, std::ostream& buf) {
+    write_pod_binary(x, buf);
 }
 
-inline void writeBinary(const Decimal32& x, std::ostream& buf) {
-    writePODBinary(x, buf);
+inline void write_binary(const Decimal32& x, std::ostream& buf) {
+    write_pod_binary(x, buf);
 }
-inline void writeBinary(const Decimal64& x, std::ostream& buf) {
-    writePODBinary(x, buf);
+inline void write_binary(const Decimal64& x, std::ostream& buf) {
+    write_pod_binary(x, buf);
 }
-inline void writeBinary(const Decimal128& x, std::ostream& buf) {
-    writePODBinary(x, buf);
+inline void write_binary(const Decimal128& x, std::ostream& buf) {
+    write_pod_binary(x, buf);
 }
 inline void write_binary(const std::ostringstream& buf, PColumn* pcolumn) {
     std::string uncompressed = buf.str();
@@ -179,7 +179,7 @@ inline void write_binary(const std::ostringstream& buf, PColumn* pcolumn) {
 
 /// Read POD-type in native format
 template <typename Type>
-inline void readPODBinary(Type& x, std::istream& buf) {
+inline void read_pod_binary(Type& x, std::istream& buf) {
     buf.read(reinterpret_cast<char*>(&x), sizeof(x));
     if (!buf) {
         throw Poco::Exception("Cannot read all data. Bytes read: " + std::to_string(buf.gcount()) +
@@ -188,19 +188,19 @@ inline void readPODBinary(Type& x, std::istream& buf) {
 }
 
 template <typename Type>
-inline void readIntBinary(Type& x, std::istream& buf) {
-    readPODBinary(x, buf);
+inline void read_int_binary(Type& x, std::istream& buf) {
+    read_pod_binary(x, buf);
 }
 
 template <typename Type>
-inline void readFloatBinary(Type& x, std::istream& buf) {
-    readPODBinary(x, buf);
+inline void read_float_binary(Type& x, std::istream& buf) {
+    read_pod_binary(x, buf);
 }
 
-inline void readStringBinary(std::string& s, std::istream& buf,
-                             size_t MAX_STRING_SIZE = DEFAULT_MAX_STRING_SIZE) {
+inline void read_string_binary(std::string& s, std::istream& buf,
+                               size_t MAX_STRING_SIZE = DEFAULT_MAX_STRING_SIZE) {
     size_t size = 0;
-    readVarUInt(size, buf);
+    read_var_uint(size, buf);
 
     if (size > MAX_STRING_SIZE) throw Poco::Exception("Too large string size.");
 
@@ -212,9 +212,9 @@ inline void readStringBinary(std::string& s, std::istream& buf,
     }
 }
 
-inline StringRef readStringBinaryInto(Arena& arena, std::istream& buf) {
+inline StringRef read_string_binary_into(Arena& arena, std::istream& buf) {
     size_t size = 0;
-    readVarUInt(size, buf);
+    read_var_uint(size, buf);
 
     char* data = arena.alloc(size);
     buf.read(data, size);
@@ -223,41 +223,41 @@ inline StringRef readStringBinaryInto(Arena& arena, std::istream& buf) {
 }
 
 template <typename Type>
-void readVectorBinary(std::vector<Type>& v, std::istream& buf,
-                      size_t MAX_VECTOR_SIZE = DEFAULT_MAX_STRING_SIZE) {
+void read_vector_binary(std::vector<Type>& v, std::istream& buf,
+                        size_t MAX_VECTOR_SIZE = DEFAULT_MAX_STRING_SIZE) {
     size_t size = 0;
-    readVarUInt(size, buf);
+    read_var_uint(size, buf);
 
     if (size > MAX_VECTOR_SIZE) throw Poco::Exception("Too large vector size.");
 
     v.resize(size);
-    for (size_t i = 0; i < size; ++i) readBinary(v[i], buf);
+    for (size_t i = 0; i < size; ++i) read_binary(v[i], buf);
 }
 
 /// Generic methods to read value in native binary format.
 template <typename Type>
-inline std::enable_if_t<std::is_arithmetic_v<Type>, void> readBinary(Type& x, std::istream& buf) {
-    readPODBinary(x, buf);
+inline std::enable_if_t<std::is_arithmetic_v<Type>, void> read_binary(Type& x, std::istream& buf) {
+        read_pod_binary(x, buf);
 }
 
-inline void readBinary(String& x, std::istream& buf) {
-    readStringBinary(x, buf);
+inline void read_binary(String& x, std::istream& buf) {
+    read_string_binary(x, buf);
 }
-inline void readBinary(Int128& x, std::istream& buf) {
-    readPODBinary(x, buf);
+inline void read_binary(Int128& x, std::istream& buf) {
+    read_pod_binary(x, buf);
 }
-inline void readBinary(UInt128& x, std::istream& buf) {
-    readPODBinary(x, buf);
+inline void read_binary(UInt128& x, std::istream& buf) {
+    read_pod_binary(x, buf);
 }
 
-inline void readBinary(Decimal32& x, std::istream& buf) {
-    readPODBinary(x, buf);
+inline void read_binary(Decimal32& x, std::istream& buf) {
+    read_pod_binary(x, buf);
 }
-inline void readBinary(Decimal64& x, std::istream& buf) {
-    readPODBinary(x, buf);
+inline void read_binary(Decimal64& x, std::istream& buf) {
+    read_pod_binary(x, buf);
 }
-inline void readBinary(Decimal128& x, std::istream& buf) {
-    readPODBinary(x, buf);
+inline void read_binary(Decimal128& x, std::istream& buf) {
+    read_pod_binary(x, buf);
 }
 inline void read_binary(const PColumn& pcolumn, std::string* data) {
     if (pcolumn.compressed()) {
@@ -268,7 +268,7 @@ inline void read_binary(const PColumn& pcolumn, std::string* data) {
 }
 
 template <typename T>
-bool readFloatTextFastImpl(T & x, ReadBuffer & in) {
+bool read_float_text_fast_impl(T & x, ReadBuffer & in) {
     static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>, "Argument for readFloatTextImpl must be float or double");
     static_assert('a' > '.' && 'A' > '.' && '\n' < '.' && '\t' < '.' && '\'' < '.' && '"' < '.', "Layout of char is not like ASCII"); //-V590
 
@@ -285,7 +285,7 @@ bool readFloatTextFastImpl(T & x, ReadBuffer & in) {
 }
 
 template <typename T>
-bool readIntTextImpl(T & x, ReadBuffer & buf) {
+bool read_int_text_impl(T & x, ReadBuffer & buf) {
     bool negative = false;
     std::make_unsigned_t<T> res = 0;
     if (buf.eof()) {
@@ -331,7 +331,7 @@ bool readIntTextImpl(T & x, ReadBuffer & buf) {
 }
 
 template <typename T>
-bool readDateTimeTextImpl(T& x, ReadBuffer & buf) {
+bool read_datetime_text_impl(T& x, ReadBuffer & buf) {
     static_assert(std::is_same_v<Int128, T>);
     auto dv = binary_cast<Int128, DateTimeValue>(x);
     auto ans = dv.from_date_str(buf.position(), buf.count());
@@ -343,7 +343,7 @@ bool readDateTimeTextImpl(T& x, ReadBuffer & buf) {
 }
 
 template <typename T>
-bool readDecimalTextImpl(T& x, ReadBuffer & buf) {
+bool read_decimal_text_impl(T& x, ReadBuffer & buf) {
     static_assert(IsDecimalNumber<T>);
     // TODO: open this static_assert
     // static_assert(std::is_same_v<Decimal128, T>);
@@ -358,22 +358,22 @@ bool readDecimalTextImpl(T& x, ReadBuffer & buf) {
 }
 
 template <typename T>
-bool tryReadIntText(T & x, ReadBuffer & buf) {
-    return readIntTextImpl<T>(x, buf);
+bool try_read_int_text(T & x, ReadBuffer & buf) {
+    return read_int_text_impl<T>(x, buf);
 }
 
 template <typename T>
-bool tryReadFloatText(T & x, ReadBuffer & in) {
-    return readFloatTextFastImpl<T>(x, in);
+bool try_read_float_text(T & x, ReadBuffer & in) {
+    return read_float_text_fast_impl<T>(x, in);
 }
 
 template <typename T>
-bool tryReadDecimalText(T & x, ReadBuffer & in) {
-    return readDecimalTextImpl<T>(x, in);
+bool try_read_decimal_text(T & x, ReadBuffer & in) {
+    return read_decimal_text_impl<T>(x, in);
 }
 
 template <typename T>
-bool tryReadDateTimeText(T & x, ReadBuffer & in) {
-    return readDateTimeTextImpl<T>(x, in);
+bool try_read_datetime_text(T & x, ReadBuffer & in) {
+    return read_datetime_text_impl<T>(x, in);
 }
 } // namespace doris::vectorized

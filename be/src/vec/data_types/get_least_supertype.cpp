@@ -45,7 +45,7 @@ String getExceptionMessagePrefix(const DataTypes& types) {
         if (!first) res << ", ";
         first = false;
 
-        res << type->getName();
+        res << type->get_name();
     }
 
     return res.str();
@@ -98,7 +98,7 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
                         typeid_cast<const DataTypeNullable*>(type.get())) {
                 have_nullable = true;
 
-                if (!type_nullable->onlyNull())
+                if (!type_nullable->only_null())
                     nested_types.emplace_back(type_nullable->getNestedType());
             } else
                 nested_types.emplace_back(type);

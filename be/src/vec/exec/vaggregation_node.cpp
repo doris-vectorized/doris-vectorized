@@ -349,11 +349,11 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
     for (int i = 0; i < block_schema.size(); ++i) {
         const auto column_type = block_schema[i].type;
         if (!column_type->equals(*data_types[i])) {
-            DCHECK(column_type->isNullable());
+            DCHECK(column_type->is_nullable());
             DCHECK(((DataTypeNullable*)column_type.get())->getNestedType()->equals(*data_types[i]));
-            DCHECK(!data_types[i]->isNullable());
+            DCHECK(!data_types[i]->is_nullable());
             ColumnPtr ptr = std::move(columns[i]);
-            ptr = makeNullable(ptr);
+            ptr = make_nullable(ptr);
             columns[i] = std::move(*ptr).mutate();
         }
     }
@@ -372,7 +372,7 @@ Status AggregationNode::_serialize_without_key(RuntimeState* state, Block* block
 
     // will serialize data to string column
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
-        data_types[i] = makeNullable(std::make_shared<DataTypeString>());
+        data_types[i] = make_nullable(std::make_shared<DataTypeString>());
         value_columns[i] = data_types[i]->createColumn();
     }
 
@@ -382,7 +382,7 @@ Status AggregationNode::_serialize_without_key(RuntimeState* state, Block* block
         _aggregate_evaluators[i]->function()->serialize(
                 _agg_data.without_key + _offsets_of_aggregate_states[i], buf);
         auto str_buffer = buf.str();
-        value_columns[i]->insertData(str_buffer.c_str(), str_buffer.length());
+        value_columns[i]->insert_data(str_buffer.c_str(), str_buffer.length());
         buf.str("");
         buf.clear();
     }
@@ -418,13 +418,13 @@ Status AggregationNode::_merge_without_key(Block* block) {
     Defer defer([&]() { _destory_agg_status(deserialize_buffer.get()); });
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         auto column = block->getByPosition(i).column;
-        if (column->isNullable()) {
-            column = ((ColumnNullable*)column.get())->getNestedColumnPtr();
+        if (column->is_nullable()) {
+            column = ((ColumnNullable*)column.get())->get_nested_column_ptr();
         }
 
         for (int j = 0; j < rows; ++j) {
             std::string data_buffer;
-            StringRef ref = column->getDataAt(j);
+            StringRef ref = column->get_data_at(j);
             data_buffer.assign(ref.data, ref.size);
             std::istringstream buf(data_buffer);
 
@@ -745,7 +745,7 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
 
     // will serialize data to string column
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
-        value_data_types[i] = makeNullable(std::make_shared<DataTypeString>());
+        value_data_types[i] = make_nullable(std::make_shared<DataTypeString>());
         value_columns[i] = value_data_types[i]->createColumn();
     }
 
@@ -760,7 +760,7 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
         for (size_t i = 0; i < _aggregate_evaluators.size(); ++i) {
             _aggregate_evaluators[i]->function()->serialize(
                     mapped + _offsets_of_aggregate_states[i], buf);
-            value_columns[i]->insertData(buf.str().c_str(), buf.str().length());
+            value_columns[i]->insert_data(buf.str().c_str(), buf.str().length());
             buf.str("");
             buf.clear();
         }
@@ -836,12 +836,12 @@ Status AggregationNode::_merge_with_serialized_key(Block* block) {
 
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         auto column = block->getByPosition(i + key_size).column;
-        if (column->isNullable()) {
-            column = ((ColumnNullable*)column.get())->getNestedColumnPtr();
+        if (column->is_nullable()) {
+            column = ((ColumnNullable*)column.get())->get_nested_column_ptr();
         }
         for (int j = 0; j < rows; ++j) {
             std::string data_buffer;
-            StringRef ref = column->getDataAt(j);
+            StringRef ref = column->get_data_at(j);
             data_buffer.assign(ref.data, ref.size);
             std::istringstream buf(data_buffer);
 

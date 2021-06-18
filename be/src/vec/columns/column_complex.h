@@ -36,44 +36,44 @@ public:
     using value_type = T;
     using Container = std::vector<value_type>;
 
-    bool isNumeric() const override { return false; }
+    bool is_numeric() const override { return false; }
 
     size_t size() const override { return data.size(); }
 
-    StringRef getDataAt(size_t n) const override {
+    StringRef get_data_at(size_t n) const override {
         return StringRef(reinterpret_cast<const char*>(&data[n]), sizeof(data[n]));
     }
 
-    void insertFrom(const IColumn& src, size_t n) override {
-        data.push_back(static_cast<const Self&>(src).getData()[n]);
+    void insert_from(const IColumn& src, size_t n) override {
+        data.push_back(static_cast<const Self&>(src).get_data()[n]);
     }
 
-    void insertData(const char* pos, size_t /*length*/) override {
+    void insert_data(const char* pos, size_t /*length*/) override {
         data.push_back(*reinterpret_cast<const T*>(pos));
     }
 
-    void insertDefault() override { data.push_back(T()); }
+    void insert_default() override { data.push_back(T()); }
 
     // TODO: value_type is not a pod type, so we also need to
     // calculate the memory requested by value_type
-    size_t byteSize() const override { return data.size() * sizeof(data[0]); }
+    size_t byte_size() const override { return data.size() * sizeof(data[0]); }
 
-    size_t allocatedBytes() const override { return byteSize(); }
+    size_t allocated_bytes() const override { return byte_size(); }
 
     void protect() override {}
 
-    void insertValue(T value) { data.emplace_back(std::move(value)); }
+    void insert_value(T value) { data.emplace_back(std::move(value)); }
 
-    void getPermutation(bool reverse, size_t limit, int nan_direction_hint,
+    void get_permutation(bool reverse, size_t limit, int nan_direction_hint,
                         IColumn::Permutation& res) const override {
-        throw Exception("getPermutation not implemented", ErrorCodes::NOT_IMPLEMENTED);
+        throw Exception("get_permutation not implemented", ErrorCodes::NOT_IMPLEMENTED);
     }
 
     void reserve(size_t n) override { data.reserve(n); }
 
-    const char* getFamilyName() const override { return TypeName<T>::get(); }
+    const char* get_family_name() const override { return TypeName<T>::get(); }
 
-    MutableColumnPtr cloneResized(size_t size) const override;
+    MutableColumnPtr clone_resized(size_t size) const override;
 
     void insert(const Field& x) override {
         throw Exception("insert field not implemented", ErrorCodes::NOT_IMPLEMENTED);
@@ -90,63 +90,63 @@ public:
         throw Exception("get field not implemented", ErrorCodes::NOT_IMPLEMENTED);
     }
 
-    Float64 getFloat64(size_t n) const override {
+    Float64 get_float64(size_t n) const override {
         throw Exception("get field not implemented", ErrorCodes::NOT_IMPLEMENTED);
     }
 
-    UInt64 getUInt(size_t n) const override {
+    UInt64 get_uint(size_t n) const override {
         throw Exception("get field not implemented", ErrorCodes::NOT_IMPLEMENTED);
     }
 
-    bool getBool(size_t n) const override {
+    bool get_bool(size_t n) const override {
         throw Exception("get field not implemented", ErrorCodes::NOT_IMPLEMENTED);
     }
 
-    Int64 getInt(size_t n) const override {
+    Int64 get_int(size_t n) const override {
         throw Exception("get field not implemented", ErrorCodes::NOT_IMPLEMENTED);
     }
 
-    void insertRangeFrom(const IColumn& src, size_t start, size_t length) {
+    void insert_range_from(const IColumn& src, size_t start, size_t length) {
         auto& col = static_cast<const Self&>(src);
-        auto& src_data = col.getData();
+        auto& src_data = col.get_data();
         auto st = src_data.begin() + start;
         auto ed = st + length;
         data.insert(data.end(), st, ed);
     }
 
-    void popBack(size_t n) { data.erase(data.end() - n, data.end()); }
+    void pop_back(size_t n) { data.erase(data.end() - n, data.end()); }
     // it's impossable to use ComplexType as key , so we don't have to implemnt them
-    StringRef serializeValueIntoArena(size_t n, Arena& arena, char const*& begin) const {
-        throw Exception("serializeValueIntoArena not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    StringRef serialize_value_into_arena(size_t n, Arena& arena, char const*& begin) const {
+        throw Exception("serialize_value_into_arena not implemented", ErrorCodes::NOT_IMPLEMENTED);
     }
 
-    const char* deserializeAndInsertFromArena(const char* pos) {
-        throw Exception("deserializeAndInsertFromArena not implemented",
+    const char* deserialize_and_insert_from_arena(const char* pos) {
+        throw Exception("deserialize_and_insert_from_arena not implemented",
                         ErrorCodes::NOT_IMPLEMENTED);
     }
 
-    void updateHashWithValue(size_t n, SipHash& hash) const {
+    void update_hash_with_value(size_t n, SipHash& hash) const {
         // TODO add hash function
     }
 
-    int compareAt(size_t n, size_t m, const IColumn& rhs, int nan_direction_hint) const {
-        throw Exception("compareAt not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    int compare_at(size_t n, size_t m, const IColumn& rhs, int nan_direction_hint) const {
+        throw Exception("compare_at not implemented", ErrorCodes::NOT_IMPLEMENTED);
     }
 
-    void getExtremes(Field& min, Field& max) const {
-        throw Exception("getExtremes not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    void get_extremes(Field& min, Field& max) const {
+        throw Exception("get_extremes not implemented", ErrorCodes::NOT_IMPLEMENTED);
     }
 
-    bool canBeInsideNullable() const override { return true; }
+    bool can_be_inside_nullable() const override { return true; }
 
-    bool isFixedAndContiguous() const override { return true; }
-    size_t sizeOfValueIfFixed() const override { return sizeof(T); }
+    bool is_fixed_and_contiguous() const override { return true; }
+    size_t size_of_value_if_fixed() const override { return sizeof(T); }
 
-    StringRef getRawData() const override {
+    StringRef get_raw_data() const override {
         return StringRef(reinterpret_cast<const char*>(data.data()), data.size());
     }
 
-    bool structureEquals(const IColumn& rhs) const override {
+    bool structure_equals(const IColumn& rhs) const override {
         return typeid(rhs) == typeid(ColumnComplexType<T>);
     }
 
@@ -154,13 +154,13 @@ public:
 
     ColumnPtr permute(const IColumn::Permutation& perm, size_t limit) const override;
 
-    Container& getData() { return data; }
+    Container& get_data() { return data; }
 
-    const Container& getData() const { return data; }
+    const Container& get_data() const { return data; }
 
-    const T& getElement(size_t n) const { return data[n]; }
+    const T& get_element(size_t n) const { return data[n]; }
 
-    T& getElement(size_t n) { return data[n]; }
+    T& get_element(size_t n) { return data[n]; }
 
     ColumnPtr replicate(const IColumn::Offsets& replicate_offsets) const override;
 
@@ -174,7 +174,7 @@ private:
 };
 
 template <typename T>
-MutableColumnPtr ColumnComplexType<T>::cloneResized(size_t size) const {
+MutableColumnPtr ColumnComplexType<T>::clone_resized(size_t size) const {
     auto res = this->create();
 
     if (size > 0) {
@@ -194,7 +194,7 @@ ColumnPtr ColumnComplexType<T>::filter(const IColumn::Filter& filt,
                         ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
     if (data.size() == 0) return this->create();
     auto res = this->create();
-    Container& res_data = res->getData();
+    Container& res_data = res->get_data();
 
     if (result_size_hint) res_data.reserve(result_size_hint > 0 ? result_size_hint : size);
 
@@ -226,7 +226,7 @@ ColumnPtr ColumnComplexType<T>::permute(const IColumn::Permutation& perm, size_t
                         ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
     auto res = this->create(limit);
-    typename Self::Container& res_data = res->getData();
+    typename Self::Container& res_data = res->get_data();
     for (size_t i = 0; i < limit; ++i) {
         res_data[i] = data[perm[i]];
     }
@@ -244,7 +244,7 @@ ColumnPtr ColumnComplexType<T>::replicate(const IColumn::Offsets& offsets) const
     if (0 == size) return this->create();
 
     auto res = this->create();
-    typename Self::Container& res_data = res->getData();
+    typename Self::Container& res_data = res->get_data();
     res_data.reserve(offsets.back());
 
     IColumn::Offset prev_offset = 0;

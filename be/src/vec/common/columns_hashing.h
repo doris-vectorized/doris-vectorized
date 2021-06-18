@@ -28,10 +28,10 @@ struct HashMethodOneNumber : public columns_hashing_impl::HashMethodBase<
     /// If the keys of a fixed length then key_sizes contains their lengths, empty otherwise.
     HashMethodOneNumber(const ColumnRawPtrs& key_columns, const Sizes& /*key_sizes*/,
                         const HashMethodContextPtr&) {
-        vec = key_columns[0]->getRawData().data;
+        vec = key_columns[0]->get_raw_data().data;
     }
 
-    HashMethodOneNumber(const IColumn* column) { vec = column->getRawData().data; }
+    HashMethodOneNumber(const IColumn* column) { vec = column->get_raw_data().data; }
 
     /// Creates context. Method is called once and result context is used in all threads.
     using Base::createContext; /// (const HashMethodContext::Settings &) -> HashMethodContextPtr
@@ -68,8 +68,8 @@ struct HashMethodString : public columns_hashing_impl::HashMethodBase<
                      const HashMethodContextPtr&) {
         const IColumn& column = *key_columns[0];
         const ColumnString& column_string = assert_cast<const ColumnString&>(column);
-        offsets = column_string.getOffsets().data();
-        chars = column_string.getChars().data();
+        offsets = column_string.get_offsets().data();
+        chars = column_string.get_chars().data();
     }
 
     auto getKeyHolder(ssize_t row, [[maybe_unused]] Arena& pool) const {
