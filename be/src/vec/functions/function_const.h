@@ -70,8 +70,8 @@ private:
 
     Status executeImpl(Block& block, const ColumnNumbers&, size_t result,
                        size_t input_rows_count) override {
-        block.getByPosition(result).column =
-                block.getByPosition(result).type->createColumnConst(input_rows_count, Impl::value);
+        block.getByPosition(result).column = block.getByPosition(result).type->createColumnConst(
+                input_rows_count == 0 ? 1 : input_rows_count, Impl::value);
         return Status::OK();
     }
 };
