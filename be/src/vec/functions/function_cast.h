@@ -88,10 +88,9 @@ struct ConvertImpl {
     using ToFieldType = typename ToDataType::FieldType;
 
     template <typename Additions = void*>
-    static Status  execute(Block& block, const ColumnNumbers& arguments,
-                                                size_t result, size_t /*input_rows_count*/,
-                                                Additions additions
-                                                [[maybe_unused]] = Additions()) {
+    static Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
+                          size_t /*input_rows_count*/,
+                          Additions additions [[maybe_unused]] = Additions()) {
         const ColumnWithTypeAndName& named_from = block.getByPosition(arguments[0]);
 
         using ColVecFrom =
@@ -103,9 +102,9 @@ struct ConvertImpl {
         if constexpr (IsDataTypeDecimal<FromDataType> || IsDataTypeDecimal<ToDataType>) {
             if constexpr (!IsDataTypeDecimalOrNumber<FromDataType> ||
                           !IsDataTypeDecimalOrNumber<ToDataType>)
-                throw Exception("Illegal column " + named_from.column->get_name() +
-                                " of first argument of function " + Name::name,
-                                ErrorCodes::ILLEGAL_COLUMN);
+                return Status::RuntimeError(
+                        fmt::format("Illegal column {} of first argument of function {}",
+                                    named_from.column->get_name(), Name::name));
         }
 
         if (const ColVecFrom* col_from = check_and_get_column<ColVecFrom>(named_from.column.get())) {
@@ -176,8 +175,8 @@ struct ConvertImplToTimeType {
     using FromFieldType = typename FromDataType::FieldType;
     using ToFieldType = typename ToDataType::FieldType;
 
-    static Status execute(Block& block, const ColumnNumbers& arguments,
-                                                size_t result, size_t /*input_rows_count*/) {
+    static Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
+                          size_t /*input_rows_count*/) {
         const ColumnWithTypeAndName& named_from = block.getByPosition(arguments[0]);
 
         using ColVecFrom =
@@ -1353,10 +1352,11 @@ protected:
 
     DataTypePtr getReturnTypeImpl(const ColumnsWithTypeAndName& arguments) const override {
         const auto type_col = checkAndGetColumnConst<ColumnString>(arguments.back().column.get());
-        if (!type_col)
-            throw Exception("Second argument to " + get_name() +
-                                    " must be a constant string describing type",
-                            ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        if (!type_col) {
+            LOG(FATAL) << fmt::format(
+                    "Second argument to {} must be a constant string describing type", get_name());
+        }
+
         auto type = DataTypeFactory::instance().get(type_col->get_value<String>());
 
         bool need_to_be_nullable = false;

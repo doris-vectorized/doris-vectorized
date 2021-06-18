@@ -15,14 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "common/logging.h"
 #include <vec/aggregate_functions/aggregate_function.h>
 #include <vec/aggregate_functions/aggregate_function_combinator.h>
 #include <vec/aggregate_functions/aggregate_function_count.h>
 #include <vec/aggregate_functions/aggregate_function_nothing.h>
 #include <vec/aggregate_functions/aggregate_function_null.h>
 #include <vec/data_types/data_type_nullable.h>
-// #include <vec/AggregateFunctions/AggregateFunctionCombinatorFactory.h>
-
 #include <vec/aggregate_functions/aggregate_function_simple_factory.h>
 
 namespace doris::vectorized {
@@ -59,11 +58,10 @@ public:
             }
         }
 
-        if (!has_nullable_types)
-            throw Exception(
-                    "Aggregate function combinator 'Null' requires at least one argument to be "
-                    "Nullable",
-                    ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        if (!has_nullable_types) {
+            LOG(WARNING) << fmt::format("Aggregate function combinator 'Null' requires at least one argument to be Nullable");
+            return nullptr;
+        }
 
         /// Special case for 'count' function. It could be called with Nullable arguments
         /// - that means - count number of calls, when all arguments are not NULL.

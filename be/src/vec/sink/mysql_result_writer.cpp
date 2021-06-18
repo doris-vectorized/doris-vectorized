@@ -173,8 +173,7 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
 }
 
 Status MysqlResultWriter::append_row_batch(const RowBatch* batch) {
-    throw Exception("Not Implemented MysqlResultWriter::append_row_batch scalar",
-                    ErrorCodes::NOT_IMPLEMENTED);
+    return Status::RuntimeError("Not Implemented MysqlResultWriter::append_row_batch scalar");
 }
 
 Status MysqlResultWriter::append_block(Block& block) {

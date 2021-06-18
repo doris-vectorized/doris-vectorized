@@ -17,6 +17,7 @@
 
 #include "vec/data_types/data_type_nullable.h"
 
+#include "common/logging.h"
 #include "gen_cpp/data.pb.h"
 #include "vec/columns/column_nullable.h"
 #include "vec/common/assert_cast.h"
@@ -34,10 +35,9 @@ extern const int ILLEGAL_TYPE_OF_ARGUMENT;
 
 DataTypeNullable::DataTypeNullable(const DataTypePtr& nested_data_type_)
         : nested_data_type{nested_data_type_} {
-    if (!nested_data_type->can_be_inside_nullable())
-        throw Exception(
-                "Nested type " + nested_data_type->get_name() + " cannot be inside Nullable type",
-                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+    if (!nested_data_type->can_be_inside_nullable()) {
+        LOG(FATAL) << fmt::format("Nested type {} cannot be inside Nullable type", nested_data_type->get_name());
+    }
 }
 
 bool DataTypeNullable::only_null() const {

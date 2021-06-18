@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "common/logging.h"
 #include <vec/aggregate_functions/aggregate_function.h>
 #include <vec/columns/column_nullable.h>
 #include <vec/common/assert_cast.h>
@@ -213,16 +214,13 @@ public:
                                         AggregateFunctionNullVariadic<result_is_nullable>>(
                       std::move(nested_function_), arguments, params),
               number_of_arguments(arguments.size()) {
-        if (number_of_arguments == 1)
-            throw Exception(
-                    "Logical error: single argument is passed to AggregateFunctionNullVariadic",
-                    ErrorCodes::LOGICAL_ERROR);
+        if (number_of_arguments == 1) {
+            LOG(FATAL) << "Logical error: single argument is passed to AggregateFunctionNullVariadic";
+        }
 
-        if (number_of_arguments > MAX_ARGS)
-            throw Exception(
-                    "Maximum number of arguments for aggregate function with Nullable types is " +
-                            std::to_string(size_t(MAX_ARGS)),
-                    ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+        if (number_of_arguments > MAX_ARGS) {
+            LOG(FATAL) << fmt::format("Maximum number of arguments for aggregate function with Nullable types is {}", size_t(MAX_ARGS));
+        }
 
         for (size_t i = 0; i < number_of_arguments; ++i)
             is_nullable[i] = arguments[i]->is_nullable();
