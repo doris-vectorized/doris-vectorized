@@ -210,10 +210,10 @@ Status PreparedFunctionImpl::defaultImplementationForConstantArguments(
 
     /// Check that these arguments are really constant.
     for (auto arg_num : arguments_to_remain_constants)
-        if (arg_num < args.size() && !is_column_const(*block.getByPosition(args[arg_num]).column))
-            throw Exception("Argument at index " + std::to_string(arg_num) + " for function " +
-                                    get_name() + " must be constant",
-                            ErrorCodes::ILLEGAL_COLUMN);
+        if (arg_num < args.size() && !is_column_const(*block.getByPosition(args[arg_num]).column)) {
+            return Status::RuntimeError(fmt::format(
+                    "Argument at index {} for function {}  must be constant", arg_num, get_name()));
+        }
 
     if (args.empty() || !useDefaultImplementationForConstants() ||
         !allArgumentsAreConstants(block, args))
@@ -241,10 +241,12 @@ Status PreparedFunctionImpl::defaultImplementationForConstantArguments(
     /** When using default implementation for constants, the function requires at least one argument
       *  not in "arguments_to_remain_constants" set. Otherwise we get infinite recursion.
       */
-    if (!have_converted_columns)
-        throw Exception("Number of arguments for function " + get_name() +
-                                " doesn't match: the function requires more arguments",
-                        ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+    if (!have_converted_columns) {
+        return Status::RuntimeError(
+                fmt::format("Number of arguments for function {} doesn't match: the function "
+                            "requires more arguments",
+                            get_name()));
+    }
 
     temporary_block.insert(block.getByPosition(result));
 
@@ -344,42 +346,6 @@ Status PreparedFunctionImpl::executeWithoutLowCardinalityColumns(Block& block,
         size_t input_rows_count) {
     size_t num_rows = input_rows_count;
     ColumnPtr indexes;
-
-    /// Find first LowCardinality column and replace it to nested dictionary.
-    //    for (auto arg : args)
-    //    {
-    //        ColumnWithTypeAndName & column = block.getByPosition(arg);
-    //        if (auto * low_cardinality_column = check_and_get_column<ColumnLowCardinality>(column.column.get()))
-    //        {
-    //            /// Single LowCardinality column is supported now.
-    //            if (indexes)
-    //                throw Exception("Expected single dictionary argument for function.", ErrorCodes::LOGICAL_ERROR);
-    //
-    //            auto * low_cardinality_type = checkAndGetDataType<DataTypeLowCardinality>(column.type.get());
-    //
-    //            if (!low_cardinality_type)
-    //                throw Exception("Incompatible type for low cardinality column: " + column.type->get_name(),
-    //                                ErrorCodes::LOGICAL_ERROR);
-    //
-    //            if (can_be_executed_on_default_arguments)
-    //            {
-    //                /// Normal case, when function can be executed on values's default.
-    //                column.column = low_cardinality_column->getDictionary().get_nested_column();
-    //                indexes = low_cardinality_column->getIndexesPtr();
-    //            }
-    //            else
-    //            {
-    //                /// Special case when default value can't be used. Example: 1 % LowCardinality(Int).
-    //                /// LowCardinality always contains default, so 1 % 0 will throw exception in normal case.
-    //                auto dict_encoded = low_cardinality_column->getMinimalDictionaryEncodedColumn(0, low_cardinality_column->size());
-    //                column.column = dict_encoded.dictionary;
-    //                indexes = dict_encoded.indexes;
-    //            }
-    //
-    //            num_rows = column.column->size();
-    //            column.type = low_cardinality_type->getDictionaryType();
-    //        }
-    //    }
 
     /// Change size of constants.
     for (auto arg : args) {
@@ -490,11 +456,9 @@ void FunctionBuilderImpl::checkNumberOfArguments(size_t number_of_arguments) con
 
     size_t expected_number_of_arguments = getNumberOfArguments();
 
-    if (number_of_arguments != expected_number_of_arguments)
-        throw Exception("Number of arguments for function " + get_name() +
-                                " doesn't match: passed " + std::to_string(number_of_arguments) +
-                                ", should be " + std::to_string(expected_number_of_arguments),
-                        ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+    CHECK_EQ(number_of_arguments, expected_number_of_arguments) << fmt::format(
+            "Number of arguments for function {} doesn't match: passed {} , should be {}",
+            get_name(), number_of_arguments, expected_number_of_arguments);
 }
 
 DataTypePtr FunctionBuilderImpl::getReturnTypeWithoutLowCardinality(
