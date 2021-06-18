@@ -38,50 +38,50 @@ public:
     IColumnDummy(size_t s_) : s(s_) {}
 
 public:
-    virtual MutableColumnPtr cloneDummy(size_t s_) const = 0;
+    virtual MutableColumnPtr clone_dummy(size_t s_) const = 0;
 
-    MutableColumnPtr cloneResized(size_t s_) const override { return cloneDummy(s_); }
+    MutableColumnPtr clone_resized(size_t s) const override { return clone_dummy(s); }
     size_t size() const override { return s; }
-    void insertDefault() override { ++s; }
-    void popBack(size_t n) override { s -= n; }
-    size_t byteSize() const override { return 0; }
-    size_t allocatedBytes() const override { return 0; }
-    int compareAt(size_t, size_t, const IColumn&, int) const override { return 0; }
+    void insert_default() override { ++s; }
+    void pop_back(size_t n) override { s -= n; }
+    size_t byte_size() const override { return 0; }
+    size_t allocated_bytes() const override { return 0; }
+    int compare_at(size_t, size_t, const IColumn&, int) const override { return 0; }
 
     Field operator[](size_t) const override {
-        throw Exception("Cannot get value from " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+        throw Exception("Cannot get value from " + get_name(), ErrorCodes::NOT_IMPLEMENTED);
     }
     void get(size_t, Field&) const override {
-        throw Exception("Cannot get value from " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+        throw Exception("Cannot get value from " + get_name(), ErrorCodes::NOT_IMPLEMENTED);
     }
     void insert(const Field&) override {
-        throw Exception("Cannot insert element into " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+        throw Exception("Cannot insert element into " + get_name(), ErrorCodes::NOT_IMPLEMENTED);
     }
 
-    StringRef getDataAt(size_t) const override { return {}; }
+    StringRef get_data_at(size_t) const override { return {}; }
 
-    void insertData(const char*, size_t) override { ++s; }
+    void insert_data(const char*, size_t) override { ++s; }
 
-    StringRef serializeValueIntoArena(size_t /*n*/, Arena& arena,
-                                      char const*& begin) const override {
+    StringRef serialize_value_into_arena(size_t /*n*/, Arena& arena,
+                                         char const*& begin) const override {
         return {arena.allocContinue(0, begin), 0};
     }
 
-    const char* deserializeAndInsertFromArena(const char* pos) override {
+    const char* deserialize_and_insert_from_arena(const char* pos) override {
         ++s;
         return pos;
     }
 
-    void updateHashWithValue(size_t /*n*/, SipHash& /*hash*/) const override {}
+    void update_hash_with_value(size_t /*n*/, SipHash& /*hash*/) const override {}
 
-    void insertFrom(const IColumn&, size_t) override { ++s; }
+    void insert_from(const IColumn&, size_t) override { ++s; }
 
-    void insertRangeFrom(const IColumn& /*src*/, size_t /*start*/, size_t length) override {
+    void insert_range_from(const IColumn& /*src*/, size_t /*start*/, size_t length) override {
         s += length;
     }
 
     ColumnPtr filter(const Filter& filt, ssize_t /*result_size_hint*/) const override {
-        return cloneDummy(countBytesInFilter(filt));
+        return clone_dummy(count_bytes_in_filter(filt));
     }
 
     ColumnPtr permute(const Permutation& perm, size_t limit) const override {
@@ -89,7 +89,7 @@ public:
             throw Exception("Size of permutation doesn't match size of column.",
                             ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
-        return cloneDummy(limit ? std::min(s, limit) : s);
+        return clone_dummy(limit ? std::min(s, limit) : s);
     }
 
     // ColumnPtr index(const IColumn & indexes, size_t limit) const override
@@ -97,10 +97,10 @@ public:
     //     if (indexes.size() < limit)
     //         throw Exception("Size of indexes is less than required.", ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
-    //     return cloneDummy(limit ? limit : s);
+    //     return clone_dummy(limit ? limit : s);
     // }
 
-    void getPermutation(bool /*reverse*/, size_t /*limit*/, int /*nan_direction_hint*/, Permutation & res) const override
+    void get_permutation(bool /*reverse*/, size_t /*limit*/, int /*nan_direction_hint*/, Permutation & res) const override
     {
         res.resize(s);
         for (size_t i = 0; i < s; ++i)
@@ -112,7 +112,7 @@ public:
             throw Exception("Size of offsets doesn't match size of column.",
                             ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
-        return cloneDummy(offsets.back());
+        return clone_dummy(offsets.back());
     }
 
     MutableColumns scatter(ColumnIndex num_columns, const Selector& selector) const override {
@@ -124,21 +124,21 @@ public:
         for (auto idx : selector) ++counts[idx];
 
         MutableColumns res(num_columns);
-        for (size_t i = 0; i < num_columns; ++i) res[i] = cloneResized(counts[i]);
+        for (size_t i = 0; i < num_columns; ++i) res[i] = clone_resized(counts[i]);
 
         return res;
     }
 
     // void gather(ColumnGathererStream &) override
     // {
-    //     throw Exception("Method gather is not supported for " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+    //     throw Exception("Method gather is not supported for " + get_name(), ErrorCodes::NOT_IMPLEMENTED);
     // }
 
-    void getExtremes(Field&, Field&) const override {}
+    void get_extremes(Field&, Field&) const override {}
 
     void addSize(size_t delta) { s += delta; }
 
-    bool isDummy() const override { return true; }
+    bool is_dummy() const override { return true; }
 
 protected:
     size_t s;

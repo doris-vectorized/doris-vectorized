@@ -59,109 +59,109 @@ public:
         return Base::create(std::forward<Args>(args)...);
     }
 
-    const char* getFamilyName() const override { return "Nullable"; }
-    std::string getName() const override { return "Nullable(" + nested_column->getName() + ")"; }
-    MutableColumnPtr cloneResized(size_t size) const override;
+    const char* get_family_name() const override { return "Nullable"; }
+    std::string get_name() const override { return "Nullable(" + nested_column->get_name() + ")"; }
+    MutableColumnPtr clone_resized(size_t size) const override;
     size_t size() const override { return nested_column->size(); }
-    bool isNullAt(size_t n) const override {
-        return assert_cast<const ColumnUInt8&>(*null_map).getData()[n] != 0;
+    bool is_null_at(size_t n) const override {
+        return assert_cast<const ColumnUInt8&>(*null_map).get_data()[n] != 0;
     }
     Field operator[](size_t n) const override;
     void get(size_t n, Field& res) const override;
-    bool getBool(size_t n) const override { return isNullAt(n) ? 0 : nested_column->getBool(n); }
+    bool get_bool(size_t n) const override { return is_null_at(n) ? 0 : nested_column->get_bool(n); }
     UInt64 get64(size_t n) const override { return nested_column->get64(n); }
-    StringRef getDataAt(size_t n) const override;
+    StringRef get_data_at(size_t n) const override;
 
     /// Will insert null value if pos=nullptr
-    void insertData(const char* pos, size_t length) override;
-    StringRef serializeValueIntoArena(size_t n, Arena& arena, char const*& begin) const override;
-    const char* deserializeAndInsertFromArena(const char* pos) override;
-    void insertRangeFrom(const IColumn& src, size_t start, size_t length) override;
+    void insert_data(const char* pos, size_t length) override;
+    StringRef serialize_value_into_arena(size_t n, Arena& arena, char const*& begin) const override;
+    const char* deserialize_and_insert_from_arena(const char* pos) override;
+    void insert_range_from(const IColumn& src, size_t start, size_t length) override;
     void insert(const Field& x) override;
-    void insertFrom(const IColumn& src, size_t n) override;
+    void insert_from(const IColumn& src, size_t n) override;
 
-    void insertFromNotNullable(const IColumn& src, size_t n);
-    void insertRangeFromNotNullable(const IColumn& src, size_t start, size_t length);
-    void insertManyFromNotNullable(const IColumn& src, size_t position, size_t length);
+    void insert_from_not_nullable(const IColumn& src, size_t n);
+    void insert_range_from_not_nullable(const IColumn& src, size_t start, size_t length);
+    void insert_many_from_not_nullable(const IColumn& src, size_t position, size_t length);
 
-    void insertDefault() override {
-        getNestedColumn().insertDefault();
-        getNullMapData().push_back(1);
+    void insert_default() override {
+        get_nested_column().insert_default();
+        get_null_map_data().push_back(1);
     }
 
-    void popBack(size_t n) override;
+    void pop_back(size_t n) override;
     ColumnPtr filter(const Filter& filt, ssize_t result_size_hint) const override;
     ColumnPtr permute(const Permutation& perm, size_t limit) const override;
     //    ColumnPtr index(const IColumn & indexes, size_t limit) const override;
-    int compareAt(size_t n, size_t m, const IColumn& rhs_, int null_direction_hint) const override;
-    void getPermutation(bool reverse, size_t limit, int null_direction_hint,
+    int compare_at(size_t n, size_t m, const IColumn& rhs_, int null_direction_hint) const override;
+    void get_permutation(bool reverse, size_t limit, int null_direction_hint,
                         Permutation& res) const override;
     void reserve(size_t n) override;
-    size_t byteSize() const override;
-    size_t allocatedBytes() const override;
+    size_t byte_size() const override;
+    size_t allocated_bytes() const override;
     void protect() override;
     ColumnPtr replicate(const Offsets& replicate_offsets) const override;
-    void updateHashWithValue(size_t n, SipHash& hash) const override;
-    void getExtremes(Field& min, Field& max) const override;
+    void update_hash_with_value(size_t n, SipHash& hash) const override;
+    void get_extremes(Field& min, Field& max) const override;
 
     MutableColumns scatter(ColumnIndex num_columns, const Selector& selector) const override {
-        return scatterImpl<ColumnNullable>(num_columns, selector);
+        return scatter_impl<ColumnNullable>(num_columns, selector);
     }
 
     //    void gather(ColumnGathererStream & gatherer_stream) override;
 
-    void forEachSubcolumn(ColumnCallback callback) override {
+    void for_each_subcolumn(ColumnCallback callback) override {
         callback(nested_column);
         callback(null_map);
     }
 
-    bool structureEquals(const IColumn& rhs) const override {
+    bool structure_equals(const IColumn& rhs) const override {
         if (auto rhs_nullable = typeid_cast<const ColumnNullable*>(&rhs))
-            return nested_column->structureEquals(*rhs_nullable->nested_column);
+            return nested_column->structure_equals(*rhs_nullable->nested_column);
         return false;
     }
 
-    bool isNullable() const override { return true; }
-    bool isFixedAndContiguous() const override { return false; }
-    bool valuesHaveFixedSize() const override { return nested_column->valuesHaveFixedSize(); }
-    size_t sizeOfValueIfFixed() const override {
-        return null_map->sizeOfValueIfFixed() + nested_column->sizeOfValueIfFixed();
+    bool is_nullable() const override { return true; }
+    bool is_fixed_and_contiguous() const override { return false; }
+    bool values_have_fixed_size() const override { return nested_column->values_have_fixed_size(); }
+    size_t size_of_value_if_fixed() const override {
+        return null_map->size_of_value_if_fixed() + nested_column->size_of_value_if_fixed();
     }
-    bool onlyNull() const override { return nested_column->isDummy(); }
+    bool only_null() const override { return nested_column->is_dummy(); }
 
     /// Return the column that represents values.
-    IColumn& getNestedColumn() { return *nested_column; }
-    const IColumn& getNestedColumn() const { return *nested_column; }
+    IColumn& get_nested_column() { return *nested_column; }
+    const IColumn& get_nested_column() const { return *nested_column; }
 
-    const ColumnPtr& getNestedColumnPtr() const { return nested_column; }
+    const ColumnPtr& get_nested_column_ptr() const { return nested_column; }
 
     /// Return the column that represents the byte map.
-    const ColumnPtr& getNullMapColumnPtr() const { return null_map; }
+    const ColumnPtr& get_null_map_column_ptr() const { return null_map; }
 
-    ColumnUInt8& getNullMapColumn() { return assert_cast<ColumnUInt8&>(*null_map); }
-    const ColumnUInt8& getNullMapColumn() const {
+    ColumnUInt8& get_null_map_column() { return assert_cast<ColumnUInt8&>(*null_map); }
+    const ColumnUInt8& get_null_map_column() const {
         return assert_cast<const ColumnUInt8&>(*null_map);
     }
 
-    NullMap& getNullMapData() { return getNullMapColumn().getData(); }
-    const NullMap& getNullMapData() const { return getNullMapColumn().getData(); }
+    NullMap& get_null_map_data() { return get_null_map_column().get_data(); }
+    const NullMap& get_null_map_data() const { return get_null_map_column().get_data(); }
 
     /// Apply the null byte map of a specified nullable column onto the
     /// null byte map of the current column by performing an element-wise OR
     /// between both byte maps. This method is used to determine the null byte
     /// map of the result column of a function taking one or more nullable
     /// columns.
-    void applyNullMap(const ColumnNullable& other);
-    void applyNullMap(const ColumnUInt8& map);
-    void applyNegatedNullMap(const ColumnUInt8& map);
+    void apply_null_map(const ColumnNullable& other);
+    void apply_null_map(const ColumnUInt8& map);
+    void apply_negated_null_map(const ColumnUInt8& map);
 
     /// Check that size of null map equals to size of nested column.
-    void checkConsistency() const;
+    void check_consistency() const;
 
     bool has_null() const {
-        size_t size = getNullMapData().size();
-        const UInt8* null_pos = getNullMapData().data();
-        const UInt8* null_pos_end = getNullMapData().data() + size;
+        size_t size = get_null_map_data().size();
+        const UInt8* null_pos = get_null_map_data().data();
+        const UInt8* null_pos_end = get_null_map_data().data() + size;
 #ifdef __SSE2__
         /** A slightly more optimized version.
         * Based on the assumption that often pieces of consecutive values
@@ -196,9 +196,9 @@ private:
     WrappedPtr null_map;
 
     template <bool negative>
-    void applyNullMapImpl(const ColumnUInt8& map);
+    void apply_null_map_impl(const ColumnUInt8& map);
 };
 
-ColumnPtr makeNullable(const ColumnPtr& column);
+ColumnPtr make_nullable(const ColumnPtr& column);
 
 } // namespace doris::vectorized

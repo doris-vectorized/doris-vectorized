@@ -110,26 +110,26 @@ public:
     DecimalField(T value, UInt32 scale_) : dec(value), scale(scale_) {}
 
     operator T() const { return dec; }
-    T getValue() const { return dec; }
+    T get_value() const { return dec; }
     T getScaleMultiplier() const;
-    UInt32 getScale() const { return scale; }
+    UInt32 get_scale() const { return scale; }
 
     template <typename U>
     bool operator<(const DecimalField<U>& r) const {
         using MaxType = std::conditional_t<(sizeof(T) > sizeof(U)), T, U>;
-        return decimalLess<MaxType>(dec, r.getValue(), scale, r.getScale());
+        return decimalLess<MaxType>(dec, r.get_value(), scale, r.get_scale());
     }
 
     template <typename U>
     bool operator<=(const DecimalField<U>& r) const {
         using MaxType = std::conditional_t<(sizeof(T) > sizeof(U)), T, U>;
-        return decimalLessOrEqual<MaxType>(dec, r.getValue(), scale, r.getScale());
+        return decimalLessOrEqual<MaxType>(dec, r.get_value(), scale, r.get_scale());
     }
 
     template <typename U>
     bool operator==(const DecimalField<U>& r) const {
         using MaxType = std::conditional_t<(sizeof(T) > sizeof(U)), T, U>;
-        return decimalEqual<MaxType>(dec, r.getValue(), scale, r.getScale());
+        return decimalEqual<MaxType>(dec, r.get_value(), scale, r.get_scale());
     }
 
     template <typename U>
@@ -146,16 +146,16 @@ public:
     }
 
     const DecimalField<T>& operator+=(const DecimalField<T>& r) {
-        if (scale != r.getScale())
+        if (scale != r.get_scale())
             throw Exception("Add different decimal fields", ErrorCodes::LOGICAL_ERROR);
-        dec += r.getValue();
+        dec += r.get_value();
         return *this;
     }
 
     const DecimalField<T>& operator-=(const DecimalField<T>& r) {
-        if (scale != r.getScale())
+        if (scale != r.get_scale())
             throw Exception("Sub different decimal fields", ErrorCodes::LOGICAL_ERROR);
-        dec -= r.getValue();
+        dec -= r.get_value();
         return *this;
     }
 

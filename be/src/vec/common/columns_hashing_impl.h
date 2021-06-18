@@ -236,9 +236,9 @@ protected:
         actual_columns.reserve(key_columns.size());
 
         for (const auto& col : key_columns) {
-            if (auto* nullable_col = checkAndGetColumn<ColumnNullable>(col)) {
-                actual_columns.push_back(&nullable_col->getNestedColumn());
-                null_maps.push_back(&nullable_col->getNullMapColumn());
+            if (auto* nullable_col = check_and_get_column<ColumnNullable>(col)) {
+                actual_columns.push_back(&nullable_col->get_nested_column());
+                null_maps.push_back(&nullable_col->get_null_map_column());
             } else {
                 actual_columns.push_back(col);
                 null_maps.push_back(nullptr);
@@ -258,7 +258,7 @@ protected:
 
         for (size_t k = 0; k < null_maps.size(); ++k) {
             if (null_maps[k] != nullptr) {
-                const auto& null_map = assert_cast<const ColumnUInt8&>(*null_maps[k]).getData();
+                const auto& null_map = assert_cast<const ColumnUInt8&>(*null_maps[k]).get_data();
                 if (null_map[row] == 1) {
                     size_t bucket = k / 8;
                     size_t offset = k % 8;

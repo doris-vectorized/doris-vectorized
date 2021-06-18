@@ -48,12 +48,12 @@ class DataTypeDateTime final : public DataTypeNumberBase<Int128> {
 public:
     DataTypeDateTime();
 
-    const char* getFamilyName() const override { return "DateTime"; }
+    const char* get_family_name() const override { return "DateTime"; }
     std::string doGetName() const override;
     TypeIndex getTypeId() const override { return TypeIndex::DateTime; }
 
     bool canBeUsedAsVersion() const override { return true; }
-    bool canBeInsideNullable() const override { return true; }
+    bool can_be_inside_nullable() const override { return true; }
 
     bool equals(const IDataType& rhs) const override;
 

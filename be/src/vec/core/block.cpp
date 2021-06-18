@@ -183,7 +183,7 @@ Block::Block(const PBlock& pblock) {
         if (pcolumn.is_null_size() > 0) {
             data_column =
                     ColumnNullable::create(std::move(type->createColumn()), ColumnUInt8::create());
-            type = makeNullable(type);
+            type = make_nullable(type);
         } else {
             data_column = type->createColumn();
         }
@@ -381,14 +381,14 @@ void Block::set_num_rows(size_t length) {
 
 size_t Block::bytes() const {
     size_t res = 0;
-    for (const auto& elem : data) res += elem.column->byteSize();
+    for (const auto& elem : data) res += elem.column->byte_size();
 
     return res;
 }
 
-size_t Block::allocatedBytes() const {
+size_t Block::allocated_bytes() const {
     size_t res = 0;
-    for (const auto& elem : data) res += elem.column->allocatedBytes();
+    for (const auto& elem : data) res += elem.column->allocated_bytes();
 
     return res;
 }
@@ -410,7 +410,7 @@ std::string Block::dumpData(size_t row_limit) const {
     std::vector<std::string> headers;
     std::vector<size_t> headers_size;
     for (auto it = data.begin(); it != data.end(); ++it) {
-        std::string s = fmt::format("{}({})", it->name, it->type->getName());
+        std::string s = fmt::format("{}({})", it->name, it->type->get_name());
         headers_size.push_back(s.size() > 15 ? s.size() : 15);
         headers.emplace_back(s);
     }
@@ -477,7 +477,7 @@ MutableColumns Block::cloneEmptyColumns() const {
     size_t num_columns = data.size();
     MutableColumns columns(num_columns);
     for (size_t i = 0; i < num_columns; ++i)
-        columns[i] = data[i].column ? data[i].column->cloneEmpty() : data[i].type->createColumn();
+        columns[i] = data[i].column ? data[i].column->clone_empty() : data[i].type->createColumn();
     return columns;
 }
 
@@ -598,7 +598,7 @@ DataTypes Block::getDataTypes() const {
 //     size_t columns = rhs.columns();
 //     if (lhs.columns() != columns)
 //         return on_error("Block structure mismatch in " + context_description + " stream: different number of columns:\n"
-//             + lhs.dumpStructure() + "\n" + rhs.dumpStructure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
+//             + lhs.dumpStructure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
 
 //     for (size_t i = 0; i < columns; ++i)
 //     {
@@ -607,23 +607,23 @@ DataTypes Block::getDataTypes() const {
 
 //         if (actual.name != expected.name)
 //             return on_error("Block structure mismatch in " + context_description + " stream: different names of columns:\n"
-//                 + lhs.dumpStructure() + "\n" + rhs.dumpStructure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
+//                 + lhs.dumpStructure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
 
 //         if (!actual.type->equals(*expected.type))
 //             return on_error("Block structure mismatch in " + context_description + " stream: different types:\n"
-//                 + lhs.dumpStructure() + "\n" + rhs.dumpStructure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
+//                 + lhs.dumpStructure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
 
 //         if (!actual.column || !expected.column)
 //             continue;
 
-//         if (actual.column->getName() != expected.column->getName())
+//         if (actual.column->get_name() != expected.column->get_name())
 //             return on_error("Block structure mismatch in " + context_description + " stream: different columns:\n"
-//                 + lhs.dumpStructure() + "\n" + rhs.dumpStructure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
+//                 + lhs.dumpStructure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
 
-// if (isColumnConst(*actual.column) && isColumnConst(*expected.column))
+// if (isColumnConst(*actual.column) && is_column_const(*expected.column))
 // {
-//     Field actual_value = assert_cast<const ColumnConst &>(*actual.column).getField();
-//     Field expected_value = assert_cast<const ColumnConst &>(*expected.column).getField();
+//     Field actual_value = assert_cast<const ColumnConst &>(*actual.column).get_field();
+//     Field expected_value = assert_cast<const ColumnConst &>(*expected.column).get_field();
 
 //     if (actual_value != expected_value)
 //         return on_error("Block structure mismatch in " + context_description + " stream: different values of constants, actual: "
@@ -700,12 +700,12 @@ DataTypes Block::getDataTypes() const {
 
 //     for (auto it = left_columns.rbegin(); it != left_columns.rend(); ++it)
 //     {
-//         lhs_diff_writer << it->dumpStructure();
+//         lhs_diff_writer << it->dump_structure();
 //         lhs_diff_writer << ", position: " << lhs.getPositionByName(it->name) << '\n';
 //     }
 //     for (auto it = right_columns.rbegin(); it != right_columns.rend(); ++it)
 //     {
-//         rhs_diff_writer << it->dumpStructure();
+//         rhs_diff_writer << it->dump_structure();
 //         rhs_diff_writer << ", position: " << rhs.getPositionByName(it->name) << '\n';
 //     }
 // }
@@ -730,13 +730,13 @@ void Block::swap(Block&& other) noexcept {
 
 void Block::updateHash(SipHash& hash) const {
     for (size_t row_no = 0, num_rows = rows(); row_no < num_rows; ++row_no)
-        for (const auto& col : data) col.column->updateHashWithValue(row_no, hash);
+        for (const auto& col : data) col.column->update_hash_with_value(row_no, hash);
 }
 
 void filter_block_internal(Block* block, const IColumn::Filter& filter, int column_to_keep) {
-    auto count = countBytesInFilter(filter);
+    auto count = count_bytes_in_filter(filter);
     if (count == 0) {
-        block->getByPosition(0).column = block->getByPosition(0).column->cloneEmpty();
+        block->getByPosition(0).column = block->getByPosition(0).column->clone_empty();
     } else {
         if (count != block->rows()) {
             for (size_t i = 0; i < column_to_keep; ++i) {
@@ -751,29 +751,29 @@ void filter_block_internal(Block* block, const IColumn::Filter& filter, int colu
 
 Status Block::filter_block(Block* block, int filter_column_id, int column_to_keep) {
     ColumnPtr filter_column = block->getByPosition(filter_column_id).column;
-    if (auto* nullable_column = checkAndGetColumn<ColumnNullable>(*filter_column)) {
-        ColumnPtr nested_column = nullable_column->getNestedColumnPtr();
+    if (auto* nullable_column = check_and_get_column<ColumnNullable>(*filter_column)) {
+        ColumnPtr nested_column = nullable_column->get_nested_column_ptr();
 
         MutableColumnPtr mutable_holder = (*std::move(nested_column)).mutate();
 
         ColumnUInt8* concrete_column = typeid_cast<ColumnUInt8*>(mutable_holder.get());
         if (!concrete_column) {
             return Status::InvalidArgument(
-                    "Illegal type " + filter_column->getName() +
+                    "Illegal type " + filter_column->get_name() +
                     " of column for filter. Must be UInt8 or Nullable(UInt8).");
         }
-        const NullMap& null_map = nullable_column->getNullMapData();
-        IColumn::Filter& filter = concrete_column->getData();
+        const NullMap& null_map = nullable_column->get_null_map_data();
+        IColumn::Filter& filter = concrete_column->get_data();
 
         size_t size = filter.size();
         for (size_t i = 0; i < size; ++i) {
             filter[i] = filter[i] && !null_map[i];
         }
         filter_block_internal(block, filter, column_to_keep);
-    } else if (auto* const_column = checkAndGetColumn<ColumnConst>(*filter_column)) {
-        UInt64 ret = const_column->getUInt(0);
+    } else if (auto* const_column = check_and_get_column<ColumnConst>(*filter_column)) {
+        UInt64 ret = const_column->get_uint(0);
         if (ret == 0) {
-            block->getByPosition(0).column = block->getByPosition(0).column->cloneEmpty();
+            block->getByPosition(0).column = block->getByPosition(0).column->clone_empty();
         } else if (ret == 1) {
             for (size_t i = column_to_keep; i < block->columns(); ++i) {
                 block->erase(i);
@@ -786,7 +786,7 @@ Status Block::filter_block(Block* block, int filter_column_id, int column_to_kee
     } else {
         const IColumn::Filter& filter =
                 assert_cast<const doris::vectorized::ColumnVector<UInt8>&>(*filter_column)
-                        .getData();
+                        .get_data();
         filter_block_internal(block, filter, column_to_keep);
     }
     return Status::OK();
@@ -795,7 +795,7 @@ void Block::serialize(PBlock* pblock) const {
     for (auto c = cbegin(); c != cend(); ++c) {
         PColumn* pc = pblock->add_columns();
         pc->set_name(c->name);
-        if (c->type->isNullable()) {
+        if (c->type->is_nullable()) {
             pc->set_type(get_pdata_type(
                     std::dynamic_pointer_cast<const DataTypeNullable>(c->type)->getNestedType()));
         } else {
@@ -817,7 +817,7 @@ size_t MutableBlock::rows() const {
 void MutableBlock::add_row(const Block* block, int row) {
     auto& src_columns_with_schema = block->getColumnsWithTypeAndName();
     for (size_t i = 0; i < _columns.size(); ++i) {
-        _columns[i]->insertFrom(*src_columns_with_schema[i].column.get(), row);
+        _columns[i]->insert_from(*src_columns_with_schema[i].column.get(), row);
     }
 }
 
@@ -835,7 +835,7 @@ std::string MutableBlock::dumpData(size_t row_limit) const {
     std::vector<std::string> headers;
     std::vector<size_t> headers_size;
     for (size_t i = 0; i < columns(); ++i) {
-        std::string s = _data_types[i]->getName();
+        std::string s = _data_types[i]->get_name();
         headers_size.push_back(s.size() > 15 ? s.size() : 15);
         headers.emplace_back(s);
     }

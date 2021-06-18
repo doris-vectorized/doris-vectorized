@@ -34,7 +34,7 @@ public:
     static constexpr bool is_parametric = false;
     using FieldType = T;
 
-    const char* getFamilyName() const override { return TypeName<T>::get(); }
+    const char* get_family_name() const override { return TypeName<T>::get(); }
     TypeIndex getTypeId() const override { return TypeId<T>::value; }
     Field getDefault() const override;
 

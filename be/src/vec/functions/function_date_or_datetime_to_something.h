@@ -42,7 +42,7 @@ public:
         return std::make_shared<FunctionDateOrDateTimeToSomething>();
     }
 
-    String getName() const override
+    String get_name() const override
     {
         return name;
     }
@@ -56,7 +56,7 @@ public:
         {
             if (!isDateOrDateTime(arguments[0].type))
                 throw Exception(
-                    "Illegal type " + arguments[0].type->getName() + " of argument of function " + getName()
+                    "Illegal type " + arguments[0].type->get_name() + " of argument of function " + get_name()
                         + ". Should be a date or a date with time",
                     ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
         }
@@ -64,23 +64,23 @@ public:
         {
             if (!isDateOrDateTime(arguments[0].type))
                 throw Exception(
-                    "Illegal type " + arguments[0].type->getName() + " of argument of function " + getName()
+                    "Illegal type " + arguments[0].type->get_name() + " of argument of function " + get_name()
                         + ". Should be a date or a date with time",
                     ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
             if (!isString(arguments[1].type))
                 throw Exception(
-                    "Function " + getName() + " supports 1 or 2 arguments. The 1st argument "
+                    "Function " + get_name() + " supports 1 or 2 arguments. The 1st argument "
                           "must be of type Date or DateTime. The 2nd argument (optional) must be "
                           "a constant string with timezone name",
                     ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
             if (isDate(arguments[0].type) && std::is_same_v<ToDataType, DataTypeDate>)
                 throw Exception(
-                    "The timezone argument of function " + getName() + " is allowed only when the 1st argument has the type DateTime",
+                    "The timezone argument of function " + get_name() + " is allowed only when the 1st argument has the type DateTime",
                     ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
         }
         else
             throw Exception(
-                "Number of arguments for function " + getName() + " doesn't match: passed " + std::to_string(arguments.size())
+                "Number of arguments for function " + get_name() + " doesn't match: passed " + std::to_string(arguments.size())
                     + ", should be 1 or 2",
                 ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
@@ -104,7 +104,7 @@ public:
 //        else if (which.isDateTime())
         DateTimeTransformImpl<Int128, typename ToDataType::FieldType, Transform>::execute(block, arguments, result, input_rows_count);
 //        else
-//            throw Exception("Illegal type " + block.getByPosition(arguments[0]).type->getName() + " of argument of function " + getName(),
+//            throw Exception("Illegal type " + block.getByPosition(arguments[0]).type->get_name() + " of argument of function " + get_name(),
 //                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
         return Status::OK();
     }

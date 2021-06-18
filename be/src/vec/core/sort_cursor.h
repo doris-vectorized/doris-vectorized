@@ -142,7 +142,7 @@ struct ReceiveQueueSortCursorImpl : public SortCursorImpl {
         size_t num_columns = columns_num();
         MutableColumns columns(num_columns);
         for (size_t i = 0; i < num_columns; ++i)
-            columns[i] = all_columns[i]->cloneEmpty();
+            columns[i] = all_columns[i]->clone_empty();
         return _block_ptr->cloneWithColumns(std::move(columns));
     }
 
@@ -168,7 +168,8 @@ struct SortCursor
         {
             int direction = impl->desc[i].direction;
             int nulls_direction = impl->desc[i].nulls_direction;
-            int res = direction * impl->sort_columns[i]->compareAt(lhs_pos, rhs_pos, *(rhs.impl->sort_columns[i]), nulls_direction);
+            int res = direction *
+                    impl->sort_columns[i]->compare_at(lhs_pos, rhs_pos, *(rhs.impl->sort_columns[i]), nulls_direction);
             if (res > 0)
                 return true;
             if (res < 0)
@@ -219,10 +220,10 @@ struct SortCursor
 //            if (impl->need_collation[i])
 //            {
 //                const ColumnString & column_string = assert_cast<const ColumnString &>(*impl->sort_columns[i]);
-//                res = column_string.compareAtWithCollation(lhs_pos, rhs_pos, *(rhs.impl->sort_columns[i]), *impl->desc[i].collator);
+//                res = column_string.compare_at_with_collation(lhs_pos, rhs_pos, *(rhs.impl->sort_columns[i]), *impl->desc[i].collator);
 //            }
 //            else
-//                res = impl->sort_columns[i]->compareAt(lhs_pos, rhs_pos, *(rhs.impl->sort_columns[i]), nulls_direction);
+//                res = impl->sort_columns[i]->compare_at(lhs_pos, rhs_pos, *(rhs.impl->sort_columns[i]), nulls_direction);
 //
 //            res *= direction;
 //            if (res > 0)

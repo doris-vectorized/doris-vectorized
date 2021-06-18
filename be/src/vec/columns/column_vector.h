@@ -117,53 +117,53 @@ private:
     ColumnVector(std::initializer_list<T> il) : data {il} {}
 
 public:
-    bool isNumeric() const override { return IsNumber<T>; }
+    bool is_numeric() const override { return IsNumber<T>; }
 
     size_t size() const override { return data.size(); }
 
-    StringRef getDataAt(size_t n) const override {
+    StringRef get_data_at(size_t n) const override {
         return StringRef(reinterpret_cast<const char*>(&data[n]), sizeof(data[n]));
     }
 
-    void insertFrom(const IColumn& src, size_t n) override {
-        data.push_back(static_cast<const Self&>(src).getData()[n]);
+    void insert_from(const IColumn& src, size_t n) override {
+        data.push_back(static_cast<const Self&>(src).get_data()[n]);
     }
 
-    void insertData(const char* pos, size_t /*length*/) override {
+    void insert_data(const char* pos, size_t /*length*/) override {
         data.push_back(unalignedLoad<T>(pos));
     }
 
-    void insertDefault() override { data.push_back(T()); }
+    void insert_default() override { data.push_back(T()); }
 
-    void popBack(size_t n) override { data.resize_assume_reserved(data.size() - n); }
+    void pop_back(size_t n) override { data.resize_assume_reserved(data.size() - n); }
 
-    StringRef serializeValueIntoArena(size_t n, Arena& arena, char const*& begin) const override;
+    StringRef serialize_value_into_arena(size_t n, Arena& arena, char const*& begin) const override;
 
-    const char* deserializeAndInsertFromArena(const char* pos) override;
+    const char* deserialize_and_insert_from_arena(const char* pos) override;
 
-    void updateHashWithValue(size_t n, SipHash& hash) const override;
+    void update_hash_with_value(size_t n, SipHash& hash) const override;
 
-    size_t byteSize() const override { return data.size() * sizeof(data[0]); }
+    size_t byte_size() const override { return data.size() * sizeof(data[0]); }
 
-    size_t allocatedBytes() const override { return data.allocated_bytes(); }
+    size_t allocated_bytes() const override { return data.allocated_bytes(); }
 
     void protect() override { data.protect(); }
 
-    void insertValue(const T value) { data.push_back(value); }
+    void insert_value(const T value) { data.push_back(value); }
 
     /// This method implemented in header because it could be possibly devirtualized.
-    int compareAt(size_t n, size_t m, const IColumn& rhs_, int nan_direction_hint) const override {
+    int compare_at(size_t n, size_t m, const IColumn& rhs_, int nan_direction_hint) const override {
         return CompareHelper<T>::compare(data[n], static_cast<const Self&>(rhs_).data[m],
                                          nan_direction_hint);
     }
 
-    void getPermutation(bool reverse, size_t limit, int nan_direction_hint, IColumn::Permutation & res) const override;
+    void get_permutation(bool reverse, size_t limit, int nan_direction_hint, IColumn::Permutation & res) const override;
 
     void reserve(size_t n) override { data.reserve(n); }
 
-    const char* getFamilyName() const override;
+    const char* get_family_name() const override;
 
-    MutableColumnPtr cloneResized(size_t size) const override;
+    MutableColumnPtr clone_resized(size_t size) const override;
 
     Field operator[](size_t n) const override { return data[n]; }
 
@@ -171,19 +171,19 @@ public:
 
     UInt64 get64(size_t n) const override;
 
-    Float64 getFloat64(size_t n) const override;
+    Float64 get_float64(size_t n) const override;
 
-    UInt64 getUInt(size_t n) const override { return UInt64(data[n]); }
+    UInt64 get_uint(size_t n) const override { return UInt64(data[n]); }
 
-    bool getBool(size_t n) const override { return bool(data[n]); }
+    bool get_bool(size_t n) const override { return bool(data[n]); }
 
-    Int64 getInt(size_t n) const override { return Int64(data[n]); }
+    Int64 get_int(size_t n) const override { return Int64(data[n]); }
 
     void insert(const Field& x) override {
         data.push_back(doris::vectorized::get<NearestFieldType<T>>(x));
     }
 
-    void insertRangeFrom(const IColumn& src, size_t start, size_t length) override;
+    void insert_range_from(const IColumn& src, size_t start, size_t length) override;
 
     ColumnPtr filter(const IColumn::Filter& filt, ssize_t result_size_hint) const override;
 
@@ -192,39 +192,39 @@ public:
     //    ColumnPtr index(const IColumn & indexes, size_t limit) const override;
 
     template <typename Type>
-    ColumnPtr indexImpl(const PaddedPODArray<Type>& indexes, size_t limit) const;
+    ColumnPtr index_impl(const PaddedPODArray<Type>& indexes, size_t limit) const;
 
     ColumnPtr replicate(const IColumn::Offsets& offsets) const override;
 
-    void getExtremes(Field& min, Field& max) const override;
+    void get_extremes(Field& min, Field& max) const override;
 
     MutableColumns scatter(IColumn::ColumnIndex num_columns,
                            const IColumn::Selector& selector) const override {
-        return this->template scatterImpl<Self>(num_columns, selector);
+        return this->template scatter_impl<Self>(num_columns, selector);
     }
 
     //    void gather(ColumnGathererStream & gatherer_stream) override;
 
-    bool canBeInsideNullable() const override { return true; }
+    bool can_be_inside_nullable() const override { return true; }
 
-    bool isFixedAndContiguous() const override { return true; }
-    size_t sizeOfValueIfFixed() const override { return sizeof(T); }
-    StringRef getRawData() const override {
+    bool is_fixed_and_contiguous() const override { return true; }
+    size_t size_of_value_if_fixed() const override { return sizeof(T); }
+    StringRef get_raw_data() const override {
         return StringRef(reinterpret_cast<const char*>(data.data()), data.size());
     }
 
-    bool structureEquals(const IColumn& rhs) const override {
+    bool structure_equals(const IColumn& rhs) const override {
         return typeid(rhs) == typeid(ColumnVector<T>);
     }
 
     /** More efficient methods of manipulation - to manipulate with data directly. */
-    Container& getData() { return data; }
+    Container& get_data() { return data; }
 
-    const Container& getData() const { return data; }
+    const Container& get_data() const { return data; }
 
-    const T& getElement(size_t n) const { return data[n]; }
+    const T& get_element(size_t n) const { return data[n]; }
 
-    T& getElement(size_t n) { return data[n]; }
+    T& get_element(size_t n) { return data[n]; }
 
 protected:
     Container data;
@@ -232,7 +232,7 @@ protected:
 
 template <typename T>
 template <typename Type>
-ColumnPtr ColumnVector<T>::indexImpl(const PaddedPODArray<Type>& indexes, size_t limit) const {
+ColumnPtr ColumnVector<T>::index_impl(const PaddedPODArray<Type>& indexes, size_t limit) const {
     size_t size = indexes.size();
 
     if (limit == 0)
@@ -241,7 +241,7 @@ ColumnPtr ColumnVector<T>::indexImpl(const PaddedPODArray<Type>& indexes, size_t
         limit = std::min(size, limit);
 
     auto res = this->create(limit);
-    typename Self::Container& res_data = res->getData();
+    typename Self::Container& res_data = res->get_data();
     for (size_t i = 0; i < limit; ++i) res_data[i] = data[indexes[i]];
 
     return res;

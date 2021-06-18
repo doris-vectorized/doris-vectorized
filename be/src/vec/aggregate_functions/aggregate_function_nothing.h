@@ -32,7 +32,7 @@ public:
     AggregateFunctionNothing(const DataTypes& arguments, const Array& params)
             : IAggregateFunctionHelper<AggregateFunctionNothing>(arguments, params) {}
 
-    String getName() const override { return "nothing"; }
+    String get_name() const override { return "nothing"; }
 
     DataTypePtr getReturnType() const override {
         return std::make_shared<DataTypeNullable>(std::make_shared<DataTypeNothing>());
@@ -56,7 +56,7 @@ public:
 
     void deserialize(AggregateDataPtr, std::istream&, Arena*) const override {}
 
-    void insertResultInto(ConstAggregateDataPtr, IColumn& to) const override { to.insertDefault(); }
+    void insertResultInto(ConstAggregateDataPtr, IColumn& to) const override { to.insert_default(); }
 
     const char* getHeaderFilePath() const override { return __FILE__; }
 };

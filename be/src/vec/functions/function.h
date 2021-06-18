@@ -51,7 +51,7 @@ public:
     virtual ~IPreparedFunction() = default;
 
     /// Get the main function name.
-    virtual String getName() const = 0;
+    virtual String get_name() const = 0;
 
     virtual Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
                            size_t input_rows_count, bool dry_run) = 0;
@@ -134,7 +134,7 @@ public:
     virtual ~IFunctionBase() = default;
 
     /// Get the main function name.
-    virtual String getName() const = 0;
+    virtual String get_name() const = 0;
 
     virtual const DataTypes& getArgumentTypes() const = 0;
     virtual const DataTypePtr& getReturnType() const = 0;
@@ -165,7 +165,7 @@ public:
       */
     virtual llvm::Value* compile(llvm::IRBuilderBase& /*builder*/,
                                  ValuePlaceholders /*values*/) const {
-        throw Exception(getName() + " is not JIT-compilable", ErrorCodes::NOT_IMPLEMENTED);
+        throw Exception(get_name() + " is not JIT-compilable", ErrorCodes::NOT_IMPLEMENTED);
     }
 
 #endif
@@ -250,7 +250,7 @@ public:
       */
     virtual Monotonicity getMonotonicityForRange(const IDataType& /*type*/, const Field& /*left*/,
                                                  const Field& /*right*/) const {
-        throw Exception("Function " + getName() + " has no information about its monotonicity.",
+        throw Exception("Function " + get_name() + " has no information about its monotonicity.",
                         ErrorCodes::NOT_IMPLEMENTED);
     }
 };
@@ -263,7 +263,7 @@ public:
     virtual ~IFunctionBuilder() = default;
 
     /// Get the main function name.
-    virtual String getName() const = 0;
+    virtual String get_name() const = 0;
 
     /// See the comment for the same method in IFunctionBase
     virtual bool isDeterministic() const = 0;
@@ -337,7 +337,7 @@ protected:
     }
 
     virtual DataTypePtr getReturnTypeImpl(const DataTypes& /*arguments*/) const {
-        throw Exception("getReturnType is not implemented for " + getName(),
+        throw Exception("getReturnType is not implemented for " + get_name(),
                         ErrorCodes::NOT_IMPLEMENTED);
     }
 
@@ -364,7 +364,7 @@ protected:
                                       const DataTypePtr& return_type) const = 0;
 
     virtual void getLambdaArgumentTypesImpl(DataTypes& /*arguments*/) const {
-        throw Exception("Function " + getName() + " can't have lambda-expressions as arguments",
+        throw Exception("Function " + get_name() + " can't have lambda-expressions as arguments",
                         ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
     }
 
@@ -378,7 +378,7 @@ class IFunction : public std::enable_shared_from_this<IFunction>,
                   public IFunctionBase,
                   public PreparedFunctionImpl {
 public:
-    String getName() const override = 0;
+    String get_name() const override = 0;
 
     bool isStateful() const override { return false; }
 
@@ -450,7 +450,7 @@ protected:
 
     virtual llvm::Value* compileImpl(llvm::IRBuilderBase&, const DataTypes&,
                                      ValuePlaceholders) const {
-        throw Exception(getName() + " is not JIT-compilable", ErrorCodes::NOT_IMPLEMENTED);
+        throw Exception(get_name() + " is not JIT-compilable", ErrorCodes::NOT_IMPLEMENTED);
     }
 
 #endif
@@ -468,7 +468,7 @@ public:
     explicit DefaultExecutable(std::shared_ptr<IFunction> function_)
             : function(std::move(function_)) {}
 
-    String getName() const override { return function->getName(); }
+    String get_name() const override { return function->get_name(); }
 
 protected:
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
@@ -507,7 +507,7 @@ public:
               arguments(std::move(arguments_)),
               return_type(std::move(return_type_)) {}
 
-    String getName() const override { return function->getName(); }
+    String get_name() const override { return function->get_name(); }
 
     const DataTypes& getArgumentTypes() const override { return arguments; }
     const DataTypePtr& getReturnType() const override { return return_type; }
@@ -574,7 +574,7 @@ public:
         return function->isDeterministicInScopeOfQuery();
     }
 
-    String getName() const override { return function->getName(); }
+    String get_name() const override { return function->get_name(); }
     bool isStateful() const override { return function->isStateful(); }
     bool isVariadic() const override { return function->isVariadic(); }
     size_t getNumberOfArguments() const override { return function->getNumberOfArguments(); }

@@ -39,24 +39,24 @@ public:
 
     void insertResultInto(IColumn& to) const {
         if (has())
-            assert_cast<ColumnVector<T>&>(to).getData().push_back(value);
+            assert_cast<ColumnVector<T>&>(to).get_data().push_back(value);
         else
-            assert_cast<ColumnVector<T>&>(to).insertDefault();
+            assert_cast<ColumnVector<T>&>(to).insert_default();
     }
 
     void write(std::ostream& buf) const {
         writeBinary(has(), buf);
-        if (has()) writeBinary(value, buf);
+        if (has()) write_binary(value, buf);
     }
 
     void read(std::istream& buf) {
-        readBinary(has_value, buf);
-        if (has()) readBinary(value, buf);
+        read_binary(has_value, buf);
+        if (has()) read_binary(value, buf);
     }
 
     void change(const IColumn& column, size_t row_num, Arena*) {
         has_value = true;
-        value = assert_cast<const ColumnVector<T>&>(column).getData()[row_num];
+        value = assert_cast<const ColumnVector<T>&>(column).get_data()[row_num];
     }
 
     /// Assuming to.has()
@@ -95,7 +95,7 @@ public:
     }
 
     bool changeIfLess(const IColumn& column, size_t row_num, Arena* arena) {
-        if (!has() || assert_cast<const ColumnVector<T>&>(column).getData()[row_num] < value) {
+        if (!has() || assert_cast<const ColumnVector<T>&>(column).get_data()[row_num] < value) {
             change(column, row_num, arena);
             return true;
         } else
@@ -111,7 +111,7 @@ public:
     }
 
     bool changeIfGreater(const IColumn& column, size_t row_num, Arena* arena) {
-        if (!has() || assert_cast<const ColumnVector<T>&>(column).getData()[row_num] > value) {
+        if (!has() || assert_cast<const ColumnVector<T>&>(column).get_data()[row_num] > value) {
             change(column, row_num, arena);
             return true;
         } else
@@ -129,7 +129,7 @@ public:
     bool isEqualTo(const Self& to) const { return has() && to.value == value; }
 
     bool isEqualTo(const IColumn& column, size_t row_num) const {
-        return has() && assert_cast<const ColumnVector<T>&>(column).getData()[row_num] == value;
+        return has() && assert_cast<const ColumnVector<T>&>(column).get_data()[row_num] == value;
     }
 };
 
@@ -155,29 +155,29 @@ private:
 public:
     bool has() const { return size >= 0; }
 
-    const char* getData() const { return size <= MAX_SMALL_STRING_SIZE ? small_data : large_data; }
+    const char* get_data() const { return size <= MAX_SMALL_STRING_SIZE ? small_data : large_data; }
 
-    StringRef getStringRef() const { return StringRef(getData(), size); }
+    StringRef getStringRef() const { return StringRef(get_data(), size); }
 
     // void insertResultInto(IColumn & to) const
     // {
     //     if (has())
-    //         assert_cast<ColumnString &>(to).insertDataWithTerminatingZero(getData(), size);
+    //         assert_cast<ColumnString &>(to).insert_data_with_terminating_zero(get_data(), size);
     //     else
-    //         assert_cast<ColumnString &>(to).insertDefault();
+    //         assert_cast<ColumnString &>(to).insert_default();
     // }
 
     // void write(WriteBuffer & buf, const IDataType & /*data_type*/) const
     // {
-    //     writeBinary(size, buf);
+    //     write_binary(size, buf);
     //     if (has())
-    //         buf.write(getData(), size);
+    //         buf.write(get_data(), size);
     // }
 
     // void read(ReadBuffer & buf, const IDataType & /*data_type*/, Arena * arena)
     // {
     //     Int32 rhs_size;
-    //     readBinary(rhs_size, buf);
+    //     read_binary(rhs_size, buf);
 
     //     if (rhs_size >= 0)
     //     {
@@ -237,7 +237,7 @@ public:
     }
 
     void change(const IColumn& column, size_t row_num, Arena* arena) {
-        // changeImpl(assert_cast<const ColumnString &>(column).getDataAtWithTerminatingZero(row_num), arena);
+        // changeImpl(assert_cast<const ColumnString &>(column).get_data_at_with_terminating_zero(row_num), arena);
     }
 
     void change(const Self& to, Arena* arena) { changeImpl(to.getStringRef(), arena); }
@@ -273,7 +273,7 @@ public:
 
     // bool changeIfLess(const IColumn & column, size_t row_num, Arena * arena)
     // {
-    //     if (!has() || assert_cast<const ColumnString &>(column).getDataAtWithTerminatingZero(row_num) < getStringRef())
+    //     if (!has() || assert_cast<const ColumnString &>(column).get_data_at_with_terminating_zero(row_num) < getStringRef())
     //     {
     //         change(column, row_num, arena);
     //         return true;
@@ -292,7 +292,7 @@ public:
 
     // bool changeIfGreater(const IColumn & column, size_t row_num, Arena * arena)
     // {
-    //     if (!has() || assert_cast<const ColumnString &>(column).getDataAtWithTerminatingZero(row_num) > getStringRef())
+    //     if (!has() || assert_cast<const ColumnString &>(column).get_data_at_with_terminating_zero(row_num) > getStringRef())
     //     {
     //         change(column, row_num, arena);
     //         return true;
@@ -312,7 +312,7 @@ public:
     bool isEqualTo(const Self& to) const { return has() && to.getStringRef() == getStringRef(); }
 
     bool isEqualTo(const IColumn& column, size_t row_num) const {
-        // return has() && assert_cast<const ColumnString &>(column).getDataAtWithTerminatingZero(row_num) == getStringRef();
+        // return has() && assert_cast<const ColumnString &>(column).get_data_at_with_terminating_zero(row_num) == getStringRef();
         return false;
     }
 };
@@ -331,24 +331,24 @@ public:
         if (has())
             to.insert(value);
         else
-            to.insertDefault();
+            to.insert_default();
     }
 
     // void write(WriteBuffer & buf, const IDataType & data_type) const
     // {
     //     if (!value.isNull())
     //     {
-    //         writeBinary(true, buf);
+    //         write_binary(true, buf);
     //         data_type.serializeBinary(value, buf);
     //     }
     //     else
-    //         writeBinary(false, buf);
+    //         write_binary(false, buf);
     // }
 
     // void read(ReadBuffer & buf, const IDataType & data_type, Arena *)
     // {
     //     bool is_not_null;
-    //     readBinary(is_not_null, buf);
+    //     read_binary(is_not_null, buf);
 
     //     if (is_not_null)
     //         data_type.deserializeBinary(value, buf);
@@ -480,14 +480,14 @@ public:
         if (StringRef(Data::name()) == StringRef("min") ||
             StringRef(Data::name()) == StringRef("max")) {
             if (!type->isComparable())
-                throw Exception("Illegal type " + type->getName() +
-                                        " of argument of aggregate function " + getName() +
+                throw Exception("Illegal type " + type->get_name() +
+                                        " of argument of aggregate function " + get_name() +
                                         " because the values of that data type are not comparable",
                                 ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
         }
     }
 
-    String getName() const override { return Data::name(); }
+    String get_name() const override { return Data::name(); }
 
     DataTypePtr getReturnType() const override { return type; }
 

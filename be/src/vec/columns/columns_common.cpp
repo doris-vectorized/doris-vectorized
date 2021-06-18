@@ -27,7 +27,7 @@
 
 namespace doris::vectorized {
 
-size_t countBytesInFilter(const IColumn::Filter& filt) {
+size_t count_bytes_in_filter(const IColumn::Filter& filt) {
     size_t count = 0;
 
     /** NOTE: In theory, `filt` should only contain zeros and ones.
@@ -64,7 +64,7 @@ size_t countBytesInFilter(const IColumn::Filter& filt) {
     return count;
 }
 
-std::vector<size_t> countColumnsSizeInSelector(IColumn::ColumnIndex num_columns,
+std::vector<size_t> count_columns_size_in_selector(IColumn::ColumnIndex num_columns,
                                                const IColumn::Selector& selector) {
     std::vector<size_t> counts(num_columns);
     for (auto idx : selector) ++counts[idx];
@@ -72,14 +72,14 @@ std::vector<size_t> countColumnsSizeInSelector(IColumn::ColumnIndex num_columns,
     return counts;
 }
 
-bool memoryIsByte(const void* data, size_t size, uint8_t byte) {
+bool memory_is_byte(const void* data, size_t size, uint8_t byte) {
     if (size == 0) return true;
     auto ptr = reinterpret_cast<const uint8_t*>(data);
     return *ptr == byte && memcmp(ptr, ptr + 1, size - 1) == 0;
 }
 
-bool memoryIsZero(const void* data, size_t size) {
-    return memoryIsByte(data, size, 0x0);
+bool memory_is_zero(const void* data, size_t size) {
+    return memory_is_byte(data, size, 0x0);
 }
 
 namespace ErrorCodes {
@@ -138,7 +138,7 @@ struct NoResultOffsetsBuilder {
 };
 
 template <typename T, typename ResultOffsetsBuilder>
-void filterArraysImplGeneric(const PaddedPODArray<T>& src_elems,
+void filter_arrays_impl_generic(const PaddedPODArray<T>& src_elems,
                              const IColumn::Offsets& src_offsets, PaddedPODArray<T>& res_elems,
                              IColumn::Offsets* res_offsets, const IColumn::Filter& filt,
                              ssize_t result_size_hint) {
@@ -221,27 +221,27 @@ void filterArraysImplGeneric(const PaddedPODArray<T>& src_elems,
 } // namespace
 
 template <typename T>
-void filterArraysImpl(const PaddedPODArray<T>& src_elems, const IColumn::Offsets& src_offsets,
+void filter_arrays_impl(const PaddedPODArray<T>& src_elems, const IColumn::Offsets& src_offsets,
                       PaddedPODArray<T>& res_elems, IColumn::Offsets& res_offsets,
                       const IColumn::Filter& filt, ssize_t result_size_hint) {
-    return filterArraysImplGeneric<T, ResultOffsetsBuilder>(src_elems, src_offsets, res_elems,
+    return filter_arrays_impl_generic<T, ResultOffsetsBuilder>(src_elems, src_offsets, res_elems,
                                                             &res_offsets, filt, result_size_hint);
 }
 
 template <typename T>
-void filterArraysImplOnlyData(const PaddedPODArray<T>& src_elems,
-                              const IColumn::Offsets& src_offsets, PaddedPODArray<T>& res_elems,
-                              const IColumn::Filter& filt, ssize_t result_size_hint) {
-    return filterArraysImplGeneric<T, NoResultOffsetsBuilder>(src_elems, src_offsets, res_elems,
+void filter_arrays_impl_only_data(const PaddedPODArray<T>& src_elems,
+                                  const IColumn::Offsets& src_offsets, PaddedPODArray<T>& res_elems,
+                                  const IColumn::Filter& filt, ssize_t result_size_hint) {
+    return filter_arrays_impl_generic<T, NoResultOffsetsBuilder>(src_elems, src_offsets, res_elems,
                                                               nullptr, filt, result_size_hint);
 }
 
 /// Explicit instantiations - not to place the implementation of the function above in the header file.
 #define INSTANTIATE(TYPE)                                                                        \
-    template void filterArraysImpl<TYPE>(const PaddedPODArray<TYPE>&, const IColumn::Offsets&,   \
+    template void filter_arrays_impl<TYPE>(const PaddedPODArray<TYPE>&, const IColumn::Offsets&,   \
                                          PaddedPODArray<TYPE>&, IColumn::Offsets&,               \
                                          const IColumn::Filter&, ssize_t);                       \
-    template void filterArraysImplOnlyData<TYPE>(const PaddedPODArray<TYPE>&,                    \
+    template void filter_arrays_impl_only_data<TYPE>(const PaddedPODArray<TYPE>&,                    \
                                                  const IColumn::Offsets&, PaddedPODArray<TYPE>&, \
                                                  const IColumn::Filter&, ssize_t);
 
@@ -260,17 +260,17 @@ INSTANTIATE(Float64)
 
 namespace detail {
 template <typename T>
-const PaddedPODArray<T>* getIndexesData(const IColumn& indexes) {
+const PaddedPODArray<T>* get_indexes_data(const IColumn& indexes) {
     auto* column = typeid_cast<const ColumnVector<T>*>(&indexes);
-    if (column) return &column->getData();
+    if (column) return &column->get_data();
 
     return nullptr;
 }
 
-template const PaddedPODArray<UInt8>* getIndexesData<UInt8>(const IColumn& indexes);
-template const PaddedPODArray<UInt16>* getIndexesData<UInt16>(const IColumn& indexes);
-template const PaddedPODArray<UInt32>* getIndexesData<UInt32>(const IColumn& indexes);
-template const PaddedPODArray<UInt64>* getIndexesData<UInt64>(const IColumn& indexes);
+template const PaddedPODArray<UInt8>* get_indexes_data<UInt8>(const IColumn& indexes);
+template const PaddedPODArray<UInt16>* get_indexes_data<UInt16>(const IColumn& indexes);
+template const PaddedPODArray<UInt32>* get_indexes_data<UInt32>(const IColumn& indexes);
+template const PaddedPODArray<UInt64>* get_indexes_data<UInt64>(const IColumn& indexes);
 } // namespace detail
 
 } // namespace doris::vectorized

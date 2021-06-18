@@ -88,11 +88,11 @@ class FunctionSubstring : public IFunction {
 public:
     static constexpr auto name = "substring";
     static FunctionPtr create() { return std::make_shared<FunctionSubstring>(); }
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 3; }
 
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
-        return makeNullable(std::make_shared<DataTypeString>());
+        return make_nullable(std::make_shared<DataTypeString>());
     }
 
     bool useDefaultImplementationForNulls() const override { return false; }
@@ -112,10 +112,10 @@ public:
 
         for (int i = 0; i < 3; ++i) {
             argument_columns[i] =
-                    block.getByPosition(arguments[i]).column->convertToFullColumnIfConst();
-            if (auto* nullable = checkAndGetColumn<ColumnNullable>(*argument_columns[i])) {
-                argument_columns[i] = nullable->getNestedColumnPtr();
-                VectorizedUtils::update_null_map(null_map->getData(), nullable->getNullMapData());
+                    block.getByPosition(arguments[i]).column->convert_to_full_column_if_const();
+            if (auto* nullable = check_and_get_column<ColumnNullable>(*argument_columns[i])) {
+                argument_columns[i] = nullable->get_nested_column_ptr();
+                VectorizedUtils::update_null_map(null_map->get_data(), nullable->get_null_map_data());
             }
         }
 
@@ -126,9 +126,9 @@ public:
                 assert_cast<const ColumnVector<Int32>*>(argument_columns[1].get());
         auto specific_len_column =
                 assert_cast<const ColumnVector<Int32>*>(argument_columns[2].get());
-        vector(specific_str_column->getChars(), specific_str_column->getOffsets(),
-               specific_start_column->getData(), specific_len_column->getData(),
-               null_map->getData(), res->getChars(), res->getOffsets());
+        vector(specific_str_column->get_chars(), specific_str_column->get_offsets(),
+               specific_start_column->get_data(), specific_len_column->get_data(),
+               null_map->get_data(), res->get_chars(), res->get_offsets());
 
         block.getByPosition(result).column =
                 ColumnNullable::create(std::move(res), std::move(null_map));
@@ -198,7 +198,7 @@ class FunctionLeft : public FunctionSubstring {
 public:
     static constexpr auto name = "left";
     static FunctionPtr create() { return std::make_shared<FunctionLeft>(); }
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 2; }
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
@@ -206,7 +206,7 @@ public:
         auto int_type = std::make_shared<DataTypeInt32>();
         size_t num_columns_without_result = block.columns();
         block.insert({int_type->createColumnConst(input_rows_count, toField(1))
-                              ->convertToFullColumnIfConst(),
+                              ->convert_to_full_column_if_const(),
                       int_type, "const 1"});
         ColumnNumbers temp_arguments(3);
         temp_arguments[0] = arguments[0];
@@ -221,7 +221,7 @@ class FunctionRight : public FunctionSubstring {
 public:
     static constexpr auto name = "right";
     static FunctionPtr create() { return std::make_shared<FunctionRight>(); }
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 2; }
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
@@ -232,24 +232,24 @@ public:
         size_t num_columns_without_result = block.columns();
 
         // params1 = max(arg[1], -len(arg))
-        auto& index_data = params1->getData();
-        auto& strlen_data = params2->getData();
+        auto& index_data = params1->get_data();
+        auto& strlen_data = params2->get_data();
 
         // we don't have to update null_map because FunctionSubstring will
         // update it
         // getNestedColumnIfNull arg[0]
-        auto str_col = block.getByPosition(arguments[0]).column->convertToFullColumnIfConst();
-        if (auto* nullable = checkAndGetColumn<const ColumnNullable>(*str_col)) {
-            str_col = nullable->getNestedColumnPtr();
+        auto str_col = block.getByPosition(arguments[0]).column->convert_to_full_column_if_const();
+        if (auto* nullable = check_and_get_column<const ColumnNullable>(*str_col)) {
+            str_col = nullable->get_nested_column_ptr();
         }
-        auto& str_offset = assert_cast<const ColumnString*>(str_col.get())->getOffsets();
+        auto& str_offset = assert_cast<const ColumnString*>(str_col.get())->get_offsets();
 
         // getNestedColumnIfNull arg[1]
-        auto pos_col = block.getByPosition(arguments[1]).column->convertToFullColumnIfConst();
-        if (auto* nullable = checkAndGetColumn<const ColumnNullable>(*pos_col)) {
-            pos_col = nullable->getNestedColumnPtr();
+        auto pos_col = block.getByPosition(arguments[1]).column->convert_to_full_column_if_const();
+        if (auto* nullable = check_and_get_column<const ColumnNullable>(*pos_col)) {
+            pos_col = nullable->get_nested_column_ptr();
         }
-        auto& pos_data = assert_cast<const ColumnInt32*>(pos_col.get())->getData();
+        auto& pos_data = assert_cast<const ColumnInt32*>(pos_col.get())->get_data();
 
         for (int i = 0; i < input_rows_count; ++i) {
             strlen_data[i] = str_offset[i] - str_offset[i - 1] - 1;
@@ -275,7 +275,7 @@ class FunctionNullOrEmpty : public IFunction {
 public:
     static constexpr auto name = "null_or_empty";
     static FunctionPtr create() { return std::make_shared<FunctionNullOrEmpty>(); }
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 1; }
 
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
@@ -290,14 +290,14 @@ public:
         auto res_map = ColumnUInt8::create(input_rows_count, 0);
 
         auto column = block.getByPosition(arguments[0]).column;
-        if (auto* nullable = checkAndGetColumn<const ColumnNullable>(*column)) {
-            column = nullable->getNestedColumnPtr();
-            VectorizedUtils::update_null_map(res_map->getData(), nullable->getNullMapData());
+        if (auto* nullable = check_and_get_column<const ColumnNullable>(*column)) {
+            column = nullable->get_nested_column_ptr();
+            VectorizedUtils::update_null_map(res_map->get_data(), nullable->get_null_map_data());
         }
         auto str_col = assert_cast<const ColumnString*>(column.get());
-        const auto& offsets = str_col->getOffsets();
+        const auto& offsets = str_col->get_offsets();
 
-        auto& res_map_data = res_map->getData();
+        auto& res_map_data = res_map->get_data();
         for (int i = 0; i < input_rows_count; ++i) {
             int size = offsets[i] - offsets[i - 1] - 1;
             res_map_data[i] |= (size == 0);
@@ -312,12 +312,12 @@ class FunctionStringConcat : public IFunction {
 public:
     static constexpr auto name = "concat";
     static FunctionPtr create() { return std::make_shared<FunctionStringConcat>(); }
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 0; }
     bool isVariadic() const override { return true; }
 
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
-        return makeNullable(std::make_shared<DataTypeString>());
+        return make_nullable(std::make_shared<DataTypeString>());
     }
     bool useDefaultImplementationForNulls() const override { return false; }
     bool useDefaultImplementationForConstants() const override { return true; }
@@ -327,11 +327,11 @@ public:
         DCHECK_GE(arguments.size(), 1);
 
         if (arguments.size() == 1) {
-            if (block.getByPosition(arguments[0]).column->isNullable()) {
+            if (block.getByPosition(arguments[0]).column->is_nullable()) {
                 block.getByPosition(result).column = block.getByPosition(arguments[0]).column;
             } else {
                 block.getByPosition(result).column =
-                        makeNullable(block.getByPosition(arguments[0]).column);
+                        make_nullable(block.getByPosition(arguments[0]).column);
             }
             return Status::OK();
         }
@@ -345,19 +345,19 @@ public:
 
         for (int i = 0; i < argument_size; ++i) {
             argument_columns[i] =
-                    block.getByPosition(arguments[i]).column->convertToFullColumnIfConst();
-            if (auto* nullable = checkAndGetColumn<const ColumnNullable>(*argument_columns[i])) {
-                argument_columns[i] = nullable->getNestedColumnPtr();
-                VectorizedUtils::update_null_map(null_map->getData(), nullable->getNullMapData());
+                    block.getByPosition(arguments[i]).column->convert_to_full_column_if_const();
+            if (auto* nullable = check_and_get_column<const ColumnNullable>(*argument_columns[i])) {
+                argument_columns[i] = nullable->get_nested_column_ptr();
+                VectorizedUtils::update_null_map(null_map->get_data(), nullable->get_null_map_data());
             }
             auto col_str = assert_cast<const ColumnString*>(argument_columns[i].get());
-            offsets_list[i] = &col_str->getOffsets();
-            chars_list[i] = &col_str->getChars();
+            offsets_list[i] = &col_str->get_offsets();
+            chars_list[i] = &col_str->get_chars();
         }
 
         auto res = ColumnString::create();
-        auto& res_data = res->getChars();
-        auto& res_offset = res->getOffsets();
+        auto& res_data = res->get_chars();
+        auto& res_offset = res->get_offsets();
 
         res_offset.resize(input_rows_count);
 
@@ -403,12 +403,12 @@ class FunctionStringConcatWs : public IFunction {
 public:
     static constexpr auto name = "concat_ws";
     static FunctionPtr create() { return std::make_shared<FunctionStringConcatWs>(); }
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 0; }
     bool isVariadic() const override { return true; }
 
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
-        return makeNullable(std::make_shared<DataTypeString>());
+        return make_nullable(std::make_shared<DataTypeString>());
     }
     bool useDefaultImplementationForNulls() const override { return false; }
     bool useDefaultImplementationForConstants() const override { return true; }
@@ -430,23 +430,23 @@ public:
 
         for (size_t i = 0; i < argument_size; ++i) {
             argument_columns[i] =
-                    block.getByPosition(arguments[i]).column->convertToFullColumnIfConst();
-            if (auto* nullable = checkAndGetColumn<const ColumnNullable>(*argument_columns[i])) {
-                argument_columns[i] = nullable->getNestedColumnPtr();
-                null_list[i] = &nullable->getNullMapData();
+                    block.getByPosition(arguments[i]).column->convert_to_full_column_if_const();
+            if (auto* nullable = check_and_get_column<const ColumnNullable>(*argument_columns[i])) {
+                argument_columns[i] = nullable->get_nested_column_ptr();
+                null_list[i] = &nullable->get_null_map_data();
             } else {
-                null_list[i] = &const_null_map->getData();
+                null_list[i] = &const_null_map->get_data();
             }
             auto col_str = assert_cast<const ColumnString*>(argument_columns[i].get());
-            offsets_list[i] = &col_str->getOffsets();
-            chars_list[i] = &col_str->getChars();
+            offsets_list[i] = &col_str->get_offsets();
+            chars_list[i] = &col_str->get_chars();
         }
 
-        auto& res_data = res->getChars();
-        auto& res_offset = res->getOffsets();
+        auto& res_data = res->get_chars();
+        auto& res_offset = res->get_offsets();
         res_offset.resize(input_rows_count);
 
-        VectorizedUtils::update_null_map(null_map->getData(), *null_list[0]);
+        VectorizedUtils::update_null_map(null_map->get_data(), *null_list[0]);
         fmt::memory_buffer buffer;
         std::vector<std::string_view> views;
 
@@ -492,7 +492,7 @@ class FunctionStringRepeat : public IFunction {
 public:
     static constexpr auto name = "repeat";
     static FunctionPtr create() { return std::make_shared<FunctionStringRepeat>(); }
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 2; }
 
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
@@ -505,19 +505,19 @@ public:
         auto res = ColumnString::create();
 
         ColumnPtr argument_ptr[2];
-        argument_ptr[0] = block.getByPosition(arguments[0]).column->convertToFullColumnIfConst();
-        argument_ptr[1] = block.getByPosition(arguments[1]).column->convertToFullColumnIfConst();
+        argument_ptr[0] = block.getByPosition(arguments[0]).column->convert_to_full_column_if_const();
+        argument_ptr[1] = block.getByPosition(arguments[1]).column->convert_to_full_column_if_const();
 
-        if (auto* col1 = checkAndGetColumn<ColumnString>(*argument_ptr[0])) {
-            if (auto* col2 = checkAndGetColumn<ColumnInt32>(*argument_ptr[1])) {
-                vector_vector(col1->getChars(), col1->getOffsets(), col2->getData(),
-                              res->getChars(), res->getOffsets());
+        if (auto* col1 = check_and_get_column<ColumnString>(*argument_ptr[0])) {
+            if (auto* col2 = check_and_get_column<ColumnInt32>(*argument_ptr[1])) {
+                vector_vector(col1->get_chars(), col1->get_offsets(), col2->get_data(),
+                              res->get_chars(), res->get_offsets());
                 block.getByPosition(result).column = std::move(res);
                 return Status::OK();
             }
         }
 
-        return Status::RuntimeError(fmt::format("not support {}", getName()));
+        return Status::RuntimeError(fmt::format("not support {}", get_name()));
     }
 
     void vector_vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
@@ -548,11 +548,11 @@ class FunctionStringPad : public IFunction {
 public:
     static constexpr auto name = Impl::name;
     static FunctionPtr create() { return std::make_shared<FunctionStringPad>(); }
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 3; }
 
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
-        return makeNullable(std::make_shared<DataTypeString>());
+        return make_nullable(std::make_shared<DataTypeString>());
     }
     bool useDefaultImplementationForNulls() const override { return false; }
     bool useDefaultImplementationForConstants() const override { return true; }
@@ -569,28 +569,28 @@ public:
         ColumnPtr argument_columns[argument_size];
         for (size_t i = 0; i < argument_size; ++i) {
             argument_columns[i] =
-                    block.getByPosition(arguments[i]).column->convertToFullColumnIfConst();
-            if (auto* nullable = checkAndGetColumn<const ColumnNullable>(*argument_columns[i])) {
-                argument_columns[i] = nullable->getNestedColumnPtr();
-                VectorizedUtils::update_null_map(null_map->getData(), nullable->getNullMapData());
+                    block.getByPosition(arguments[i]).column->convert_to_full_column_if_const();
+            if (auto* nullable = check_and_get_column<const ColumnNullable>(*argument_columns[i])) {
+                argument_columns[i] = nullable->get_nested_column_ptr();
+                VectorizedUtils::update_null_map(null_map->get_data(), nullable->get_null_map_data());
             }
         }
 
-        auto& null_map_data = null_map->getData();
-        auto& res_offsets = res->getOffsets();
-        auto& res_chars = res->getChars();
+        auto& null_map_data = null_map->get_data();
+        auto& res_offsets = res->get_offsets();
+        auto& res_chars = res->get_chars();
         res_offsets.resize(input_rows_count);
 
         auto strcol = assert_cast<const ColumnString*>(argument_columns[0].get());
-        auto& strcol_offsets = strcol->getOffsets();
-        auto& strcol_chars = strcol->getChars();
+        auto& strcol_offsets = strcol->get_offsets();
+        auto& strcol_chars = strcol->get_chars();
 
         auto col_len = assert_cast<const ColumnInt32*>(argument_columns[1].get());
-        auto& col_len_data = col_len->getData();
+        auto& col_len_data = col_len->get_data();
 
         auto padcol = assert_cast<const ColumnString*>(argument_columns[2].get());
-        auto& padcol_offsets = padcol->getOffsets();
-        auto& padcol_chars = padcol->getChars();
+        auto& padcol_offsets = padcol->get_offsets();
+        auto& padcol_chars = padcol->get_chars();
 
         std::vector<size_t> str_index;
         std::vector<size_t> pad_index;

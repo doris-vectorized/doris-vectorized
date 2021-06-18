@@ -32,7 +32,7 @@ public:
         }
 
         for (size_t i = 0; i < rhs.grower.bufSize(); ++i)
-            if (!rhs.buf[i].isZero(*this)) this->insert(Cell::getKey(rhs.buf[i].getValue()));
+            if (!rhs.buf[i].isZero(*this)) this->insert(Cell::getKey(rhs.buf[i].get_value()));
     }
 
     // void readAndMerge(DB::ReadBuffer & rb)
@@ -40,7 +40,7 @@ public:
     //     Cell::State::read(rb);
 
     //     size_t new_size = 0;
-    //     DB::readVarUInt(new_size, rb);
+    //     DB::read_var_uint(new_size, rb);
 
     //     this->resize(new_size);
 
@@ -48,7 +48,7 @@ public:
     //     {
     //         Cell x;
     //         x.read(rb);
-    //         this->insert(Cell::getKey(x.getValue()));
+    //         this->insert(Cell::getKey(x.get_value()));
     //     }
     // }
 };

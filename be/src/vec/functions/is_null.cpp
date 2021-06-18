@@ -33,7 +33,7 @@ public:
         return std::make_shared<FunctionIsNull>();
     }
 
-    std::string getName() const override
+    std::string get_name() const override
     {
         return name;
     }
@@ -51,10 +51,10 @@ public:
     Status executeImpl(Block & block, const ColumnNumbers & arguments, size_t result, size_t) override
     {
         const ColumnWithTypeAndName & elem = block.getByPosition(arguments[0]);
-        if (auto * nullable = checkAndGetColumn<ColumnNullable>(*elem.column))
+        if (auto * nullable = check_and_get_column<ColumnNullable>(*elem.column))
         {
             /// Merely return the embedded null map.
-            block.getByPosition(result).column = nullable->getNullMapColumnPtr();
+            block.getByPosition(result).column = nullable->get_null_map_column_ptr();
         }
         else
         {

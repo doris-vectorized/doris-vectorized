@@ -58,14 +58,14 @@ public:
             : argument_types(argument_types_), parameters(parameters_) {}
 
     /// Get main function name.
-    virtual String getName() const = 0;
+    virtual String get_name() const = 0;
 
     /// Get the result type.
     virtual DataTypePtr getReturnType() const = 0;
 
     /// Get type which will be used for prediction result in case if function is an ML method.
     virtual DataTypePtr getReturnTypeToPredict() const {
-        throw Exception("Prediction is not supported for " + getName(),
+        throw Exception("Prediction is not supported for " + get_name(),
                         ErrorCodes::NOT_IMPLEMENTED);
     }
 

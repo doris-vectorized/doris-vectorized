@@ -24,10 +24,10 @@ namespace doris::vectorized {
 class DataTypeDate final : public DataTypeNumberBase<Int128> {
 public:
     TypeIndex getTypeId() const override { return TypeIndex::Date; }
-    const char* getFamilyName() const override { return "Date"; }
+    const char* get_family_name() const override { return "Date"; }
 
     bool canBeUsedAsVersion() const override { return true; }
-    bool canBeInsideNullable() const override { return true; }
+    bool can_be_inside_nullable() const override { return true; }
 
     bool equals(const IDataType& rhs) const override;
     std::string to_string(const IColumn& column, size_t row_num) const;

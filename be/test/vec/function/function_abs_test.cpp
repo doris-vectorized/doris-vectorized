@@ -79,7 +79,7 @@ TEST(ABSTest, ABSTest) {
     k1 = -100;
     for (int i = 0; i < 1024; ++i) {
         vectorized::ColumnPtr column = block.getColumns()[3];
-        ASSERT_EQ(column->getInt(i), std::abs(k1++));
+        ASSERT_EQ(column->get_int(i), std::abs(k1++));
     }
 }
 

@@ -75,7 +75,7 @@ public:
     using ColVecType = ColumnBitmap;
     using ColVecResult = ColumnBitmap;
 
-    String getName() const override { return Op::name; }
+    String get_name() const override { return Op::name; }
 
     AggregateFunctionBitmapOp(const DataTypes& argument_types_)
             : IAggregateFunctionDataHelper<AggregateFunctionBitmapData<Op>,
@@ -86,7 +86,7 @@ public:
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
         const auto& column = static_cast<const ColVecType&>(*columns[0]);
-        this->data(place).add(column.getData()[row_num]);
+        this->data(place).add(column.get_data()[row_num]);
     }
 
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {
@@ -104,7 +104,7 @@ public:
 
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
         auto& column = static_cast<ColVecResult&>(to);
-        column.getData().push_back(
+        column.get_data().push_back(
                 const_cast<AggregateFunctionBitmapData<Op>&>(this->data(place)).get());
     }
 
@@ -124,20 +124,20 @@ public:
             : IAggregateFunctionDataHelper<AggregateFunctionBitmapData<AggregateFunctionBitmapUnionOp>,
                                            AggregateFunctionBitmapCount<nullable, ColVecType>>(argument_types_, {}) {}
 
-    String getName() const override { return "count"; }
+    String get_name() const override { return "count"; }
     DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
     
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
         if constexpr (nullable) {
             auto& nullable_column = assert_cast<const ColumnNullable&>(*columns[0]);
-            if (!nullable_column.isNullAt(row_num)) {
-                const auto& column = static_cast<const ColVecType&>(nullable_column.getNestedColumn());
-                this->data(place).add(column.getData()[row_num]);
+            if (!nullable_column.is_null_at(row_num)) {
+                const auto& column = static_cast<const ColVecType&>(nullable_column.get_nested_column());
+                this->data(place).add(column.get_data()[row_num]);
             }
         } else {
             const auto& column = static_cast<const ColVecType&>(*columns[0]);
-            this->data(place).add(column.getData()[row_num]);
+            this->data(place).add(column.get_data()[row_num]);
         }
     }
 
@@ -157,7 +157,7 @@ public:
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
         auto & value_data = const_cast<AggFunctionData&>(this->data(place)).get();
         auto& column = static_cast<ColVecResult&>(to);
-        column.getData().push_back(value_data.cardinality());
+        column.get_data().push_back(value_data.cardinality());
     }
 
     const char* getHeaderFilePath() const override { return __FILE__; }

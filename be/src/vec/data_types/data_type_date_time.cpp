@@ -33,8 +33,8 @@ bool DataTypeDateTime::equals(const IDataType& rhs) const {
     return typeid(rhs) == typeid(*this);
 }
 std::string DataTypeDateTime::to_string(const IColumn& column, size_t row_num) const {
-    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convertToFullColumnIfConst().get())
-                             .getData()[row_num];
+    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convert_to_full_column_if_const().get())
+                             .get_data()[row_num];
     // TODO: Rethink we really need to do copy replace const reference here?
     doris::DateTimeValue value = binary_cast<Int128, doris::DateTimeValue>(int_val);
 
@@ -75,8 +75,8 @@ std::string DataTypeDateTime::to_string(const IColumn& column, size_t row_num) c
 }
 
 void DataTypeDateTime::to_string(const IColumn & column, size_t row_num, BufferWritable & ostr) const {
-    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convertToFullColumnIfConst().get())
-                             .getData()[row_num];
+    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convert_to_full_column_if_const().get())
+                             .get_data()[row_num];
     // TODO: Rethink we really need to do copy replace const reference here?
     doris::DateTimeValue value = binary_cast<Int128, doris::DateTimeValue>(int_val);
 

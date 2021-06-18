@@ -89,7 +89,7 @@ public:
     //    static FunctionPtr create(const Context &) { return std::make_shared<FunctionUnaryArithmetic>(); }
     static FunctionPtr create() { return std::make_shared<FunctionUnaryArithmetic>(); }
 
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
 
     size_t getNumberOfArguments() const override { return 1; }
     bool isInjective(const Block&) override { return is_injective; }
@@ -104,15 +104,15 @@ public:
 
             if constexpr (IsDataTypeDecimal<DataType>) {
                 if constexpr (!allow_decimal) return false;
-                result = std::make_shared<DataType>(type.getPrecision(), type.getScale());
+                result = std::make_shared<DataType>(type.getPrecision(), type.get_scale());
             } else {
                 result = std::make_shared<DataTypeNumber<typename Op<T0>::ResultType>>();
             }
             return true;
         });
         if (!valid)
-            throw Exception("Illegal type " + arguments[0]->getName() +
-                                    " of argument of function " + getName(),
+            throw Exception("Illegal type " + arguments[0]->get_name() +
+                                    " of argument of function " + get_name(),
                             ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
         return result;
     }
@@ -125,24 +125,24 @@ public:
 
             if constexpr (IsDataTypeDecimal<DataType>) {
                 if constexpr (allow_decimal) {
-                    if (auto col = checkAndGetColumn<ColumnDecimal<T0>>(
-                                block.getByPosition(arguments[0]).column.get())) {
+                    if (auto col = check_and_get_column<ColumnDecimal<T0>>(
+                            block.getByPosition(arguments[0]).column.get())) {
                         auto col_res = ColumnDecimal<typename Op<T0>::ResultType>::create(
-                                0, type.getScale());
-                        auto& vec_res = col_res->getData();
-                        vec_res.resize(col->getData().size());
-                        UnaryOperationImpl<T0, Op<T0>>::vector(col->getData(), vec_res);
+                                0, type.get_scale());
+                        auto& vec_res = col_res->get_data();
+                        vec_res.resize(col->get_data().size());
+                        UnaryOperationImpl<T0, Op<T0>>::vector(col->get_data(), vec_res);
                         block.getByPosition(result).column = std::move(col_res);
                         return true;
                     }
                 }
             } else {
-                if (auto col = checkAndGetColumn<ColumnVector<T0>>(
-                            block.getByPosition(arguments[0]).column.get())) {
+                if (auto col = check_and_get_column<ColumnVector<T0>>(
+                        block.getByPosition(arguments[0]).column.get())) {
                     auto col_res = ColumnVector<typename Op<T0>::ResultType>::create();
-                    auto& vec_res = col_res->getData();
-                    vec_res.resize(col->getData().size());
-                    UnaryOperationImpl<T0, Op<T0>>::vector(col->getData(), vec_res);
+                    auto& vec_res = col_res->get_data();
+                    vec_res.resize(col->get_data().size());
+                    UnaryOperationImpl<T0, Op<T0>>::vector(col->get_data(), vec_res);
                     block.getByPosition(result).column = std::move(col_res);
                     return true;
                 }
@@ -151,7 +151,7 @@ public:
             return false;
         });
         if (!valid)
-            throw Exception(getName() + "'s argument does not match the expected data type",
+            throw Exception(get_name() + "'s argument does not match the expected data type",
                             ErrorCodes::LOGICAL_ERROR);
         return Status::OK();
     }

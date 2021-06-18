@@ -43,16 +43,16 @@ std::string DataTypeDecimal<T>::doGetName() const {
 template <typename T>
 bool DataTypeDecimal<T>::equals(const IDataType& rhs) const {
     if (auto* ptype = typeid_cast<const DataTypeDecimal<T>*>(&rhs))
-        return scale == ptype->getScale();
+        return scale == ptype->get_scale();
     return false;
 }
 
 template <typename T>
 std::string DataTypeDecimal<T>::to_string(const IColumn& column, size_t row_num) const {
-    T value = assert_cast<const ColumnType&>(*column.convertToFullColumnIfConst().get())
-                      .getData()[row_num];
+    T value = assert_cast<const ColumnType&>(*column.convert_to_full_column_if_const().get())
+                      .get_data()[row_num];
     std::ostringstream buf;
-    writeText(value, scale, buf);
+    write_text(value, scale, buf);
     return buf.str();
 }
 
@@ -60,8 +60,8 @@ template <typename T>
 void DataTypeDecimal<T>::to_string(const IColumn& column, size_t row_num,
                                       BufferWritable& ostr) const {
     // TODO: Reduce the copy in std::string mem to ostr, like DataTypeNumber
-    DecimalV2Value value = (DecimalV2Value)assert_cast<const ColumnType&>(*column.convertToFullColumnIfConst().get())
-                      .getData()[row_num];
+    DecimalV2Value value = (DecimalV2Value)assert_cast<const ColumnType&>(*column.convert_to_full_column_if_const().get())
+                      .get_data()[row_num];
     auto str = value.to_string();
     ostr.write(str.data(), str.size());
 }
@@ -71,9 +71,9 @@ void DataTypeDecimal<T>::serialize(const IColumn& column, PColumn* pcolumn) cons
     std::ostringstream buf;
     for (size_t i = 0; i < column.size(); ++i) {
         const FieldType& x =
-                assert_cast<const ColumnType&>(*column.convertToFullColumnIfConst().get())
-                        .getElement(i);
-        writeBinary(x, buf);
+                assert_cast<const ColumnType&>(*column.convert_to_full_column_if_const().get())
+                        .get_element(i);
+        write_binary(x, buf);
     }
 
     write_binary(buf, pcolumn);
@@ -88,8 +88,8 @@ void DataTypeDecimal<T>::deserialize(const PColumn& pcolumn, IColumn* column) co
     std::istringstream istr(uncompressed);
     while (istr.peek() != EOF) {
         typename FieldType::NativeType x;
-        readBinary(x, istr);
-        assert_cast<ColumnType*>(column)->getData().push_back(FieldType(x));
+        read_binary(x, istr);
+        assert_cast<ColumnType*>(column)->get_data().push_back(FieldType(x));
     }
 }
 
