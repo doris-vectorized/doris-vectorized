@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "common/logging.h"
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/columns/column_vector.h"
 #include "vec/common/assert_cast.h"
@@ -479,11 +480,12 @@ public:
               type(this->argument_types[0]) {
         if (StringRef(Data::name()) == StringRef("min") ||
             StringRef(Data::name()) == StringRef("max")) {
-            if (!type->isComparable())
-                throw Exception("Illegal type " + type->get_name() +
-                                        " of argument of aggregate function " + get_name() +
-                                        " because the values of that data type are not comparable",
-                                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+            if (!type->isComparable()) {
+                LOG(FATAL) << fmt::format(
+                        "Illegal type {} of argument of aggregate function {} because the values "
+                        "of that data type are not comparable",
+                        type->get_name(), get_name());
+            }
         }
     }
 

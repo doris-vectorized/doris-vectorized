@@ -20,6 +20,7 @@
 // #include <IO/VarInt.h>
 // #include <IO/WriteHelpers.h>
 
+#include "common/logging.h"
 #include <vec/aggregate_functions/aggregate_function.h>
 #include <vec/columns/column_nullable.h>
 #include <vec/common/assert_cast.h>
@@ -81,11 +82,9 @@ public:
     AggregateFunctionCountNotNullUnary(const DataTypePtr& argument, const Array& params)
             : IAggregateFunctionDataHelper<AggregateFunctionCountData,
                                            AggregateFunctionCountNotNullUnary>({argument}, params) {
-        if (!argument->is_nullable())
-            throw Exception(
-                    "Logical error: not Nullable data type passed to "
-                    "AggregateFunctionCountNotNullUnary",
-                    ErrorCodes::LOGICAL_ERROR);
+        if (!argument->is_nullable()) {
+            LOG(FATAL) << "Logical error: not Nullable data type passed to AggregateFunctionCountNotNullUnary";
+        }
     }
 
     AggregateFunctionCountNotNullUnary(const DataTypes& argument_types_)
