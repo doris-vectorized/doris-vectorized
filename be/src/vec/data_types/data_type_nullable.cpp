@@ -34,47 +34,47 @@ extern const int ILLEGAL_TYPE_OF_ARGUMENT;
 
 DataTypeNullable::DataTypeNullable(const DataTypePtr& nested_data_type_)
         : nested_data_type{nested_data_type_} {
-    if (!nested_data_type->canBeInsideNullable())
+    if (!nested_data_type->can_be_inside_nullable())
         throw Exception(
-                "Nested type " + nested_data_type->getName() + " cannot be inside Nullable type",
+                "Nested type " + nested_data_type->get_name() + " cannot be inside Nullable type",
                 ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 }
 
-bool DataTypeNullable::onlyNull() const {
+bool DataTypeNullable::only_null() const {
     return typeid_cast<const DataTypeNothing*>(nested_data_type.get());
 }
 
 std::string DataTypeNullable::to_string(const IColumn& column, size_t row_num) const {
     const ColumnNullable& col =
-            assert_cast<const ColumnNullable&>(*column.convertToFullColumnIfConst().get());
+            assert_cast<const ColumnNullable&>(*column.convert_to_full_column_if_const().get());
 
-    if (col.isNullAt(row_num)) {
+    if (col.is_null_at(row_num)) {
         return "\\N";
     } else {
-        return nested_data_type->to_string(col.getNestedColumn(), row_num);
+        return nested_data_type->to_string(col.get_nested_column(), row_num);
     }
 }
 
 void DataTypeNullable::serialize(const IColumn& column, PColumn* pcolumn) const {
     const ColumnNullable& col =
-            assert_cast<const ColumnNullable&>(*column.convertToFullColumnIfConst().get());
+            assert_cast<const ColumnNullable&>(*column.convert_to_full_column_if_const().get());
     for (size_t i = 0; i < column.size(); ++i) {
-        bool is_null = col.isNullAt(i);
+        bool is_null = col.is_null_at(i);
         pcolumn->add_is_null(is_null);
     }
-    nested_data_type->serialize(col.getNestedColumn(), pcolumn);
+    nested_data_type->serialize(col.get_nested_column(), pcolumn);
 }
 
 void DataTypeNullable::deserialize(const PColumn& pcolumn, IColumn* column) const {
     ColumnNullable* col = assert_cast<ColumnNullable*>(column);
     for (int i = 0; i < pcolumn.is_null_size(); ++i) {
         if (pcolumn.is_null(i)) {
-            col->getNullMapData().push_back(1);
+            col->get_null_map_data().push_back(1);
         } else {
-            col->getNullMapData().push_back(0);
+            col->get_null_map_data().push_back(0);
         }
     }
-    IColumn& nested = col->getNestedColumn();
+    IColumn& nested = col->get_nested_column();
     nested_data_type->deserialize(pcolumn, &nested);
 }
 
@@ -87,22 +87,22 @@ Field DataTypeNullable::getDefault() const {
 }
 
 size_t DataTypeNullable::getSizeOfValueInMemory() const {
-    throw Exception("Value of type " + getName() + " in memory is not of fixed size.",
+    throw Exception("Value of type " + get_name() + " in memory is not of fixed size.",
                     ErrorCodes::LOGICAL_ERROR);
 }
 
 bool DataTypeNullable::equals(const IDataType& rhs) const {
-    return rhs.isNullable() &&
+    return rhs.is_nullable() &&
            nested_data_type->equals(*static_cast<const DataTypeNullable&>(rhs).nested_data_type);
 }
 
-DataTypePtr makeNullable(const DataTypePtr& type) {
-    if (type->isNullable()) return type;
+DataTypePtr make_nullable(const DataTypePtr& type) {
+    if (type->is_nullable()) return type;
     return std::make_shared<DataTypeNullable>(type);
 }
 
 DataTypePtr removeNullable(const DataTypePtr& type) {
-    if (type->isNullable()) return static_cast<const DataTypeNullable&>(*type).getNestedType();
+    if (type->is_nullable()) return static_cast<const DataTypeNullable&>(*type).getNestedType();
     return type;
 }
 

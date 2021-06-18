@@ -39,7 +39,7 @@ class FunctionUnaryToType : public IFunction {
 public:
     static constexpr auto name = Name::name;
     static FunctionPtr create() { return std::make_shared<FunctionUnaryToType>(); }
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 1; }
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
         return std::make_shared<typename Impl::ReturnType>();
@@ -59,51 +59,51 @@ private:
                         size_t /*input_rows_count*/) {
         const ColumnPtr column = block.getByPosition(arguments[0]).column;
         if constexpr (std::is_integer(Impl::TYPE_INDEX)) {
-            if (auto* col = checkAndGetColumn<ColumnVector<typename Impl::Type>>(column.get())) {
+            if (auto* col = check_and_get_column<ColumnVector<typename Impl::Type>>(column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
                 RETURN_IF_ERROR(
-                        Impl::vector(col->getData(), col_res->getChars(), col_res->getOffsets()));
+                        Impl::vector(col->get_data(), col_res->get_chars(), col_res->get_offsets()));
                 block.getByPosition(result).column = std::move(col_res);
                 return Status::OK();
             }
         }
 
         return Status::RuntimeError(fmt::format("Illegal column {} of argument of function {}",
-                                                block.getByPosition(arguments[0]).column->getName(),
-                                                getName()));
+                                                block.getByPosition(arguments[0]).column->get_name(),
+                                                get_name()));
     }
     template <typename T, std::enable_if_t<!std::is_same_v<T, DataTypeString>, T>* = nullptr>
     Status _executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                         size_t /*input_rows_count*/) {
         const ColumnPtr column = block.getByPosition(arguments[0]).column;
         if constexpr (Impl::TYPE_INDEX == TypeIndex::String) {
-            if (const ColumnString* col = checkAndGetColumn<ColumnString>(column.get())) {
+            if (const ColumnString* col = check_and_get_column<ColumnString>(column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
                 RETURN_IF_ERROR(
-                        Impl::vector(col->getChars(), col->getOffsets(), col_res->getData()));
+                        Impl::vector(col->get_chars(), col->get_offsets(), col_res->get_data()));
                 block.getByPosition(result).column = std::move(col_res);
                 return Status::OK();
             }
         } else if constexpr (std::is_integer(Impl::TYPE_INDEX)) {
             if (const auto* col =
-                        checkAndGetColumn<ColumnVector<typename Impl::Type>>(column.get())) {
+                    check_and_get_column<ColumnVector<typename Impl::Type>>(column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
-                RETURN_IF_ERROR(Impl::vector(col->getData(), col_res->getData()));
+                RETURN_IF_ERROR(Impl::vector(col->get_data(), col_res->get_data()));
                 block.getByPosition(result).column = std::move(col_res);
                 return Status::OK();
             }
         } else if constexpr (is_complex_v<typename Impl::Type>) {
             if (const auto* col =
-                        checkAndGetColumn<ColumnComplexType<typename Impl::Type>>(column.get())) {
+                    check_and_get_column<ColumnComplexType<typename Impl::Type>>(column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
-                RETURN_IF_ERROR(Impl::vector(col->getData(), col_res->getData()));
+                RETURN_IF_ERROR(Impl::vector(col->get_data(), col_res->get_data()));
                 block.getByPosition(result).column = std::move(col_res);
                 return Status::OK();
             }
         }
         return Status::RuntimeError(fmt::format("Illegal column {} of argument of function {}",
-                                                block.getByPosition(arguments[0]).column->getName(),
-                                                getName()));
+                                                block.getByPosition(arguments[0]).column->get_name(),
+                                                get_name()));
     }
 };
 
@@ -113,7 +113,7 @@ class FunctionBinaryToType : public IFunction {
 public:
     static constexpr auto name = Name::name;
     static FunctionPtr create() { return std::make_shared<FunctionBinaryToType>(); }
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 2; }
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
         using ResultDataType = typename Impl<LeftDataType, RightDataType>::ResultDataType;
@@ -126,9 +126,9 @@ public:
                        size_t /*input_rows_count*/) override {
         DCHECK_EQ(arguments.size(), 2);
         const auto& left = block.getByPosition(arguments[0]);
-        auto lcol = left.column->convertToFullColumnIfConst();
+        auto lcol = left.column->convert_to_full_column_if_const();
         const auto& right = block.getByPosition(arguments[1]);
-        auto rcol = right.column->convertToFullColumnIfConst();
+        auto rcol = right.column->convert_to_full_column_if_const();
 
         using ResultDataType = typename Impl<LeftDataType, RightDataType>::ResultDataType;
 
@@ -148,18 +148,18 @@ public:
         typename ColVecResult::MutablePtr col_res = nullptr;
 
         col_res = ColVecResult::create();
-        auto& vec_res = col_res->getData();
+        auto& vec_res = col_res->get_data();
         vec_res.resize(block.rows());
 
-        if (auto col_left = checkAndGetColumn<ColVecLeft>(lcol.get())) {
-            if (auto col_right = checkAndGetColumn<ColVecRight>(rcol.get())) {
-                Impl<LeftDataType, RightDataType>::vector_vector(col_left->getData(),
-                                                                 col_right->getData(), vec_res);
+        if (auto col_left = check_and_get_column<ColVecLeft>(lcol.get())) {
+            if (auto col_right = check_and_get_column<ColVecRight>(rcol.get())) {
+                Impl<LeftDataType, RightDataType>::vector_vector(col_left->get_data(),
+                                                                 col_right->get_data(), vec_res);
                 block.getByPosition(result).column = std::move(col_res);
                 return Status::OK();
             }
         }
-        return Status::RuntimeError(fmt::format("unimplements function {}", getName()));
+        return Status::RuntimeError(fmt::format("unimplements function {}", get_name()));
     }
 };
 
@@ -175,7 +175,7 @@ public:
 
     static constexpr auto name = Name::name;
     static FunctionPtr create() { return std::make_shared<FunctionBinaryToType>(); }
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 2; }
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
         return std::make_shared<ResultDataType>();
@@ -195,26 +195,26 @@ private:
                       nullptr>
     Status execute_inner_impl(const ColumnWithTypeAndName& left, const ColumnWithTypeAndName& right,
                               Block& block, const ColumnNumbers& arguments, size_t result) {
-        auto lcol = left.column->convertToFullColumnIfConst();
-        auto rcol = right.column->convertToFullColumnIfConst();
+        auto lcol = left.column->convert_to_full_column_if_const();
+        auto rcol = right.column->convert_to_full_column_if_const();
 
         using ResultType = typename ResultDataType::FieldType;
         using ColVecResult = ColumnVector<ResultType>;
         typename ColVecResult::MutablePtr col_res = ColVecResult::create();
 
-        auto& vec_res = col_res->getData();
+        auto& vec_res = col_res->get_data();
         vec_res.resize(block.rows());
 
-        if (auto col_left = checkAndGetColumn<ColVecLeft>(lcol.get())) {
-            if (auto col_right = checkAndGetColumn<ColVecRight>(rcol.get())) {
+        if (auto col_left = check_and_get_column<ColVecLeft>(lcol.get())) {
+            if (auto col_right = check_and_get_column<ColVecRight>(rcol.get())) {
                 Impl<LeftDataType, RightDataType>::vector_vector(
-                        col_left->getChars(), col_left->getOffsets(), col_right->getChars(),
-                        col_right->getOffsets(), vec_res);
+                        col_left->get_chars(), col_left->get_offsets(), col_right->get_chars(),
+                        col_right->get_offsets(), vec_res);
                 block.getByPosition(result).column = std::move(col_res);
                 return Status::OK();
             }
         }
-        return Status::RuntimeError(fmt::format("unimplements function {}", getName()));
+        return Status::RuntimeError(fmt::format("unimplements function {}", get_name()));
     }
 
     template <typename ReturnDataType,
@@ -222,21 +222,21 @@ private:
                       nullptr>
     Status execute_inner_impl(const ColumnWithTypeAndName& left, const ColumnWithTypeAndName& right,
                               Block& block, const ColumnNumbers& arguments, size_t result) {
-        auto lcol = left.column->convertToFullColumnIfConst();
-        auto rcol = right.column->convertToFullColumnIfConst();
+        auto lcol = left.column->convert_to_full_column_if_const();
+        auto rcol = right.column->convert_to_full_column_if_const();
 
         using ColVecResult = ColumnString;
         typename ColVecResult::MutablePtr col_res = ColVecResult::create();
-        if (auto col_left = checkAndGetColumn<ColVecLeft>(lcol.get())) {
-            if (auto col_right = checkAndGetColumn<ColVecRight>(rcol.get())) {
+        if (auto col_left = check_and_get_column<ColVecLeft>(lcol.get())) {
+            if (auto col_right = check_and_get_column<ColVecRight>(rcol.get())) {
                 Impl<LeftDataType, RightDataType>::vector_vector(
-                        col_left->getChars(), col_left->getOffsets(), col_right->getChars(),
-                        col_right->getOffsets(), col_res->getChars(), col_res->getOffsets());
+                        col_left->get_chars(), col_left->get_offsets(), col_right->get_chars(),
+                        col_right->get_offsets(), col_res->get_chars(), col_res->get_offsets());
                 block.getByPosition(result).column = std::move(col_res);
                 return Status::OK();
             }
         }
-        return Status::RuntimeError(fmt::format("unimplements function {}", getName()));
+        return Status::RuntimeError(fmt::format("unimplements function {}", get_name()));
     }
 };
 
@@ -248,10 +248,10 @@ public:
     static FunctionPtr create() {
         return std::make_shared<FunctionBinaryStringOperateToNullType>();
     }
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 2; }
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
-        return makeNullable(std::make_shared<typename Impl::ReturnType>());
+        return make_nullable(std::make_shared<typename Impl::ReturnType>());
     }
     bool useDefaultImplementationForConstants() const override { return true; }
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
@@ -263,10 +263,10 @@ public:
         // handle
         for (int i = 0; i < 2; ++i) {
             argument_columns[i] =
-                    block.getByPosition(arguments[i]).column->convertToFullColumnIfConst();
-            if (auto* nullable = checkAndGetColumn<ColumnNullable>(*argument_columns[i])) {
-                argument_columns[i] = nullable->getNestedColumnPtr();
-                VectorizedUtils::update_null_map(null_map->getData(), nullable->getNullMapData());
+                    block.getByPosition(arguments[i]).column->convert_to_full_column_if_const();
+            if (auto* nullable = check_and_get_column<ColumnNullable>(*argument_columns[i])) {
+                argument_columns[i] = nullable->get_nested_column_ptr();
+                VectorizedUtils::update_null_map(null_map->get_data(), nullable->get_null_map_data());
             }
         }
 
@@ -275,21 +275,21 @@ public:
         auto specific_str_column = assert_cast<const ColumnString*>(argument_columns[0].get());
         auto specific_char_column = assert_cast<const ColumnString*>(argument_columns[1].get());
 
-        auto& ldata = specific_str_column->getChars();
-        auto& loffsets = specific_str_column->getOffsets();
+        auto& ldata = specific_str_column->get_chars();
+        auto& loffsets = specific_str_column->get_offsets();
 
-        auto& rdata = specific_char_column->getChars();
-        auto& roffsets = specific_char_column->getOffsets();
+        auto& rdata = specific_char_column->get_chars();
+        auto& roffsets = specific_char_column->get_offsets();
 
         // execute Impl
         if constexpr (std::is_same_v<typename Impl::ReturnType, DataTypeString>) {
-            auto& res_data = res->getChars();
-            auto& res_offsets = res->getOffsets();
+            auto& res_data = res->get_chars();
+            auto& res_offsets = res->get_offsets();
             Impl::vector_vector(ldata, loffsets, rdata, roffsets, res_data, res_offsets,
-                                null_map->getData());
+                                null_map->get_data());
         } else {
-            Impl::vector_vector(ldata, loffsets, rdata, roffsets, res->getData(),
-                                null_map->getData());
+            Impl::vector_vector(ldata, loffsets, rdata, roffsets, res->get_data(),
+                                null_map->get_data());
         }
 
         block.getByPosition(result).column =

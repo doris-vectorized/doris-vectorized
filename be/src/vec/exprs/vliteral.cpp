@@ -123,7 +123,7 @@ VLiteral::VLiteral(const TExprNode& node) : VExpr(node) {
     }
 
     this->_column_ptr = _data_type->createColumnConst(1, field);
-    _expr_name = _data_type->getName();
+    _expr_name = _data_type->get_name();
 }
 
 VLiteral::~VLiteral() {}
@@ -134,7 +134,7 @@ Status VLiteral::execute(vectorized::Block* block, int* result_column_id) {
         rows = 1;
     }
     size_t res = block->columns();
-    block->insert({_column_ptr->cloneResized(rows), _data_type, _expr_name});
+    block->insert({_column_ptr->clone_resized(rows), _data_type, _expr_name});
     *result_column_id = res;
     return Status::OK();
 }

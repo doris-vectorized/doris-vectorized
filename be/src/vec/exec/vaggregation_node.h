@@ -62,7 +62,7 @@ struct AggregationMethodSerialized {
     static void insertKeyIntoColumns(const StringRef& key, MutableColumns& key_columns,
                                      const Sizes&) {
         auto pos = key.data;
-        for (auto& column : key_columns) pos = column->deserializeAndInsertFromArena(pos);
+        for (auto& column : key_columns) pos = column->deserialize_and_insert_from_arena(pos);
     }
 
     void init_once() {

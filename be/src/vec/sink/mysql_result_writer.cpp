@@ -73,7 +73,7 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
 
     doris::vectorized::ColumnPtr column;
     if constexpr (is_nullable) {
-        column = assert_cast<const ColumnNullable&>(*column_ptr).getNestedColumnPtr();
+        column = assert_cast<const ColumnNullable&>(*column_ptr).get_nested_column_ptr();
     } else {
         column = column_ptr;
     }
@@ -81,50 +81,50 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
     int buf_ret = 0;
     for (int i = 0; i < column_ptr->size(); ++i) {
         if constexpr (is_nullable) {
-            if (column_ptr->isNullAt(i)) {
+            if (column_ptr->is_null_at(i)) {
                 buf_ret = _vec_buffers[i]->push_null();
                 continue;
             }
         }
 
         if constexpr (type == TYPE_TINYINT) {
-            buf_ret = _vec_buffers[i]->push_tinyint(static_cast<int8_t>(column->getInt(i)));
+            buf_ret = _vec_buffers[i]->push_tinyint(static_cast<int8_t>(column->get_int(i)));
         }
         if constexpr (type == TYPE_SMALLINT) {
             buf_ret = _vec_buffers[i]->push_smallint(
-                    assert_cast<const ColumnVector<Int16>&>(*column).getData()[i]);
+                    assert_cast<const ColumnVector<Int16>&>(*column).get_data()[i]);
         }
         if constexpr (type == TYPE_INT) {
             buf_ret = _vec_buffers[i]->push_int(
-                    assert_cast<const ColumnVector<Int32>&>(*column).getData()[i]);
+                    assert_cast<const ColumnVector<Int32>&>(*column).get_data()[i]);
         }
         if constexpr (type == TYPE_BIGINT) {
             buf_ret = _vec_buffers[i]->push_bigint(
-                    assert_cast<const ColumnVector<Int64>&>(*column).getData()[i]);
+                    assert_cast<const ColumnVector<Int64>&>(*column).get_data()[i]);
         }
         if constexpr (type == TYPE_LARGEINT) {
             char buf[48];
             int len = 48;
             char* v = LargeIntValue::to_string(
-                    assert_cast<const ColumnVector<Int128>&>(*column).getData()[i], buf, &len);
+                    assert_cast<const ColumnVector<Int128>&>(*column).get_data()[i], buf, &len);
             buf_ret = _vec_buffers[i]->push_string(v, len);
         }
         if constexpr (type == TYPE_FLOAT) {
             buf_ret = _vec_buffers[i]->push_float(
-                    assert_cast<const ColumnVector<Float32>&>(*column).getData()[i]);
+                    assert_cast<const ColumnVector<Float32>&>(*column).get_data()[i]);
         }
         if constexpr (type == TYPE_DOUBLE) {
             buf_ret = _vec_buffers[i]->push_double(
-                    assert_cast<const ColumnVector<Float64>&>(*column).getData()[i]);
+                    assert_cast<const ColumnVector<Float64>&>(*column).get_data()[i]);
         }
         if constexpr (type == TYPE_TIME) {
-            auto time = assert_cast<const ColumnVector<Float64>&>(*column).getData()[i];
+            auto time = assert_cast<const ColumnVector<Float64>&>(*column).get_data()[i];
             std::string time_str = time_str_from_double(time);
             buf_ret = _vec_buffers[i]->push_string(time_str.c_str(), time_str.size());
         }
         if constexpr (type == TYPE_DATETIME) {
             char buf[64];
-            auto time_num = assert_cast<const ColumnVector<Int128>&>(*column).getData()[i];
+            auto time_num = assert_cast<const ColumnVector<Int128>&>(*column).get_data()[i];
             DateTimeValue time_val;
             memcpy(&time_val, &time_num, sizeof(Int128));
             // TODO(zhaochun), this function has core risk
@@ -136,7 +136,7 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
             buf_ret = _vec_buffers[i]->push_null();
         }
         if constexpr (type == TYPE_VARCHAR) {
-            const auto string_val = column->getDataAt(i);
+            const auto string_val = column->get_data_at(i);
 
             if (string_val.data == NULL) {
                 if (string_val.size == 0) {
@@ -152,7 +152,7 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
         }
         if constexpr (type == TYPE_DECIMALV2) {
             DecimalV2Value decimal_val(
-                    assert_cast<const ColumnDecimal<Decimal128>&>(*column).getData()[i]);
+                    assert_cast<const ColumnDecimal<Decimal128>&>(*column).get_data()[i]);
             std::string decimal_str;
             //            int output_scale = _output_expr_ctxs[i]->root()->output_scale();
             //
@@ -201,13 +201,13 @@ Status MysqlResultWriter::append_block(Block& block) {
 
     for (int i = 0; status.ok() && i < _output_vexpr_ctxs.size(); ++i) {
         auto column_ptr =
-                block.getByPosition(result_column_ids[i]).column->convertToFullColumnIfConst();
+                block.getByPosition(result_column_ids[i]).column->convert_to_full_column_if_const();
         auto type_ptr = block.getByPosition(result_column_ids[i]).type;
 
         switch (_output_vexpr_ctxs[i]->root()->result_type()) {
         case TYPE_BOOLEAN:
         case TYPE_TINYINT: {
-            if (type_ptr->isNullable()) {
+            if (type_ptr->is_nullable()) {
                 status = _add_one_column<PrimitiveType::TYPE_TINYINT, true>(column_ptr);
             } else {
                 status = _add_one_column<PrimitiveType::TYPE_TINYINT, false>(column_ptr);
@@ -215,7 +215,7 @@ Status MysqlResultWriter::append_block(Block& block) {
             break;
         }
         case TYPE_SMALLINT: {
-            if (type_ptr->isNullable()) {
+            if (type_ptr->is_nullable()) {
                 status = _add_one_column<PrimitiveType::TYPE_SMALLINT, true>(column_ptr);
             } else {
                 status = _add_one_column<PrimitiveType::TYPE_SMALLINT, false>(column_ptr);
@@ -223,7 +223,7 @@ Status MysqlResultWriter::append_block(Block& block) {
             break;
         }
         case TYPE_INT: {
-            if (type_ptr->isNullable()) {
+            if (type_ptr->is_nullable()) {
                 status = _add_one_column<PrimitiveType::TYPE_INT, true>(column_ptr);
             } else {
                 status = _add_one_column<PrimitiveType::TYPE_INT, false>(column_ptr);
@@ -231,7 +231,7 @@ Status MysqlResultWriter::append_block(Block& block) {
             break;
         }
         case TYPE_BIGINT: {
-            if (type_ptr->isNullable()) {
+            if (type_ptr->is_nullable()) {
                 status = _add_one_column<PrimitiveType::TYPE_BIGINT, true>(column_ptr);
             } else {
                 status = _add_one_column<PrimitiveType::TYPE_BIGINT, false>(column_ptr);
@@ -239,7 +239,7 @@ Status MysqlResultWriter::append_block(Block& block) {
             break;
         }
         case TYPE_LARGEINT: {
-            if (type_ptr->isNullable()) {
+            if (type_ptr->is_nullable()) {
                 status = _add_one_column<PrimitiveType::TYPE_LARGEINT, true>(column_ptr);
             } else {
                 status = _add_one_column<PrimitiveType::TYPE_LARGEINT, false>(column_ptr);
@@ -247,7 +247,7 @@ Status MysqlResultWriter::append_block(Block& block) {
             break;
         }
         case TYPE_FLOAT: {
-            if (type_ptr->isNullable()) {
+            if (type_ptr->is_nullable()) {
                 status = _add_one_column<PrimitiveType::TYPE_FLOAT, true>(column_ptr);
             } else {
                 status = _add_one_column<PrimitiveType::TYPE_FLOAT, false>(column_ptr);
@@ -255,7 +255,7 @@ Status MysqlResultWriter::append_block(Block& block) {
             break;
         }
         case TYPE_DOUBLE: {
-            if (type_ptr->isNullable()) {
+            if (type_ptr->is_nullable()) {
                 status = _add_one_column<PrimitiveType::TYPE_DOUBLE, true>(column_ptr);
             } else {
                 status = _add_one_column<PrimitiveType::TYPE_DOUBLE, false>(column_ptr);
@@ -263,7 +263,7 @@ Status MysqlResultWriter::append_block(Block& block) {
             break;
         }
         case TYPE_TIME: {
-            if (type_ptr->isNullable()) {
+            if (type_ptr->is_nullable()) {
                 status = _add_one_column<PrimitiveType::TYPE_TIME, true>(column_ptr);
             } else {
                 status = _add_one_column<PrimitiveType::TYPE_TIME, false>(column_ptr);
@@ -272,7 +272,7 @@ Status MysqlResultWriter::append_block(Block& block) {
         }
         case TYPE_CHAR:
         case TYPE_VARCHAR: {
-            if (type_ptr->isNullable()) {
+            if (type_ptr->is_nullable()) {
                 status = _add_one_column<PrimitiveType::TYPE_VARCHAR, true>(column_ptr);
             } else {
                 status = _add_one_column<PrimitiveType::TYPE_VARCHAR, false>(column_ptr);
@@ -280,7 +280,7 @@ Status MysqlResultWriter::append_block(Block& block) {
             break;
         }
         case TYPE_DECIMALV2: {
-            if (type_ptr->isNullable()) {
+            if (type_ptr->is_nullable()) {
                 status = _add_one_column<PrimitiveType::TYPE_DECIMALV2, true>(column_ptr);
             } else {
                 status = _add_one_column<PrimitiveType::TYPE_DECIMALV2, false>(column_ptr);
@@ -289,7 +289,7 @@ Status MysqlResultWriter::append_block(Block& block) {
         }
         case TYPE_DATE:
         case TYPE_DATETIME: {
-            if (type_ptr->isNullable()) {
+            if (type_ptr->is_nullable()) {
                 status = _add_one_column<PrimitiveType::TYPE_DATETIME, true>(column_ptr);
             } else {
                 status = _add_one_column<PrimitiveType::TYPE_DATETIME, false>(column_ptr);
@@ -298,7 +298,7 @@ Status MysqlResultWriter::append_block(Block& block) {
         }
         case TYPE_HLL:
         case TYPE_OBJECT: {
-            if (type_ptr->isNullable()) {
+            if (type_ptr->is_nullable()) {
                 status = _add_one_column<PrimitiveType::TYPE_OBJECT, true>(column_ptr);
             } else {
                 status = _add_one_column<PrimitiveType::TYPE_OBJECT, false>(column_ptr);

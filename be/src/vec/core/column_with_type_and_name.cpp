@@ -30,7 +30,7 @@ ColumnWithTypeAndName ColumnWithTypeAndName::cloneEmpty() const {
 
     res.name = name;
     res.type = type;
-    if (column) res.column = column->cloneEmpty();
+    if (column) res.column = column->clone_empty();
 
     return res;
 }
@@ -39,20 +39,20 @@ bool ColumnWithTypeAndName::operator==(const ColumnWithTypeAndName& other) const
     return name == other.name &&
            ((!type && !other.type) || (type && other.type && type->equals(*other.type))) &&
            ((!column && !other.column) ||
-            (column && other.column && column->getName() == other.column->getName()));
+            (column && other.column && column->get_name() == other.column->get_name()));
 }
 
 void ColumnWithTypeAndName::dumpStructure(std::ostream& out) const {
     out << name;
 
     if (type)
-        //out << ' ' << type->getName();
+        //out << ' ' << type->get_name();
         out << " ";
     else
         out << " nullptr";
 
     if (column)
-        out << ' ' << column->dumpStructure();
+        out << ' ' << column->dump_structure();
     else
         out << " nullptr";
 }
@@ -63,7 +63,7 @@ String ColumnWithTypeAndName::dumpStructure() const {
     return out.str();
 }
 std::string ColumnWithTypeAndName::to_string(size_t row_num) const {
-    return type->to_string(*column->convertToFullColumnIfConst().get(), row_num);
+    return type->to_string(*column->convert_to_full_column_if_const().get(), row_num);
 }
 
 } // namespace doris::vectorized

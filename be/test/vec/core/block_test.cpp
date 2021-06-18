@@ -125,15 +125,15 @@ TEST(BlockTest, RowBatchCovertToBlock) {
         if (i % 5 != 0) {
             ASSERT_EQ((int16_t)column1->get64(i), k1);
         } else {
-            ASSERT_TRUE(column1->isNullAt(i));
+            ASSERT_TRUE(column1->is_null_at(i));
         }
-        ASSERT_EQ(column2->getInt(i), k2++);
-        ASSERT_EQ(column3->getFloat64(i), k3);
-        ASSERT_STREQ(column4->getDataAt(i).data, std::to_string(k1).c_str());
+        ASSERT_EQ(column2->get_int(i), k2++);
+        ASSERT_EQ(column3->get_float64(i), k3);
+        ASSERT_STREQ(column4->get_data_at(i).data, std::to_string(k1).c_str());
         auto decimal_field =
                 column5->operator[](i).get<vectorized::DecimalField<vectorized::Decimal128>>();
         DecimalV2Value decimalv2_num(std::to_string(k3));
-        ASSERT_EQ(DecimalV2Value(decimal_field.getValue()), decimalv2_num);
+        ASSERT_EQ(DecimalV2Value(decimal_field.get_value()), decimalv2_num);
 
         int128_t larget_int = k1;
         ASSERT_EQ(column6->operator[](i).get<vectorized::Int128>(), k1);
@@ -157,7 +157,7 @@ TEST(BlockTest, RowBatchCovertToBlock) {
 TEST(BlockTest, SerializeAndDeserializeBlock) {
     {
         auto vec = vectorized::ColumnVector<Int32>::create();
-        auto& data = vec->getData();
+        auto& data = vec->get_data();
         for (int i = 0; i < 1024; ++i) {
             data.push_back(i);
         }
@@ -177,7 +177,7 @@ TEST(BlockTest, SerializeAndDeserializeBlock) {
         auto strcol = vectorized::ColumnString::create();
         for (int i = 0; i < 1024; ++i) {
             std::string is = std::to_string(i);
-            strcol->insertData(is.c_str(), is.size());
+            strcol->insert_data(is.c_str(), is.size());
         }
         vectorized::DataTypePtr data_type(std::make_shared<vectorized::DataTypeString>());
         vectorized::ColumnWithTypeAndName type_and_name(strcol->getPtr(), data_type, "test_string");
@@ -196,7 +196,7 @@ TEST(BlockTest, SerializeAndDeserializeBlock) {
         auto decimal_column = decimal_data_type->createColumn();
         auto& data = ((vectorized::ColumnDecimal<vectorized::Decimal<vectorized::Int128>>*)
                               decimal_column.get())
-                             ->getData();
+                             ->get_data();
         for (int i = 0; i < 1024; ++i) {
             __int128_t value = i * pow(10, 9) + i * pow(10, 8);
             data.push_back(value);
@@ -216,12 +216,12 @@ TEST(BlockTest, SerializeAndDeserializeBlock) {
     // Test Block
     {
         auto column_vector_int32 = vectorized::ColumnVector<Int32>::create();
-        auto column_nullable_vector = vectorized::makeNullable(std::move(column_vector_int32));
+        auto column_nullable_vector = vectorized::make_nullable(std::move(column_vector_int32));
         auto mutable_nullable_vector = std::move(*column_nullable_vector).mutate();
         for (int i = 0; i < 4096; i++) {
             mutable_nullable_vector->insert(vectorized::castToNearestFieldType(i));
         }
-        auto data_type = vectorized::makeNullable(std::make_shared<vectorized::DataTypeInt32>());
+        auto data_type = vectorized::make_nullable(std::make_shared<vectorized::DataTypeInt32>());
         vectorized::ColumnWithTypeAndName type_and_name(mutable_nullable_vector->getPtr(),
                                                         data_type, "test_nullable_int32");
         vectorized::Block block({type_and_name});
@@ -238,7 +238,7 @@ TEST(BlockTest, SerializeAndDeserializeBlock) {
 
 TEST(BlockTest, DumpData) {
     auto vec = vectorized::ColumnVector<Int32>::create();
-    auto& int32_data = vec->getData();
+    auto& int32_data = vec->get_data();
     for (int i = 0; i < 1024; ++i) {
         int32_data.push_back(i);
     }
@@ -248,7 +248,7 @@ TEST(BlockTest, DumpData) {
     auto strcol = vectorized::ColumnString::create();
     for (int i = 0; i < 1024; ++i) {
         std::string is = std::to_string(i);
-        strcol->insertData(is.c_str(), is.size());
+        strcol->insert_data(is.c_str(), is.size());
     }
     vectorized::DataTypePtr string_type(std::make_shared<vectorized::DataTypeString>());
     vectorized::ColumnWithTypeAndName test_string(strcol->getPtr(), string_type, "test_string");
@@ -257,7 +257,7 @@ TEST(BlockTest, DumpData) {
     auto decimal_column = decimal_data_type->createColumn();
     auto& decimal_data = ((vectorized::ColumnDecimal<vectorized::Decimal<vectorized::Int128>>*)
                                   decimal_column.get())
-                                 ->getData();
+                                 ->get_data();
     for (int i = 0; i < 1024; ++i) {
         __int128_t value = i * pow(10, 9) + i * pow(10, 8);
         decimal_data.push_back(value);
@@ -266,17 +266,17 @@ TEST(BlockTest, DumpData) {
                                                    "test_decimal");
 
     auto column_vector_int32 = vectorized::ColumnVector<Int32>::create();
-    auto column_nullable_vector = vectorized::makeNullable(std::move(column_vector_int32));
+    auto column_nullable_vector = vectorized::make_nullable(std::move(column_vector_int32));
     auto mutable_nullable_vector = std::move(*column_nullable_vector).mutate();
     for (int i = 0; i < 4096; i++) {
         mutable_nullable_vector->insert(vectorized::castToNearestFieldType(i));
     }
-    auto nint32_type = vectorized::makeNullable(std::make_shared<vectorized::DataTypeInt32>());
+    auto nint32_type = vectorized::make_nullable(std::make_shared<vectorized::DataTypeInt32>());
     vectorized::ColumnWithTypeAndName test_nullable_int32(mutable_nullable_vector->getPtr(),
                                                           nint32_type, "test_nullable_int32");
 
     auto column_vector_date = vectorized::ColumnVector<vectorized::Int128>::create();
-    auto& date_data = column_vector_date->getData();
+    auto& date_data = column_vector_date->get_data();
     for (int i = 0; i < 1024; ++i) {
         DateTimeValue value;
         value.from_date_int64(20210501);
@@ -287,7 +287,7 @@ TEST(BlockTest, DumpData) {
                                                 "test_date");
 
     auto column_vector_datetime = vectorized::ColumnVector<vectorized::Int128>::create();
-    auto& datetime_data = column_vector_datetime->getData();
+    auto& datetime_data = column_vector_datetime->get_data();
     for (int i = 0; i < 1024; ++i) {
         DateTimeValue value;
         value.from_date_int64(20210501080910);

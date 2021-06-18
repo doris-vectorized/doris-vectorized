@@ -18,7 +18,7 @@
 /**
   * This file implements template methods of IColumn that depend on other types
   * we don't want to include.
-  * Currently, this is only the scatterImpl method that depends on PODArray
+  * Currently, this is only the scatter_impl method that depends on PODArray
   * implementation.
   */
 
@@ -30,8 +30,8 @@
 namespace doris::vectorized {
 
 template <typename Derived>
-std::vector<IColumn::MutablePtr> IColumn::scatterImpl(ColumnIndex num_columns,
-                                                      const Selector& selector) const {
+std::vector<IColumn::MutablePtr> IColumn::scatter_impl(ColumnIndex num_columns,
+                                                       const Selector& selector) const {
     size_t num_rows = size();
 
     if (num_rows != selector.size())
@@ -40,7 +40,7 @@ std::vector<IColumn::MutablePtr> IColumn::scatterImpl(ColumnIndex num_columns,
                         ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
     std::vector<MutablePtr> columns(num_columns);
-    for (auto& column : columns) column = cloneEmpty();
+    for (auto& column : columns) column = clone_empty();
 
     {
         size_t reserve_size =
@@ -51,7 +51,7 @@ std::vector<IColumn::MutablePtr> IColumn::scatterImpl(ColumnIndex num_columns,
     }
 
     for (size_t i = 0; i < num_rows; ++i)
-        static_cast<Derived&>(*columns[selector[i]]).insertFrom(*this, i);
+        static_cast<Derived&>(*columns[selector[i]]).insert_from(*this, i);
 
     return columns;
 }

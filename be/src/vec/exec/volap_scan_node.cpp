@@ -229,7 +229,7 @@ void VOlapScanNode::scanner_thread(VOlapScanner* scanner) {
         } else {
             blocks.push_back(block);
             // TODO(yangzhg) this bytes is an approximate number
-            __sync_fetch_and_add(&_buffered_bytes, block->allocatedBytes());
+            __sync_fetch_and_add(&_buffered_bytes, block->allocated_bytes());
         }
         raw_rows_read = scanner->raw_rows_read();
     }
@@ -513,7 +513,7 @@ Status VOlapScanNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         //                  << Tuple::to_string(row->get_tuple(0), *_tuple_desc);
         //     }
         // }
-        __sync_fetch_and_sub(&_buffered_bytes, block->allocatedBytes());
+        __sync_fetch_and_sub(&_buffered_bytes, block->allocated_bytes());
 
         delete materialized_block;
         return Status::OK();

@@ -28,7 +28,7 @@ public:
     using FieldType = String;
     static constexpr bool is_parametric = false;
 
-    const char* getFamilyName() const override { return "String"; }
+    const char* get_family_name() const override { return "String"; }
 
     TypeIndex getTypeId() const override { return TypeIndex::String; }
     void serialize(const IColumn& column, PColumn* pcolumn) const override;
@@ -46,7 +46,7 @@ public:
     bool canBeComparedWithCollation() const override { return true; }
     bool isValueUnambiguouslyRepresentedInContiguousMemoryRegion() const override { return true; }
     bool isCategorial() const override { return true; }
-    bool canBeInsideNullable() const override { return true; }
+    bool can_be_inside_nullable() const override { return true; }
     bool canBeInsideLowCardinality() const override { return true; }
     std::string to_string(const IColumn& column, size_t row_num) const;
 };

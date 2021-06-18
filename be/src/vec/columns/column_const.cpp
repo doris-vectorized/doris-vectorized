@@ -32,7 +32,7 @@ extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
 ColumnConst::ColumnConst(const ColumnPtr& data_, size_t s_) : data(data_), s(s_) {
     /// Squash Const of Const.
     while (const ColumnConst* const_data = typeid_cast<const ColumnConst*>(data.get()))
-        data = const_data->getDataColumnPtr();
+        data = const_data->get_data_column_ptr();
 
     if (data->size() != 1)
         throw Exception("Incorrect size of nested column in constructor of ColumnConst: " +
@@ -40,12 +40,12 @@ ColumnConst::ColumnConst(const ColumnPtr& data_, size_t s_) : data(data_), s(s_)
                         ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 }
 
-ColumnPtr ColumnConst::convertToFullColumn() const {
+ColumnPtr ColumnConst::convert_to_full_column() const {
     return data->replicate(Offsets(1, s));
 }
 
-ColumnPtr ColumnConst::removeLowCardinality() const {
-    return ColumnConst::create(data->convertToFullColumnIfLowCardinality(), s);
+ColumnPtr ColumnConst::remove_low_cardinality() const {
+    return ColumnConst::create(data->convert_to_full_column_if_low_cardinality(), s);
 }
 
 ColumnPtr ColumnConst::filter(const Filter& filt, ssize_t /*result_size_hint*/) const {
@@ -54,7 +54,7 @@ ColumnPtr ColumnConst::filter(const Filter& filt, ssize_t /*result_size_hint*/) 
                                 ") doesn't match size of column (" + std::to_string(s) + ")",
                         ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
-    return ColumnConst::create(data, countBytesInFilter(filt));
+    return ColumnConst::create(data, count_bytes_in_filter(filt));
 }
 
 ColumnPtr ColumnConst::replicate(const Offsets& offsets) const {
@@ -99,15 +99,15 @@ MutableColumns ColumnConst::scatter(ColumnIndex num_columns, const Selector& sel
                                 ") doesn't match size of column (" + std::to_string(s) + ")",
                         ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
-    std::vector<size_t> counts = countColumnsSizeInSelector(num_columns, selector);
+    std::vector<size_t> counts = count_columns_size_in_selector(num_columns, selector);
 
     MutableColumns res(num_columns);
-    for (size_t i = 0; i < num_columns; ++i) res[i] = cloneResized(counts[i]);
+    for (size_t i = 0; i < num_columns; ++i) res[i] = clone_resized(counts[i]);
 
     return res;
 }
 
-void ColumnConst::getPermutation(bool /*reverse*/, size_t /*limit*/, int /*nan_direction_hint*/, Permutation & res) const
+void ColumnConst::get_permutation(bool /*reverse*/, size_t /*limit*/, int /*nan_direction_hint*/, Permutation & res) const
 {
     res.resize(s);
     for (size_t i = 0; i < s; ++i)

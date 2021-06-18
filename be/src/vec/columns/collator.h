@@ -30,9 +30,9 @@ public:
 
     int compare(const char* str1, size_t length1, const char* str2, size_t length2) const;
 
-    const std::string& getLocale() const;
+    const std::string& get_locale() const;
 
-    static std::vector<std::string> getAvailableCollations();
+    static std::vector<std::string> get_available_collations();
 
 private:
     std::string locale;

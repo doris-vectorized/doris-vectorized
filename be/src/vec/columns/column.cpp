@@ -27,30 +27,30 @@
 
 namespace doris::vectorized {
 
-std::string IColumn::dumpStructure() const {
+std::string IColumn::dump_structure() const {
     std::stringstream res;
-    res << getFamilyName() << "(size = " << size();
+    res << get_family_name() << "(size = " << size();
 
     ColumnCallback callback = [&](ColumnPtr& subcolumn) {
-        res << ", " << subcolumn->dumpStructure();
+        res << ", " << subcolumn->dump_structure();
     };
 
-    const_cast<IColumn*>(this)->forEachSubcolumn(callback);
+    const_cast<IColumn *>(this)->for_each_subcolumn(callback);
 
     res << ")";
     return res.str();
 }
 
-void IColumn::insertFrom(const IColumn& src, size_t n) {
+void IColumn::insert_from(const IColumn& src, size_t n) {
     insert(src[n]);
 }
 
-bool isColumnNullable(const IColumn& column) {
-    return checkColumn<ColumnNullable>(column);
+bool is_column_nullable(const IColumn& column) {
+    return check_column<ColumnNullable>(column);
 }
 
-bool isColumnConst(const IColumn& column) {
-    return checkColumn<ColumnConst>(column);
+bool is_column_const(const IColumn& column) {
+    return check_column<ColumnConst>(column);
 }
 
 } // namespace doris::vectorized

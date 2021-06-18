@@ -15,7 +15,7 @@ public:
     static FunctionPtr create() { return std::make_shared<FunctionConst>(); }
 
 public:
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
 
     size_t getNumberOfArguments() const override { return 0; }
 
@@ -36,7 +36,7 @@ class FunctionConst<Impl, false> : public IFunction {
 public:
     static constexpr auto name = Impl::name;
     static FunctionPtr create() { return std::make_shared<FunctionConst>(); }
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
 
     size_t getNumberOfArguments() const override { return 0; }
 
@@ -47,7 +47,7 @@ public:
     Status executeImpl(Block& block, const ColumnNumbers&, size_t result,
                        size_t input_rows_count) override {
         auto column = Impl::ReturnColVec::create();
-        column->getData().emplace_back(Impl::init_value());
+        column->get_data().emplace_back(Impl::init_value());
         block.getByPosition(result).column = ColumnConst::create(std::move(column), 1);
         return Status::OK();
     }
@@ -60,7 +60,7 @@ public:
     static FunctionPtr create() { return std::make_shared<FunctionMathConstFloat64>(); }
 
 private:
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
 
     size_t getNumberOfArguments() const override { return 0; }
 

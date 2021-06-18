@@ -43,17 +43,17 @@ private:
     ColumnConst(const ColumnConst& src) = default;
 
 public:
-    ColumnPtr convertToFullColumn() const;
+    ColumnPtr convert_to_full_column() const;
 
-    ColumnPtr convertToFullColumnIfConst() const override { return convertToFullColumn(); }
+    ColumnPtr convert_to_full_column_if_const() const override { return convert_to_full_column(); }
 
-    ColumnPtr removeLowCardinality() const;
+    ColumnPtr remove_low_cardinality() const;
 
-    std::string getName() const override { return "Const(" + data->getName() + ")"; }
+    std::string get_name() const override { return "Const(" + data->get_name() + ")"; }
 
-    const char* getFamilyName() const override { return "Const"; }
+    const char* get_family_name() const override { return "Const"; }
 
-    MutableColumnPtr cloneResized(size_t new_size) const override {
+    MutableColumnPtr clone_resized(size_t new_size) const override {
         return ColumnConst::create(data, new_size);
     }
 
@@ -63,63 +63,63 @@ public:
 
     void get(size_t, Field& res) const override { data->get(0, res); }
 
-    StringRef getDataAt(size_t) const override { return data->getDataAt(0); }
+    StringRef get_data_at(size_t) const override { return data->get_data_at(0); }
 
-    StringRef getDataAtWithTerminatingZero(size_t) const override {
-        return data->getDataAtWithTerminatingZero(0);
+    StringRef get_data_at_with_terminating_zero(size_t) const override {
+        return data->get_data_at_with_terminating_zero(0);
     }
 
     UInt64 get64(size_t) const override { return data->get64(0); }
 
-    UInt64 getUInt(size_t) const override { return data->getUInt(0); }
+    UInt64 get_uint(size_t) const override { return data->get_uint(0); }
 
-    Int64 getInt(size_t) const override { return data->getInt(0); }
+    Int64 get_int(size_t) const override { return data->get_int(0); }
 
-    bool getBool(size_t) const override { return data->getBool(0); }
+    bool get_bool(size_t) const override { return data->get_bool(0); }
 
-    Float64 getFloat64(size_t) const override { return data->getFloat64(0); }
+    Float64 get_float64(size_t) const override { return data->get_float64(0); }
 
-    bool isNullAt(size_t) const override { return data->isNullAt(0); }
+    bool is_null_at(size_t) const override { return data->is_null_at(0); }
 
-    void insertRangeFrom(const IColumn&, size_t /*start*/, size_t length) override { s += length; }
+    void insert_range_from(const IColumn&, size_t /*start*/, size_t length) override { s += length; }
 
     void insert(const Field&) override { ++s; }
 
-    void insertData(const char*, size_t) override { ++s; }
+    void insert_data(const char*, size_t) override { ++s; }
 
-    void insertFrom(const IColumn&, size_t) override { ++s; }
+    void insert_from(const IColumn&, size_t) override { ++s; }
 
-    void insertDefault() override { ++s; }
+    void insert_default() override { ++s; }
 
-    void popBack(size_t n) override { s -= n; }
+    void pop_back(size_t n) override { s -= n; }
 
-    StringRef serializeValueIntoArena(size_t, Arena& arena, char const*& begin) const override {
-        return data->serializeValueIntoArena(0, arena, begin);
+    StringRef serialize_value_into_arena(size_t, Arena& arena, char const*& begin) const override {
+        return data->serialize_value_into_arena(0, arena, begin);
     }
 
-    const char* deserializeAndInsertFromArena(const char* pos) override {
-        auto res = data->deserializeAndInsertFromArena(pos);
-        data->popBack(1);
+    const char* deserialize_and_insert_from_arena(const char* pos) override {
+        auto res = data->deserialize_and_insert_from_arena(pos);
+        data->pop_back(1);
         ++s;
         return res;
     }
 
-    void updateHashWithValue(size_t, SipHash& hash) const override {
-        data->updateHashWithValue(0, hash);
+    void update_hash_with_value(size_t, SipHash& hash) const override {
+        data->update_hash_with_value(0, hash);
     }
 
     ColumnPtr filter(const Filter& filt, ssize_t result_size_hint) const override;
     ColumnPtr replicate(const Offsets& offsets) const override;
     ColumnPtr permute(const Permutation& perm, size_t limit) const override;
     // ColumnPtr index(const IColumn & indexes, size_t limit) const override;
-    void getPermutation(bool reverse, size_t limit, int nan_direction_hint, Permutation & res) const override;
+    void get_permutation(bool reverse, size_t limit, int nan_direction_hint, Permutation & res) const override;
 
-    size_t byteSize() const override { return data->byteSize() + sizeof(s); }
+    size_t byte_size() const override { return data->byte_size() + sizeof(s); }
 
-    size_t allocatedBytes() const override { return data->allocatedBytes() + sizeof(s); }
+    size_t allocated_bytes() const override { return data->allocated_bytes() + sizeof(s); }
 
-    int compareAt(size_t, size_t, const IColumn& rhs, int nan_direction_hint) const override {
-        return data->compareAt(0, 0, *assert_cast<const ColumnConst&>(rhs).data,
+    int compare_at(size_t, size_t, const IColumn& rhs, int nan_direction_hint) const override {
+        return data->compare_at(0, 0, *assert_cast<const ColumnConst&>(rhs).data,
                                nan_direction_hint);
     }
 
@@ -127,38 +127,38 @@ public:
 
     // void gather(ColumnGathererStream &) override
     // {
-    //     throw Exception("Cannot gather into constant column " + getName(), ErrorCodes::NOT_IMPLEMENTED);
+    //     throw Exception("Cannot gather into constant column " + get_name(), ErrorCodes::NOT_IMPLEMENTED);
     // }
 
-    void getExtremes(Field& min, Field& max) const override { data->getExtremes(min, max); }
+    void get_extremes(Field& min, Field& max) const override { data->get_extremes(min, max); }
 
-    void forEachSubcolumn(ColumnCallback callback) override { callback(data); }
+    void for_each_subcolumn(ColumnCallback callback) override { callback(data); }
 
-    bool structureEquals(const IColumn& rhs) const override {
+    bool structure_equals(const IColumn& rhs) const override {
         if (auto rhs_concrete = typeid_cast<const ColumnConst*>(&rhs))
-            return data->structureEquals(*rhs_concrete->data);
+            return data->structure_equals(*rhs_concrete->data);
         return false;
     }
 
-    //    bool isNullable() const override { return isColumnNullable(*data); }
-    bool onlyNull() const override { return data->isNullAt(0); }
-    bool isNumeric() const override { return data->isNumeric(); }
-    bool isFixedAndContiguous() const override { return data->isFixedAndContiguous(); }
-    bool valuesHaveFixedSize() const override { return data->valuesHaveFixedSize(); }
-    size_t sizeOfValueIfFixed() const override { return data->sizeOfValueIfFixed(); }
-    StringRef getRawData() const override { return data->getRawData(); }
+    //    bool is_nullable() const override { return is_column_nullable(*data); }
+    bool only_null() const override { return data->is_null_at(0); }
+    bool is_numeric() const override { return data->is_numeric(); }
+    bool is_fixed_and_contiguous() const override { return data->is_fixed_and_contiguous(); }
+    bool values_have_fixed_size() const override { return data->values_have_fixed_size(); }
+    size_t size_of_value_if_fixed() const override { return data->size_of_value_if_fixed(); }
+    StringRef get_raw_data() const override { return data->get_raw_data(); }
 
     /// Not part of the common interface.
 
-    IColumn& getDataColumn() { return *data; }
-    const IColumn& getDataColumn() const { return *data; }
-    const ColumnPtr& getDataColumnPtr() const { return data; }
+    IColumn& get_data_column() { return *data; }
+    const IColumn& get_data_column() const { return *data; }
+    const ColumnPtr& get_data_column_ptr() const { return data; }
 
-    Field getField() const { return getDataColumn()[0]; }
+    Field get_field() const { return get_data_column()[0]; }
 
     template <typename T>
-    T getValue() const {
-        return getField().safeGet<NearestFieldType<T>>();
+    T get_value() const {
+        return get_field().safeGet<NearestFieldType<T>>();
     }
 };
 

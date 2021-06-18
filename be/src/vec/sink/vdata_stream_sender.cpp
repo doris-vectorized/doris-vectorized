@@ -319,7 +319,7 @@ Status VDataStreamSender::send(RuntimeState* state, Block* block) {
             SipHash siphash;
             for (int j = 0; j < result.size(); ++j) {
                 auto column = block->getByPosition(result[j]).column;
-                column->updateHashWithValue(i, siphash);
+                column->update_hash_with_value(i, siphash);
             }
             auto target_channel_id = siphash.get64() % num_channels;
             RETURN_IF_ERROR(_channels[target_channel_id]->add_row(&send_block, i));
