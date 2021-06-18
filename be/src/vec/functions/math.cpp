@@ -288,7 +288,7 @@ template <typename A>
 struct RadiansImpl {
     using ResultType = A;
 
-    static inline NO_SANITIZE_UNDEFINED ResultType apply(A a) {
+    static inline ResultType apply(A a) {
         return static_cast<ResultType>(a * PiImpl::value / 180.0);
     }
 };
@@ -303,7 +303,7 @@ template <typename A>
 struct DegreesImpl {
     using ResultType = A;
 
-    static inline NO_SANITIZE_UNDEFINED ResultType apply(A a) {
+    static inline ResultType apply(A a) {
         return static_cast<ResultType>(a * 180.0 / PiImpl::value);
     }
 };

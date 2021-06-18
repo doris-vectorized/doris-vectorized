@@ -19,6 +19,7 @@
 
 #include "runtime/datetime_value.h"
 #include "vec/columns/columns_number.h"
+#include "util/binary_cast.hpp"
 
 namespace doris::vectorized {
 
@@ -29,7 +30,7 @@ bool DataTypeDate::equals(const IDataType& rhs) const {
 std::string DataTypeDate::to_string(const IColumn& column, size_t row_num) const {
     Int128 int_val = assert_cast<const ColumnInt128&>(*column.convertToFullColumnIfConst().get())
                              .getData()[row_num];
-    doris::DateTimeValue value = *reinterpret_cast<doris::DateTimeValue*>(&int_val);
+    doris::DateTimeValue value = binary_cast<Int128, doris::DateTimeValue>(int_val);
     std::stringstream ss;
     // Year
     uint32_t temp = value.year() / 100;
@@ -46,7 +47,7 @@ std::string DataTypeDate::to_string(const IColumn& column, size_t row_num) const
 void DataTypeDate::to_string(const IColumn & column, size_t row_num, BufferWritable & ostr) const {
     Int128 int_val = assert_cast<const ColumnInt128&>(*column.convertToFullColumnIfConst().get())
                              .getData()[row_num];
-    doris::DateTimeValue value = *reinterpret_cast<doris::DateTimeValue*>(&int_val);
+    doris::DateTimeValue value = binary_cast<Int128, doris::DateTimeValue>(int_val);
 
     char buf[64];
     char* pos = value.to_string(buf);
@@ -54,8 +55,9 @@ void DataTypeDate::to_string(const IColumn & column, size_t row_num, BufferWrita
 }
 
 void DataTypeDate::cast_to_date(Int128 &x) {
-    auto& value = reinterpret_cast<doris::DateTimeValue&>(x);
+    auto value = binary_cast<Int128, DateTimeValue>(x);
     value.cast_to_date();
+    x = binary_cast<DateTimeValue, Int128>(value);
 }
 
 } // namespace doris::vectorized

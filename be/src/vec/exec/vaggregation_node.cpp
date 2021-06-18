@@ -127,6 +127,8 @@ Status AggregationNode::prepare(RuntimeState* state) {
     _build_timer = ADD_TIMER(runtime_profile(), "BuildTime");
     _exec_timer = ADD_TIMER(runtime_profile(), "ExecTime");
     _merge_timer = ADD_TIMER(runtime_profile(), "MergeTime");
+    _expr_timer = ADD_TIMER(runtime_profile(), "ExprTime");
+
     SCOPED_TIMER(_runtime_profile->total_time_counter());
     _intermediate_tuple_desc = state->desc_tbl().get_tuple_descriptor(_intermediate_tuple_id);
     _output_tuple_desc = state->desc_tbl().get_tuple_descriptor(_output_tuple_id);
@@ -147,7 +149,7 @@ Status AggregationNode::prepare(RuntimeState* state) {
 
     // set profile timer to evaluators
     for (auto& evaluator : _aggregate_evaluators) {
-        evaluator->set_timer(_exec_timer, _merge_timer);
+        evaluator->set_timer(_exec_timer, _merge_timer, _expr_timer);
     }
 
     _offsets_of_aggregate_states.resize(_aggregate_evaluators.size());
@@ -504,12 +506,15 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
 
     size_t key_size = _probe_expr_ctxs.size();
     ColumnRawPtrs key_columns(key_size);
-
-    for (size_t i = 0; i < key_size; ++i) {
-        int result_column_id = -1;
-        RETURN_IF_ERROR(_probe_expr_ctxs[i]->execute(in_block, &result_column_id));
-        key_columns[i] = in_block->getByPosition(result_column_id).column.get();
+    {
+        SCOPED_TIMER(_expr_timer);
+        for (size_t i = 0; i < key_size; ++i) {
+            int result_column_id = -1;
+            RETURN_IF_ERROR(_probe_expr_ctxs[i]->execute(in_block, &result_column_id));
+            key_columns[i] = in_block->getByPosition(result_column_id).column.get();
+        }
     }
+
 
     int rows = in_block->rows();
     PODArray<AggregateDataPtr> places(rows);
@@ -605,6 +610,7 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
 Status AggregationNode::_execute_with_serialized_key(Block* block) {
     SCOPED_TIMER(_build_timer);
     DCHECK(!_probe_expr_ctxs.empty());
+    SCOPED_TIMER(_build_timer);
     // now we only support serialized key
     // TODO:
     DCHECK(_agg_data.serialized != nullptr);
@@ -616,12 +622,15 @@ Status AggregationNode::_execute_with_serialized_key(Block* block) {
 
     size_t key_size = _probe_expr_ctxs.size();
     ColumnRawPtrs key_columns(key_size);
-
-    for (size_t i = 0; i < key_size; ++i) {
-        int result_column_id = -1;
-        RETURN_IF_ERROR(_probe_expr_ctxs[i]->execute(block, &result_column_id));
-        key_columns[i] = block->getByPosition(result_column_id).column.get();
+    {
+        SCOPED_TIMER(_expr_timer);
+        for (size_t i = 0; i < key_size; ++i) {
+            int result_column_id = -1;
+            RETURN_IF_ERROR(_probe_expr_ctxs[i]->execute(block, &result_column_id));
+            key_columns[i] = block->getByPosition(result_column_id).column.get();
+        }
     }
+
 
     int rows = block->rows();
     PODArray<AggregateDataPtr> places(rows);

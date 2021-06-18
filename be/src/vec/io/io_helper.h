@@ -30,6 +30,7 @@
 #include "vec/core/types.h"
 #include "vec/io/reader_buffer.h"
 #include "vec/io/var_int.h"
+#include "util/binary_cast.hpp"
 
 #define DEFAULT_MAX_STRING_SIZE (1ULL << 30)
 #define WRITE_HELPERS_MAX_INT_WIDTH 40U
@@ -331,21 +332,28 @@ bool readIntTextImpl(T & x, ReadBuffer & buf) {
 
 template <typename T>
 bool readDateTimeTextImpl(T& x, ReadBuffer & buf) {
-    auto& dv = (DateTimeValue&)x;
+    static_assert(std::is_same_v<Int128, T>);
+    auto dv = binary_cast<Int128, DateTimeValue>(x);
     auto ans = dv.from_date_str(buf.position(), buf.count());
 
     // only to match the isAllRead() check to prevent return null
     buf.position() = buf.end();
+    x = binary_cast<DateTimeValue, Int128>(x);
     return ans;
 }
 
 template <typename T>
 bool readDecimalTextImpl(T& x, ReadBuffer & buf) {
-    auto& dv = (DecimalV2Value&)x.value;
+    static_assert(IsDecimalNumber<T>);
+    // TODO: open this static_assert
+    // static_assert(std::is_same_v<Decimal128, T>);
+    auto dv = binary_cast<Int128, DecimalV2Value>(x.value);
     auto ans = dv.parse_from_str((const char *) buf.position(), buf.count()) == 0;
 
     // only to match the isAllRead() check to prevent return null
     buf.position() = buf.end();
+
+    x.value = binary_cast<DecimalV2Value, Int128>(dv);
     return ans;
 }
 

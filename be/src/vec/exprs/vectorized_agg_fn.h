@@ -36,9 +36,10 @@ public:
                    const SlotDescriptor* output_slot_desc,
                    const std::shared_ptr<MemTracker>& mem_tracker);
 
-    void set_timer(RuntimeProfile::Counter* exec_timer, RuntimeProfile::Counter* merge_timer) {
+    void set_timer(RuntimeProfile::Counter* exec_timer, RuntimeProfile::Counter* merge_timer, RuntimeProfile::Counter* expr_timer) {
         _exec_timer = exec_timer;
         _merge_timer = merge_timer;
+        _expr_timer = expr_timer;
     }
 
     Status open(RuntimeState* state);
@@ -81,6 +82,7 @@ private:
 
     RuntimeProfile::Counter* _exec_timer;
     RuntimeProfile::Counter* _merge_timer;
+    RuntimeProfile::Counter* _expr_timer;
 
     // input context
     std::vector<VExprContext*> _input_exprs_ctxs;
