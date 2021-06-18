@@ -196,7 +196,7 @@ Status VSortNode::merge_sort_read(doris::RuntimeState *state, doris::vectorized:
         _priority_queue.pop();
 
         for (size_t i = 0; i < num_columns; ++i)
-            merged_columns[i]->insertFrom(*current->all_columns[i], current->pos);
+            merged_columns[i]->insert_from(*current->all_columns[i], current->pos);
 
         if (!current->isLast()) {
             current->next();

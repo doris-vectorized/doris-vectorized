@@ -45,7 +45,7 @@ namespace doris::vectorized {
 
 class IAggregateFunctionCombinator {
 public:
-    virtual String getName() const = 0;
+    virtual String get_name() const = 0;
 
     virtual bool isForInternalUsageOnly() const { return false; }
 

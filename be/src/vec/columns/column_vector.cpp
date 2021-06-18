@@ -47,7 +47,7 @@ extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
 } // namespace ErrorCodes
 
 template <typename T>
-StringRef ColumnVector<T>::serializeValueIntoArena(size_t n, Arena& arena,
+StringRef ColumnVector<T>::serialize_value_into_arena(size_t n, Arena& arena,
                                                    char const*& begin) const {
     auto pos = arena.allocContinue(sizeof(T), begin);
     unalignedStore<T>(pos, data[n]);
@@ -55,13 +55,13 @@ StringRef ColumnVector<T>::serializeValueIntoArena(size_t n, Arena& arena,
 }
 
 template <typename T>
-const char* ColumnVector<T>::deserializeAndInsertFromArena(const char* pos) {
+const char* ColumnVector<T>::deserialize_and_insert_from_arena(const char* pos) {
     data.push_back(unalignedLoad<T>(pos));
     return pos + sizeof(T);
 }
 
 template <typename T>
-void ColumnVector<T>::updateHashWithValue(size_t n, SipHash& hash) const {
+void ColumnVector<T>::update_hash_with_value(size_t n, SipHash& hash) const {
     hash.update(data[n]);
 }
 
@@ -105,7 +105,7 @@ namespace
 }
 
 template <typename T>
-void ColumnVector<T>::getPermutation(bool reverse, size_t limit, int nan_direction_hint, IColumn::Permutation & res) const
+void ColumnVector<T>::get_permutation(bool reverse, size_t limit, int nan_direction_hint, IColumn::Permutation & res) const
 {
     size_t s = data.size();
     res.resize(s);
@@ -201,12 +201,12 @@ void ColumnVector<T>::getPermutation(bool reverse, size_t limit, int nan_directi
 }
 
 template <typename T>
-const char* ColumnVector<T>::getFamilyName() const {
+const char* ColumnVector<T>::get_family_name() const {
     return TypeName<T>::get();
 }
 
 template <typename T>
-MutableColumnPtr ColumnVector<T>::cloneResized(size_t size) const {
+MutableColumnPtr ColumnVector<T>::clone_resized(size_t size) const {
     auto res = this->create();
 
     if (size > 0) {
@@ -230,18 +230,18 @@ UInt64 ColumnVector<T>::get64(size_t n) const {
 }
 
 template <typename T>
-Float64 ColumnVector<T>::getFloat64(size_t n) const {
+Float64 ColumnVector<T>::get_float64(size_t n) const {
     return static_cast<Float64>(data[n]);
 }
 
 template <typename T>
-void ColumnVector<T>::insertRangeFrom(const IColumn& src, size_t start, size_t length) {
+void ColumnVector<T>::insert_range_from(const IColumn& src, size_t start, size_t length) {
     const ColumnVector& src_vec = dynamic_cast<const ColumnVector&>(src);
 
     if (start + length > src_vec.data.size())
         throw Exception("Parameters start = " + std::to_string(start) +
                                 ", length = " + std::to_string(length) +
-                                " are out of bound in ColumnVector<T>::insertRangeFrom method"
+                                " are out of bound in ColumnVector<T>::insert_range_from method"
                                 " (data.size() = " +
                                 std::to_string(src_vec.data.size()) + ").",
                         ErrorCodes::PARAMETER_OUT_OF_BOUND);
@@ -259,7 +259,7 @@ ColumnPtr ColumnVector<T>::filter(const IColumn::Filter& filt, ssize_t result_si
                         ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
     auto res = this->create();
-    Container& res_data = res->getData();
+    Container& res_data = res->get_data();
 
     if (result_size_hint) res_data.reserve(result_size_hint > 0 ? result_size_hint : size);
 
@@ -320,7 +320,7 @@ ColumnPtr ColumnVector<T>::permute(const IColumn::Permutation& perm, size_t limi
                         ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
     auto res = this->create(limit);
-    typename Self::Container& res_data = res->getData();
+    typename Self::Container& res_data = res->get_data();
     for (size_t i = 0; i < limit; ++i) res_data[i] = data[perm[i]];
 
     return res;
@@ -329,7 +329,7 @@ ColumnPtr ColumnVector<T>::permute(const IColumn::Permutation& perm, size_t limi
 //template <typename T>
 //ColumnPtr ColumnVector<T>::index(const IColumn & indexes, size_t limit) const
 //{
-//    return selectIndexImpl(*this, indexes, limit);
+//    return select_index_impl(*this, indexes, limit);
 //}
 
 template <typename T>
@@ -342,7 +342,7 @@ ColumnPtr ColumnVector<T>::replicate(const IColumn::Offsets& offsets) const {
     if (0 == size) return this->create();
 
     auto res = this->create();
-    typename Self::Container& res_data = res->getData();
+    typename Self::Container& res_data = res->get_data();
     res_data.reserve(offsets.back());
 
     IColumn::Offset prev_offset = 0;
@@ -363,7 +363,7 @@ ColumnPtr ColumnVector<T>::replicate(const IColumn::Offsets& offsets) const {
 //}
 
 template <typename T>
-void ColumnVector<T>::getExtremes(Field& min, Field& max) const {
+void ColumnVector<T>::get_extremes(Field& min, Field& max) const {
     size_t size = data.size();
 
     if (size == 0) {

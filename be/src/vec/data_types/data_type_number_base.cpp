@@ -34,13 +34,13 @@ void DataTypeNumberBase<T>::to_string(const IColumn& column, size_t row_num,
                                       BufferWritable& ostr) const {
     if constexpr (std::is_same<T, __int128_t>::value || std::is_same<T, UInt128>::value) {
         std::string hex = int128_to_string(
-                assert_cast<const ColumnVector<T>&>(*column.convertToFullColumnIfConst().get())
-                        .getData()[row_num]);
+                assert_cast<const ColumnVector<T>&>(*column.convert_to_full_column_if_const().get())
+                        .get_data()[row_num]);
         ostr.write(hex.data(), hex.size());
     } else if constexpr (std::is_integral<T>::value || std::numeric_limits<T>::is_iec559) {
         ostr.write_number(
-                assert_cast<const ColumnVector<T>&>(*column.convertToFullColumnIfConst().get())
-                        .getData()[row_num]);
+                assert_cast<const ColumnVector<T>&>(*column.convert_to_full_column_if_const().get())
+                        .get_data()[row_num]);
     }
 }
 
@@ -53,12 +53,12 @@ template <typename T>
 std::string DataTypeNumberBase<T>::to_string(const IColumn& column, size_t row_num) const {
     if constexpr (std::is_same<T, __int128_t>::value || std::is_same<T, UInt128>::value) {
         return int128_to_string(
-                assert_cast<const ColumnVector<T>&>(*column.convertToFullColumnIfConst().get())
-                        .getData()[row_num]);
+                assert_cast<const ColumnVector<T>&>(*column.convert_to_full_column_if_const().get())
+                        .get_data()[row_num]);
     } else if constexpr (std::is_integral<T>::value || std::numeric_limits<T>::is_iec559) {
         return std::to_string(
-                assert_cast<const ColumnVector<T>&>(*column.convertToFullColumnIfConst().get())
-                        .getData()[row_num]);
+                assert_cast<const ColumnVector<T>&>(*column.convert_to_full_column_if_const().get())
+                        .get_data()[row_num]);
     }
 }
 
@@ -67,9 +67,9 @@ void DataTypeNumberBase<T>::serialize(const IColumn& column, PColumn* pcolumn) c
     std::ostringstream buf;
     for (size_t i = 0; i < column.size(); ++i) {
         const FieldType& x =
-                assert_cast<const ColumnVector<T>&>(*column.convertToFullColumnIfConst().get())
-                        .getData()[i];
-        writeBinary(x, buf);
+                assert_cast<const ColumnVector<T>&>(*column.convert_to_full_column_if_const().get())
+                        .get_data()[i];
+        write_binary(x, buf);
     }
     write_binary(buf, pcolumn);
 }
@@ -81,8 +81,8 @@ void DataTypeNumberBase<T>::deserialize(const PColumn& pcolumn, IColumn* column)
     std::istringstream istr(uncompressed);
     while (istr.peek() != EOF) {
         typename ColumnVector<T>::value_type x;
-        readBinary(x, istr);
-        assert_cast<ColumnVector<T>*>(column)->getData().push_back(x);
+        read_binary(x, istr);
+        assert_cast<ColumnVector<T>*>(column)->get_data().push_back(x);
     }
 }
 template <typename T>

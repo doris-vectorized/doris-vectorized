@@ -133,7 +133,7 @@ TEST_F(VDataStreamTest, BasicTest) {
     sender.open(&runtime_stat);
 
     auto vec = vectorized::ColumnVector<Int32>::create();
-    auto& data = vec->getData();
+    auto& data = vec->get_data();
     for (int i = 0; i < 1024; ++i) {
         data.push_back(i);
     }

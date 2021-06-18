@@ -30,9 +30,9 @@ public:
 
     explicit DataTypeNullable(const DataTypePtr& nested_data_type_);
     std::string doGetName() const override {
-        return "Nullable(" + nested_data_type->getName() + ")";
+        return "Nullable(" + nested_data_type->get_name() + ")";
     }
-    const char* getFamilyName() const override { return "Nullable"; }
+    const char* get_family_name() const override { return "Nullable"; }
     TypeIndex getTypeId() const override { return TypeIndex::Nullable; }
 
     void serialize(const IColumn& column, PColumn* pcolumn) const override;
@@ -69,9 +69,9 @@ public:
     size_t getMaximumSizeOfValueInMemory() const override {
         return 1 + nested_data_type->getMaximumSizeOfValueInMemory();
     }
-    bool isNullable() const override { return true; }
+    bool is_nullable() const override { return true; }
     size_t getSizeOfValueInMemory() const override;
-    bool onlyNull() const override;
+    bool only_null() const override;
     bool canBeInsideLowCardinality() const override {
         return nested_data_type->canBeInsideLowCardinality();
     }
@@ -83,7 +83,7 @@ private:
     DataTypePtr nested_data_type;
 };
 
-DataTypePtr makeNullable(const DataTypePtr& type);
+DataTypePtr make_nullable(const DataTypePtr& type);
 DataTypePtr removeNullable(const DataTypePtr& type);
 
 } // namespace doris::vectorized

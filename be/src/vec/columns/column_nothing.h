@@ -30,12 +30,12 @@ private:
     ColumnNothing(const ColumnNothing&) = default;
 
 public:
-    const char* getFamilyName() const override { return "Nothing"; }
-    MutableColumnPtr cloneDummy(size_t s_) const override { return ColumnNothing::create(s_); }
+    const char* get_family_name() const override { return "Nothing"; }
+    MutableColumnPtr clone_dummy(size_t s_) const override { return ColumnNothing::create(s_); }
 
-    bool canBeInsideNullable() const override { return true; }
+    bool can_be_inside_nullable() const override { return true; }
 
-    bool structureEquals(const IColumn& rhs) const override {
+    bool structure_equals(const IColumn& rhs) const override {
         return typeid(rhs) == typeid(ColumnNothing);
     }
 };

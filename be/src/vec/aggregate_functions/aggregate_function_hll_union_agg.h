@@ -44,12 +44,12 @@ struct AggregateFunctionHLLData {
         std::string result(dst_hll.max_serialized_size(), '0');
         int size = dst_hll.serialize((uint8_t*)result.c_str());
         result.resize(size);
-        writeBinary(result, buf);
+        write_binary(result, buf);
     }
 
     void read(std::istream& buf) {
         std::string result;
-        readBinary(result, buf);
+        read_binary(result, buf);
         dst_hll.deserialize(Slice(result.c_str(), result.length()));
     }
 
@@ -68,7 +68,7 @@ class AggregateFunctionHLLUnionAgg
         : public IAggregateFunctionDataHelper<AggregateFunctionHLLData,
                                               AggregateFunctionHLLUnionAgg> {
 public:
-    virtual String getName() const override { return "hll_union_agg"; }
+    virtual String get_name() const override { return "hll_union_agg"; }
 
     AggregateFunctionHLLUnionAgg(const DataTypes& argument_types_)
             : IAggregateFunctionDataHelper(argument_types_, {}) {}
@@ -81,7 +81,7 @@ public:
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
         const auto& column = static_cast<const ColumnString&>(*columns[0]);
-        this->data(place).add(column.getDataAt(row_num));
+        this->data(place).add(column.get_data_at(row_num));
     }
 
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {
@@ -98,7 +98,7 @@ public:
 
     virtual void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
         auto& column = static_cast<ColumnVector<Int64>&>(to);
-        column.getData().push_back(this->data(place).get_cardinality());
+        column.get_data().push_back(this->data(place).get_cardinality());
     }
 
     const char* getHeaderFilePath() const override { return __FILE__; }
@@ -106,7 +106,7 @@ public:
 
 class AggregateFunctionHLLUnion final : public AggregateFunctionHLLUnionAgg {
 public:
-    String getName() const override { return "hll_union"; }
+    String get_name() const override { return "hll_union"; }
 
     AggregateFunctionHLLUnion(const DataTypes& argument_types_)
             : AggregateFunctionHLLUnionAgg{argument_types_} {}
@@ -119,7 +119,7 @@ public:
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
         auto& column = static_cast<ColumnString&>(to);
         auto result = this->data(place).get();
-        column.insertData(result.c_str(), result.length());
+        column.insert_data(result.c_str(), result.length());
     }
 };
 

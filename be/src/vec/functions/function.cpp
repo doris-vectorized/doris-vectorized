@@ -120,25 +120,25 @@ ColumnPtr wrapInNullable(const ColumnPtr& src, const Block& block, const ColumnN
     /// If result is already nullable.
     ColumnPtr src_not_nullable = src;
 
-    if (src->onlyNull())
+    if (src->only_null())
         return src;
-    else if (auto* nullable = checkAndGetColumn<ColumnNullable>(*src)) {
-        src_not_nullable = nullable->getNestedColumnPtr();
-        result_null_map_column = nullable->getNullMapColumnPtr();
+    else if (auto* nullable = check_and_get_column<ColumnNullable>(*src)) {
+        src_not_nullable = nullable->get_nested_column_ptr();
+        result_null_map_column = nullable->get_null_map_column_ptr();
     }
 
     for (const auto& arg : args) {
         const ColumnWithTypeAndName& elem = block.getByPosition(arg);
-        if (!elem.type->isNullable()) continue;
+        if (!elem.type->is_nullable()) continue;
 
         /// Const Nullable that are NULL.
-        if (elem.column->onlyNull())
+        if (elem.column->only_null())
             return block.getByPosition(result).type->createColumnConst(input_rows_count, Null());
 
-        if (isColumnConst(*elem.column)) continue;
+        if (is_column_const(*elem.column)) continue;
 
-        if (auto* nullable = checkAndGetColumn<ColumnNullable>(*elem.column)) {
-            const ColumnPtr& null_map_column = nullable->getNullMapColumnPtr();
+        if (auto* nullable = check_and_get_column<ColumnNullable>(*elem.column)) {
+            const ColumnPtr& null_map_column = nullable->get_null_map_column_ptr();
             if (!result_null_map_column) {
                 result_null_map_column = null_map_column;
             } else {
@@ -146,9 +146,9 @@ ColumnPtr wrapInNullable(const ColumnPtr& src, const Block& block, const ColumnN
                         (*std::move(result_null_map_column)).mutate();
 
                 NullMap& result_null_map =
-                        assert_cast<ColumnUInt8&>(*mutable_result_null_map_column).getData();
+                        assert_cast<ColumnUInt8&>(*mutable_result_null_map_column).get_data();
                 const NullMap& src_null_map =
-                        assert_cast<const ColumnUInt8&>(*null_map_column).getData();
+                        assert_cast<const ColumnUInt8&>(*null_map_column).get_data();
 
                 for (size_t i = 0, size = result_null_map.size(); i < size; ++i)
                     if (src_null_map[i]) result_null_map[i] = 1;
@@ -158,9 +158,9 @@ ColumnPtr wrapInNullable(const ColumnPtr& src, const Block& block, const ColumnN
         }
     }
 
-    if (!result_null_map_column) return makeNullable(src);
+    if (!result_null_map_column) return make_nullable(src);
 
-    return ColumnNullable::create(src_not_nullable->convertToFullColumnIfConst(),
+    return ColumnNullable::create(src_not_nullable->convert_to_full_column_if_const(),
                                   result_null_map_column);
 }
 
@@ -177,8 +177,8 @@ NullPresence getNullPresense(const Block& block, const ColumnNumbers& args) {
     for (const auto& arg : args) {
         const auto& elem = block.getByPosition(arg);
 
-        if (!res.has_nullable) res.has_nullable = elem.type->isNullable();
-        if (!res.has_null_constant) res.has_null_constant = elem.type->onlyNull();
+        if (!res.has_nullable) res.has_nullable = elem.type->is_nullable();
+        if (!res.has_null_constant) res.has_null_constant = elem.type->only_null();
     }
 
     return res;
@@ -188,8 +188,8 @@ NullPresence getNullPresense(const Block& block, const ColumnNumbers& args) {
     NullPresence res;
 
     for (const auto& elem : args) {
-        if (!res.has_nullable) res.has_nullable = elem.type->isNullable();
-        if (!res.has_null_constant) res.has_null_constant = elem.type->onlyNull();
+        if (!res.has_nullable) res.has_nullable = elem.type->is_nullable();
+        if (!res.has_null_constant) res.has_null_constant = elem.type->only_null();
     }
 
     return res;
@@ -197,7 +197,7 @@ NullPresence getNullPresense(const Block& block, const ColumnNumbers& args) {
 
 bool allArgumentsAreConstants(const Block& block, const ColumnNumbers& args) {
     for (auto arg : args)
-        if (!isColumnConst(*block.getByPosition(arg).column)) return false;
+        if (!is_column_const(*block.getByPosition(arg).column)) return false;
     return true;
 }
 } // namespace
@@ -210,9 +210,9 @@ Status PreparedFunctionImpl::defaultImplementationForConstantArguments(
 
     /// Check that these arguments are really constant.
     for (auto arg_num : arguments_to_remain_constants)
-        if (arg_num < args.size() && !isColumnConst(*block.getByPosition(args[arg_num]).column))
+        if (arg_num < args.size() && !is_column_const(*block.getByPosition(args[arg_num]).column))
             throw Exception("Argument at index " + std::to_string(arg_num) + " for function " +
-                                    getName() + " must be constant",
+                                    get_name() + " must be constant",
                             ErrorCodes::ILLEGAL_COLUMN);
 
     if (args.empty() || !useDefaultImplementationForConstants() ||
@@ -229,11 +229,11 @@ Status PreparedFunctionImpl::defaultImplementationForConstantArguments(
         if (arguments_to_remain_constants.end() != std::find(arguments_to_remain_constants.begin(),
                                                              arguments_to_remain_constants.end(),
                                                              arg_num)) {
-            temporary_block.insert({column.column->cloneResized(1), column.type, column.name});
+            temporary_block.insert({column.column->clone_resized(1), column.type, column.name});
         } else {
             have_converted_columns = true;
             temporary_block.insert(
-                    {assert_cast<const ColumnConst*>(column.column.get())->getDataColumnPtr(),
+                    {assert_cast<const ColumnConst*>(column.column.get())->get_data_column_ptr(),
                      column.type, column.name});
         }
     }
@@ -242,7 +242,7 @@ Status PreparedFunctionImpl::defaultImplementationForConstantArguments(
       *  not in "arguments_to_remain_constants" set. Otherwise we get infinite recursion.
       */
     if (!have_converted_columns)
-        throw Exception("Number of arguments for function " + getName() +
+        throw Exception("Number of arguments for function " + get_name() +
                                 " doesn't match: the function requires more arguments",
                         ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
@@ -259,7 +259,7 @@ Status PreparedFunctionImpl::defaultImplementationForConstantArguments(
     /// extremely rare case, when we have function with completely const arguments
     /// but some of them produced by non isDeterministic function
     if (temporary_block.getByPosition(arguments_size).column->size() > 1)
-        result_column = temporary_block.getByPosition(arguments_size).column->cloneResized(1);
+        result_column = temporary_block.getByPosition(arguments_size).column->clone_resized(1);
     else
         result_column = temporary_block.getByPosition(arguments_size).column;
 
@@ -327,7 +327,7 @@ Status PreparedFunctionImpl::executeWithoutLowCardinalityColumns(Block& block,
 //    for (auto arg : args)
 //    {
 //        const ColumnWithTypeAndName & column = block.getByPosition(arg);
-//        if (auto * low_cardinality_column = checkAndGetColumn<ColumnLowCardinality>(column.column.get()))
+//        if (auto * low_cardinality_column = check_and_get_column<ColumnLowCardinality>(column.column.get()))
 //        {
 //            if (result_column)
 //                throw Exception("Expected single dictionary argument for function.", ErrorCodes::LOGICAL_ERROR);
@@ -349,7 +349,7 @@ Status PreparedFunctionImpl::executeWithoutLowCardinalityColumns(Block& block,
     //    for (auto arg : args)
     //    {
     //        ColumnWithTypeAndName & column = block.getByPosition(arg);
-    //        if (auto * low_cardinality_column = checkAndGetColumn<ColumnLowCardinality>(column.column.get()))
+    //        if (auto * low_cardinality_column = check_and_get_column<ColumnLowCardinality>(column.column.get()))
     //        {
     //            /// Single LowCardinality column is supported now.
     //            if (indexes)
@@ -358,13 +358,13 @@ Status PreparedFunctionImpl::executeWithoutLowCardinalityColumns(Block& block,
     //            auto * low_cardinality_type = checkAndGetDataType<DataTypeLowCardinality>(column.type.get());
     //
     //            if (!low_cardinality_type)
-    //                throw Exception("Incompatible type for low cardinality column: " + column.type->getName(),
+    //                throw Exception("Incompatible type for low cardinality column: " + column.type->get_name(),
     //                                ErrorCodes::LOGICAL_ERROR);
     //
     //            if (can_be_executed_on_default_arguments)
     //            {
     //                /// Normal case, when function can be executed on values's default.
-    //                column.column = low_cardinality_column->getDictionary().getNestedColumn();
+    //                column.column = low_cardinality_column->getDictionary().get_nested_column();
     //                indexes = low_cardinality_column->getIndexesPtr();
     //            }
     //            else
@@ -384,9 +384,9 @@ Status PreparedFunctionImpl::executeWithoutLowCardinalityColumns(Block& block,
     /// Change size of constants.
     for (auto arg : args) {
         ColumnWithTypeAndName& column = block.getByPosition(arg);
-        if (auto* column_const = checkAndGetColumn<ColumnConst>(column.column.get())) {
-            column.column = column_const->removeLowCardinality()->cloneResized(num_rows);
-            //            column.type = removeLowCardinality(column.type);
+        if (auto* column_const = check_and_get_column<ColumnConst>(column.column.get())) {
+            column.column = column_const->remove_low_cardinality()->clone_resized(num_rows);
+            //            column.type = remove_low_cardinality(column.type);
         }
     }
 
@@ -446,7 +446,7 @@ Status PreparedFunctionImpl::execute(Block& block, const ColumnNumbers& args, si
         //
         //            executeWithoutLowCardinalityColumns(block_without_low_cardinality, args, result, block_without_low_cardinality.rows(), dry_run);
         //
-        //            auto keys = block_without_low_cardinality.safeGetByPosition(result).column->convertToFullColumnIfConst();
+        //            auto keys = block_without_low_cardinality.safeGetByPosition(result).column->convert_to_full_column_if_const();
         //
         //            auto res_mut_dictionary = DataTypeLowCardinality::createColumnUnique(*res_low_cardinality_type->getDictionaryType());
         //            ColumnPtr res_indexes = res_mut_dictionary->uniqueInsertRangeFrom(*keys, 0, keys->size());
@@ -491,7 +491,7 @@ void FunctionBuilderImpl::checkNumberOfArguments(size_t number_of_arguments) con
     size_t expected_number_of_arguments = getNumberOfArguments();
 
     if (number_of_arguments != expected_number_of_arguments)
-        throw Exception("Number of arguments for function " + getName() +
+        throw Exception("Number of arguments for function " + get_name() +
                                 " doesn't match: passed " + std::to_string(number_of_arguments) +
                                 ", should be " + std::to_string(expected_number_of_arguments),
                         ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
@@ -505,7 +505,7 @@ DataTypePtr FunctionBuilderImpl::getReturnTypeWithoutLowCardinality(
         NullPresence null_presence = getNullPresense(arguments);
 
         if (null_presence.has_null_constant) {
-            return makeNullable(std::make_shared<DataTypeNothing>());
+            return make_nullable(std::make_shared<DataTypeNothing>());
         }
         if (null_presence.has_nullable) {
             ColumnNumbers numbers(arguments.size());
@@ -515,7 +515,7 @@ DataTypePtr FunctionBuilderImpl::getReturnTypeWithoutLowCardinality(
             Block nested_block = createBlockWithNestedColumns(Block(arguments), numbers);
             auto return_type = getReturnTypeImpl(
                     ColumnsWithTypeAndName(nested_block.begin(), nested_block.end()));
-            return makeNullable(return_type);
+            return make_nullable(return_type);
         }
     }
 
@@ -552,9 +552,9 @@ llvm::Value* IFunction::compile(llvm::IRBuilderBase& builder, const DataTypes& a
             auto* join = llvm::BasicBlock::Create(b.GetInsertBlock()->getContext(), "",
                                                   b.GetInsertBlock()->getParent());
             auto* zero = llvm::Constant::getNullValue(
-                    toNativeType(b, makeNullable(getReturnTypeImpl(*denulled))));
+                    toNativeType(b, make_nullable(getReturnTypeImpl(*denulled))));
             for (size_t i = 0; i < arguments.size(); i++) {
-                if (!arguments[i]->isNullable()) continue;
+                if (!arguments[i]->is_nullable()) continue;
                 /// Would be nice to evaluate all this lazily, but that'd change semantics: if only unevaluated
                 /// arguments happen to contain NULLs, the return value would not be NULL, though it should be.
                 auto* value = values[i]();
@@ -592,9 +592,9 @@ DataTypePtr FunctionBuilderImpl::getReturnType(const ColumnsWithTypeAndName& arg
         ColumnsWithTypeAndName args_without_low_cardinality(arguments);
 
         for (ColumnWithTypeAndName& arg : args_without_low_cardinality) {
-            bool is_const = arg.column && isColumnConst(*arg.column);
+            bool is_const = arg.column && is_column_const(*arg.column);
             if (is_const)
-                arg.column = assert_cast<const ColumnConst&>(*arg.column).removeLowCardinality();
+                arg.column = assert_cast<const ColumnConst&>(*arg.column).remove_low_cardinality();
 
             //            if (auto * low_cardinality_type = typeid_cast<const DataTypeLowCardinality *>(arg.type.get()))
             //            {

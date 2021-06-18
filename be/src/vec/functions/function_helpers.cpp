@@ -35,13 +35,13 @@ extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
 
 //const ColumnConst * checkAndGetColumnConstStringOrFixedString(const IColumn * column)
 //{
-//    if (!isColumnConst(*column))
+//    if (!is_column_const(*column))
 //        return {};
 //
 //    const ColumnConst * res = assert_cast<const ColumnConst *>(column);
 //
-//    if (checkColumn<ColumnString>(&res->getDataColumn())
-//        || checkColumn<ColumnFixedString>(&res->getDataColumn()))
+//    if (check_column<ColumnString>(&res->get_data_column())
+//        || check_column<ColumnFixedString>(&res->get_data_column()))
 //        return res;
 //
 //    return {};
@@ -49,7 +49,7 @@ extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
 
 //Columns convertConstTupleToConstantElements(const ColumnConst & column)
 //{
-//    const ColumnTuple & src_tuple = assert_cast<const ColumnTuple &>(column.getDataColumn());
+//    const ColumnTuple & src_tuple = assert_cast<const ColumnTuple &>(column.get_data_column());
 //    const auto & src_tuple_columns = src_tuple.getColumns();
 //    size_t tuple_size = src_tuple_columns.size();
 //    size_t rows = column.size();
@@ -69,19 +69,19 @@ static Block createBlockWithNestedColumnsImpl(const Block& block,
     for (size_t i = 0; i < columns; ++i) {
         const auto& col = block.getByPosition(i);
 
-        if (args.count(i) && col.type->isNullable()) {
+        if (args.count(i) && col.type->is_nullable()) {
             const DataTypePtr& nested_type =
                     static_cast<const DataTypeNullable&>(*col.type).getNestedType();
 
             if (!col.column) {
                 res.insert({nullptr, nested_type, col.name});
-            } else if (auto* nullable = checkAndGetColumn<ColumnNullable>(*col.column)) {
-                const auto& nested_col = nullable->getNestedColumnPtr();
+            } else if (auto* nullable = check_and_get_column<ColumnNullable>(*col.column)) {
+                const auto& nested_col = nullable->get_nested_column_ptr();
                 res.insert({nested_col, nested_type, col.name});
-            } else if (auto* const_column = checkAndGetColumn<ColumnConst>(*col.column)) {
+            } else if (auto* const_column = check_and_get_column<ColumnConst>(*col.column)) {
                 const auto& nested_col =
-                        checkAndGetColumn<ColumnNullable>(const_column->getDataColumn())
-                                ->getNestedColumnPtr();
+                        check_and_get_column<ColumnNullable>(const_column->get_data_column())
+                                ->get_nested_column_ptr();
                 res.insert({ColumnConst::create(nested_col, col.column->size()), nested_type,
                             col.name});
             } else
@@ -108,14 +108,14 @@ void validateArgumentType(const IFunction& func, const DataTypes& arguments, siz
                           bool (*validator_func)(const IDataType&),
                           const char* expected_type_description) {
     if (arguments.size() <= argument_index)
-        throw Exception("Incorrect number of arguments of function " + func.getName(),
+        throw Exception("Incorrect number of arguments of function " + func.get_name(),
                         ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
     const auto& argument = arguments[argument_index];
     if (validator_func(*argument) == false)
-        throw Exception("Illegal type " + argument->getName() + " of " +
+        throw Exception("Illegal type " + argument->get_name() + " of " +
                                 std::to_string(argument_index) + " argument of function " +
-                                func.getName() + " expected " + expected_type_description,
+                                func.get_name() + " expected " + expected_type_description,
                         ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 }
 

@@ -88,7 +88,7 @@ public:
                              const Array& parameters) {
         bool nullable = false;
         for (const auto& type : argument_types) {
-            if (type->isNullable()) {
+            if (type->is_nullable()) {
                 nullable = true;
             }
         }

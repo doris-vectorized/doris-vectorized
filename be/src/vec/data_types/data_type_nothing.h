@@ -32,7 +32,7 @@ class DataTypeNothing final : public IDataType {
 public:
     static constexpr bool is_parametric = false;
 
-    const char* getFamilyName() const override { return "Nothing"; }
+    const char* get_family_name() const override { return "Nothing"; }
     TypeIndex getTypeId() const override { return TypeIndex::Nothing; }
 
     MutableColumnPtr createColumn() const override;
@@ -43,17 +43,17 @@ public:
     bool textCanContainOnlyValidUTF8() const override { return true; }
     bool haveMaximumSizeOfValue() const override { return true; }
     size_t getSizeOfValueInMemory() const override { return 0; }
-    bool canBeInsideNullable() const override { return true; }
+    bool can_be_inside_nullable() const override { return true; }
 
     void serialize(const IColumn& column, PColumn* pcolumn) const override;
     void deserialize(const PColumn& pcolumn, IColumn* column) const override;
     Field getDefault() const override {
-        throw Exception("Method getDefault() is not implemented for data type " + getName(),
+        throw Exception("Method getDefault() is not implemented for data type " + get_name(),
                         ErrorCodes::NOT_IMPLEMENTED);
     }
 
     void insertDefaultInto(IColumn&) const override {
-        throw Exception("Method insertDefaultInto() is not implemented for data type " + getName(),
+        throw Exception("Method insertDefaultInto() is not implemented for data type " + get_name(),
                         ErrorCodes::NOT_IMPLEMENTED);
     }
 

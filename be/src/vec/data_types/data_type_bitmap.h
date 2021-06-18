@@ -29,8 +29,8 @@ public:
 
     using FieldType = BitmapValue;
 
-    std::string doGetName() const override { return getFamilyName(); }
-    const char* getFamilyName() const override { return "BitMap"; }
+    std::string doGetName() const override { return get_family_name(); }
+    const char* get_family_name() const override { return "BitMap"; }
 
     TypeIndex getTypeId() const override { return TypeIndex::BitMap; }
 
@@ -53,7 +53,7 @@ public:
 
     bool canBeUsedAsVersion() const override { return false; }
 
-    bool canBeInsideNullable() const override { return true; }
+    bool can_be_inside_nullable() const override { return true; }
 
     bool equals(const IDataType& rhs) const override { return typeid(rhs) == typeid(*this); }
 
@@ -64,7 +64,7 @@ public:
     std::string to_string(const IColumn& column, size_t row_num) const { return "BitMap()"; }
 
     virtual Field getDefault() const {
-        throw Exception("Method getDefault() is not implemented for data type " + getName(),
+        throw Exception("Method getDefault() is not implemented for data type " + get_name(),
                         ErrorCodes::NOT_IMPLEMENTED);
     }
 };

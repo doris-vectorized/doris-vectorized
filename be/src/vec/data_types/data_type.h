@@ -60,10 +60,10 @@ public:
     virtual ~IDataType();
 
     /// Name of data type (examples: UInt64, Array(String)).
-    String getName() const;
+    String get_name() const;
 
     /// Name of data type family (example: FixedString, Array).
-    virtual const char* getFamilyName() const = 0;
+    virtual const char* get_family_name() const = 0;
 
     /// Data type id. It's used for runtime type checks.
     virtual TypeIndex getTypeId() const = 0;
@@ -98,7 +98,7 @@ public:
       */
     virtual DataTypePtr promoteNumericType() const;
 
-    /** Directly insert default value into a column. Default implementation use method IColumn::insertDefault.
+    /** Directly insert default value into a column. Default implementation use method IColumn::insert_default.
       * This should be overriden if data type default value differs from column default value (example: Enum data types).
       */
     virtual void insertDefaultInto(IColumn& column) const;
@@ -182,7 +182,7 @@ public:
     virtual bool isValueRepresentedByUnsignedInteger() const { return false; }
 
     /** Values are unambiguously identified by contents of contiguous memory region,
-      *  that can be obtained by IColumn::getDataAt method.
+      *  that can be obtained by IColumn::get_data_at method.
       * Examples: numbers, Date, DateTime, String, FixedString,
       *  and Arrays of numbers, Date, DateTime, FixedString, Enum, but not String.
       *  (because Array(String) values became ambiguous if you concatenate Strings).
@@ -212,15 +212,15 @@ public:
       */
     virtual bool isCategorial() const { return false; }
 
-    virtual bool isNullable() const { return false; }
+    virtual bool is_nullable() const { return false; }
 
-    /** Is this type can represent only NULL value? (It also implies isNullable)
+    /** Is this type can represent only NULL value? (It also implies is_nullable)
       */
-    virtual bool onlyNull() const { return false; }
+    virtual bool only_null() const { return false; }
 
     /** If this data type cannot be wrapped in Nullable data type.
       */
-    virtual bool canBeInsideNullable() const { return false; }
+    virtual bool can_be_inside_nullable() const { return false; }
 
     virtual bool lowCardinality() const { return false; }
 
@@ -309,7 +309,7 @@ struct WhichDataType {
     bool isInterval() const { return idx == TypeIndex::Interval; }
 
     bool isNothing() const { return idx == TypeIndex::Nothing; }
-    bool isNullable() const { return idx == TypeIndex::Nullable; }
+    bool is_nullable() const { return idx == TypeIndex::Nullable; }
     bool isFunction() const { return idx == TypeIndex::Function; }
     bool isAggregateFunction() const { return idx == TypeIndex::AggregateFunction; }
 };

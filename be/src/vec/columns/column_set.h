@@ -37,10 +37,10 @@ public:
     ColumnSet(size_t s_, const ConstSetPtr & data_) : data(data_) { s = s_; }
     ColumnSet(const ColumnSet &) = default;
 
-    const char * getFamilyName() const override { return "Set"; }
-    MutableColumnPtr cloneDummy(size_t s_) const override { return ColumnSet::create(s_, data); }
+    const char * get_family_name() const override { return "Set"; }
+    MutableColumnPtr clone_dummy(size_t s_) const override { return ColumnSet::create(s_, data); }
 
-    ConstSetPtr getData() const { return data; }
+    ConstSetPtr get_data() const { return data; }
 
 private:
     ConstSetPtr data;

@@ -23,7 +23,7 @@ struct AggregateFunctionDistinctSingleNumericData {
     Set set;
 
     void add(const IColumn** columns, size_t /* columns_num */, size_t row_num, Arena*) {
-        const auto& vec = assert_cast<const ColumnVector<T>&>(*columns[0]).getData();
+        const auto& vec = assert_cast<const ColumnVector<T>&>(*columns[0]).get_data();
         set.insert(vec[row_num]);
     }
 
@@ -36,7 +36,7 @@ struct AggregateFunctionDistinctSingleNumericData {
     MutableColumns getArguments(const DataTypes& argument_types) const {
         MutableColumns argument_columns;
         argument_columns.emplace_back(argument_types[0]->createColumn());
-        for (const auto& elem : set) argument_columns[0]->insert(elem.getValue());
+        for (const auto& elem : set) argument_columns[0]->insert(elem.get_value());
 
         return argument_columns;
     }
@@ -52,18 +52,18 @@ struct AggregateFunctionDistinctGenericData {
         Set::LookupResult it;
         bool inserted;
         for (const auto& elem : rhs.set)
-            set.emplace(ArenaKeyHolder{elem.getValue(), *arena}, it, inserted);
+            set.emplace(ArenaKeyHolder{elem.get_value(), *arena}, it, inserted);
     }
 
     void serialize(std::ostream& buf) const {
-        writeVarUInt(set.size(), buf);
-        for (const auto& elem : set) writeStringBinary(elem.getValue(), buf);
+        write_var_uint(set.size(), buf);
+        for (const auto& elem : set) write_string_binary(elem.get_value(), buf);
     }
 
     void deserialize(std::istream& buf, Arena* arena) {
         size_t size;
-        readVarUInt(size, buf);
-        for (size_t i = 0; i < size; ++i) set.insert(readStringBinaryInto(*arena, buf));
+        read_var_uint(size, buf);
+        for (size_t i = 0; i < size; ++i) set.insert(read_string_binary_into(*arena, buf));
     }
 };
 
@@ -80,7 +80,7 @@ struct AggregateFunctionDistinctSingleGenericData : public AggregateFunctionDist
         MutableColumns argument_columns;
         argument_columns.emplace_back(argument_types[0]->createColumn());
         for (const auto& elem : set)
-            deserializeAndInsert<is_plain_column>(elem.getValue(), *argument_columns[0]);
+            deserializeAndInsert<is_plain_column>(elem.get_value(), *argument_columns[0]);
 
         return argument_columns;
     }
@@ -91,7 +91,7 @@ struct AggregateFunctionDistinctMultipleGenericData : public AggregateFunctionDi
         const char* begin = nullptr;
         StringRef value(begin, 0);
         for (size_t i = 0; i < columns_num; ++i) {
-            auto cur_ref = columns[i]->serializeValueIntoArena(row_num, *arena, begin);
+            auto cur_ref = columns[i]->serialize_value_into_arena(row_num, *arena, begin);
             value.data = cur_ref.data - value.size;
             value.size += cur_ref.size;
         }
@@ -108,9 +108,9 @@ struct AggregateFunctionDistinctMultipleGenericData : public AggregateFunctionDi
             argument_columns[i] = argument_types[i]->createColumn();
 
         for (const auto& elem : set) {
-            const char* begin = elem.getValue().data;
+            const char* begin = elem.get_value().data;
             for (auto& column : argument_columns)
-                begin = column->deserializeAndInsertFromArena(begin);
+                begin = column->deserialize_and_insert_from_arena(begin);
         }
 
         return argument_columns;
@@ -189,7 +189,7 @@ public:
         nested_func->destroy(getNestedPlace(place));
     }
 
-    String getName() const override { return nested_func->getName() + "Distinct"; }
+    String get_name() const override { return nested_func->get_name() + "Distinct"; }
 
     DataTypePtr getReturnType() const override { return nested_func->getReturnType(); }
 

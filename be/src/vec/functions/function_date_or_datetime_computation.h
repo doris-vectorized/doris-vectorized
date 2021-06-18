@@ -180,7 +180,7 @@ struct DateTimeOp {
         size_t size = delta.size();
         vec_to.resize(size);
 
-        for (size_t i = 0; i < size; ++i) vec_to[i] = Transform::execute(from, delta.getInt(i));
+        for (size_t i = 0; i < size; ++i) vec_to[i] = Transform::execute(from, delta.get_int(i));
     }
 
     // use for (const DateTime, DateTime) -> other_type
@@ -203,42 +203,42 @@ struct DateTimeAddIntervalImpl {
 
         const ColumnPtr source_col = block.getByPosition(arguments[0]).column;
 
-        if (const auto* sources = checkAndGetColumn<ColumnVector<FromType>>(source_col.get())) {
+        if (const auto* sources = check_and_get_column<ColumnVector<FromType>>(source_col.get())) {
             auto col_to = ColumnVector<ToType>::create();
 
             const IColumn& delta_column = *block.getByPosition(arguments[1]).column;
 
             if (const auto* delta_const_column = typeid_cast<const ColumnConst*>(&delta_column)) {
-                if (delta_const_column->getField().getType() == Field::Types::Int128) {
-                    Op::vector_constant(sources->getData(), col_to->getData(),
-                                        delta_const_column->getField().get<Int128>());
+                if (delta_const_column->get_field().getType() == Field::Types::Int128) {
+                    Op::vector_constant(sources->get_data(), col_to->get_data(),
+                                        delta_const_column->get_field().get<Int128>());
                 } else {
-                    Op::vector_constant(sources->getData(), col_to->getData(),
-                                        delta_const_column->getField().get<Int64>());
+                    Op::vector_constant(sources->get_data(), col_to->get_data(),
+                                        delta_const_column->get_field().get<Int64>());
                 }
             } else {
                 const auto* delta_vec_column =
-                        checkAndGetColumn<ColumnVector<FromType>>(delta_column);
-                Op::vector_vector(sources->getData(), delta_vec_column->getData(),
-                                  col_to->getData());
+                        check_and_get_column<ColumnVector<FromType>>(delta_column);
+                Op::vector_vector(sources->get_data(), delta_vec_column->get_data(),
+                                  col_to->get_data());
             }
             block.getByPosition(result).column = std::move(col_to);
         } else if (const auto* sources_const =
                            checkAndGetColumnConst<ColumnVector<FromType>>(source_col.get())) {
             auto col_to = ColumnVector<ToType>::create();
-            if (const auto* delta_vec_column = checkAndGetColumn<ColumnVector<FromType>>(
-                        *block.getByPosition(arguments[1]).column)) {
-                Op::constant_vector(sources_const->template getValue<FromType>(), col_to->getData(),
-                                    delta_vec_column->getData());
+            if (const auto* delta_vec_column = check_and_get_column<ColumnVector<FromType>>(
+                    *block.getByPosition(arguments[1]).column)) {
+                Op::constant_vector(sources_const->template get_value<FromType>(), col_to->get_data(),
+                                    delta_vec_column->get_data());
             } else {
-                Op::constant_vector(sources_const->template getValue<FromType>(), col_to->getData(),
+                Op::constant_vector(sources_const->template get_value<FromType>(), col_to->get_data(),
                                     *block.getByPosition(arguments[1]).column);
             }
             block.getByPosition(result).column = std::move(col_to);
         } else {
             return Status::RuntimeError(fmt::format(
                     "Illegal column {} of first argument of function {}",
-                    block.getByPosition(arguments[0]).column->getName(), Transform::name));
+                    block.getByPosition(arguments[0]).column->get_name(), Transform::name));
         }
         return Status::OK();
     }
@@ -250,28 +250,28 @@ public:
     static constexpr auto name = Transform::name;
     static FunctionPtr create() { return std::make_shared<FunctionDateOrDateTimeComputation>(); }
 
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
 
     bool isVariadic() const override { return true; }
     size_t getNumberOfArguments() const override { return 0; }
 
     DataTypePtr getReturnTypeImpl(const ColumnsWithTypeAndName& arguments) const override {
         if (arguments.size() != 2 && arguments.size() != 3)
-            throw Exception("Number of arguments for function " + getName() +
+            throw Exception("Number of arguments for function " + get_name() +
                                     " doesn't match: passed " + std::to_string(arguments.size()) +
                                     ", should be 2 or 3",
                             ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
         if (arguments.size() == 2) {
             if (!isDateOrDateTime(arguments[0].type))
-                throw Exception{"Illegal type " + arguments[0].type->getName() +
-                                        " of argument of function " + getName() +
+                throw Exception{"Illegal type " + arguments[0].type->get_name() +
+                                        " of argument of function " + get_name() +
                                         ". Should be a date or a date with time",
                                 ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
         } else {
             if (!WhichDataType(arguments[0].type).isDateTime() ||
                 !WhichDataType(arguments[2].type).isString())
-                throw Exception("Function " + getName() +
+                throw Exception("Function " + get_name() +
                                         " supports 2 or 3 arguments. The 1st argument "
                                         "must be of type Date or DateTime. The 2nd argument must "
                                         "be number. "
@@ -315,7 +315,7 @@ public:
         } else {
             return Status::RuntimeError(
                     fmt::format("Illegal type {} of argument of function {}",
-                                block.getByPosition(arguments[0]).type->getName(), getName()));
+                                block.getByPosition(arguments[0]).type->get_name(), get_name()));
         }
 
         return Status::OK();

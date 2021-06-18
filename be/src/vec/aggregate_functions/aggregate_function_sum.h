@@ -40,9 +40,9 @@ struct AggregateFunctionSumData {
 
     void merge(const AggregateFunctionSumData& rhs) { sum += rhs.sum; }
 
-    void write(std::ostream& buf) const { writeBinary(sum, buf); }
+    void write(std::ostream& buf) const { write_binary(sum, buf); }
 
-    void read(std::istream& buf) { readBinary(sum, buf); }
+    void read(std::istream& buf) { read_binary(sum, buf); }
 
     T get() const { return sum; }
 };
@@ -96,7 +96,7 @@ public:
     using ColVecResult =
             std::conditional_t<IsDecimalNumber<T>, ColumnDecimal<TResult>, ColumnVector<TResult>>;
 
-    String getName() const override { return "sum"; }
+    String get_name() const override { return "sum"; }
 
     AggregateFunctionSum(const DataTypes& argument_types_)
             : IAggregateFunctionDataHelper<Data, AggregateFunctionSum<T, TResult, Data>>(
@@ -118,7 +118,7 @@ public:
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
         const auto& column = static_cast<const ColVecType&>(*columns[0]);
-        this->data(place).add(column.getData()[row_num]);
+        this->data(place).add(column.get_data()[row_num]);
     }
 
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {
@@ -135,7 +135,7 @@ public:
 
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
         auto& column = static_cast<ColVecResult&>(to);
-        column.getData().push_back(this->data(place).get());
+        column.get_data().push_back(this->data(place).get());
     }
 
     const char* getHeaderFilePath() const override { return __FILE__; }

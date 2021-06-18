@@ -50,7 +50,7 @@ doris::Status VInPredicate::prepare(doris::RuntimeState* state, const doris::Row
     }
 
     // expr data_type
-    _data_type = makeNullable(std::make_shared<DataTypeUInt8>());
+    _data_type = make_nullable(std::make_shared<DataTypeUInt8>());
     _expr_name = fmt::format("({} {} set)", _children[0]->expr_name(), _is_not_in ? "not_in" : "in");
     _is_prepare = true;
     return Status::OK();
@@ -76,11 +76,11 @@ doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* conte
 
         DCHECK(result != -1);
         const auto& column = block.getByPosition(result).column;
-        if (column->isNullAt(0)) {
+        if (column->is_null_at(0)) {
             _null_in_set = true;
             continue;
         }
-        const auto& ref_data = column->getDataAt(0);
+        const auto& ref_data = column->get_data_at(0);
         _hybrid_set->insert((void*)(ref_data.data), ref_data.size);
     }
     _set_param = COWHelper<IColumn, ColumnSet>::create(1, _hybrid_set);
