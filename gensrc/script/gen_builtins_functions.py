@@ -67,13 +67,13 @@ def add_function(fn_meta_data, user_visible):
     entry["args"] = fn_meta_data[2]
     entry["symbol"] = fn_meta_data[3]
     if len(fn_meta_data) >= 5:
-	if fn_meta_data[4] != "vec":
-		entry["prepare"] = fn_meta_data[4]
+        if fn_meta_data[4] != "vec":
+            entry["prepare"] = fn_meta_data[4]
     if len(fn_meta_data) >= 6:
         entry["close"] = fn_meta_data[5]
     
     if fn_meta_data[-1] == 'vec':
-	entry['vec'] = True
+        entry['vec'] = True
 
     entry["user_visible"] = user_visible
     meta_data_entries.append(entry)

@@ -427,7 +427,7 @@ visible_functions = [
     [['ceil', 'ceiling', 'dceil'], 'BIGINT', ['DOUBLE'],
             '_ZN5doris13MathFunctions4ceilEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['floor', 'dfloor'], 'BIGINT', ['DOUBLE'],
-            '_ZN5doris13MathFunctions5floorEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+            '_ZN5doris13MathFunctions5floorEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['round', 'dround'], 'BIGINT', ['DOUBLE'],
             '_ZN5doris13MathFunctions5roundEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
     [['round', 'dround'], 'DOUBLE', ['DOUBLE', 'INT'],
@@ -435,12 +435,12 @@ visible_functions = [
             '15FunctionContextERKNS1_9DoubleValERKNS1_6IntValE'],
     [['truncate'], 'DOUBLE', ['DOUBLE', 'INT'],
             '_ZN5doris13MathFunctions8truncateEPN9doris_udf'
-            '15FunctionContextERKNS1_9DoubleValERKNS1_6IntValE'],
+            '15FunctionContextERKNS1_9DoubleValERKNS1_6IntValE', 'vec'],
 
     [['ln', 'dlog1'], 'DOUBLE', ['DOUBLE'],
             '_ZN5doris13MathFunctions2lnEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['log'], 'DOUBLE', ['DOUBLE', 'DOUBLE'],
-            '_ZN5doris13MathFunctions3logEPN9doris_udf15FunctionContextERKNS1_9DoubleValES6_'],
+            '_ZN5doris13MathFunctions3logEPN9doris_udf15FunctionContextERKNS1_9DoubleValES6_', 'vec'],
     [['log2'], 'DOUBLE', ['DOUBLE'],
             '_ZN5doris13MathFunctions4log2EPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['log10', 'dlog10'], 'DOUBLE', ['DOUBLE'],
@@ -449,9 +449,9 @@ visible_functions = [
             '_ZN5doris13MathFunctions3expEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
 
     [['radians'], 'DOUBLE', ['DOUBLE'],
-            '_ZN5doris13MathFunctions7radiansEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+            '_ZN5doris13MathFunctions7radiansEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
     [['degrees'], 'DOUBLE', ['DOUBLE'],
-            '_ZN5doris13MathFunctions7degreesEPN9doris_udf15FunctionContextERKNS1_9DoubleValE'],
+            '_ZN5doris13MathFunctions7degreesEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
 
     [['sqrt', 'dsqrt'], 'DOUBLE', ['DOUBLE'],
             '_ZN5doris13MathFunctions4sqrtEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', 'vec'],
