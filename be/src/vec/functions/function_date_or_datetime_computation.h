@@ -15,7 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "common/logging.h"
+#include "fmt/format.h"
 #include "runtime/datetime_value.h"
+#include "util/binary_cast.hpp"
 #include "vec/columns/column_vector.h"
 #include "vec/data_types/data_type_date.h"
 #include "vec/data_types/data_type_date_time.h"
@@ -33,12 +36,11 @@ extern const int ILLEGAL_COLUMN;
 
 template <TimeUnit unit>
 inline Int128 date_time_add(const Int128& t, Int64 delta) {
-    auto res = t;
-    auto& ts_value = (doris::DateTimeValue&)(res);
+    auto ts_value = binary_cast<Int128, doris::DateTimeValue>(t);
     TimeInterval interval(unit, delta, false);
     ts_value.date_add_interval(interval, unit);
 
-    return res;
+    return binary_cast<doris::DateTimeValue, Int128>(ts_value);
 }
 
 #define ADD_TIME_FUNCTION_IMPL(CLASS, NAME, UNIT)                    \
@@ -193,7 +195,7 @@ struct DateTimeOp {
 
 template <typename FromType, typename Transform>
 struct DateTimeAddIntervalImpl {
-    static void execute(Block& block, const ColumnNumbers& arguments, size_t result) {
+    static Status execute(Block& block, const ColumnNumbers& arguments, size_t result) {
         using ToType = typename Transform::ReturnType::FieldType;
         using Op = DateTimeOp<FromType, ToType, Transform>;
 
@@ -234,11 +236,11 @@ struct DateTimeAddIntervalImpl {
             }
             block.getByPosition(result).column = std::move(col_to);
         } else {
-            throw Exception("Illegal column " +
-                                    block.getByPosition(arguments[0]).column->getName() +
-                                    " of first argument of function " + Transform::name,
-                            ErrorCodes::ILLEGAL_COLUMN);
+            return Status::RuntimeError(fmt::format(
+                    "Illegal column {} of first argument of function {}",
+                    block.getByPosition(arguments[0]).column->getName(), Transform::name));
         }
+        return Status::OK();
     }
 };
 
@@ -246,7 +248,6 @@ template <typename Transform>
 class FunctionDateOrDateTimeComputation : public IFunction {
 public:
     static constexpr auto name = Transform::name;
-    //    static FunctionPtr create(const Context &) { return std::make_shared<FunctionDateOrDateTimeComputation>(); }
     static FunctionPtr create() { return std::make_shared<FunctionDateOrDateTimeComputation>(); }
 
     String getName() const override { return name; }
@@ -260,10 +261,6 @@ public:
                                     " doesn't match: passed " + std::to_string(arguments.size()) +
                                     ", should be 2 or 3",
                             ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
-
-        //        if (!isNativeNumber(arguments[1].type))
-        //            throw Exception("Second argument for function " + getName() + " (delta) must be number",
-        //                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
         if (arguments.size() == 2) {
             if (!isDateOrDateTime(arguments[0].type))
@@ -309,16 +306,17 @@ public:
         const IDataType* from_type = block.getByPosition(arguments[0]).type.get();
         WhichDataType which(from_type);
 
-        if (which.isDate())
-            DateTimeAddIntervalImpl<DataTypeDate::FieldType, Transform>::execute(block, arguments,
-                                                                                 result);
-        else if (which.isDateTime())
-            DateTimeAddIntervalImpl<DataTypeDateTime::FieldType, Transform>::execute(
+        if (which.isDate()) {
+            return DateTimeAddIntervalImpl<DataTypeDate::FieldType, Transform>::execute(
                     block, arguments, result);
-        else
-            throw Exception("Illegal type " + block.getByPosition(arguments[0]).type->getName() +
-                                    " of argument of function " + getName(),
-                            ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        } else if (which.isDateTime()) {
+            return DateTimeAddIntervalImpl<DataTypeDateTime::FieldType, Transform>::execute(
+                    block, arguments, result);
+        } else {
+            return Status::RuntimeError(
+                    fmt::format("Illegal type {} of argument of function {}",
+                                block.getByPosition(arguments[0]).type->getName(), getName()));
+        }
 
         return Status::OK();
     }

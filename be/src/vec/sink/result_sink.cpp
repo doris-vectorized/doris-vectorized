@@ -93,8 +93,9 @@ Status ResultSink::open(RuntimeState* state) {
 }
 
 Status ResultSink::send(RuntimeState* state, RowBatch* batch) {
-    throw Exception("Not Implemented Result Sink::send scalar", ErrorCodes::NOT_IMPLEMENTED);
+    return Status::NotSupported("Not Implemented Result Sink::send scalar");
 }
+
 Status ResultSink::send(RuntimeState* state, Block* block) {
     return _writer->append_block(*block);
 }

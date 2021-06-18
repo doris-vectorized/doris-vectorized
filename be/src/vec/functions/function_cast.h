@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "common/logging.h"
+#include "fmt/format.h"
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_nullable.h"
 #include "vec/columns/column_string.h"
@@ -86,9 +88,10 @@ struct ConvertImpl {
     using ToFieldType = typename ToDataType::FieldType;
 
     template <typename Additions = void*>
-    static void execute(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t /*input_rows_count*/,
-                        Additions additions [[maybe_unused]] = Additions()) {
+    static Status  execute(Block& block, const ColumnNumbers& arguments,
+                                                size_t result, size_t /*input_rows_count*/,
+                                                Additions additions
+                                                [[maybe_unused]] = Additions()) {
         const ColumnWithTypeAndName& named_from = block.getByPosition(arguments[0]);
 
         using ColVecFrom =
@@ -151,6 +154,7 @@ struct ConvertImpl {
             throw Exception("Illegal column " + named_from.column->getName() +
                                     " of first argument of function " + Name::name,
                             ErrorCodes::ILLEGAL_COLUMN);
+        return Status::OK();
     }
 };
 
@@ -158,9 +162,10 @@ struct ConvertImpl {
   */
 template <typename T, typename Name>
 struct ConvertImpl<std::enable_if_t<!T::is_parametric, T>, T, Name> {
-    static void execute(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t /*input_rows_count*/) {
+    static Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
+                          size_t /*input_rows_count*/) {
         block.getByPosition(result).column = block.getByPosition(arguments[0]).column;
+        return Status::OK();
     }
 };
 
@@ -171,8 +176,8 @@ struct ConvertImplToTimeType {
     using FromFieldType = typename FromDataType::FieldType;
     using ToFieldType = typename ToDataType::FieldType;
 
-    static void execute(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t /*input_rows_count*/) {
+    static Status execute(Block& block, const ColumnNumbers& arguments,
+                                                size_t result, size_t /*input_rows_count*/) {
         const ColumnWithTypeAndName& named_from = block.getByPosition(arguments[0]);
 
         using ColVecFrom =
@@ -204,16 +209,19 @@ struct ConvertImplToTimeType {
             }
             block.getByPosition(result).column =
                     ColumnNullable::create(std::move(col_to), std::move(col_null_map_to));
-        } else
-            throw Exception("Illegal column " + named_from.column->getName() +
-                                    " of first argument of function " + Name::name,
-                            ErrorCodes::ILLEGAL_COLUMN);
+        } else {
+            return Status::RuntimeError(
+                    fmt::format("Illegal column {} of first argument of function {}",
+                                named_from.column->getName(), Name::name));
+        }
+
+        return Status::OK();
     }
 };
 
 // Generic conversion of any type to String.
 struct ConvertImplGenericToString {
-    static void execute(Block& block, const ColumnNumbers& arguments, size_t result) {
+    static Status execute(Block& block, const ColumnNumbers& arguments, size_t result) {
         const auto& col_with_type_and_name = block.getByPosition(arguments[0]);
         const IDataType& type = *col_with_type_and_name.type;
         const IColumn& col_from = *col_with_type_and_name.column;
@@ -235,6 +243,7 @@ struct ConvertImplGenericToString {
         }
 
         block.getByPosition(result).column = std::move(col_to);
+        return Status::OK();
     }
 };
 
@@ -242,10 +251,10 @@ template <typename ToDataType, typename Name>
 struct ConvertImpl<DataTypeString, ToDataType, Name> {
     template <typename Additions = void*>
 
-    static void execute(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t /*input_rows_count*/,
-                        Additions additions [[maybe_unused]] = Additions()) {
-        throw Exception("not support convert from string", ErrorCodes::NOT_IMPLEMENTED);
+    static Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
+                          size_t /*input_rows_count*/,
+                          Additions additions [[maybe_unused]] = Additions()) {
+        return Status::RuntimeError("not support convert from string");
     }
 };
 
@@ -511,29 +520,7 @@ public:
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
-        try {
-            executeInternal(block, arguments, result, input_rows_count);
-        } catch (Exception& e) {
-            /// More convenient error message.
-            if (e.code() == ErrorCodes::ATTEMPT_TO_READ_AFTER_EOF) {
-                e.addMessage("Cannot parse " + block.getByPosition(result).type->getName() +
-                             " from " + block.getByPosition(arguments[0]).type->getName() +
-                             ", because value is too short");
-            } else if (e.code() == ErrorCodes::CANNOT_PARSE_NUMBER ||
-                       e.code() == ErrorCodes::CANNOT_READ_ARRAY_FROM_TEXT ||
-                       e.code() == ErrorCodes::CANNOT_PARSE_INPUT_ASSERTION_FAILED ||
-                       e.code() == ErrorCodes::CANNOT_PARSE_QUOTED_STRING ||
-                       e.code() == ErrorCodes::CANNOT_PARSE_ESCAPE_SEQUENCE ||
-                       e.code() == ErrorCodes::CANNOT_PARSE_DATE ||
-                       e.code() == ErrorCodes::CANNOT_PARSE_DATETIME ||
-                       e.code() == ErrorCodes::CANNOT_PARSE_UUID) {
-                e.addMessage("Cannot parse " + block.getByPosition(result).type->getName() +
-                             " from " + block.getByPosition(arguments[0]).type->getName());
-            }
-
-            throw;
-        }
-        return Status::OK();
+        return executeInternal(block, arguments, result, input_rows_count);
     }
 
     bool hasInformationAboutMonotonicity() const override { return Monotonic::has(); }
@@ -544,17 +531,19 @@ public:
     }
 
 private:
-    void executeInternal(Block& block, const ColumnNumbers& arguments, size_t result,
-                         size_t input_rows_count) {
-        if (!arguments.size())
-            throw Exception{"Function " + getName() + " expects at least 1 arguments",
-                            ErrorCodes::TOO_FEW_ARGUMENTS_FOR_FUNCTION};
+    Status executeInternal(Block& block, const ColumnNumbers& arguments, size_t result,
+                           size_t input_rows_count) {
+        if (!arguments.size()) {
+            return Status::RuntimeError(
+                    fmt::format("Function {} expects at least 1 arguments", getName()));
+        }
 
         const IDataType* from_type = block.getByPosition(arguments[0]).type.get();
 
+        Status ret_status;
         /// Generic conversion of any type to String.
         if constexpr (std::is_same_v<ToDataType, DataTypeString>) {
-            ConvertImplGenericToString::execute(block, arguments, result);
+            return ConvertImplGenericToString::execute(block, arguments, result);
         } else {
             auto call = [&](const auto& types) -> bool {
                 using Types = std::decay_t<decltype(types)>;
@@ -563,29 +552,30 @@ private:
 
                 // now, cast to decimal do not execute the code
                 if constexpr (IsDataTypeDecimal<RightDataType>) {
-                    if (arguments.size() != 2)
-                        throw Exception{
-                                "Function " + getName() + " expects 2 arguments for Decimal.",
-                                ErrorCodes::TOO_FEW_ARGUMENTS_FOR_FUNCTION};
+                    if (arguments.size() != 2) {
+                        ret_status = Status::RuntimeError(fmt::format(
+                                "Function {} expects 2 arguments for Decimal.", getName()));
+                        return true;
+                    }
 
                     const ColumnWithTypeAndName& scale_column = block.getByPosition(arguments[1]);
                     UInt32 scale = extractToDecimalScale(scale_column);
 
-                    ConvertImpl<LeftDataType, RightDataType, Name>::execute(
+                    ret_status = ConvertImpl<LeftDataType, RightDataType, Name>::execute(
                             block, arguments, result, input_rows_count, scale);
                 } else
-                    ConvertImpl<LeftDataType, RightDataType, Name>::execute(
+                    ret_status = ConvertImpl<LeftDataType, RightDataType, Name>::execute(
                             block, arguments, result, input_rows_count);
                 return true;
             };
 
             bool done = callOnIndexAndDataType<ToDataType>(from_type->getTypeId(), call);
             if (!done) {
-                throw Exception("Illegal type " +
-                                        block.getByPosition(arguments[0]).type->getName() +
-                                        " of argument of function " + getName(),
-                                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+                ret_status = Status::RuntimeError(
+                        fmt::format("Illegal type {} of argument of function {}",
+                                    block.getByPosition(arguments[0]).type->getName(), getName()));
             }
+            return ret_status;
         }
     }
 };
@@ -743,9 +733,9 @@ struct ConvertThroughParsing {
     }
 
     template <typename Additions = void*>
-    static void execute(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count,
-                        Additions additions [[maybe_unused]] = Additions()) {
+    static Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
+                          size_t input_rows_count,
+                          Additions additions [[maybe_unused]] = Additions()) {
         using ColVecTo = std::conditional_t<IsDecimalNumber<ToFieldType>,
                                             ColumnDecimal<ToFieldType>, ColumnVector<ToFieldType>>;
 
@@ -765,10 +755,11 @@ struct ConvertThroughParsing {
         const ColumnString* col_from_string = checkAndGetColumn<ColumnString>(col_from);
         //        const ColumnFixedString * col_from_fixed_string = checkAndGetColumn<ColumnFixedString>(col_from);
 
-        if (std::is_same_v<FromDataType, DataTypeString> && !col_from_string)
-            throw Exception("Illegal column " + col_from->getName() +
-                                    " of first argument of function " + Name::name,
-                            ErrorCodes::ILLEGAL_COLUMN);
+        if (std::is_same_v<FromDataType, DataTypeString> && !col_from_string) {
+            return Status::RuntimeError(
+                    fmt::format("Illegal column {} of first argument of function {}",
+                                col_from->getName(), Name::name));
+        }
 
         //        if (std::is_same_v<FromDataType, DataTypeFixedString> && !col_from_fixed_string)
         //            throw Exception("Illegal column " + col_from->getName()
@@ -868,6 +859,7 @@ struct ConvertThroughParsing {
 
         block.getByPosition(result).column =
                 ColumnNullable::create(std::move(col_to), std::move(col_null_map_to));
+        return Status::OK();
     }
 };
 
@@ -935,7 +927,7 @@ public:
         //        else
         {
             if (checkAndGetDataType<DataTypeString>(from_type)) {
-                ConvertThroughParsing<DataTypeString, ToDataType, Name>::execute(
+                return ConvertThroughParsing<DataTypeString, ToDataType, Name>::execute(
                         block, arguments, result, input_rows_count);
             }
             //            else if (checkAndGetDataType<DataTypeFixedString>(from_type))
@@ -947,15 +939,13 @@ public:
                 ok = false;
         }
 
-        // TODO: Return Status repalce throw Exception
-        if (!ok)
-            throw Exception(
-                    "Illegal type " + block.getByPosition(arguments[0]).type->getName() +
-                            " of argument of function " + getName() +
-                            ". Only String or FixedString argument is accepted for try-conversion "
-                            "function." +
-                            " For other arguments, use function without 'orZero' or 'orNull'.",
-                    ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        if (!ok) {
+            return Status::RuntimeError(fmt::format(
+                    "Illegal type {} of argument of function {} . Only String or FixedString "
+                    "argument is accepted for try-conversion function. For other arguments, use "
+                    "function without 'orZero' or 'orNull'.",
+                    block.getByPosition(arguments[0]).type->getName(), getName()));
+        }
 
         return Status::OK();
     }
@@ -984,13 +974,14 @@ public:
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
+        Status ret_status = Status::OK();
         const IDataType* from_type = block.getByPosition(arguments[0]).type.get();
         auto call = [&](const auto& types) -> bool {
             using Types = std::decay_t<decltype(types)>;
             using LeftDataType = typename Types::LeftType;
             using RightDataType = typename Types::RightType;
 
-            ConvertImplToTimeType<LeftDataType, RightDataType, Name>::execute(
+            ret_status = ConvertImplToTimeType<LeftDataType, RightDataType, Name>::execute(
                     block, arguments, result, input_rows_count);
             return true;
         };
@@ -1002,7 +993,7 @@ public:
                             ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
         }
 
-        return Status::OK();
+        return ret_status;
     }
 };
 
@@ -1080,8 +1071,7 @@ private:
 
         return [function](Block& block, const ColumnNumbers& arguments, const size_t result,
                           size_t input_rows_count) {
-            function->execute(block, arguments, result, input_rows_count);
-            return Status::OK();
+            return function->execute(block, arguments, result, input_rows_count);
         };
     }
 
@@ -1218,12 +1208,12 @@ private:
                 const auto& tmp_res = tmp_block.getByPosition(tmp_res_index);
 
                 /// May happen in fuzzy tests. For debug purpose.
-                if (!tmp_res.column)
-                    throw Exception("Couldn't convert " +
-                                            block.getByPosition(arguments[0]).type->getName() +
-                                            " to " + nested_type->getName() + " in " +
-                                            " prepareRemoveNullable wrapper.",
-                                    ErrorCodes::LOGICAL_ERROR);
+                if (!tmp_res.column) {
+                    return Status::RuntimeError(fmt::format(
+                            "Couldn't convert {} to {} in prepareRemoveNullable wrapper.",
+                            block.getByPosition(arguments[0]).type->getName(),
+                            nested_type->getName()));
+                }
 
                 res.column = wrapInNullable(tmp_res.column,
                                             Block({block.getByPosition(arguments[0]), tmp_res}),
@@ -1245,9 +1235,10 @@ private:
                     const auto& nullable_col = assert_cast<const ColumnNullable&>(*col);
                     const auto& null_map = nullable_col.getNullMapData();
 
-                    if (!memoryIsZero(null_map.data(), null_map.size()))
-                        throw Exception{"Cannot convert NULL value to non-Nullable type",
-                                        ErrorCodes::CANNOT_INSERT_NULL_IN_ORDINARY_COLUMN};
+                    if (!memoryIsZero(null_map.data(), null_map.size())) {
+                        return Status::RuntimeError(
+                                fmt::format("Cannot convert NULL value to non-Nullable type"));
+                    }
                 }
 
                 wrapper(tmp_block, arguments, result, input_rows_count);
