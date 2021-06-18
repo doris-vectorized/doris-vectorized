@@ -22,6 +22,8 @@
 #include <typeindex>
 #include <typeinfo>
 
+#include "fmt/format.h"
+#include "common/logging.h"
 #include "vec/common/demangle.h"
 #include "vec/common/exception.h"
 
@@ -45,12 +47,10 @@ To assert_cast(From&& from) {
             if (typeid(from) == typeid(To)) return static_cast<To>(from);
         }
     } catch (const std::exception& e) {
-        throw doris::vectorized::Exception(e.what(), doris::vectorized::ErrorCodes::BAD_CAST);
+        LOG(FATAL) << "assert cast err:" << e.what();
     }
 
-    throw doris::vectorized::Exception("Bad cast from type " + demangle(typeid(from).name()) +
-                                               " to " + demangle(typeid(To).name()),
-                                       doris::vectorized::ErrorCodes::BAD_CAST);
+    LOG(FATAL) << fmt::format("Bad cast from type:{} to {}",  demangle(typeid(from).name()), demangle(typeid(To).name()));
 #else
     return static_cast<To>(from);
 #endif
