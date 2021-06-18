@@ -63,15 +63,7 @@ public:
     /// Get the result type.
     virtual DataTypePtr getReturnType() const = 0;
 
-    /// Get type which will be used for prediction result in case if function is an ML method.
-    virtual DataTypePtr getReturnTypeToPredict() const {
-        throw Exception("Prediction is not supported for " + get_name(),
-                        ErrorCodes::NOT_IMPLEMENTED);
-    }
-
     virtual ~IAggregateFunction() {}
-
-    /** Data manipulating functions. */
 
     /** Create empty data for aggregation with `placement new` at the specified location.
       * You will have to destroy them using the `destroy` method.

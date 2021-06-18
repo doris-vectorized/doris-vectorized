@@ -256,47 +256,32 @@ public:
     size_t getNumberOfArguments() const override { return 0; }
 
     DataTypePtr getReturnTypeImpl(const ColumnsWithTypeAndName& arguments) const override {
-        if (arguments.size() != 2 && arguments.size() != 3)
-            throw Exception("Number of arguments for function " + get_name() +
-                                    " doesn't match: passed " + std::to_string(arguments.size()) +
-                                    ", should be 2 or 3",
-                            ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
-
-        if (arguments.size() == 2) {
-            if (!isDateOrDateTime(arguments[0].type))
-                throw Exception{"Illegal type " + arguments[0].type->get_name() +
-                                        " of argument of function " + get_name() +
-                                        ". Should be a date or a date with time",
-                                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT};
-        } else {
-            if (!WhichDataType(arguments[0].type).isDateTime() ||
-                !WhichDataType(arguments[2].type).isString())
-                throw Exception("Function " + get_name() +
-                                        " supports 2 or 3 arguments. The 1st argument "
-                                        "must be of type Date or DateTime. The 2nd argument must "
-                                        "be number. "
-                                        "The 3rd argument (optional) must be "
-                                        "a constant string with timezone name. The timezone "
-                                        "argument is allowed "
-                                        "only when the 1st argument has the type DateTime",
-                                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        if (arguments.size() != 2 && arguments.size() != 3) {
+            LOG(FATAL) << fmt::format(
+                    "Number of arguments for function {} doesn't match: passed {} , should be 2 or "
+                    "3",
+                    get_name(), arguments.size());
         }
 
-        //        if (WhichDataType(arguments[0].type).isDate())
-        //        {
-        //            if (std::is_same_v<decltype(Transform::execute(DataTypeDate::FieldType(), 0, std::declval<DateLUTImpl>())), UInt16>)
-        //                return std::make_shared<DataTypeDate>();
-        //            else
-        //                return std::make_shared<DataTypeDateTime>(extractTimeZoneNameFromFunctionArguments(arguments, 2, 0));
-        //        }
-        //        else
-        //        {
-        //            if (std::is_same_v<decltype(Transform::execute(DataTypeDateTime::FieldType(), 0, std::declval<DateLUTImpl>())), UInt16>)
+        if (arguments.size() == 2) {
+            if (!isDateOrDateTime(arguments[0].type)) {
+                LOG(FATAL) << fmt::format(
+                        "Illegal type {} of argument of function {}. Should be a date or a date "
+                        "with time",
+                        arguments[0].type->get_name(), get_name());
+            }
+        } else {
+            if (!WhichDataType(arguments[0].type).isDateTime() ||
+                !WhichDataType(arguments[2].type).isString()) {
+                LOG(FATAL) << fmt::format(
+                        "Function {} supports 2 or 3 arguments. The 1st argument must be of type "
+                        "Date or DateTime. The 2nd argument must be number. The 3rd argument "
+                        "(optional) must be a constant string with timezone name. The timezone "
+                        "argument is allowed only when the 1st argument has the type DateTime", get_name());
+            }
+        }
+
         return std::make_shared<typename Transform::ReturnType>();
-        //            else
-        //                return std::make_shared<DataTypeDateTime>(extractTimeZoneNameFromFunctionArguments(arguments, 2, 0));
-        //          return std::make_shared<DataTypeDateTime>();
-        //        }
     }
 
     bool useDefaultImplementationForConstants() const override { return true; }

@@ -20,6 +20,7 @@
 #include <limits>
 #include <type_traits>
 
+#include "common/logging.h"
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_decimal.h"
 #include "vec/columns/column_nullable.h"
@@ -649,8 +650,8 @@ private:
         return false;
     }
 
-    void executeDecimal(Block& block, size_t result, const ColumnWithTypeAndName& col_left,
-                        const ColumnWithTypeAndName& col_right) {
+    Status executeDecimal(Block& block, size_t result, const ColumnWithTypeAndName& col_left,
+                          const ColumnWithTypeAndName& col_right) {
         TypeIndex left_number = col_left.type->getTypeId();
         TypeIndex right_number = col_right.type->getTypeId();
 
@@ -667,10 +668,12 @@ private:
             return true;
         };
 
-        if (!callOnBasicTypes<true, false, true, false>(left_number, right_number, call))
-            throw Exception("Wrong call for " + get_name() + " with " + col_left.type->get_name() +
-                                    " and " + col_right.type->get_name(),
-                            ErrorCodes::LOGICAL_ERROR);
+        if (!callOnBasicTypes<true, false, true, false>(left_number, right_number, call)) {
+            return Status::RuntimeError(fmt::format("Wrong call for {} with {} and {}", get_name(),
+                                                    col_left.type->get_name(),
+                                                    col_right.type->get_name()));
+        }
+        return Status::OK();
     }
 
     bool executeString(Block& block, size_t result, const IColumn* c0, const IColumn* c1) {
@@ -704,10 +707,9 @@ private:
             //                c0_const_chars = &c0_const_fixed_string->get_chars();
             //                c0_const_size = c0_const_fixed_string->getN();
             //            }
-            else
-                throw Exception(
-                        "Logical error: ColumnConst contains not String nor FixedString column",
-                        ErrorCodes::ILLEGAL_COLUMN);
+            else {
+                CHECK(false) << "Logical error: ColumnConst contains not String nor FixedString column";
+            }
         }
 
         if (c1_const) {
@@ -724,10 +726,9 @@ private:
             //                c1_const_chars = &c1_const_fixed_string->get_chars();
             //                c1_const_size = c1_const_fixed_string->getN();
             //            }
-            else
-                throw Exception(
-                        "Logical error: ColumnConst contains not String nor FixedString column",
-                        ErrorCodes::ILLEGAL_COLUMN);
+            else {
+                CHECK(false) << "Logical error: ColumnConst contains not String nor FixedString column";
+            }
         }
 
         using StringImpl = StringComparisonImpl<Op<int, int>>;
@@ -780,12 +781,11 @@ private:
             //            else if (c0_const && c1_fixed_string)
             //                StringImpl::constant_fixed_string_vector(
             //                    *c0_const_chars, c0_const_size,
-            //                    c1_fixed_string->get_chars(), c1_fixed_string->getN(),
-            //                    c_res->get_data());
-            else
-                throw Exception("Illegal columns " + c0->get_name() + " and " + c1->get_name() +
-                                " of arguments of function " + get_name(),
-                                ErrorCodes::ILLEGAL_COLUMN);
+            //                    c1_fixed_string->getChars(), c1_fixed_string->getN(),
+            //                    c_res->getData());
+            else {
+                CHECK(false) << fmt::format("Illegal columns {} and {} of arguments of function {}", c0->get_name(), c1->get_name(), get_name());
+            }
 
             block.getByPosition(result).column = std::move(c_res);
             return true;
@@ -818,7 +818,7 @@ private:
         }
     }
 
-    void executeGeneric(Block& block, size_t result, const ColumnWithTypeAndName& c0,
+    Status executeGeneric(Block& block, size_t result, const ColumnWithTypeAndName& c0,
                         const ColumnWithTypeAndName& c1) {
         DataTypePtr common_type = getLeastSupertype({c0.type, c1.type});
         // TODO: Support full castColumn
@@ -829,6 +829,7 @@ private:
         ColumnPtr c1_converted = castColumnNullable(c1, common_type);
 
         executeGenericIdenticalTypes(block, result, c0_converted.get(), c1_converted.get());
+        return Status::OK();
     }
 
 private:
@@ -949,22 +950,19 @@ public:
                   executeNumLeftType<Int128>(block, result, col_left_untyped, col_right_untyped) ||
                   executeNumLeftType<Float32>(block, result, col_left_untyped, col_right_untyped) ||
                   executeNumLeftType<Float64>(block, result, col_left_untyped, col_right_untyped)))
-                throw Exception("Illegal column " + col_left_untyped->get_name() +
-                                " of first argument of function " + get_name(),
-                                ErrorCodes::ILLEGAL_COLUMN);
-        }
-        //        else if (checkAndGetDataType<DataTypeTuple>(left_type.get()))
-        //        {
-        //            executeTuple(block, result, col_with_type_and_name_left, col_with_type_and_name_right, input_rows_count);
-        //        }
-        else if (isDecimal(left_type) || isDecimal(right_type)) {
-            if (!allowDecimalComparison(left_type, right_type))
-                throw Exception("No operation " + get_name() + " between " + left_type->get_name() +
-                                        " and " + right_type->get_name(),
-                                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
-            executeDecimal(block, result, col_with_type_and_name_left,
-                           col_with_type_and_name_right);
+                return Status::RuntimeError(
+                        fmt::format("Illegal column {} of first argument of function {}",
+                                    col_left_untyped->get_name(), get_name()));
+        } else if (isDecimal(left_type) || isDecimal(right_type)) {
+            if (!allowDecimalComparison(left_type, right_type)) {
+                return Status::RuntimeError(fmt::format("No operation {} between {} and {}",
+                                                        get_name(), left_type->get_name(),
+                                                        right_type->get_name()));
+            }
+
+            return executeDecimal(block, result, col_with_type_and_name_left,
+                                  col_with_type_and_name_right);
         }
         //        else if (!left_is_num && !right_is_num && executeString(block, result, col_left_untyped, col_right_untyped))
         //        {
@@ -980,7 +978,7 @@ public:
         //        {
         //        }
         else {
-            executeGeneric(block, result, col_with_type_and_name_left,
+            return executeGeneric(block, result, col_with_type_and_name_left,
                            col_with_type_and_name_right);
         }
         return Status::OK();
