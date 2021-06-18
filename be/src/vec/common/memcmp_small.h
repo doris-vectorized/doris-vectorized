@@ -20,8 +20,6 @@
 #include <algorithm>
 #include <cstdint>
 
-#include "vec/core/defines.h"
-
 namespace detail {
 
 template <typename T>

@@ -1,40 +1,39 @@
 //#include "vec/functions/function_factory.h"
-#include "vec/functions/simple_function_factory.h"
 #include "vec/functions/function_binary_arithmetic.h"
+#include "vec/functions/simple_function_factory.h"
 
-namespace doris::vectorized
-{
+namespace doris::vectorized {
 
 template <typename A, typename B>
-struct DivideFloatingImpl
-{
+struct DivideFloatingImpl {
     using ResultType = typename NumberTraits::ResultOfFloatingPointDivision<A, B>::Type;
     static const constexpr bool allow_decimal = true;
 
     template <typename Result = ResultType>
-    static inline NO_SANITIZE_UNDEFINED Result apply(A a, B b)
-    {
+    static inline Result apply(A a, B b) {
         return static_cast<Result>(a) / b;
     }
 
 #if USE_EMBEDDED_COMPILER
     static constexpr bool compilable = true;
 
-    static inline llvm::Value * compile(llvm::IRBuilder<> & b, llvm::Value * left, llvm::Value * right, bool)
-    {
+    static inline llvm::Value* compile(llvm::IRBuilder<>& b, llvm::Value* left, llvm::Value* right,
+                                       bool) {
         if (left->getType()->isIntegerTy())
-            throw Exception("DivideFloatingImpl expected a floating-point type", ErrorCodes::LOGICAL_ERROR);
+            throw Exception("DivideFloatingImpl expected a floating-point type",
+                            ErrorCodes::LOGICAL_ERROR);
         return b.CreateFDiv(left, right);
     }
 #endif
 };
 
-struct NameDivide { static constexpr auto name = "divide"; };
+struct NameDivide {
+    static constexpr auto name = "divide";
+};
 using FunctionDivide = FunctionBinaryArithmetic<DivideFloatingImpl, NameDivide>;
 
-void registerFunctionDivide(SimpleFunctionFactory & factory)
-{
+void registerFunctionDivide(SimpleFunctionFactory& factory) {
     factory.registerFunction<FunctionDivide>();
 }
 
-}
+} // namespace doris::vectorized

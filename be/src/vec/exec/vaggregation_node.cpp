@@ -282,20 +282,22 @@ Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
 
         if (in_block.rows() != 0) {
             RETURN_IF_ERROR(_executor.pre_agg(&in_block, block));
-            return Status::OK();
         } else {
-            return _executor.get_result(state, block, eos);
+            RETURN_IF_ERROR(_executor.get_result(state, block, eos));
+        }
+    } else {
+        RETURN_IF_ERROR(_executor.get_result(state, block, eos));
+        // dispose the having clause, should not be execute in prestreaming agg
+        if (_vconjunct_ctx_ptr) {
+            int result_column_id = -1;
+            int orig_columns = block->columns();
+            (*_vconjunct_ctx_ptr)->execute(block, &result_column_id);
+            Block::filter_block(block, result_column_id, orig_columns);
         }
     }
 
-    RETURN_IF_ERROR(_executor.get_result(state, block, eos));
-    // dispose the having clause, should not be execute in prestreaming agg
-    if (_vconjunct_ctx_ptr) {
-        int result_column_id = -1;
-        int orig_columns = block->columns();
-        (*_vconjunct_ctx_ptr)->execute(block, &result_column_id);
-        Block::filter_block(block, result_column_id, orig_columns);
-    }
+    _num_rows_returned += block->rows();
+    COUNTER_SET(_rows_returned_counter, _num_rows_returned);
     return Status::OK();
 }
 
@@ -489,6 +491,7 @@ bool AggregationNode::_should_expand_preagg_hash_tables() {
 
 Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* in_block,
                                                      doris::vectorized::Block* out_block) {
+    SCOPED_TIMER(_build_timer);
     DCHECK(!_probe_expr_ctxs.empty());
     // now we only support serialized key
     // TODO:
@@ -600,6 +603,7 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
 }
 
 Status AggregationNode::_execute_with_serialized_key(Block* block) {
+    SCOPED_TIMER(_build_timer);
     DCHECK(!_probe_expr_ctxs.empty());
     // now we only support serialized key
     // TODO:

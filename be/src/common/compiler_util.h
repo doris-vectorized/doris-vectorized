@@ -45,8 +45,9 @@
 #ifdef ALWAYS_INLINE
 #undef ALWAYS_INLINE
 #endif
-
 #define ALWAYS_INLINE __attribute__((always_inline))
+#define NO_INLINE __attribute__((__noinline__))
+#define MAY_ALIAS __attribute__((__may_alias__))
 
 #define ALIGN_CACHE_LINE __attribute__((aligned(CACHE_LINE_SIZE)))
 
