@@ -17,6 +17,8 @@
 
 #include "vec/data_types/data_type.h"
 
+#include "fmt/format.h"
+#include "common/logging.h"
 #include "vec/columns/column.h"
 #include "vec/columns/column_const.h"
 #include "vec/common/exception.h"
@@ -77,13 +79,11 @@ size_t IDataType::getSizeOfValueInMemory() const {
 }
 
 void IDataType::to_string(const IColumn& column, size_t row_num, BufferWritable& ostr) const {
-    throw Exception("Data type " + getName() + "to_string not implement.",
-                    ErrorCodes::NOT_IMPLEMENTED);
+    LOG(FATAL) << fmt::format("Data type {} to_string not implement.", getName());
 }
 
 std::string IDataType::to_string(const IColumn& column, size_t row_num) const {
-    throw Exception("Data type " + getName() + "to_string not implement.",
-                    ErrorCodes::NOT_IMPLEMENTED);
+    LOG(FATAL) << fmt::format("Data type {} to_string not implement.", getName());
 }
 
 void IDataType::insertDefaultInto(IColumn& column) const {

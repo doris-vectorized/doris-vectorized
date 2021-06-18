@@ -205,7 +205,6 @@ private:
 
             buf = mmap(getMmapHint(), size, PROT_READ | PROT_WRITE, mmap_flags, -1, 0);
             if (MAP_FAILED == buf)
-                // doris::vectorized::throwFromErrno("Allocator: Cannot mmap " + std::to_string(size) + ".", doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
                 doris::vectorized::throwFromErrno(
                         fmt::format("Allocator: Cannot mmap {}.", size),
                         doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
