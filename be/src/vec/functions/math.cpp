@@ -164,7 +164,7 @@ using FunctionCeil = FunctionMathUnary<UnaryFunctionVectorized<CeilName, std::ce
 template <typename A>
 struct SignImpl {
     using ResultType = Float32;
-    static inline NO_SANITIZE_UNDEFINED ResultType apply(A a) {
+    static inline ResultType apply(A a) {
         if constexpr (IsDecimalNumber<A> || std::is_floating_point_v<A>)
             return static_cast<ResultType>(a < A(0) ? -1 : a == A(0) ? 0 : 1);
         else if constexpr (std::is_signed_v<A>)
@@ -184,7 +184,7 @@ struct AbsImpl {
     using ResultType =
             std::conditional_t<IsDecimalNumber<A>, A, typename NumberTraits::ResultOfAbs<A>::Type>;
 
-    static inline NO_SANITIZE_UNDEFINED ResultType apply(A a) {
+    static inline ResultType apply(A a) {
         if constexpr (IsDecimalNumber<A>)
             return a < 0 ? A(-a) : a;
         else if constexpr (std::is_integral_v<A> && std::is_signed_v<A>)
@@ -206,7 +206,7 @@ template <typename A>
 struct NegativeImpl {
     using ResultType = A;
 
-    static inline NO_SANITIZE_UNDEFINED ResultType apply(A a) {
+    static inline ResultType apply(A a) {
         if constexpr (IsDecimalNumber<A>)
             return a > 0 ? A(-a) : a;
         else if constexpr (std::is_integral_v<A> && std::is_signed_v<A>)
@@ -228,7 +228,7 @@ template <typename A>
 struct PositiveImpl {
     using ResultType = A;
 
-    static inline NO_SANITIZE_UNDEFINED ResultType apply(A a) { return static_cast<ResultType>(a); }
+    static inline ResultType apply(A a) { return static_cast<ResultType>(a); }
 };
 
 struct NamePositive {

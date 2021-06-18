@@ -33,8 +33,8 @@
 #include <string>
 #include <type_traits>
 
+#include "common/compiler_util.h"
 #include "vec/common/unaligned.h"
-#include "vec/core/defines.h"
 #include "vec/core/types.h"
 
 #define ROTL(x, b) static_cast<doris::vectorized::UInt64>(((x) << (b)) | ((x) >> (64 - (b))))

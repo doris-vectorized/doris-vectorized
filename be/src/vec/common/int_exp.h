@@ -20,11 +20,9 @@
 #include <cstdint>
 #include <limits>
 
-#include "vec/core/defines.h"
-
 /// On overlow, the function returns unspecified value.
 
-inline NO_SANITIZE_UNDEFINED uint64_t intExp2(int x) {
+inline uint64_t intExp2(int x) {
     return 1ULL << x;
 }
 
