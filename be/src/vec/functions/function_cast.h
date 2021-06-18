@@ -70,9 +70,10 @@ inline UInt32 extractToDecimalScale(const ColumnWithTypeAndName& named_column) {
               checkAndGetDataType<DataTypeUInt32>(arg_type) ||
               checkAndGetDataType<DataTypeUInt16>(arg_type) ||
               checkAndGetDataType<DataTypeUInt8>(arg_type);
-    if (!ok)
-        throw Exception("Illegal type of toDecimal() scale " + named_column.type->get_name(),
-                        ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+    if (!ok) {
+        LOG(FATAL) << fmt::format("Illegal type of toDecimal() scale {}",
+                                  named_column.type->get_name());
+    }
 
     Field field;
     named_column.column->get(0, field);
@@ -88,10 +89,9 @@ struct ConvertImpl {
     using ToFieldType = typename ToDataType::FieldType;
 
     template <typename Additions = void*>
-    static Status  execute(Block& block, const ColumnNumbers& arguments,
-                                                size_t result, size_t /*input_rows_count*/,
-                                                Additions additions
-                                                [[maybe_unused]] = Additions()) {
+    static Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
+                          size_t /*input_rows_count*/,
+                          Additions additions [[maybe_unused]] = Additions()) {
         const ColumnWithTypeAndName& named_from = block.get_by_position(arguments[0]);
 
         using ColVecFrom =
@@ -108,7 +108,8 @@ struct ConvertImpl {
                                     named_from.column->get_name(), Name::name));
         }
 
-        if (const ColVecFrom* col_from = check_and_get_column<ColVecFrom>(named_from.column.get())) {
+        if (const ColVecFrom* col_from =
+                    check_and_get_column<ColVecFrom>(named_from.column.get())) {
             typename ColVecTo::MutablePtr col_to = nullptr;
             if constexpr (IsDataTypeDecimal<ToDataType>) {
                 UInt32 scale = additions;
@@ -150,10 +151,11 @@ struct ConvertImpl {
             }
 
             block.get_by_position(result).column = std::move(col_to);
-        } else
-            throw Exception("Illegal column " + named_from.column->get_name() +
-                            " of first argument of function " + Name::name,
-                            ErrorCodes::ILLEGAL_COLUMN);
+        } else {
+            return Status::RuntimeError(
+                    fmt::format("Illegal column {} of first argument of function {}",
+                                named_from.column->get_name(), Name::name));
+        }
         return Status::OK();
     }
 };
@@ -176,8 +178,8 @@ struct ConvertImplToTimeType {
     using FromFieldType = typename FromDataType::FieldType;
     using ToFieldType = typename ToDataType::FieldType;
 
-    static Status execute(Block& block, const ColumnNumbers& arguments,
-                                                size_t result, size_t /*input_rows_count*/) {
+    static Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
+                          size_t /*input_rows_count*/) {
         const ColumnWithTypeAndName& named_from = block.get_by_position(arguments[0]);
 
         using ColVecFrom =
@@ -185,7 +187,8 @@ struct ConvertImplToTimeType {
                                    ColumnVector<FromFieldType>>;
         using ColVecTo = ColumnVector<Int128>;
 
-        if (const ColVecFrom* col_from = check_and_get_column<ColVecFrom>(named_from.column.get())) {
+        if (const ColVecFrom* col_from =
+                    check_and_get_column<ColVecFrom>(named_from.column.get())) {
             const auto& vec_from = col_from->get_data();
             size_t size = vec_from.size();
 
@@ -395,7 +398,8 @@ struct ToNumberMonotonicity {
         const size_t size_of_from = type.getSizeOfValueInMemory();
         const size_t size_of_to = sizeof(T);
 
-        const bool left_in_first_half = left.is_null() ? from_is_unsigned : (left.get<Int64>() >= 0);
+        const bool left_in_first_half =
+                left.is_null() ? from_is_unsigned : (left.get<Int64>() >= 0);
 
         const bool right_in_first_half =
                 right.is_null() ? !from_is_unsigned : (right.get<Int64>() >= 0);
@@ -571,9 +575,9 @@ private:
 
             bool done = call_on_index_and_data_type<ToDataType>(from_type->getTypeId(), call);
             if (!done) {
-                ret_status = Status::RuntimeError(
-                        fmt::format("Illegal type {} of argument of function {}",
-                                    block.get_by_position(arguments[0]).type->get_name(), get_name()));
+                ret_status = Status::RuntimeError(fmt::format(
+                        "Illegal type {} of argument of function {}",
+                        block.get_by_position(arguments[0]).type->get_name(), get_name()));
             }
             return ret_status;
         }
@@ -890,9 +894,10 @@ public:
             //            else if constexpr (std::is_same_v<ToDataType, DataTypeDecimal<Decimal128>>)
             res = createDecimal(27, 9);
 
-            if (!res)
-                throw Exception("Someting wrong with toDecimalNNOrZero() or toDecimalNNOrNull()",
-                                ErrorCodes::LOGICAL_ERROR);
+            if (!res) {
+                LOG(FATAL) << "Someting wrong with toDecimalNNOrZero() or toDecimalNNOrNull()";
+            }
+
         } else
             res = std::make_shared<ToDataType>();
 
@@ -988,9 +993,9 @@ public:
 
         bool done = callOnIndexAndNumberDataType<ToDataType>(from_type->getTypeId(), call);
         if (!done) {
-            throw Exception("Illegal type " + block.get_by_position(arguments[0]).type->get_name() +
-                            " of argument of function " + get_name(),
-                            ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+            return Status::RuntimeError(
+                    fmt::format("Illegal type {} of argument of function {}",
+                                block.get_by_position(arguments[0]).type->get_name(), get_name()));
         }
 
         return ret_status;
@@ -1087,10 +1092,11 @@ private:
         WhichDataType which(type_index);
         bool ok = which.isNativeInt() || which.isNativeUInt() || which.isDecimal() ||
                   which.isFloat() || which.isDateOrDateTime() || which.isStringOrFixedString();
-        if (!ok)
-            throw Exception{"Conversion from " + from_type->get_name() + " to " +
-                                    to_type->get_name() + " is not supported",
-                            ErrorCodes::CANNOT_CONVERT_TYPE};
+        if (!ok) {
+            LOG(FATAL) << fmt::format(
+                    "Conversion from {} to {} to_type->get_name() is not supported",
+                    from_type->get_name(), to_type->get_name());
+        }
 
         if (which.isStringOrFixedString()) {
             auto function =
@@ -1107,8 +1113,8 @@ private:
 
         return [type_index, precision, scale](Block& block, const ColumnNumbers& arguments,
                                               const size_t result, size_t input_rows_count) {
-            auto res =
-                    call_on_index_and_data_type<ToDataType>(type_index, [&](const auto &types) -> bool {
+            auto res = call_on_index_and_data_type<ToDataType>(
+                    type_index, [&](const auto& types) -> bool {
                         using Types = std::decay_t<decltype(types)>;
                         using LeftDataType = typename Types::LeftType;
                         using RightDataType = typename Types::RightType;
@@ -1121,9 +1127,8 @@ private:
             /// Additionally check if call_on_index_and_data_type wasn't called at all.
             if (!res) {
                 auto to = DataTypeDecimal<FieldType>(precision, scale);
-                throw Exception{"Conversion from " + std::string(getTypeName(type_index)) + " to " +
-                                        to.get_name() + " is not supported",
-                                ErrorCodes::CANNOT_CONVERT_TYPE};
+                return Status::RuntimeError(fmt::format("Conversion from {} to {} is not supported",
+                                                        getTypeName(type_index), to.get_name()));
             }
             return Status::OK();
         };
@@ -1154,15 +1159,15 @@ private:
         const auto& to_nested = to_type;
 
         if (from_type->only_null()) {
-            if (!to_nested->is_nullable())
-                throw Exception{"Cannot convert NULL to a non-nullable type",
-                                ErrorCodes::CANNOT_CONVERT_TYPE};
+            if (!to_nested->is_nullable()) {
+                LOG(FATAL) << "Cannot convert NULL to a non-nullable type";
+            }
 
             return [](Block& block, const ColumnNumbers&, const size_t result,
                       size_t input_rows_count) {
                 auto& res = block.get_by_position(result);
                 res.column = res.type->createColumnConstWithDefaultValue(input_rows_count)
-                        ->convert_to_full_column_if_const();
+                                     ->convert_to_full_column_if_const();
                 return Status::OK();
             };
         }
@@ -1299,7 +1304,8 @@ private:
             return false;
         };
 
-        if (call_on_index_and_data_type<void>(to_type->getTypeId(), make_default_wrapper)) return ret;
+        if (call_on_index_and_data_type<void>(to_type->getTypeId(), make_default_wrapper))
+            return ret;
 
         switch (to_type->getTypeId()) {
         case TypeIndex::String:
@@ -1318,9 +1324,9 @@ private:
             break;
         }
 
-        throw Exception{"Conversion from " + from_type->get_name() + " to " + to_type->get_name() +
-                                " is not supported",
-                        ErrorCodes::CANNOT_CONVERT_TYPE};
+        LOG(FATAL) << fmt::format("Conversion from {} to {} is not supported",
+                                  from_type->get_name(), to_type->get_name());
+        return WrapperType{};
     }
 };
 
