@@ -550,13 +550,13 @@ vectorized::Block RowBatch::convert_to_vec_block() const {
             TupleRow* src_row = get_row(j);
             auto tuple = src_row->get_tuple(tuple_idx[i]);
             if (slot_desc->is_nullable() && tuple->is_null(slot_desc->null_indicator_offset())) {
-                columns[i]->insertData(nullptr, 0);
+                columns[i]->insert_data(nullptr, 0);
             } else if (slot_desc->type().is_string_type()) {
                 auto string_value =
                         static_cast<const StringValue*>(tuple->get_slot(slot_desc->tuple_offset()));
-                columns[i]->insertData(string_value->ptr, string_value->len);
+                columns[i]->insert_data(string_value->ptr, string_value->len);
             } else {
-                columns[i]->insertData(
+                columns[i]->insert_data(
                         static_cast<const char*>(tuple->get_slot(slot_desc->tuple_offset())),
                         slot_desc->slot_size());
             }

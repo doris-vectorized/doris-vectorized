@@ -124,7 +124,7 @@ public:
     size_t bytes() const;
 
     /// Approximate number of allocated bytes in memory - for profiling and limits.
-    size_t allocatedBytes() const;
+    size_t allocated_bytes() const;
 
     operator bool() const { return !!columns(); }
     bool operator!() const { return !this->operator bool(); }
@@ -223,7 +223,7 @@ public:
                 if (block.getByPosition(i).column) {
                     _columns[i] =
                             (*std::move(
-                                     block.getByPosition(i).column->convertToFullColumnIfConst()))
+                                    block.getByPosition(i).column->convert_to_full_column_if_const()))
                                     .mutate();
                 } else {
                     _columns[i] = _data_types[i]->createColumn();
@@ -231,8 +231,8 @@ public:
             }
         } else {
             for (int i = 0; i < _columns.size(); ++i) {
-                _columns[i]->insertRangeFrom(
-                        *block.getByPosition(i).column->convertToFullColumnIfConst().get(), 0,
+                _columns[i]->insert_range_from(
+                        *block.getByPosition(i).column->convert_to_full_column_if_const().get(), 0,
                         block.rows());
             }
         }
@@ -245,7 +245,7 @@ public:
                 if (block.getByPosition(i).column) {
                     _columns[i] =
                             (*std::move(
-                                     block.getByPosition(i).column->convertToFullColumnIfConst()))
+                                    block.getByPosition(i).column->convert_to_full_column_if_const()))
                                     .mutate();
                 } else {
                     _columns[i] = _data_types[i]->createColumn();
@@ -253,8 +253,8 @@ public:
             }
         } else {
             for (int i = 0; i < _columns.size(); ++i) {
-                _columns[i]->insertRangeFrom(
-                        *block.getByPosition(i).column->convertToFullColumnIfConst().get(), 0,
+                _columns[i]->insert_range_from(
+                        *block.getByPosition(i).column->convert_to_full_column_if_const().get(), 0,
                         block.rows());
             }
         }

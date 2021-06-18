@@ -32,7 +32,7 @@ AggregateFunctionPtr createAggregateFunctionAvg(const std::string & name, const 
         res.reset(createWithNumericType<AggregateFuncAvg>(*data_type, argument_types));
 
     if (!res)
-        throw Exception("Illegal type " + argument_types[0]->getName() + " of argument for aggregate function " + name,
+        throw Exception("Illegal type " + argument_types[0]->get_name() + " of argument for aggregate function " + name,
                         ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
     return res;
 }

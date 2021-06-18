@@ -230,9 +230,9 @@ public:
     template <typename U>
     T operator()(const DecimalField<U>& x) const {
         if constexpr (std::is_floating_point_v<T>)
-            return static_cast<T>(x.getValue()) / x.getScaleMultiplier();
+            return static_cast<T>(x.get_value()) / x.getScaleMultiplier();
         else
-            return x.getValue() / x.getScaleMultiplier();
+            return x.get_value() / x.getScaleMultiplier();
     }
 
     T operator()(const AggregateFunctionStateData&) const {
@@ -539,7 +539,7 @@ public:
     template <typename T>
     bool operator()(DecimalField<T>& x) const {
         x += get<DecimalField<T>>(rhs);
-        return x.getValue() != 0;
+        return x.get_value() != 0;
     }
 };
 

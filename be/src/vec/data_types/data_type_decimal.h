@@ -111,7 +111,7 @@ public:
                             ErrorCodes::ARGUMENT_OUT_OF_BOUND);
     }
 
-    const char* getFamilyName() const override { return "Decimal"; }
+    const char* get_family_name() const override { return "Decimal"; }
     std::string doGetName() const override;
     TypeIndex getTypeId() const override { return TypeId<T>::value; }
 
@@ -135,7 +135,7 @@ public:
 
     bool isSummable() const override { return true; }
     bool canBeUsedInBooleanContext() const override { return true; }
-    bool canBeInsideNullable() const override { return true; }
+    bool can_be_inside_nullable() const override { return true; }
     std::string to_string(const IColumn& column, size_t row_num) const;
     void to_string(const IColumn& column, size_t row_num, BufferWritable& ostr) const;
 
@@ -143,7 +143,7 @@ public:
     /// Decimal specific
 
     UInt32 getPrecision() const { return precision; }
-    UInt32 getScale() const { return scale; }
+    UInt32 get_scale() const { return scale; }
     T getScaleMultiplier() const { return getScaleMultiplier(scale); }
 
     T wholePart(T x) const {
@@ -168,10 +168,10 @@ public:
     /// @returns multiplier for U to become T with correct scale
     template <typename U>
     T scaleFactorFor(const DataTypeDecimal<U>& x, bool) const {
-        if (getScale() < x.getScale())
+        if (get_scale() < x.get_scale())
             throw Exception("Decimal result's scale is less then argiment's one",
                             ErrorCodes::ARGUMENT_OUT_OF_BOUND);
-        UInt32 scale_delta = getScale() - x.getScale(); /// scale_delta >= 0
+        UInt32 scale_delta = get_scale() - x.get_scale(); /// scale_delta >= 0
         return getScaleMultiplier(scale_delta);
     }
 
@@ -192,11 +192,11 @@ template <typename T, typename U>
 typename std::enable_if_t<(sizeof(T) >= sizeof(U)), const DataTypeDecimal<T>> decimalResultType(
         const DataTypeDecimal<T>& tx, const DataTypeDecimal<U>& ty, bool is_multiply,
         bool is_divide) {
-    UInt32 scale = (tx.getScale() > ty.getScale() ? tx.getScale() : ty.getScale());
+    UInt32 scale = (tx.get_scale() > ty.get_scale() ? tx.get_scale() : ty.get_scale());
     if (is_multiply)
-        scale = tx.getScale() + ty.getScale();
+        scale = tx.get_scale() + ty.get_scale();
     else if (is_divide)
-        scale = tx.getScale();
+        scale = tx.get_scale();
     return DataTypeDecimal<T>(maxDecimalPrecision<T>(), scale);
 }
 
@@ -204,24 +204,24 @@ template <typename T, typename U>
 typename std::enable_if_t<(sizeof(T) < sizeof(U)), const DataTypeDecimal<U>> decimalResultType(
         const DataTypeDecimal<T>& tx, const DataTypeDecimal<U>& ty, bool is_multiply,
         bool is_divide) {
-    UInt32 scale = (tx.getScale() > ty.getScale() ? tx.getScale() : ty.getScale());
+    UInt32 scale = (tx.get_scale() > ty.get_scale() ? tx.get_scale() : ty.get_scale());
     if (is_multiply)
-        scale = tx.getScale() * ty.getScale();
+        scale = tx.get_scale() * ty.get_scale();
     else if (is_divide)
-        scale = tx.getScale();
+        scale = tx.get_scale();
     return DataTypeDecimal<U>(maxDecimalPrecision<U>(), scale);
 }
 
 template <typename T, typename U>
 const DataTypeDecimal<T> decimalResultType(const DataTypeDecimal<T>& tx, const DataTypeNumber<U>&,
                                            bool, bool) {
-    return DataTypeDecimal<T>(maxDecimalPrecision<T>(), tx.getScale());
+    return DataTypeDecimal<T>(maxDecimalPrecision<T>(), tx.get_scale());
 }
 
 template <typename T, typename U>
 const DataTypeDecimal<U> decimalResultType(const DataTypeNumber<T>&, const DataTypeDecimal<U>& ty,
                                            bool, bool) {
-    return DataTypeDecimal<U>(maxDecimalPrecision<U>(), ty.getScale());
+    return DataTypeDecimal<U>(maxDecimalPrecision<U>(), ty.get_scale());
 }
 
 template <typename T>
@@ -231,9 +231,9 @@ inline const DataTypeDecimal<T>* checkDecimal(const IDataType& data_type) {
 
 inline UInt32 getDecimalScale(const IDataType& data_type,
                               UInt32 default_value = std::numeric_limits<UInt32>::max()) {
-    if (auto* decimal_type = checkDecimal<Decimal32>(data_type)) return decimal_type->getScale();
-    if (auto* decimal_type = checkDecimal<Decimal64>(data_type)) return decimal_type->getScale();
-    if (auto* decimal_type = checkDecimal<Decimal128>(data_type)) return decimal_type->getScale();
+    if (auto* decimal_type = checkDecimal<Decimal32>(data_type)) return decimal_type->get_scale();
+    if (auto* decimal_type = checkDecimal<Decimal64>(data_type)) return decimal_type->get_scale();
+    if (auto* decimal_type = checkDecimal<Decimal128>(data_type)) return decimal_type->get_scale();
     return default_value;
 }
 

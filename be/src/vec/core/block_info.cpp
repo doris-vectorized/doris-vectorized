@@ -36,13 +36,13 @@ void BlockInfo::write(WriteBuffer & out) const
 {
 /// Set of pairs `FIELD_NUM`, value in binary form. Then 0.
 #define WRITE_FIELD(TYPE, NAME, DEFAULT, FIELD_NUM) \
-    writeVarUInt(FIELD_NUM, out); \
-    writeBinary(NAME, out);
+    write_var_uint(FIELD_NUM, out); \
+    write_binary(NAME, out);
 
     APPLY_FOR_BLOCK_INFO_FIELDS(WRITE_FIELD)
 
 #undef WRITE_FIELD
-    writeVarUInt(0, out);
+    write_var_uint(0, out);
 }
 
 /// Read values in binary form.
@@ -52,7 +52,7 @@ void BlockInfo::read(ReadBuffer & in)
 
     while (true)
     {
-        readVarUInt(field_num, in);
+        read_var_uint(field_num, in);
         if (field_num == 0)
             break;
 
@@ -60,7 +60,7 @@ void BlockInfo::read(ReadBuffer & in)
         {
         #define READ_FIELD(TYPE, NAME, DEFAULT, FIELD_NUM) \
             case FIELD_NUM: \
-                readBinary(NAME, in); \
+                read_binary(NAME, in); \
                 break;
 
             APPLY_FOR_BLOCK_INFO_FIELDS(READ_FIELD)

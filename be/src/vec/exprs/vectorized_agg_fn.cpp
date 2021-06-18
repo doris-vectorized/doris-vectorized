@@ -77,7 +77,7 @@ Status AggFnEvaluator::prepare(RuntimeState* state, const RowDescriptor& desc, M
         // Now, For correctness. We have to treat each AggFn argument as nullable. which will cause execute slowly
         // TODO: RECHCK THE BEHAVIOR
         auto data_type = _input_exprs_ctxs[i]->root()->data_type();
-//        argument_types.emplace_back(data_type->isNullable() ? data_type : std::make_shared<DataTypeNullable>(data_type));
+//        argument_types.emplace_back(data_type->is_nullable() ? data_type : std::make_shared<DataTypeNullable>(data_type));
         argument_types.emplace_back(data_type);
         child_expr_name.emplace_back(_input_exprs_ctxs[i]->root()->expr_name());
     }
@@ -108,10 +108,10 @@ void AggFnEvaluator::destroy(AggregateDataPtr place) {
 
 void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place, Arena* arena) {
     auto columns = _get_argment_columns(block);
-    // Because the `convertToFullColumnIfConst()` may return a temporary variable, so we need keep the reference of it
+    // Because the `convert_to_full_column_if_const()` may return a temporary variable, so we need keep the reference of it
     // to make sure program do not destroy it before we call `addBatchSinglePlace`.
     // WARNING:
-    //      There's danger to call `convertToFullColumnIfConst().get()` to get the `const IColumn*` directly.
+    //      There's danger to call `convert_to_full_column_if_const().get()` to get the `const IColumn*` directly.
     std::vector<const IColumn*> column_arguments(columns.size());
     std::transform(columns.cbegin(), columns.cend(), column_arguments.begin(),
                    [](const auto& ptr) { return ptr.get(); });
@@ -122,10 +122,10 @@ void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place, Ar
 void AggFnEvaluator::execute_batch_add(Block* block, size_t offset, AggregateDataPtr* places,
                                        Arena* arena) {
     auto columns = _get_argment_columns(block);
-    // Because the `convertToFullColumnIfConst()` may return a temporary variable, so we need keep the reference of it
+    // Because the `convert_to_full_column_if_const()` may return a temporary variable, so we need keep the reference of it
     // to make sure program do not destroy it before we call `addBatchSinglePlace`.
     // WARNING:
-    //      There's danger to call `convertToFullColumnIfConst().get()` to get the `const IColumn*` directly.
+    //      There's danger to call `convert_to_full_column_if_const().get()` to get the `const IColumn*` directly.
     std::vector<const IColumn*> column_arguments(columns.size());
     std::transform(columns.cbegin(), columns.cend(), column_arguments.begin(),
                    [](const auto& ptr) { return ptr.get(); });
@@ -167,7 +167,7 @@ std::vector<ColumnPtr> AggFnEvaluator::_get_argment_columns(Block* block) const 
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
         int column_id = -1;
         _input_exprs_ctxs[i]->execute(block, &column_id);
-        auto ptr = block->getByPosition(column_id).column->convertToFullColumnIfConst();
+        auto ptr = block->getByPosition(column_id).column->convert_to_full_column_if_const();
         columns[i] = ptr;
     }
     return columns;

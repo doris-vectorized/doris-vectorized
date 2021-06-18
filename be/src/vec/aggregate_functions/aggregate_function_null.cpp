@@ -33,7 +33,7 @@ extern const int ILLEGAL_TYPE_OF_ARGUMENT;
 
 class AggregateFunctionCombinatorNull final : public IAggregateFunctionCombinator {
 public:
-    String getName() const override { return "Null"; }
+    String get_name() const override { return "Null"; }
 
     bool isForInternalUsageOnly() const override { return true; }
 
@@ -50,9 +50,9 @@ public:
         bool has_nullable_types = false;
         bool has_null_types = false;
         for (const auto& arg_type : arguments) {
-            if (arg_type->isNullable()) {
+            if (arg_type->is_nullable()) {
                 has_nullable_types = true;
-                if (arg_type->onlyNull()) {
+                if (arg_type->only_null()) {
                     has_null_types = true;
                     break;
                 }
@@ -67,12 +67,12 @@ public:
 
         /// Special case for 'count' function. It could be called with Nullable arguments
         /// - that means - count number of calls, when all arguments are not NULL.
-        if (nested_function && nested_function->getName() == "count")
+        if (nested_function && nested_function->get_name() == "count")
             return std::make_shared<AggregateFunctionCountNotNullUnary>(arguments[0], params);
 
         if (has_null_types) return std::make_shared<AggregateFunctionNothing>(arguments, params);
 
-        bool return_type_is_nullable = nested_function->getReturnType()->canBeInsideNullable();
+        bool return_type_is_nullable = nested_function->getReturnType()->can_be_inside_nullable();
 
         if (arguments.size() == 1) {
             if (return_type_is_nullable)

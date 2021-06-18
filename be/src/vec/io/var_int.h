@@ -27,71 +27,71 @@ extern const int ATTEMPT_TO_READ_AFTER_EOF;
 }
 
 /** Write UInt64 in variable length format (base128) NOTE Only up to 2^63 - 1 are supported. */
-void writeVarUInt(UInt64 x, std::ostream& ostr);
-char* writeVarUInt(UInt64 x, char* ostr);
+void write_var_uint(UInt64 x, std::ostream& ostr);
+char* write_var_uint(UInt64 x, char* ostr);
 
 /** Read UInt64, written in variable length format (base128) */
-void readVarUInt(UInt64& x, std::istream& istr);
-const char* readVarUInt(UInt64& x, const char* istr, size_t size);
+void read_var_uint(UInt64& x, std::istream& istr);
+const char* read_var_uint(UInt64& x, const char* istr, size_t size);
 
 /** Get the length of UInt64 in VarUInt format */
-size_t getLengthOfVarUInt(UInt64 x);
+size_t get_length_of_var_uint(UInt64 x);
 
 /** Get the Int64 length in VarInt format */
-size_t getLengthOfVarInt(Int64 x);
+size_t get_length_of_var_int(Int64 x);
 
 /** Write Int64 in variable length format (base128) */
 template <typename OUT>
-inline void writeVarInt(Int64 x, OUT& ostr) {
-    writeVarUInt(static_cast<UInt64>((x << 1) ^ (x >> 63)), ostr);
+inline void write_var_int(Int64 x, OUT& ostr) {
+        write_var_uint(static_cast<UInt64>((x << 1) ^ (x >> 63)), ostr);
 }
 
-inline char* writeVarInt(Int64 x, char* ostr) {
-    return writeVarUInt(static_cast<UInt64>((x << 1) ^ (x >> 63)), ostr);
+inline char* write_var_int(Int64 x, char* ostr) {
+    return write_var_uint(static_cast<UInt64>((x << 1) ^ (x >> 63)), ostr);
 }
 
 /** Read Int64, written in variable length format (base128) */
 template <typename IN>
-inline void readVarInt(Int64& x, IN& istr) {
-    readVarUInt(*reinterpret_cast<UInt64*>(&x), istr);
+inline void read_var_int(Int64& x, IN& istr) {
+        read_var_uint(*reinterpret_cast<UInt64 *>(&x), istr);
     x = (static_cast<UInt64>(x) >> 1) ^ -(x & 1);
 }
 
-inline const char* readVarInt(Int64& x, const char* istr, size_t size) {
-    const char* res = readVarUInt(*reinterpret_cast<UInt64*>(&x), istr, size);
+inline const char* read_var_int(Int64& x, const char* istr, size_t size) {
+    const char* res = read_var_uint(*reinterpret_cast<UInt64 *>(&x), istr, size);
     x = (static_cast<UInt64>(x) >> 1) ^ -(x & 1);
     return res;
 }
 
-inline void writeVarT(UInt64 x, std::ostream& ostr) {
-    writeVarUInt(x, ostr);
+inline void write_var_t(UInt64 x, std::ostream& ostr) {
+    write_var_uint(x, ostr);
 }
-inline void writeVarT(Int64 x, std::ostream& ostr) {
-    writeVarInt(x, ostr);
-}
-
-inline char* writeVarT(UInt64 x, char*& ostr) {
-    return writeVarUInt(x, ostr);
-}
-inline char* writeVarT(Int64 x, char*& ostr) {
-    return writeVarInt(x, ostr);
+inline void write_var_t(Int64 x, std::ostream& ostr) {
+    write_var_int(x, ostr);
 }
 
-inline void readVarT(UInt64& x, std::istream& istr) {
-    readVarUInt(x, istr);
+inline char* write_var_t(UInt64 x, char*& ostr) {
+    return write_var_uint(x, ostr);
 }
-inline void readVarT(Int64& x, std::istream& istr) {
-    readVarInt(x, istr);
-}
-
-inline const char* readVarT(UInt64& x, const char* istr, size_t size) {
-    return readVarUInt(x, istr, size);
-}
-inline const char* readVarT(Int64& x, const char* istr, size_t size) {
-    return readVarInt(x, istr, size);
+inline char* write_var_t(Int64 x, char*& ostr) {
+    return write_var_int(x, ostr);
 }
 
-inline void readVarUInt(UInt64& x, std::istream& istr) {
+inline void read_var_t(UInt64& x, std::istream& istr) {
+    read_var_uint(x, istr);
+}
+inline void read_var_t(Int64& x, std::istream& istr) {
+    read_var_int(x, istr);
+}
+
+inline const char* read_var_t(UInt64& x, const char* istr, size_t size) {
+    return read_var_uint(x, istr, size);
+}
+inline const char* read_var_t(Int64& x, const char* istr, size_t size) {
+    return read_var_int(x, istr, size);
+}
+
+inline void read_var_uint(UInt64& x, std::istream& istr) {
     x = 0;
     for (size_t i = 0; i < 9; ++i) {
         UInt64 byte = istr.get();
@@ -101,7 +101,7 @@ inline void readVarUInt(UInt64& x, std::istream& istr) {
     }
 }
 
-inline void writeVarUInt(UInt64 x, std::ostream& ostr) {
+inline void write_var_uint(UInt64 x, std::ostream& ostr) {
     for (size_t i = 0; i < 9; ++i) {
         uint8_t byte = x & 0x7F;
         if (x > 0x7F) byte |= 0x80;
@@ -113,7 +113,7 @@ inline void writeVarUInt(UInt64 x, std::ostream& ostr) {
     }
 }
 
-inline char* writeVarUInt(UInt64 x, char* ostr) {
+inline char* write_var_uint(UInt64 x, char* ostr) {
     for (size_t i = 0; i < 9; ++i) {
         uint8_t byte = x & 0x7F;
         if (x > 0x7F) byte |= 0x80;
@@ -128,29 +128,20 @@ inline char* writeVarUInt(UInt64 x, char* ostr) {
     return ostr;
 }
 
-inline size_t getLengthOfVarUInt(UInt64 x) {
-    return x < (1ULL << 7)
-                   ? 1
-                   : (x < (1ULL << 14)
-                              ? 2
-                              : (x < (1ULL << 21)
-                                         ? 3
-                                         : (x < (1ULL << 28)
-                                                    ? 4
-                                                    : (x < (1ULL << 35)
-                                                               ? 5
-                                                               : (x < (1ULL << 42)
-                                                                          ? 6
-                                                                          : (x < (1ULL << 49)
-                                                                                     ? 7
-                                                                                     : (x < (1ULL
-                                                                                             << 56)
-                                                                                                ? 8
-                                                                                                : 9)))))));
+inline size_t get_length_of_var_uint(UInt64 x) {
+    return x < (1ULL << 7) ? 1
+        : (x < (1ULL << 14) ? 2
+        : (x < (1ULL << 21) ? 3
+        : (x < (1ULL << 28) ? 4
+        : (x < (1ULL << 35) ? 5
+        : (x < (1ULL << 42) ? 6
+        : (x < (1ULL << 49) ? 7
+        : (x < (1ULL << 56) ? 8
+        : 9)))))));
 }
 
-inline size_t getLengthOfVarInt(Int64 x) {
-    return getLengthOfVarUInt(static_cast<UInt64>((x << 1) ^ (x >> 63)));
+inline size_t get_length_of_var_int(Int64 x) {
+    return get_length_of_var_uint(static_cast<UInt64>((x << 1) ^ (x >> 63)));
 }
 
 } // namespace doris::vectorized

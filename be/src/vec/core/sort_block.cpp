@@ -55,7 +55,7 @@ struct PartialSortingLess
     {
         for (ColumnsWithSortDescriptions::const_iterator it = columns.begin(); it != columns.end(); ++it)
         {
-            int res = it->second.direction * it->first->compareAt(a, b, *it->first, it->second.nulls_direction);
+            int res = it->second.direction * it->first->compare_at(a, b, *it->first, it->second.nulls_direction);
             if (res < 0)
                 return true;
             else if (res > 0)
@@ -80,10 +80,10 @@ struct PartialSortingLessWithCollation
             if (needCollation(it->first, it->second))
             {
                 const ColumnString & column_string = typeid_cast<const ColumnString &>(*it->first);
-                res = column_string.compareAtWithCollation(a, b, *it->first, *it->second.collator);
+                res = column_string.compare_at_with_collation(a, b, *it->first, *it->second.collator);
             }
             else
-                res = it->first->compareAt(a, b, *it->first, it->second.nulls_direction);
+                res = it->first->compare_at(a, b, *it->first, it->second.nulls_direction);
 
             res *= it->second.direction;
             if (res < 0)
@@ -113,10 +113,10 @@ void sortBlock(Block & block, const SortDescription & description, UInt64 limit)
 //        if (needCollation(column, description[0]))
 //        {
 //            const ColumnString & column_string = typeid_cast<const ColumnString &>(*column);
-//            column_string.getPermutationWithCollation(*description[0].collator, reverse, limit, perm);
+//            column_string.get_permutation_with_collation(*description[0].collator, reverse, limit, perm);
 //        }
 //        else
-            column->getPermutation(reverse, limit, description[0].nulls_direction, perm);
+        column->get_permutation(reverse, limit, description[0].nulls_direction, perm);
 
         size_t columns = block.columns();
         for (size_t i = 0; i < columns; ++i)

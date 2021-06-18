@@ -31,7 +31,7 @@ extern const int PARAMETER_OUT_OF_BOUND;
 extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
 } // namespace ErrorCodes
 
-MutableColumnPtr ColumnString::cloneResized(size_t to_size) const {
+MutableColumnPtr ColumnString::clone_resized(size_t to_size) const {
     auto res = ColumnString::create();
     if (to_size == 0) return res;
 
@@ -66,16 +66,16 @@ MutableColumnPtr ColumnString::cloneResized(size_t to_size) const {
     return res;
 }
 
-void ColumnString::insertRangeFrom(const IColumn& src, size_t start, size_t length) {
+void ColumnString::insert_range_from(const IColumn& src, size_t start, size_t length) {
     if (length == 0) return;
 
     const ColumnString& src_concrete = assert_cast<const ColumnString&>(src);
 
     if (start + length > src_concrete.offsets.size())
-        throw Exception("Parameter out of bound in IColumnString::insertRangeFrom method.",
+        throw Exception("Parameter out of bound in IColumnString::insert_range_from method.",
                         ErrorCodes::PARAMETER_OUT_OF_BOUND);
 
-    size_t nested_offset = src_concrete.offsetAt(start);
+    size_t nested_offset = src_concrete.offset_at(start);
     size_t nested_length = src_concrete.offsets[start + length - 1] - nested_offset;
 
     size_t old_chars_size = chars.size();
@@ -103,7 +103,7 @@ ColumnPtr ColumnString::filter(const Filter& filt, ssize_t result_size_hint) con
     Chars& res_chars = res->chars;
     Offsets& res_offsets = res->offsets;
 
-    filterArraysImpl<UInt8>(chars, offsets, res_chars, res_offsets, filt, result_size_hint);
+    filter_arrays_impl<UInt8>(chars, offsets, res_chars, res_offsets, filt, result_size_hint);
     return res;
 }
 
@@ -130,7 +130,7 @@ ColumnPtr ColumnString::permute(const Permutation& perm, size_t limit) const {
         res_chars.resize(chars.size());
     else {
         size_t new_chars_size = 0;
-        for (size_t i = 0; i < limit; ++i) new_chars_size += sizeAt(perm[i]);
+        for (size_t i = 0; i < limit; ++i) new_chars_size += size_at(perm[i]);
         res_chars.resize(new_chars_size);
     }
 
@@ -153,9 +153,9 @@ ColumnPtr ColumnString::permute(const Permutation& perm, size_t limit) const {
     return res;
 }
 
-StringRef ColumnString::serializeValueIntoArena(size_t n, Arena& arena, char const*& begin) const {
-    size_t string_size = sizeAt(n);
-    size_t offset = offsetAt(n);
+StringRef ColumnString::serialize_value_into_arena(size_t n, Arena& arena, char const*& begin) const {
+    size_t string_size = size_at(n);
+    size_t offset = offset_at(n);
 
     StringRef res;
     res.size = sizeof(string_size) + string_size;
@@ -167,7 +167,7 @@ StringRef ColumnString::serializeValueIntoArena(size_t n, Arena& arena, char con
     return res;
 }
 
-const char* ColumnString::deserializeAndInsertFromArena(const char* pos) {
+const char* ColumnString::deserialize_and_insert_from_arena(const char* pos) {
     const size_t string_size = unalignedLoad<size_t>(pos);
     pos += sizeof(string_size);
 
@@ -182,11 +182,11 @@ const char* ColumnString::deserializeAndInsertFromArena(const char* pos) {
 
 //ColumnPtr ColumnString::index(const IColumn & indexes, size_t limit) const
 //{
-//    return selectIndexImpl(*this, indexes, limit);
+//    return select_index_impl(*this, indexes, limit);
 //}
 
 template <typename Type>
-ColumnPtr ColumnString::indexImpl(const PaddedPODArray<Type>& indexes, size_t limit) const {
+ColumnPtr ColumnString::index_impl(const PaddedPODArray<Type>& indexes, size_t limit) const {
     if (limit == 0) return ColumnString::create();
 
     auto res = ColumnString::create();
@@ -195,7 +195,7 @@ ColumnPtr ColumnString::indexImpl(const PaddedPODArray<Type>& indexes, size_t li
     Offsets& res_offsets = res->offsets;
 
     size_t new_chars_size = 0;
-    for (size_t i = 0; i < limit; ++i) new_chars_size += sizeAt(indexes[i]);
+    for (size_t i = 0; i < limit; ++i) new_chars_size += size_at(indexes[i]);
     res_chars.resize(new_chars_size);
 
     res_offsets.resize(limit);
@@ -223,14 +223,14 @@ struct ColumnString::less {
     explicit less(const ColumnString& parent_) : parent(parent_) {}
     bool operator()(size_t lhs, size_t rhs) const {
         int res = memcmpSmallAllowOverflow15(
-                parent.chars.data() + parent.offsetAt(lhs), parent.sizeAt(lhs) - 1,
-                parent.chars.data() + parent.offsetAt(rhs), parent.sizeAt(rhs) - 1);
+                parent.chars.data() + parent.offset_at(lhs), parent.size_at(lhs) - 1,
+                parent.chars.data() + parent.offset_at(rhs), parent.size_at(rhs) - 1);
 
         return positive ? (res < 0) : (res > 0);
     }
 };
 
-void ColumnString::getPermutation(bool reverse, size_t limit, int /*nan_direction_hint*/,
+void ColumnString::get_permutation(bool reverse, size_t limit, int /*nan_direction_hint*/,
                                   Permutation& res) const {
     size_t s = offsets.size();
     res.resize(s);
@@ -299,7 +299,7 @@ void ColumnString::reserve(size_t n) {
     offsets.reserve(n);
 }
 
-void ColumnString::getExtremes(Field& min, Field& max) const {
+void ColumnString::get_extremes(Field& min, Field& max) const {
     min = String();
     max = String();
 
@@ -323,13 +323,13 @@ void ColumnString::getExtremes(Field& min, Field& max) const {
     get(max_idx, max);
 }
 
-int ColumnString::compareAtWithCollation(size_t n, size_t m, const IColumn& rhs_,
+int ColumnString::compare_at_with_collation(size_t n, size_t m, const IColumn& rhs_,
                                          const Collator& collator) const {
     const ColumnString& rhs = assert_cast<const ColumnString&>(rhs_);
 
-    return collator.compare(reinterpret_cast<const char*>(&chars[offsetAt(n)]), sizeAt(n),
-                            reinterpret_cast<const char*>(&rhs.chars[rhs.offsetAt(m)]),
-                            rhs.sizeAt(m));
+    return collator.compare(reinterpret_cast<const char*>(&chars[offset_at(n)]), size_at(n),
+                            reinterpret_cast<const char*>(&rhs.chars[rhs.offset_at(m)]),
+                            rhs.size_at(m));
 }
 
 template <bool positive>
@@ -342,16 +342,16 @@ struct ColumnString::lessWithCollation {
 
     bool operator()(size_t lhs, size_t rhs) const {
         int res =
-                collator.compare(reinterpret_cast<const char*>(&parent.chars[parent.offsetAt(lhs)]),
-                                 parent.sizeAt(lhs),
-                                 reinterpret_cast<const char*>(&parent.chars[parent.offsetAt(rhs)]),
-                                 parent.sizeAt(rhs));
+                collator.compare(reinterpret_cast<const char*>(&parent.chars[parent.offset_at(lhs)]),
+                                 parent.size_at(lhs),
+                                 reinterpret_cast<const char*>(&parent.chars[parent.offset_at(rhs)]),
+                                 parent.size_at(rhs));
 
         return positive ? (res < 0) : (res > 0);
     }
 };
 
-void ColumnString::getPermutationWithCollation(const Collator& collator, bool reverse, size_t limit,
+void ColumnString::get_permutation_with_collation(const Collator& collator, bool reverse, size_t limit,
                                                Permutation& res) const {
     size_t s = offsets.size();
     res.resize(s);
@@ -375,8 +375,8 @@ void ColumnString::getPermutationWithCollation(const Collator& collator, bool re
 }
 
 void ColumnString::protect() {
-    getChars().protect();
-    getOffsets().protect();
+    get_chars().protect();
+    get_offsets().protect();
 }
 
 } // namespace doris::vectorized

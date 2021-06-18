@@ -29,13 +29,13 @@ struct AggregateFunctionAvgData {
     }
 
     void write(std::ostream& buf) const {
-        writeBinary(sum, buf);
+        write_binary(sum, buf);
         writeBinary(count, buf);
     }
 
     void read(std::istream& buf) {
-        readBinary(sum, buf);
-        readBinary(count, buf);
+        read_binary(sum, buf);
+        read_binary(count, buf);
     }
 };
 
@@ -63,7 +63,7 @@ public:
                                                                                 {}),
               scale(getDecimalScale(data_type)) {}
 
-    String getName() const override { return "avg"; }
+    String get_name() const override { return "avg"; }
 
     DataTypePtr getReturnType() const override {
         if constexpr (IsDecimalNumber<T>)
@@ -75,7 +75,7 @@ public:
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
         const auto& column = static_cast<const ColVecType&>(*columns[0]);
-        this->data(place).sum += column.getData()[row_num];
+        this->data(place).sum += column.get_data()[row_num];
         ++this->data(place).count;
     }
 
@@ -94,7 +94,7 @@ public:
 
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
         auto& column = static_cast<ColVecResult&>(to);
-        column.getData().push_back(this->data(place).template result<ResultType>());
+        column.get_data().push_back(this->data(place).template result<ResultType>());
     }
 
     const char* getHeaderFilePath() const override { return __FILE__; }

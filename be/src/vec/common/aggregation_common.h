@@ -73,16 +73,16 @@ packFixed(size_t i, size_t keys_size, const ColumnRawPtrs& key_columns, const Si
             if (const IColumn* positions = (*low_cardinality_positions)[j]) {
                 switch ((*low_cardinality_sizes)[j]) {
                 case sizeof(UInt8):
-                    index = assert_cast<const ColumnUInt8*>(positions)->getElement(i);
+                    index = assert_cast<const ColumnUInt8*>(positions)->get_element(i);
                     break;
                 case sizeof(UInt16):
-                    index = assert_cast<const ColumnUInt16*>(positions)->getElement(i);
+                    index = assert_cast<const ColumnUInt16*>(positions)->get_element(i);
                     break;
                 case sizeof(UInt32):
-                    index = assert_cast<const ColumnUInt32*>(positions)->getElement(i);
+                    index = assert_cast<const ColumnUInt32*>(positions)->get_element(i);
                     break;
                 case sizeof(UInt64):
-                    index = assert_cast<const ColumnUInt64*>(positions)->getElement(i);
+                    index = assert_cast<const ColumnUInt64*>(positions)->get_element(i);
                     break;
                 default:
                     throw Exception("Unexpected size of index type for low cardinality column.",
@@ -94,30 +94,30 @@ packFixed(size_t i, size_t keys_size, const ColumnRawPtrs& key_columns, const Si
         switch (key_sizes[j]) {
         case 1:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(column)->getRawDataBegin<1>() + index, 1);
+                   static_cast<const ColumnVectorHelper*>(column)->get_raw_data_begin<1>() + index, 1);
             offset += 1;
             break;
         case 2:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(column)->getRawDataBegin<2>() + index * 2,
+                   static_cast<const ColumnVectorHelper*>(column)->get_raw_data_begin<2>() + index * 2,
                    2);
             offset += 2;
             break;
         case 4:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(column)->getRawDataBegin<4>() + index * 4,
+                   static_cast<const ColumnVectorHelper*>(column)->get_raw_data_begin<4>() + index * 4,
                    4);
             offset += 4;
             break;
         case 8:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(column)->getRawDataBegin<8>() + index * 8,
+                   static_cast<const ColumnVectorHelper*>(column)->get_raw_data_begin<8>() + index * 8,
                    8);
             offset += 8;
             break;
         default:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(column)->getRawDataBegin<1>() +
+                   static_cast<const ColumnVectorHelper*>(column)->get_raw_data_begin<1>() +
                            index * key_sizes[j],
                    key_sizes[j]);
             offset += key_sizes[j];
@@ -163,34 +163,34 @@ static inline T ALWAYS_INLINE packFixed(size_t i, size_t keys_size,
         switch (key_sizes[j]) {
         case 1:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(key_columns[j])->getRawDataBegin<1>() + i,
+                   static_cast<const ColumnVectorHelper*>(key_columns[j])->get_raw_data_begin<1>() + i,
                    1);
             offset += 1;
             break;
         case 2:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(key_columns[j])->getRawDataBegin<2>() +
+                   static_cast<const ColumnVectorHelper*>(key_columns[j])->get_raw_data_begin<2>() +
                            i * 2,
                    2);
             offset += 2;
             break;
         case 4:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(key_columns[j])->getRawDataBegin<4>() +
+                   static_cast<const ColumnVectorHelper*>(key_columns[j])->get_raw_data_begin<4>() +
                            i * 4,
                    4);
             offset += 4;
             break;
         case 8:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(key_columns[j])->getRawDataBegin<8>() +
+                   static_cast<const ColumnVectorHelper*>(key_columns[j])->get_raw_data_begin<8>() +
                            i * 8,
                    8);
             offset += 8;
             break;
         default:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(key_columns[j])->getRawDataBegin<1>() +
+                   static_cast<const ColumnVectorHelper*>(key_columns[j])->get_raw_data_begin<1>() +
                            i * key_sizes[j],
                    key_sizes[j]);
             offset += key_sizes[j];
@@ -206,7 +206,7 @@ static inline UInt128 ALWAYS_INLINE hash128(size_t i, size_t keys_size,
     UInt128 key;
     SipHash hash;
 
-    for (size_t j = 0; j < keys_size; ++j) key_columns[j]->updateHashWithValue(i, hash);
+    for (size_t j = 0; j < keys_size; ++j) key_columns[j]->update_hash_with_value(i, hash);
 
     hash.get128(key.low, key.high);
 
@@ -237,7 +237,7 @@ static inline StringRef ALWAYS_INLINE serializeKeysToPoolContiguous(
 
     size_t sum_size = 0;
     for (size_t j = 0; j < keys_size; ++j)
-        sum_size += key_columns[j]->serializeValueIntoArena(i, pool, begin).size;
+        sum_size += key_columns[j]->serialize_value_into_arena(i, pool, begin).size;
 
     return {begin, sum_size};
 }
