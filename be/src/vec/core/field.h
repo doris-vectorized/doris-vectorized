@@ -339,20 +339,14 @@ public:
     template <typename T>
     T& safeGet() {
         const Types::Which requested = TypeToEnum<std::decay_t<T>>::value;
-        if (which != requested)
-            throw Exception("Bad get: has " + std::string(getTypeName()) + ", requested " +
-                                    std::string(Types::toString(requested)),
-                            ErrorCodes::BAD_GET);
+        CHECK_EQ(which, requested) << fmt::format("Bad get: has {}, requested {}",getTypeName(), Types::toString(requested));
         return get<T>();
     }
 
     template <typename T>
     const T& safeGet() const {
         const Types::Which requested = TypeToEnum<std::decay_t<T>>::value;
-        if (which != requested)
-            throw Exception("Bad get: has " + std::string(getTypeName()) + ", requested " +
-                                    std::string(Types::toString(requested)),
-                            ErrorCodes::BAD_GET);
+        CHECK_EQ(which, requested) << fmt::format("Bad get: has {}, requested {}",getTypeName(), Types::toString(requested));
         return get<T>();
     }
 
@@ -462,7 +456,7 @@ public:
             return get<AggregateFunctionStateData>() == rhs.get<AggregateFunctionStateData>();
         }
 
-        throw Exception("Bad type of Field", ErrorCodes::BAD_TYPE_OF_FIELD);
+        CHECK(false) << "Bad type of Field";
     }
 
     bool operator!=(const Field& rhs) const { return !(*this == rhs); }
@@ -914,44 +908,4 @@ std::enable_if_t<!std::is_same_v<std::decay_t<T>, Field>, Field&> Field::operato
 class ReadBuffer;
 class WriteBuffer;
 
-/// It is assumed that all elements of the array have the same type.
-void readBinary(Array& x, ReadBuffer& buf);
-
-[[noreturn]] inline void readText(Array&, ReadBuffer&) {
-    throw Exception("Cannot read Array.", ErrorCodes::NOT_IMPLEMENTED);
-}
-[[noreturn]] inline void readQuoted(Array&, ReadBuffer&) {
-    throw Exception("Cannot read Array.", ErrorCodes::NOT_IMPLEMENTED);
-}
-
-/// It is assumed that all elements of the array have the same type.
-/// Also write size and type into buf. UInt64 and Int64 is written in variadic size form
-void writeBinary(const Array& x, WriteBuffer& buf);
-
-void writeText(const Array& x, WriteBuffer& buf);
-
-[[noreturn]] inline void writeQuoted(const Array&, WriteBuffer&) {
-    throw Exception("Cannot write Array quoted.", ErrorCodes::NOT_IMPLEMENTED);
-}
-
-void readBinary(Tuple& x, ReadBuffer& buf);
-void readBinary(Tuple& x, std::istream& buf);
-
-[[noreturn]] inline void readText(Tuple&, ReadBuffer&) {
-    throw Exception("Cannot read Tuple.", ErrorCodes::NOT_IMPLEMENTED);
-}
-[[noreturn]] inline void readQuoted(Tuple&, ReadBuffer&) {
-    throw Exception("Cannot read Tuple.", ErrorCodes::NOT_IMPLEMENTED);
-}
-
-void writeBinary(const Tuple& x, WriteBuffer& buf);
-void writeBinary(const Tuple& x, std::ostream& buf);
-
-void writeText(const Tuple& x, WriteBuffer& buf);
-
-void writeFieldText(const Field& x, WriteBuffer& buf);
-
-[[noreturn]] inline void writeQuoted(const Tuple&, WriteBuffer&) {
-    throw Exception("Cannot write Tuple quoted.", ErrorCodes::NOT_IMPLEMENTED);
-}
 } // namespace doris::vectorized
