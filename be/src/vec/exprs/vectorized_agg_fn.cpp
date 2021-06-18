@@ -34,7 +34,8 @@ AggFnEvaluator::AggFnEvaluator(const TExprNode& desc)
           _intermediate_slot_desc(nullptr),
           _output_slot_desc(nullptr),
           _exec_timer(nullptr),
-          _merge_timer(nullptr) {}
+          _merge_timer(nullptr),
+          _expr_timer(nullptr) {}
 
 Status AggFnEvaluator::create(ObjectPool* pool, const TExpr& desc, AggFnEvaluator** result) {
     *result = pool->add(new AggFnEvaluator(desc.nodes[0]));
@@ -161,6 +162,7 @@ std::string AggFnEvaluator::debug_string() const {
 }
 
 std::vector<ColumnPtr> AggFnEvaluator::_get_argment_columns(Block* block) const {
+    SCOPED_TIMER(_expr_timer);
     std::vector<ColumnPtr> columns(_input_exprs_ctxs.size());
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
         int column_id = -1;

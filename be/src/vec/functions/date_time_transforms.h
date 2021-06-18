@@ -23,6 +23,7 @@
 #include "vec/common/exception.h"
 #include "vec/core/types.h"
 #include "vec/functions/function_helpers.h"
+#include "util/binary_cast.hpp"
 //#include "vec/functions/extract_time_zone_from_function_arguments.h>
 
 namespace doris::vectorized {
@@ -300,10 +301,9 @@ struct ToDateImpl {
     static constexpr auto name = "to_date";
 
     static inline auto execute(const Int128& t) {
-        auto res = t;
-        auto& dt = (doris::DateTimeValue&)(res);
+        auto dt = binary_cast<Int128, doris::DateTimeValue>(t);
         dt.cast_to_date();
-        return res;
+        return binary_cast<doris::DateTimeValue, Int128>(dt);
     }
 };
 struct DateImpl : public ToDateImpl {

@@ -15,12 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// #include <vec/AggregateFunctions/AggregateFunctionFactory.h>
 #include "vec/aggregate_functions/aggregate_function_sum.h"
 
+#include "common/logging.h"
+#include "fmt/format.h"
 #include "vec/aggregate_functions/aggregate_function_simple_factory.h"
 #include "vec/aggregate_functions/helpers.h"
-// #include <vec/AggregateFunctions/FactoryHelpers.h>
 
 namespace doris::vectorized {
 
@@ -72,21 +72,13 @@ AggregateFunctionPtr createAggregateFunctionSum(const std::string& name,
     else
         res.reset(createWithNumericType<Function>(*data_type, argument_types));
 
-    if (!res)
-        throw Exception("Illegal type " + argument_types[0]->getName() +
-                                " of argument for aggregate function " + name,
-                        ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+    if (!res) {
+        LOG(WARNING) << fmt::format("Illegal type {} of argument for aggregate function {}", argument_types[0]->getName(), name);
+    }
     return res;
 }
 
 } // namespace
-
-// void registerAggregateFunctionSum(AggregateFunctionFactory & factory)
-// {
-//     factory.registerFunction("sum", createAggregateFunctionSum<AggregateFunctionSumSimple>, AggregateFunctionFactory::CaseInsensitive);
-//     factory.registerFunction("sumWithOverflow", createAggregateFunctionSum<AggregateFunctionSumWithOverflow>);
-//     factory.registerFunction("sumKahan", createAggregateFunctionSum<AggregateFunctionSumKahan>);
-// }
 
 void registerAggregateFunctionSum(AggregateFunctionSimpleFactory& factory) {
     factory.registerFunction("sum", createAggregateFunctionSum<AggregateFunctionSumSimple>);
