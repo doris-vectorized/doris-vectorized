@@ -78,8 +78,8 @@ public:
     DecimalComparison(Block& block, size_t result, const ColumnWithTypeAndName& col_left,
                       const ColumnWithTypeAndName& col_right) {
         if (!apply(block, result, col_left, col_right))
-            throw Exception("Wrong decimal comparison with " + col_left.type->getName() + " and " +
-                                    col_right.type->getName(),
+            throw Exception("Wrong decimal comparison with " + col_left.type->get_name() + " and " +
+                                    col_right.type->get_name(),
                             ErrorCodes::LOGICAL_ERROR);
     }
 
@@ -174,42 +174,42 @@ private:
         auto c_res = ColumnUInt8::create();
 
         if constexpr (_actual) {
-            bool c0_is_const = isColumnConst(*c0);
-            bool c1_is_const = isColumnConst(*c1);
+            bool c0_is_const = is_column_const(*c0);
+            bool c1_is_const = is_column_const(*c1);
 
             if (c0_is_const && c1_is_const) {
                 const ColumnConst* c0_const = checkAndGetColumnConst<ColVecA>(c0.get());
                 const ColumnConst* c1_const = checkAndGetColumnConst<ColVecB>(c1.get());
 
-                A a = c0_const->template getValue<A>();
-                B b = c1_const->template getValue<B>();
+                A a = c0_const->template get_value<A>();
+                B b = c1_const->template get_value<B>();
                 UInt8 res = apply<scale_left, scale_right>(a, b, scale);
                 return DataTypeUInt8().createColumnConst(c0->size(), toField(res));
             }
 
-            ColumnUInt8::Container& vec_res = c_res->getData();
+            ColumnUInt8::Container& vec_res = c_res->get_data();
             vec_res.resize(c0->size());
 
             if (c0_is_const) {
                 const ColumnConst* c0_const = checkAndGetColumnConst<ColVecA>(c0.get());
-                A a = c0_const->template getValue<A>();
-                if (const ColVecB* c1_vec = checkAndGetColumn<ColVecB>(c1.get()))
-                    constant_vector<scale_left, scale_right>(a, c1_vec->getData(), vec_res, scale);
+                A a = c0_const->template get_value<A>();
+                if (const ColVecB* c1_vec = check_and_get_column<ColVecB>(c1.get()))
+                    constant_vector<scale_left, scale_right>(a, c1_vec->get_data(), vec_res, scale);
                 else
                     throw Exception("Wrong column in Decimal comparison",
                                     ErrorCodes::LOGICAL_ERROR);
             } else if (c1_is_const) {
                 const ColumnConst* c1_const = checkAndGetColumnConst<ColVecB>(c1.get());
-                B b = c1_const->template getValue<B>();
-                if (const ColVecA* c0_vec = checkAndGetColumn<ColVecA>(c0.get()))
-                    vector_constant<scale_left, scale_right>(c0_vec->getData(), b, vec_res, scale);
+                B b = c1_const->template get_value<B>();
+                if (const ColVecA* c0_vec = check_and_get_column<ColVecA>(c0.get()))
+                    vector_constant<scale_left, scale_right>(c0_vec->get_data(), b, vec_res, scale);
                 else
                     throw Exception("Wrong column in Decimal comparison",
                                     ErrorCodes::LOGICAL_ERROR);
             } else {
-                if (const ColVecA* c0_vec = checkAndGetColumn<ColVecA>(c0.get())) {
-                    if (const ColVecB* c1_vec = checkAndGetColumn<ColVecB>(c1.get()))
-                        vector_vector<scale_left, scale_right>(c0_vec->getData(), c1_vec->getData(),
+                if (const ColVecA* c0_vec = check_and_get_column<ColVecA>(c0.get())) {
+                    if (const ColVecB* c1_vec = check_and_get_column<ColVecB>(c1.get()))
+                        vector_vector<scale_left, scale_right>(c0_vec->get_data(), c1_vec->get_data(),
                                                                vec_res, scale);
                     else
                         throw Exception("Wrong column in Decimal comparison",

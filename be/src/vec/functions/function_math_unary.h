@@ -33,7 +33,7 @@ public:
     static FunctionPtr create() { return std::make_shared<FunctionMathUnary>(); }
 
 private:
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 1; }
 
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
@@ -81,11 +81,11 @@ private:
 
     template <typename T, typename ReturnType>
     static bool execute(Block& block, const ColumnVector<T>* col, const size_t result) {
-        const auto& src_data = col->getData();
+        const auto& src_data = col->get_data();
         const size_t size = src_data.size();
 
         auto dst = ColumnVector<ReturnType>::create();
-        auto& dst_data = dst->getData();
+        auto& dst_data = dst->get_data();
         dst_data.resize(size);
 
         executeInIterations(src_data.data(), dst_data.data(), size);
@@ -96,12 +96,12 @@ private:
 
     template <typename T, typename ReturnType>
     static bool execute(Block& block, const ColumnDecimal<T>* col, const size_t result) {
-        const auto& src_data = col->getData();
+        const auto& src_data = col->get_data();
         const size_t size = src_data.size();
-        UInt32 scale = src_data.getScale();
+        UInt32 scale = src_data.get_scale();
 
         auto dst = ColumnVector<ReturnType>::create();
-        auto& dst_data = dst->getData();
+        auto& dst_data = dst->get_data();
         dst_data.resize(size);
 
         for (size_t i = 0; i < size; ++i)
@@ -128,13 +128,13 @@ private:
             using ColVecType = std::conditional_t<IsDecimalNumber<Type>, ColumnDecimal<Type>,
                                                   ColumnVector<Type>>;
 
-            const auto col_vec = checkAndGetColumn<ColVecType>(col.column.get());
+            const auto col_vec = check_and_get_column<ColVecType>(col.column.get());
             return execute<Type, ReturnType>(block, col_vec, result);
         };
 
         if (!callOnBasicType<void, true, true, true, false>(col.type->getTypeId(), call)) {
-            return Status::InvalidArgument("Illegal column " + col.column->getName() +
-                                           " of argument of function " + getName());
+            return Status::InvalidArgument("Illegal column " + col.column->get_name() +
+                                           " of argument of function " + get_name());
         }
         return Status::OK();
     }

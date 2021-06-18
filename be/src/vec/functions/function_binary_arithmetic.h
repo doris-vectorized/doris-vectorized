@@ -118,7 +118,7 @@ struct ModuloImpl;
 /// Binary operations for Decimals need scale args
 /// +|- scale one of args (which scale factor is not 1). ScaleR = oneof(Scale1, Scale2);
 /// *   no agrs scale. ScaleR = Scale1 + Scale2;
-/// /   first arg scale. ScaleR = Scale1 (scale_a = DecimalType<B>::getScale()).
+/// /   first arg scale. ScaleR = Scale1 (scale_a = DecimalType<B>::get_scale()).
 template <typename A, typename B, template <typename, typename> typename Operation,
           typename ResultType_, bool _check_overflow = true>
 struct DecimalBinaryOperation {
@@ -499,7 +499,7 @@ class FunctionBinaryArithmetic : public IFunction {
     //            return {};
     //
     //        if (interval_arg == 0 && function_is_minus)
-    //            throw Exception("Wrong order of arguments for function " + getName() + ": argument of type Interval cannot be first.",
+    //            throw Exception("Wrong order of arguments for function " + get_name() + ": argument of type Interval cannot be first.",
     //                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
 
     //        const DataTypeDate * date_data_type = checkAndGetDataType<DataTypeDate>(interval_arg == 0 ? type1.get() : type0.get());
@@ -508,7 +508,7 @@ class FunctionBinaryArithmetic : public IFunction {
     //        {
     //            date_time_data_type = checkAndGetDataType<DataTypeDateTime>(interval_arg == 0 ? type1.get() : type0.get());
     //            if (!date_time_data_type)
-    //                throw Exception("Wrong argument types for function " + getName() + ": if one argument is Interval, then another must be Date or DateTime.",
+    //                throw Exception("Wrong argument types for function " + get_name() + ": if one argument is Interval, then another must be Date or DateTime.",
     //                    ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
     //        }
     //
@@ -544,14 +544,14 @@ class FunctionBinaryArithmetic : public IFunction {
     //        if (WhichDataType(block.getByPosition(new_arguments[1]).type).isAggregateFunction())
     //            std::swap(new_arguments[0], new_arguments[1]);
     //
-    //        if (!isColumnConst(*block.getByPosition(new_arguments[1]).column))
-    //            throw Exception{"Illegal column " + block.getByPosition(new_arguments[1]).column->getName()
+    //        if (!is_column_const(*block.getByPosition(new_arguments[1]).column))
+    //            throw Exception{"Illegal column " + block.getByPosition(new_arguments[1]).column->get_name()
     //                + " of argument of aggregation state multiply. Should be integer constant", ErrorCodes::ILLEGAL_COLUMN};
     //
     //        const IColumn & agg_state_column = *block.getByPosition(new_arguments[0]).column;
-    //        bool agg_state_is_const = isColumnConst(agg_state_column);
+    //        bool agg_state_is_const = is_column_const(agg_state_column);
     //        const ColumnAggregateFunction & column = typeid_cast<const ColumnAggregateFunction &>(
-    //            agg_state_is_const ? assert_cast<const ColumnConst &>(agg_state_column).getDataColumn() : agg_state_column);
+    //            agg_state_is_const ? assert_cast<const ColumnConst &>(agg_state_column).get_data_column() : agg_state_column);
     //
     //        AggregateFunctionPtr function = column.getAggregateFunction();
     //
@@ -566,14 +566,14 @@ class FunctionBinaryArithmetic : public IFunction {
     //
     //        for (size_t i = 0; i < size; ++i)
     //        {
-    //            column_to->insertDefault();
-    //            column_from->insertFrom(column.getData()[i]);
+    //            column_to->insert_default();
+    //            column_from->insert_from(column.get_data()[i]);
     //        }
     //
-    //        auto & vec_to = column_to->getData();
-    //        auto & vec_from = column_from->getData();
+    //        auto & vec_to = column_to->get_data();
+    //        auto & vec_from = column_from->get_data();
     //
-    //        UInt64 m = typeid_cast<const ColumnConst *>(block.getByPosition(new_arguments[1]).column.get())->getValue<UInt64>();
+    //        UInt64 m = typeid_cast<const ColumnConst *>(block.getByPosition(new_arguments[1]).column.get())->get_value<UInt64>();
     //
     //        // Since we merge the function states by ourselves, we have to have an
     //        // Arena for this. Pass it to the resulting column so that the arena
@@ -611,13 +611,13 @@ class FunctionBinaryArithmetic : public IFunction {
     //        const IColumn & lhs_column = *block.getByPosition(arguments[0]).column;
     //        const IColumn & rhs_column = *block.getByPosition(arguments[1]).column;
     //
-    //        bool lhs_is_const = isColumnConst(lhs_column);
-    //        bool rhs_is_const = isColumnConst(rhs_column);
+    //        bool lhs_is_const = is_column_const(lhs_column);
+    //        bool rhs_is_const = is_column_const(rhs_column);
     //
     //        const ColumnAggregateFunction & lhs = typeid_cast<const ColumnAggregateFunction &>(
-    //            lhs_is_const ? assert_cast<const ColumnConst &>(lhs_column).getDataColumn() : lhs_column);
+    //            lhs_is_const ? assert_cast<const ColumnConst &>(lhs_column).get_data_column() : lhs_column);
     //        const ColumnAggregateFunction & rhs = typeid_cast<const ColumnAggregateFunction &>(
-    //            rhs_is_const ? assert_cast<const ColumnConst &>(rhs_column).getDataColumn() : rhs_column);
+    //            rhs_is_const ? assert_cast<const ColumnConst &>(rhs_column).get_data_column() : rhs_column);
     //
     //        AggregateFunctionPtr function = lhs.getAggregateFunction();
     //
@@ -628,8 +628,8 @@ class FunctionBinaryArithmetic : public IFunction {
     //
     //        for (size_t i = 0; i < size; ++i)
     //        {
-    //            column_to->insertFrom(lhs.getData()[lhs_is_const ? 0 : i]);
-    //            column_to->insertMergeFrom(rhs.getData()[rhs_is_const ? 0 : i]);
+    //            column_to->insert_from(lhs.get_data()[lhs_is_const ? 0 : i]);
+    //            column_to->insertMergeFrom(rhs.get_data()[rhs_is_const ? 0 : i]);
     //        }
     //
     //        if (lhs_is_const && rhs_is_const)
@@ -673,7 +673,7 @@ public:
     //        : context(context_),
     //        : check_decimal_overflow(decimalCheckArithmeticOverflow(context))
     {}
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
 
     size_t getNumberOfArguments() const override { return 2; }
 
@@ -691,7 +691,7 @@ public:
         //        {
         //            if (!arguments[0]->equals(*arguments[1]))
         //                throw Exception("Cannot add aggregate states of different functions: "
-        //                    + arguments[0]->getName() + " and " + arguments[1]->getName(), ErrorCodes::CANNOT_ADD_DIFFERENT_AGGREGATE_STATES);
+        //                    + arguments[0]->get_name() + " and " + arguments[1]->get_name(), ErrorCodes::CANNOT_ADD_DIFFERENT_AGGREGATE_STATES);
         //
         //            return arguments[0];
         //        }
@@ -739,13 +739,13 @@ public:
                             ResultDataType result_type =
                                     decimalResultType(left, right, is_multiply, is_division);
                             type_res = std::make_shared<ResultDataType>(result_type.getPrecision(),
-                                                                        result_type.getScale());
+                                                                        result_type.get_scale());
                         } else if constexpr (IsDataTypeDecimal<LeftDataType>)
                             type_res = std::make_shared<LeftDataType>(left.getPrecision(),
-                                                                      left.getScale());
+                                                                      left.get_scale());
                         else if constexpr (IsDataTypeDecimal<RightDataType>)
                             type_res = std::make_shared<RightDataType>(right.getPrecision(),
-                                                                       right.getScale());
+                                                                       right.get_scale());
                         else
                             type_res = std::make_shared<ResultDataType>();
                         return true;
@@ -753,9 +753,9 @@ public:
                     return false;
                 });
         if (!valid)
-            throw Exception("Illegal types " + arguments[0]->getName() + " and " +
-                                    arguments[1]->getName() + " of arguments of function " +
-                                    getName(),
+            throw Exception("Illegal types " + arguments[0]->get_name() + " and " +
+                                    arguments[1]->get_name() + " of arguments of function " +
+                                    get_name(),
                             ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
         return type_res;
     }
@@ -838,19 +838,19 @@ public:
                                         scale_a = right.getScaleMultiplier();
 
                                     auto res = OpImpl::constant_constant(
-                                            col_left->template getValue<T0>(),
-                                            col_right->template getValue<T1>(), scale_a, scale_b,
+                                            col_left->template get_value<T0>(),
+                                            col_right->template get_value<T1>(), scale_a, scale_b,
                                             check_decimal_overflow);
                                     block.getByPosition(result).column =
-                                            ResultDataType(type.getPrecision(), type.getScale())
+                                            ResultDataType(type.getPrecision(), type.get_scale())
                                                     .createColumnConst(
                                                             col_left->size(),
-                                                            toField(res, type.getScale()));
+                                                            toField(res, type.get_scale()));
 
                                 } else {
                                     auto res = OpImpl::constant_constant(
-                                            col_left->template getValue<T0>(),
-                                            col_right->template getValue<T1>());
+                                            col_left->template get_value<T0>(),
+                                            col_right->template get_value<T1>());
                                     block.getByPosition(result).column =
                                             ResultDataType().createColumnConst(col_left->size(),
                                                                                toField(res));
@@ -863,15 +863,15 @@ public:
                         if constexpr (result_is_decimal) {
                             ResultDataType type =
                                     decimalResultType(left, right, is_multiply, is_division);
-                            col_res = ColVecResult::create(0, type.getScale());
+                            col_res = ColVecResult::create(0, type.get_scale());
                         } else
                             col_res = ColVecResult::create();
 
-                        auto& vec_res = col_res->getData();
+                        auto& vec_res = col_res->get_data();
                         vec_res.resize(block.rows());
 
                         if (auto col_left_const = checkAndGetColumnConst<ColVecT0>(col_left_raw)) {
-                            if (auto col_right = checkAndGetColumn<ColVecT1>(col_right_raw)) {
+                            if (auto col_right = check_and_get_column<ColVecT1>(col_right_raw)) {
                                 if constexpr (result_is_decimal) {
                                     ResultDataType type = decimalResultType(
                                             left, right, is_multiply, is_division);
@@ -883,15 +883,15 @@ public:
                                     if constexpr (IsDataTypeDecimal<RightDataType> && is_division)
                                         scale_a = right.getScaleMultiplier();
 
-                                    OpImpl::constant_vector(col_left_const->template getValue<T0>(),
-                                                            col_right->getData(), vec_res, scale_a,
+                                    OpImpl::constant_vector(col_left_const->template get_value<T0>(),
+                                                            col_right->get_data(), vec_res, scale_a,
                                                             scale_b, check_decimal_overflow);
                                 } else
-                                    OpImpl::constant_vector(col_left_const->template getValue<T0>(),
-                                                            col_right->getData(), vec_res);
+                                    OpImpl::constant_vector(col_left_const->template get_value<T0>(),
+                                                            col_right->get_data(), vec_res);
                             } else
                                 return false;
-                        } else if (auto col_left = checkAndGetColumn<ColVecT0>(col_left_raw)) {
+                        } else if (auto col_left = check_and_get_column<ColVecT0>(col_left_raw)) {
                             if constexpr (result_is_decimal) {
                                 ResultDataType type =
                                         decimalResultType(left, right, is_multiply, is_division);
@@ -902,27 +902,27 @@ public:
                                         type.scaleFactorFor(right, is_multiply || is_division);
                                 if constexpr (IsDataTypeDecimal<RightDataType> && is_division)
                                     scale_a = right.getScaleMultiplier();
-                                if (auto col_right = checkAndGetColumn<ColVecT1>(col_right_raw)) {
-                                    OpImpl::vector_vector(col_left->getData(), col_right->getData(),
+                                if (auto col_right = check_and_get_column<ColVecT1>(col_right_raw)) {
+                                    OpImpl::vector_vector(col_left->get_data(), col_right->get_data(),
                                                           vec_res, scale_a, scale_b,
                                                           check_decimal_overflow);
                                 } else if (auto col_right_const = checkAndGetColumnConst<ColVecT1>(
                                                    col_right_raw)) {
                                     OpImpl::vector_constant(
-                                            col_left->getData(),
-                                            col_right_const->template getValue<T1>(), vec_res,
+                                            col_left->get_data(),
+                                            col_right_const->template get_value<T1>(), vec_res,
                                             scale_a, scale_b, check_decimal_overflow);
                                 } else
                                     return false;
                             } else {
-                                if (auto col_right = checkAndGetColumn<ColVecT1>(col_right_raw))
-                                    OpImpl::vector_vector(col_left->getData(), col_right->getData(),
+                                if (auto col_right = check_and_get_column<ColVecT1>(col_right_raw))
+                                    OpImpl::vector_vector(col_left->get_data(), col_right->get_data(),
                                                           vec_res);
                                 else if (auto col_right_const =
                                                  checkAndGetColumnConst<ColVecT1>(col_right_raw))
                                     OpImpl::vector_constant(
-                                            col_left->getData(),
-                                            col_right_const->template getValue<T1>(), vec_res);
+                                            col_left->get_data(),
+                                            col_right_const->template get_value<T1>(), vec_res);
                                 else
                                     return false;
                             }
@@ -935,7 +935,7 @@ public:
                     return false;
                 });
         if (!valid)
-            throw Exception(getName() + "'s arguments do not match the expected data types",
+            throw Exception(get_name() + "'s arguments do not match the expected data types",
                             ErrorCodes::LOGICAL_ERROR);
         return Status::OK();
     }

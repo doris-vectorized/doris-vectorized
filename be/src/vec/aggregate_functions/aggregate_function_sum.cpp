@@ -73,7 +73,7 @@ AggregateFunctionPtr createAggregateFunctionSum(const std::string& name,
         res.reset(createWithNumericType<Function>(*data_type, argument_types));
 
     if (!res) {
-        LOG(WARNING) << fmt::format("Illegal type {} of argument for aggregate function {}", argument_types[0]->getName(), name);
+        LOG(WARNING) << fmt::format("Illegal type {} of argument for aggregate function {}", argument_types[0]->get_name(), name);
     }
     return res;
 }

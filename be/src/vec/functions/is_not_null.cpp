@@ -33,7 +33,7 @@ public:
         return std::make_shared<FunctionIsNotNull>();
     }
 
-    std::string getName() const override
+    std::string get_name() const override
     {
         return name;
     }
@@ -51,12 +51,12 @@ public:
     Status executeImpl(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) override
     {
         const ColumnWithTypeAndName & elem = block.getByPosition(arguments[0]);
-        if (auto * nullable = checkAndGetColumn<ColumnNullable>(*elem.column))
+        if (auto * nullable = check_and_get_column<ColumnNullable>(*elem.column))
         {
             /// Return the negated null map.
             auto res_column = ColumnUInt8::create(input_rows_count);
-            const auto & src_data = nullable->getNullMapData();
-            auto & res_data = assert_cast<ColumnUInt8 &>(*res_column).getData();
+            const auto & src_data = nullable->get_null_map_data();
+            auto & res_data = assert_cast<ColumnUInt8 &>(*res_column).get_data();
 
             for (size_t i = 0; i < input_rows_count; ++i)
                 res_data[i] = !src_data[i];

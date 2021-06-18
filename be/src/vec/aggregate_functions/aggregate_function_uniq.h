@@ -37,7 +37,7 @@ struct AggregateFunctionUniqExactData {
 
     Set set;
 
-    static String getName() { return "uniqExact"; }
+    static String get_name() { return "uniqExact"; }
 };
 
 /// For rows, we put the SipHash values (128 bits) into the hash table.
@@ -51,7 +51,7 @@ struct AggregateFunctionUniqExactData<String> {
 
     Set set;
 
-    static String getName() { return "uniqExact"; }
+    static String get_name() { return "uniqExact"; }
 };
 
 namespace detail {
@@ -64,9 +64,9 @@ struct OneAdder {
     static void ALWAYS_INLINE add(Data& data, const IColumn& column, size_t row_num) {
         if constexpr (std::is_same_v<Data, AggregateFunctionUniqExactData<T>>) {
             if constexpr (!std::is_same_v<T, String>) {
-                data.set.insert(assert_cast<const ColumnVector<T>&>(column).getData()[row_num]);
+                data.set.insert(assert_cast<const ColumnVector<T>&>(column).get_data()[row_num]);
             } else {
-                StringRef value = column.getDataAt(row_num);
+                StringRef value = column.get_data_at(row_num);
 
                 UInt128 key;
                 SipHash hash;
@@ -90,7 +90,7 @@ public:
             : IAggregateFunctionDataHelper<Data, AggregateFunctionUniq<T, Data>>(argument_types_,
                                                                                  {}) {}
 
-    String getName() const override { return Data::getName(); }
+    String get_name() const override { return Data::get_name(); }
 
     DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
 
@@ -112,7 +112,7 @@ public:
     }
 
     void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
-        assert_cast<ColumnInt64&>(to).getData().push_back(this->data(place).set.size());
+        assert_cast<ColumnInt64&>(to).get_data().push_back(this->data(place).set.size());
     }
 
     const char* getHeaderFilePath() const override { return __FILE__; }

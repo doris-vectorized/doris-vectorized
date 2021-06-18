@@ -60,7 +60,7 @@ public:
         return std::make_shared<FunctionIn>();
     }
 
-    String getName() const override
+    String get_name() const override
     {
         return name;
     }
@@ -72,7 +72,7 @@ public:
 
     DataTypePtr getReturnTypeImpl(const DataTypes & /*arguments*/) const override
     {
-        return makeNullable(std::make_shared<DataTypeUInt8>());
+        return make_nullable(std::make_shared<DataTypeUInt8>());
     }
 
     bool useDefaultImplementationForNulls() const override { return false; }
@@ -85,20 +85,21 @@ public:
         ColumnPtr column_set_ptr = block.getByPosition(arguments[1]).column;
         const ColumnSet * column_set = typeid_cast<const ColumnSet *>(&*column_set_ptr);
         if (!column_set)
-            throw Exception("Second argument for function '" + getName() + "' must be Set; found " + column_set_ptr->getName(),
+            throw Exception("Second argument for function '" + get_name() + "' must be Set; found " +
+                                    column_set_ptr->get_name(),
                 ErrorCodes::ILLEGAL_COLUMN);
 
-        auto set = column_set->getData();
+        auto set = column_set->get_data();
         /// First argument may be a single column.
         const ColumnWithTypeAndName & left_arg = block.getByPosition(arguments[0]);
 
         auto res = ColumnUInt8::create();
-        ColumnUInt8::Container & vec_res = res->getData();
+        ColumnUInt8::Container & vec_res = res->get_data();
         vec_res.resize(left_arg.column->size());
 
         ColumnUInt8::MutablePtr col_null_map_to;
         col_null_map_to = ColumnUInt8::create(left_arg.column->size());
-        auto& vec_null_map_to = col_null_map_to->getData();
+        auto& vec_null_map_to = col_null_map_to->get_data();
 
        if (set->size() == 0) {
             if (negative)
@@ -106,17 +107,17 @@ public:
             else
                 memset(vec_res.data(), 0, vec_res.size());
         } else {
-           auto materialized_column = left_arg.column->convertToFullColumnIfConst();
+           auto materialized_column = left_arg.column->convert_to_full_column_if_const();
            auto size = materialized_column->size();
 
-           if (auto * nullable = checkAndGetColumn<ColumnNullable>(*materialized_column)) {
-               const auto& nested_column = nullable->getNestedColumn();
-               const auto& null_map = nullable->getNullMapColumn().getData();
+           if (auto * nullable = check_and_get_column<ColumnNullable>(*materialized_column)) {
+               const auto& nested_column = nullable->get_nested_column();
+               const auto& null_map = nullable->get_null_map_column().get_data();
 
                for (size_t i = 0; i < size; ++i) {
                    vec_null_map_to[i] = null_map[i];
                    if (null_map[i]) { continue;}
-                   const auto &ref_data = nested_column.getDataAt(i);
+                   const auto &ref_data = nested_column.get_data_at(i);
                    vec_res[i] = negative ^ set->find((void *) ref_data.data, ref_data.size);
                    if constexpr (null_in_set) {
                        vec_null_map_to[i] = negative == vec_res[i];
@@ -125,7 +126,7 @@ public:
            } else {
                /// For all rows
                for (size_t i = 0; i < size; ++i) {
-                   const auto &ref_data = materialized_column->getDataAt(i);
+                   const auto &ref_data = materialized_column->get_data_at(i);
                    vec_res[i] = negative ^ set->find((void *) ref_data.data, ref_data.size);
                    if constexpr (null_in_set) {
                        vec_null_map_to[i] = negative == vec_res[i];

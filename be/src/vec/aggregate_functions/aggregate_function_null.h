@@ -87,13 +87,13 @@ public:
             prefix_size = 0;
     }
 
-    String getName() const override {
+    String get_name() const override {
         /// This is just a wrapper. The function for Nullable arguments is named the same as the nested function itself.
-        return nested_function->getName();
+        return nested_function->get_name();
     }
 
     DataTypePtr getReturnType() const override {
-        return result_is_nullable ? makeNullable(nested_function->getReturnType())
+        return result_is_nullable ? make_nullable(nested_function->getReturnType())
                                   : nested_function->getReturnType();
     }
 
@@ -126,7 +126,7 @@ public:
 
     void deserialize(AggregateDataPtr place, std::istream& buf, Arena* arena) const override {
         bool flag = true;
-        if (result_is_nullable) readBinary(flag, buf);
+        if (result_is_nullable) read_binary(flag, buf);
         if (flag) {
             setFlag(place);
             nested_function->deserialize(nestedPlace(place), buf, arena);
@@ -138,10 +138,10 @@ public:
             ColumnNullable& to_concrete = assert_cast<ColumnNullable&>(to);
             if (getFlag(place)) {
                 nested_function->insertResultInto(nestedPlace(place),
-                                                  to_concrete.getNestedColumn());
-                to_concrete.getNullMapData().push_back(0);
+                                                  to_concrete.get_nested_column());
+                to_concrete.get_null_map_data().push_back(0);
             } else {
-                to_concrete.insertDefault();
+                to_concrete.insert_default();
             }
         } else {
             nested_function->insertResultInto(nestedPlace(place), to);
@@ -174,9 +174,9 @@ public:
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena* arena) const override {
         const ColumnNullable* column = assert_cast<const ColumnNullable*>(columns[0]);
-        if (!column->isNullAt(row_num)) {
+        if (!column->is_null_at(row_num)) {
             this->setFlag(place);
-            const IColumn* nested_column = &column->getNestedColumn();
+            const IColumn* nested_column = &column->get_nested_column();
             this->nested_function->add(this->nestedPlace(place), &nested_column, row_num, arena);
         }
     }
@@ -188,14 +188,14 @@ public:
 
         if (has_null) {
             for (size_t i = 0; i < batch_size; ++i) {
-                if (!column->isNullAt(i)) {
+                if (!column->is_null_at(i)) {
                     this->setFlag(place);
                     this->add(place, columns, i, arena);
                 }
             }
         } else {
             this->setFlag(place);
-            const IColumn* nested_column = &column->getNestedColumn();
+            const IColumn* nested_column = &column->get_nested_column();
             this->nested_function->addBatchSinglePlace(batch_size, this->nestedPlace(place),
                                                        &nested_column, arena);
         }
@@ -225,7 +225,7 @@ public:
                     ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
         for (size_t i = 0; i < number_of_arguments; ++i)
-            is_nullable[i] = arguments[i]->isNullable();
+            is_nullable[i] = arguments[i]->is_nullable();
     }
 
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
@@ -237,12 +237,12 @@ public:
             if (is_nullable[i]) {
                 const ColumnNullable& nullable_col =
                         assert_cast<const ColumnNullable&>(*columns[i]);
-                if (nullable_col.isNullAt(row_num)) {
+                if (nullable_col.is_null_at(row_num)) {
                     /// If at least one column has a null value in the current row,
                     /// we don't process this row.
                     return;
                 }
-                nested_columns[i] = &nullable_col.getNestedColumn();
+                nested_columns[i] = &nullable_col.get_nested_column();
             } else
                 nested_columns[i] = columns[i];
         }

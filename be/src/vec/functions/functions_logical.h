@@ -115,7 +115,7 @@ public:
     static FunctionPtr create() { return std::make_shared<FunctionAnyArityLogical>(); }
 
 public:
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
 
     bool isVariadic() const override { return true; }
     size_t getNumberOfArguments() const override { return 0; }
@@ -176,7 +176,7 @@ public:
     static FunctionPtr create() { return std::make_shared<FunctionUnaryLogical>(); }
 
 public:
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
 
     size_t getNumberOfArguments() const override { return 1; }
 

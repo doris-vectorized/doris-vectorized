@@ -38,15 +38,15 @@ public:
     bool useDefaultImplementationForConstants() const override { return true; }
 
 private:
-    String getName() const override { return name; }
+    String get_name() const override { return name; }
 
     size_t getNumberOfArguments() const override { return 2; }
 
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
         const auto check_argument_type = [this](const IDataType* arg) -> bool {
             if (!isNativeNumber(arg)) {
-                LOG(ERROR) << "Illegal type " << arg->getName() << " of argument of function "
-                           << getName();
+                LOG(ERROR) << "Illegal type " << arg->get_name() << " of argument of function "
+                           << get_name();
                 return false;
             }
             return true;
@@ -63,15 +63,15 @@ private:
     template <typename LeftType, typename RightType>
     bool executeTyped(Block& block, const size_t result, const ColumnConst* left_arg,
                       const IColumn* right_arg) {
-        if (const auto right_arg_typed = checkAndGetColumn<ColumnVector<RightType>>(right_arg)) {
+        if (const auto right_arg_typed = check_and_get_column<ColumnVector<RightType>>(right_arg)) {
             auto dst = ColumnVector<Float64>::create();
 
             LeftType left_src_data[Impl::rows_per_iteration];
             std::fill(std::begin(left_src_data), std::end(left_src_data),
-                      left_arg->template getValue<LeftType>());
-            const auto& right_src_data = right_arg_typed->getData();
+                      left_arg->template get_value<LeftType>());
+            const auto& right_src_data = right_arg_typed->get_data();
             const auto src_size = right_src_data.size();
-            auto& dst_data = dst->getData();
+            auto& dst_data = dst->get_data();
             dst_data.resize(src_size);
 
             const auto rows_remaining = src_size % Impl::rows_per_iteration;
@@ -103,13 +103,13 @@ private:
     template <typename LeftType, typename RightType>
     bool executeTyped(Block& block, const size_t result, const ColumnVector<LeftType>* left_arg,
                       const IColumn* right_arg) {
-        if (const auto right_arg_typed = checkAndGetColumn<ColumnVector<RightType>>(right_arg)) {
+        if (const auto right_arg_typed = check_and_get_column<ColumnVector<RightType>>(right_arg)) {
             auto dst = ColumnVector<Float64>::create();
 
-            const auto& left_src_data = left_arg->getData();
-            const auto& right_src_data = right_arg_typed->getData();
+            const auto& left_src_data = left_arg->get_data();
+            const auto& right_src_data = right_arg_typed->get_data();
             const auto src_size = left_src_data.size();
-            auto& dst_data = dst->getData();
+            auto& dst_data = dst->get_data();
             dst_data.resize(src_size);
 
             const auto rows_remaining = src_size % Impl::rows_per_iteration;
@@ -143,12 +143,12 @@ private:
                     checkAndGetColumnConst<ColumnVector<RightType>>(right_arg)) {
             auto dst = ColumnVector<Float64>::create();
 
-            const auto& left_src_data = left_arg->getData();
+            const auto& left_src_data = left_arg->get_data();
             RightType right_src_data[Impl::rows_per_iteration];
             std::fill(std::begin(right_src_data), std::end(right_src_data),
-                      right_arg_typed->template getValue<RightType>());
+                      right_arg_typed->template get_value<RightType>());
             const auto src_size = left_src_data.size();
-            auto& dst_data = dst->getData();
+            auto& dst_data = dst->get_data();
             dst_data.resize(src_size);
 
             const auto rows_remaining = src_size % Impl::rows_per_iteration;
@@ -191,20 +191,20 @@ private:
             const IColumn* left_arg = col_left.column.get();
             const IColumn* right_arg = col_right.column.get();
 
-            if (const auto left_arg_typed = checkAndGetColumn<ColVecLeft>(left_arg)) {
+            if (const auto left_arg_typed = check_and_get_column<ColVecLeft>(left_arg)) {
                 if (executeTyped<LeftType, RightType>(block, result, left_arg_typed, right_arg)) {
                     return true;
                 }
-                DCHECK(false) << "Illegal column " << right_arg->getName()
-                              << " of second argument of function " << getName();
+                DCHECK(false) << "Illegal column " << right_arg->get_name()
+                              << " of second argument of function " << get_name();
             }
             if (const auto left_arg_typed = checkAndGetColumnConst<ColVecLeft>(left_arg)) {
                 if (executeTyped<LeftType, RightType>(block, result, left_arg_typed, right_arg)) {
                     return true;
                 }
 
-                DCHECK(false) << "Illegal column " << right_arg->getName()
-                              << " of second argument of function " << getName();
+                DCHECK(false) << "Illegal column " << right_arg->get_name()
+                              << " of second argument of function " << get_name();
             }
 
             return false;
@@ -214,8 +214,8 @@ private:
         TypeIndex right_index = col_right.type->getTypeId();
 
         if (!callOnBasicTypes<true, true, false, false>(left_index, right_index, call)) {
-            return Status::InvalidArgument("Illegal column " + col_left.column->getName() +
-                                           " of argument of function " + getName());
+            return Status::InvalidArgument("Illegal column " + col_left.column->get_name() +
+                                           " of argument of function " + get_name());
         }
         return Status::OK();
     }

@@ -252,7 +252,7 @@ TEST(TEST_VEXPR, LITERALTEST) {
         int ret = -1;
         literal.execute(&block, &ret);
         auto ctn = block.safeGetByPosition(ret);
-        bool v = ctn.column->getBool(0);
+        bool v = ctn.column->get_bool(0);
         ASSERT_EQ(v, true);
     }
     {
@@ -261,7 +261,7 @@ TEST(TEST_VEXPR, LITERALTEST) {
         int ret = -1;
         literal.execute(&block, &ret);
         auto ctn = block.safeGetByPosition(ret);
-        auto v = ctn.column->getInt(0);
+        auto v = ctn.column->get_int(0);
         ASSERT_EQ(v, 1024);
     }
     {
@@ -270,7 +270,7 @@ TEST(TEST_VEXPR, LITERALTEST) {
         int ret = -1;
         literal.execute(&block, &ret);
         auto ctn = block.safeGetByPosition(ret);
-        auto v = ctn.column->getInt(0);
+        auto v = ctn.column->get_int(0);
         ASSERT_EQ(v, 1024);
     }
     {
@@ -330,7 +330,7 @@ TEST(TEST_VEXPR, LITERALTEST) {
         literal.execute(&block, &ret);
         auto ctn = block.safeGetByPosition(ret);
         auto v = (*ctn.column)[0].get<DecimalField<Decimal128>>();
-        ASSERT_FLOAT_EQ(((double)v.getValue()) / (std::pow(10, v.getScale())), 1234.56);
+        ASSERT_FLOAT_EQ(((double)v.get_value()) / (std::pow(10, v.get_scale())), 1234.56);
     }
 }
 

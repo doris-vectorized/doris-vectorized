@@ -24,16 +24,16 @@
 namespace doris::vectorized {
 void DataTypeBitMap::serialize(const IColumn& column, PColumn* pcolumn) const {
     std::ostringstream buf;
-    auto& data_column = assert_cast<const ColumnBitmap&>(*column.convertToFullColumnIfConst());
+    auto& data_column = assert_cast<const ColumnBitmap&>(*column.convert_to_full_column_if_const());
     // TODO: remove std::string as memory buffer to avoid memory copy
     std::string memory_buffer;
     for (size_t i = 0; i < column.size(); ++i) {
-        auto& bitmap = const_cast<BitmapValue&>(data_column.getElement(i));
+        auto& bitmap = const_cast<BitmapValue&>(data_column.get_element(i));
         int bytesize = bitmap.getSizeInBytes();
-        writeIntBinary(bytesize, buf);
+        write_int_binary(bytesize, buf);
         memory_buffer.resize(bytesize);
         bitmap.write(const_cast<char*>(memory_buffer.data()));
-        writeBinary(memory_buffer, buf);
+        write_binary(memory_buffer, buf);
         memory_buffer.clear();
     }
     write_binary(buf, pcolumn);
@@ -41,7 +41,7 @@ void DataTypeBitMap::serialize(const IColumn& column, PColumn* pcolumn) const {
 
 void DataTypeBitMap::deserialize(const PColumn& pcolumn, IColumn* column) const {
     auto& data_column = assert_cast<ColumnBitmap&>(*column);
-    auto& data = data_column.getData();
+    auto& data = data_column.get_data();
 
     std::string uncompressed;
     read_binary(pcolumn, &uncompressed);
@@ -50,8 +50,8 @@ void DataTypeBitMap::deserialize(const PColumn& pcolumn, IColumn* column) const 
     std::string memory_buffer;
     while (istr.peek() != EOF) {
         int bytesize = 0;
-        readIntBinary(bytesize, istr);
-        readBinary(memory_buffer, istr);
+        read_int_binary(bytesize, istr);
+        read_binary(memory_buffer, istr);
 
         data.emplace_back();
         data.back().deserialize(memory_buffer.data());

@@ -36,8 +36,8 @@ struct NameAndTypePair {
     NameAndTypePair(const String& name_, const DataTypePtr& type_) : name(name_), type(type_) {}
 
     bool operator<(const NameAndTypePair& rhs) const {
-        return std::forward_as_tuple(name, type->getName()) <
-               std::forward_as_tuple(rhs.name, rhs.type->getName());
+        return std::forward_as_tuple(name, type->get_name()) <
+               std::forward_as_tuple(rhs.name, rhs.type->get_name());
     }
 
     bool operator==(const NameAndTypePair& rhs) const {
@@ -58,7 +58,7 @@ public:
     NamesAndTypesList(Iterator begin, Iterator end) : std::list<NameAndTypePair>(begin, end) {}
 
     // void readText(ReadBuffer & buf);
-    // void writeText(WriteBuffer & buf) const;
+    // void write_text(WriteBuffer & buf) const;
 
     String toString() const;
     static NamesAndTypesList parse(const String& s);

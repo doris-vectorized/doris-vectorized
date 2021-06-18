@@ -94,11 +94,11 @@ int Collator::compare(const char* str1, size_t length1, const char* str2, size_t
 #endif
 }
 
-const std::string& Collator::getLocale() const {
+const std::string& Collator::get_locale() const {
     return locale;
 }
 
-std::vector<std::string> Collator::getAvailableCollations() {
+std::vector<std::string> Collator::get_available_collations() {
     std::vector<std::string> result;
 #if USE_ICU
     size_t available_locales_count = ucol_countAvailable();

@@ -32,7 +32,7 @@ class DataTypeNumber final : public DataTypeNumberBase<T> {
     bool isSummable() const override { return true; }
     bool canBeUsedInBitOperations() const override { return true; }
     bool canBeUsedInBooleanContext() const override { return true; }
-    bool canBeInsideNullable() const override { return true; }
+    bool can_be_inside_nullable() const override { return true; }
 
     bool canBePromoted() const override { return true; }
     DataTypePtr promoteNumericType() const override {

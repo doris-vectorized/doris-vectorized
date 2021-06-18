@@ -36,7 +36,7 @@ extern const int NOT_IMPLEMENTED;
 } // namespace ErrorCodes
 
 template <typename T>
-int ColumnDecimal<T>::compareAt(size_t n, size_t m, const IColumn& rhs_, int) const {
+int ColumnDecimal<T>::compare_at(size_t n, size_t m, const IColumn& rhs_, int) const {
     auto& other = static_cast<const Self&>(rhs_);
     const T& a = data[n];
     const T& b = other.data[m];
@@ -48,7 +48,7 @@ int ColumnDecimal<T>::compareAt(size_t n, size_t m, const IColumn& rhs_, int) co
 }
 
 template <typename T>
-StringRef ColumnDecimal<T>::serializeValueIntoArena(size_t n, Arena& arena,
+StringRef ColumnDecimal<T>::serialize_value_into_arena(size_t n, Arena& arena,
                                                     char const*& begin) const {
     auto pos = arena.allocContinue(sizeof(T), begin);
     memcpy(pos, &data[n], sizeof(T));
@@ -56,7 +56,7 @@ StringRef ColumnDecimal<T>::serializeValueIntoArena(size_t n, Arena& arena,
 }
 
 template <typename T>
-const char* ColumnDecimal<T>::deserializeAndInsertFromArena(const char* pos) {
+const char* ColumnDecimal<T>::deserialize_and_insert_from_arena(const char* pos) {
     data.push_back(unalignedLoad<T>(pos));
     return pos + sizeof(T);
 }
@@ -64,18 +64,18 @@ const char* ColumnDecimal<T>::deserializeAndInsertFromArena(const char* pos) {
 template <typename T>
 UInt64 ColumnDecimal<T>::get64(size_t n) const {
     if constexpr (sizeof(T) > sizeof(UInt64))
-        throw Exception(String("Method get64 is not supported for ") + getFamilyName(),
+        throw Exception(String("Method get64 is not supported for ") + get_family_name(),
                         ErrorCodes::NOT_IMPLEMENTED);
     return static_cast<typename T::NativeType>(data[n]);
 }
 
 template <typename T>
-void ColumnDecimal<T>::updateHashWithValue(size_t n, SipHash& hash) const {
+void ColumnDecimal<T>::update_hash_with_value(size_t n, SipHash& hash) const {
     hash.update(data[n]);
 }
 
 template <typename T>
-void ColumnDecimal<T>::getPermutation(bool reverse, size_t limit, int,
+void ColumnDecimal<T>::get_permutation(bool reverse, size_t limit, int,
                                       IColumn::Permutation& res) const {
 #if 1 /// TODO: perf test
     if (data.size() <= std::numeric_limits<UInt32>::max()) {
@@ -99,7 +99,7 @@ ColumnPtr ColumnDecimal<T>::permute(const IColumn::Permutation& perm, size_t lim
                         ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
     auto res = this->create(size, scale);
-    typename Self::Container& res_data = res->getData();
+    typename Self::Container& res_data = res->get_data();
 
     for (size_t i = 0; i < size; ++i) res_data[i] = data[perm[i]];
 
@@ -107,7 +107,7 @@ ColumnPtr ColumnDecimal<T>::permute(const IColumn::Permutation& perm, size_t lim
 }
 
 template <typename T>
-MutableColumnPtr ColumnDecimal<T>::cloneResized(size_t size) const {
+MutableColumnPtr ColumnDecimal<T>::clone_resized(size_t size) const {
     auto res = this->create(0, scale);
 
     if (size > 0) {
@@ -127,20 +127,20 @@ MutableColumnPtr ColumnDecimal<T>::cloneResized(size_t size) const {
 }
 
 template <typename T>
-void ColumnDecimal<T>::insertData(const char* src, size_t /*length*/) {
+void ColumnDecimal<T>::insert_data(const char* src, size_t /*length*/) {
     T tmp;
     memcpy(&tmp, src, sizeof(T));
     data.emplace_back(tmp);
 }
 
 template <typename T>
-void ColumnDecimal<T>::insertRangeFrom(const IColumn& src, size_t start, size_t length) {
+void ColumnDecimal<T>::insert_range_from(const IColumn& src, size_t start, size_t length) {
     const ColumnDecimal& src_vec = assert_cast<const ColumnDecimal&>(src);
 
     if (start + length > src_vec.data.size())
         throw Exception("Parameters start = " + std::to_string(start) +
                                 ", length = " + std::to_string(length) +
-                                " are out of bound in ColumnDecimal<T>::insertRangeFrom method "
+                                " are out of bound in ColumnDecimal<T>::insert_range_from method "
                                 "(data.size() = " +
                                 std::to_string(src_vec.data.size()) + ").",
                         ErrorCodes::PARAMETER_OUT_OF_BOUND);
@@ -158,7 +158,7 @@ ColumnPtr ColumnDecimal<T>::filter(const IColumn::Filter& filt, ssize_t result_s
                         ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
     auto res = this->create(0, scale);
-    Container& res_data = res->getData();
+    Container& res_data = res->get_data();
 
     if (result_size_hint) res_data.reserve(result_size_hint > 0 ? result_size_hint : size);
 
@@ -179,7 +179,7 @@ ColumnPtr ColumnDecimal<T>::filter(const IColumn::Filter& filt, ssize_t result_s
 //template <typename T>
 //ColumnPtr ColumnDecimal<T>::index(const IColumn & indexes, size_t limit) const
 //{
-//    return selectIndexImpl(*this, indexes, limit);
+//    return select_index_impl(*this, indexes, limit);
 //}
 
 template <typename T>
@@ -192,7 +192,7 @@ ColumnPtr ColumnDecimal<T>::replicate(const IColumn::Offsets& offsets) const {
     auto res = this->create(0, scale);
     if (0 == size) return res;
 
-    typename Self::Container& res_data = res->getData();
+    typename Self::Container& res_data = res->get_data();
     res_data.reserve(offsets.back());
 
     IColumn::Offset prev_offset = 0;
@@ -213,7 +213,7 @@ ColumnPtr ColumnDecimal<T>::replicate(const IColumn::Offsets& offsets) const {
 //}
 
 template <typename T>
-void ColumnDecimal<T>::getExtremes(Field& min, Field& max) const {
+void ColumnDecimal<T>::get_extremes(Field& min, Field& max) const {
     if (data.size() == 0) {
         min = NearestFieldType<T>(0, scale);
         max = NearestFieldType<T>(0, scale);

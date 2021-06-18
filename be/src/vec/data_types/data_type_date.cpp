@@ -28,8 +28,8 @@ bool DataTypeDate::equals(const IDataType& rhs) const {
 }
 
 std::string DataTypeDate::to_string(const IColumn& column, size_t row_num) const {
-    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convertToFullColumnIfConst().get())
-                             .getData()[row_num];
+    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convert_to_full_column_if_const().get())
+                             .get_data()[row_num];
     doris::DateTimeValue value = binary_cast<Int128, doris::DateTimeValue>(int_val);
     std::stringstream ss;
     // Year
@@ -45,8 +45,8 @@ std::string DataTypeDate::to_string(const IColumn& column, size_t row_num) const
 }
 
 void DataTypeDate::to_string(const IColumn & column, size_t row_num, BufferWritable & ostr) const {
-    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convertToFullColumnIfConst().get())
-                             .getData()[row_num];
+    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convert_to_full_column_if_const().get())
+                             .get_data()[row_num];
     doris::DateTimeValue value = binary_cast<Int128, doris::DateTimeValue>(int_val);
 
     char buf[64];
