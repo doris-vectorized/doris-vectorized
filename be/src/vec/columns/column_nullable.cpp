@@ -134,7 +134,7 @@ void ColumnNullable::insert_range_from(const IColumn& src, size_t start, size_t 
 }
 
 void ColumnNullable::insert(const Field& x) {
-    if (x.isNull()) {
+    if (x.is_null()) {
         get_nested_column().insert_default();
         get_null_map_data().push_back(1);
     } else {

@@ -345,7 +345,7 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
                 _agg_data.without_key + _offsets_of_aggregate_states[i], column);
     }
 
-    const auto& block_schema = block->getColumnsWithTypeAndName();
+    const auto& block_schema = block->get_columns_with_type_and_name();
     DCHECK_EQ(block_schema.size(), columns.size());
     for (int i = 0; i < block_schema.size(); ++i) {
         const auto column_type = block_schema[i].type;
@@ -359,7 +359,7 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
         }
     }
 
-    block->setColumns(std::move(columns));
+    block->set_columns(std::move(columns));
     *eos = true;
     return Status::OK();
 }
@@ -396,7 +396,7 @@ Status AggregationNode::_serialize_without_key(RuntimeState* state, Block* block
         *block = Block(data_with_schema);
     }
 
-    block->setColumns(std::move(value_columns));
+    block->set_columns(std::move(value_columns));
     *eos = true;
     return Status::OK();
 }
@@ -418,7 +418,7 @@ Status AggregationNode::_merge_without_key(Block* block) {
     _create_agg_status(deserialize_buffer.get());
     Defer defer([&]() { _destory_agg_status(deserialize_buffer.get()); });
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
-        auto column = block->getByPosition(i).column;
+        auto column = block->get_by_position(i).column;
         if (column->is_nullable()) {
             column = ((ColumnNullable*)column.get())->get_nested_column_ptr();
         }
@@ -512,7 +512,7 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
         for (size_t i = 0; i < key_size; ++i) {
             int result_column_id = -1;
             RETURN_IF_ERROR(_probe_expr_ctxs[i]->execute(in_block, &result_column_id));
-            key_columns[i] = in_block->getByPosition(result_column_id).column.get();
+            key_columns[i] = in_block->get_by_position(result_column_id).column.get();
         }
     }
 
@@ -572,7 +572,7 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
                     columns[i] = std::move(value_columns[i - key_size]);
                 }
             }
-            out_block->setColumns(std::move(columns));
+            out_block->set_columns(std::move(columns));
             return Status::OK();
         }
     }
@@ -628,7 +628,7 @@ Status AggregationNode::_execute_with_serialized_key(Block* block) {
         for (size_t i = 0; i < key_size; ++i) {
             int result_column_id = -1;
             RETURN_IF_ERROR(_probe_expr_ctxs[i]->execute(block, &result_column_id));
-            key_columns[i] = block->getByPosition(result_column_id).column.get();
+            key_columns[i] = block->get_by_position(result_column_id).column.get();
         }
     }
 
@@ -715,7 +715,7 @@ Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Blo
             columns[i] = std::move(value_columns[i - key_size]);
         }
     }
-    block->setColumns(std::move(columns));
+    block->set_columns(std::move(columns));
     if (iter == data.end()) {
         *eos = true;
     }
@@ -802,7 +802,7 @@ Status AggregationNode::_merge_with_serialized_key(Block* block) {
     for (size_t i = 0; i < key_size; ++i) {
         int result_column_id = -1;
         RETURN_IF_ERROR(_probe_expr_ctxs[i]->execute(block, &result_column_id));
-        key_columns[i] = block->getByPosition(result_column_id).column.get();
+        key_columns[i] = block->get_by_position(result_column_id).column.get();
     }
 
     int rows = block->rows();
@@ -836,7 +836,7 @@ Status AggregationNode::_merge_with_serialized_key(Block* block) {
     std::unique_ptr<char[]> deserialize_buffer(new char[_total_size_of_aggregate_states]);
 
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
-        auto column = block->getByPosition(i + key_size).column;
+        auto column = block->get_by_position(i + key_size).column;
         if (column->is_nullable()) {
             column = ((ColumnNullable*)column.get())->get_nested_column_ptr();
         }

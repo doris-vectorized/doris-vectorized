@@ -90,7 +90,7 @@ private:
 
         executeInIterations(src_data.data(), dst_data.data(), size);
 
-        block.getByPosition(result).column = std::move(dst);
+        block.get_by_position(result).column = std::move(dst);
         return true;
     }
 
@@ -110,7 +110,7 @@ private:
 
         executeInIterations(dst_data.data(), dst_data.data(), size);
 
-        block.getByPosition(result).column = std::move(dst);
+        block.get_by_position(result).column = std::move(dst);
         return true;
     }
 
@@ -118,7 +118,7 @@ private:
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
-        const ColumnWithTypeAndName& col = block.getByPosition(arguments[0]);
+        const ColumnWithTypeAndName& col = block.get_by_position(arguments[0]);
 
         auto call = [&](const auto& types) -> bool {
             using Types = std::decay_t<decltype(types)>;
@@ -132,7 +132,7 @@ private:
             return execute<Type, ReturnType>(block, col_vec, result);
         };
 
-        if (!callOnBasicType<void, true, true, true, false>(col.type->getTypeId(), call)) {
+        if (!call_on_basic_type<void, true, true, true, false>(col.type->getTypeId(), call)) {
             return Status::InvalidArgument("Illegal column " + col.column->get_name() +
                                            " of argument of function " + get_name());
         }

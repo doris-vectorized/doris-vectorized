@@ -1,3 +1,20 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/core/sort_block.h"
 
 #include "vec/columns/column_string.h"
@@ -26,7 +43,7 @@ static inline bool needCollation(const IColumn * column, const SortColumnDescrip
 }
 
 
-ColumnsWithSortDescriptions getColumnsWithSortDescription(const Block & block, const SortDescription & description)
+ColumnsWithSortDescriptions get_columns_with_sort_description(const Block & block, const SortDescription & description)
 {
     size_t size = description.size();
     ColumnsWithSortDescriptions res;
@@ -35,8 +52,8 @@ ColumnsWithSortDescriptions getColumnsWithSortDescription(const Block & block, c
     for (size_t i = 0; i < size; ++i)
     {
         const IColumn * column = !description[i].column_name.empty()
-            ? block.getByName(description[i].column_name).column.get()
-            : block.safeGetByPosition(description[i].column_number).column.get();
+            ? block.get_by_name(description[i].column_name).column.get()
+            : block.safe_get_by_position(description[i].column_number).column.get();
 
         res.emplace_back(column, description[i]);
     }
@@ -95,7 +112,7 @@ struct PartialSortingLessWithCollation
     }
 };
 
-void sortBlock(Block & block, const SortDescription & description, UInt64 limit)
+void sort_block(Block & block, const SortDescription & description, UInt64 limit)
 {
     if (!block)
         return;
@@ -106,8 +123,8 @@ void sortBlock(Block & block, const SortDescription & description, UInt64 limit)
         bool reverse = description[0].direction == -1;
 
         const IColumn * column = !description[0].column_name.empty()
-            ? block.getByName(description[0].column_name).column.get()
-            : block.safeGetByPosition(description[0].column_number).column.get();
+            ? block.get_by_name(description[0].column_name).column.get()
+            : block.safe_get_by_position(description[0].column_number).column.get();
 
         IColumn::Permutation perm;
 //        if (needCollation(column, description[0]))
@@ -120,7 +137,7 @@ void sortBlock(Block & block, const SortDescription & description, UInt64 limit)
 
         size_t columns = block.columns();
         for (size_t i = 0; i < columns; ++i)
-            block.getByPosition(i).column = block.getByPosition(i).column->permute(perm, limit);
+            block.get_by_position(i).column = block.get_by_position(i).column->permute(perm, limit);
     }
     else
     {
@@ -133,7 +150,7 @@ void sortBlock(Block & block, const SortDescription & description, UInt64 limit)
             limit = 0;
 
         bool need_collation = false;
-        ColumnsWithSortDescriptions columns_with_sort_desc = getColumnsWithSortDescription(block, description);
+        ColumnsWithSortDescriptions columns_with_sort_desc = get_columns_with_sort_description(block, description);
 
 //        for (size_t i = 0, num_sort_columns = description.size(); i < num_sort_columns; ++i)
 //        {
@@ -165,12 +182,12 @@ void sortBlock(Block & block, const SortDescription & description, UInt64 limit)
 
         size_t columns = block.columns();
         for (size_t i = 0; i < columns; ++i)
-            block.getByPosition(i).column = block.getByPosition(i).column->permute(perm, limit);
+            block.get_by_position(i).column = block.get_by_position(i).column->permute(perm, limit);
     }
 }
 
 
-void stableGetPermutation(const Block & block, const SortDescription & description, IColumn::Permutation & out_permutation)
+void stable_get_permutation(const Block & block, const SortDescription & description, IColumn::Permutation & out_permutation)
 {
     if (!block)
         return;
@@ -180,20 +197,20 @@ void stableGetPermutation(const Block & block, const SortDescription & descripti
     for (size_t i = 0; i < size; ++i)
         out_permutation[i] = i;
 
-    ColumnsWithSortDescriptions columns_with_sort_desc = getColumnsWithSortDescription(block, description);
+    ColumnsWithSortDescriptions columns_with_sort_desc = get_columns_with_sort_description(block, description);
 
     std::stable_sort(out_permutation.begin(), out_permutation.end(), PartialSortingLess(columns_with_sort_desc));
 }
 
 
-bool isAlreadySorted(const Block & block, const SortDescription & description)
+bool is_already_sorted(const Block & block, const SortDescription & description)
 {
     if (!block)
         return true;
 
     size_t rows = block.rows();
 
-    ColumnsWithSortDescriptions columns_with_sort_desc = getColumnsWithSortDescription(block, description);
+    ColumnsWithSortDescriptions columns_with_sort_desc = get_columns_with_sort_description(block, description);
 
     PartialSortingLess less(columns_with_sort_desc);
 
@@ -221,17 +238,17 @@ bool isAlreadySorted(const Block & block, const SortDescription & description)
 }
 
 
-void stableSortBlock(Block & block, const SortDescription & description)
+void stable_sort_block(Block & block, const SortDescription & description)
 {
     if (!block)
         return;
 
     IColumn::Permutation perm;
-    stableGetPermutation(block, description, perm);
+    stable_get_permutation(block, description, perm);
 
     size_t columns = block.columns();
     for (size_t i = 0; i < columns; ++i)
-        block.safeGetByPosition(i).column = block.safeGetByPosition(i).column->permute(perm, 0);
+        block.safe_get_by_position(i).column = block.safe_get_by_position(i).column->permute(perm, 0);
 }
 
 }

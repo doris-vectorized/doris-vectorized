@@ -57,22 +57,22 @@ public:
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
-        const ColumnPtr column = block.getByPosition(arguments[0]).column;
+        const ColumnPtr column = block.get_by_position(arguments[0]).column;
         if (const ColumnString* col = check_and_get_column<ColumnString>(column.get())) {
             auto col_res = ColumnString::create();
             Impl::vector(col->get_chars(), col->get_offsets(), col_res->get_chars(),
                          col_res->get_offsets());
-            block.getByPosition(result).column = std::move(col_res);
+            block.get_by_position(result).column = std::move(col_res);
         }
         //        else if (const ColumnFixedString * col_fixed = check_and_get_column<ColumnFixedString>(column.get()))
         //        {
         //            auto col_res = ColumnFixedString::create(col_fixed->getN());
         //            Impl::vector_fixed(col_fixed->get_chars(), col_fixed->getN(), col_res->get_chars());
-        //            block.getByPosition(result).column = std::move(col_res);
+        //            block.get_by_position(result).column = std::move(col_res);
         //        }
         else
             throw Exception("Illegal column " +
-                                    block.getByPosition(arguments[0]).column->get_name() +
+                                    block.get_by_position(arguments[0]).column->get_name() +
                             " of argument of function " + get_name(),
                             ErrorCodes::ILLEGAL_COLUMN);
         return Status::OK();

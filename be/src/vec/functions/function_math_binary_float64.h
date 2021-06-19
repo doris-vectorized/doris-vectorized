@@ -93,7 +93,7 @@ private:
                 memcpy(&dst_data[rows_size], dst_remaining, rows_remaining * sizeof(Float64));
             }
 
-            block.getByPosition(result).column = std::move(dst);
+            block.get_by_position(result).column = std::move(dst);
             return true;
         }
 
@@ -136,7 +136,7 @@ private:
                 memcpy(&dst_data[rows_size], dst_remaining, rows_remaining * sizeof(Float64));
             }
 
-            block.getByPosition(result).column = std::move(dst);
+            block.get_by_position(result).column = std::move(dst);
             return true;
         }
         if (const auto right_arg_typed =
@@ -170,7 +170,7 @@ private:
                 memcpy(&dst_data[rows_size], dst_remaining, rows_remaining * sizeof(Float64));
             }
 
-            block.getByPosition(result).column = std::move(dst);
+            block.get_by_position(result).column = std::move(dst);
             return true;
         }
 
@@ -179,8 +179,8 @@ private:
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
-        const ColumnWithTypeAndName& col_left = block.getByPosition(arguments[0]);
-        const ColumnWithTypeAndName& col_right = block.getByPosition(arguments[1]);
+        const ColumnWithTypeAndName& col_left = block.get_by_position(arguments[0]);
+        const ColumnWithTypeAndName& col_right = block.get_by_position(arguments[1]);
 
         auto call = [&](const auto& types) -> bool {
             using Types = std::decay_t<decltype(types)>;
@@ -213,7 +213,7 @@ private:
         TypeIndex left_index = col_left.type->getTypeId();
         TypeIndex right_index = col_right.type->getTypeId();
 
-        if (!callOnBasicTypes<true, true, false, false>(left_index, right_index, call)) {
+        if (!call_on_basic_types<true, true, false, false>(left_index, right_index, call)) {
             return Status::InvalidArgument("Illegal column " + col_left.column->get_name() +
                                            " of argument of function " + get_name());
         }

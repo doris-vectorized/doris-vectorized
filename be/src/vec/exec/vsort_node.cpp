@@ -146,7 +146,7 @@ Status VSortNode::pretreat_block(doris::vectorized::Block& block) {
 
         Block new_block;
         for (auto column_id : valid_column_ids) {
-            new_block.insert(block.getByPosition(column_id));
+            new_block.insert(block.get_by_position(column_id));
         }
         block.swap(new_block);
     }
@@ -160,7 +160,7 @@ Status VSortNode::pretreat_block(doris::vectorized::Block& block) {
         _sort_description[i].nulls_direction = _nulls_first[i] ? -1 : 1;
     }
 
-    sortBlock(block, _sort_description, _offset + _limit);
+    sort_block(block, _sort_description, _offset + _limit);
 
     return Status::OK();
 }
@@ -186,7 +186,7 @@ void VSortNode::build_merge_tree() {
 Status VSortNode::merge_sort_read(doris::RuntimeState *state, doris::vectorized::Block *block, bool *eos) {
     size_t num_columns = _sorted_blocks[0].columns();
 
-    MutableColumns merged_columns = _sorted_blocks[0].cloneEmptyColumns();
+    MutableColumns merged_columns = _sorted_blocks[0].clone_empty_columns();
     /// TODO: reserve (in each column)
 
     /// Take rows from queue in right order and push to 'merged'.
@@ -213,7 +213,7 @@ Status VSortNode::merge_sort_read(doris::RuntimeState *state, doris::vectorized:
         return Status::OK();
     }
 
-    Block merge_block = _sorted_blocks[0].cloneWithColumns(std::move(merged_columns));
+    Block merge_block = _sorted_blocks[0].clone_with_columns(std::move(merged_columns));
     _num_rows_returned += merge_block.rows();
     if (reached_limit()) {
         merge_block.set_num_rows(merge_block.rows() - (_num_rows_returned - _limit));

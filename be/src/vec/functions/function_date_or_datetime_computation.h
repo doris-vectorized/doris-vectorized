@@ -201,15 +201,15 @@ struct DateTimeAddIntervalImpl {
 
         //        const DateLUTImpl & time_zone = extractTimeZoneFromFunctionArguments(block, arguments, 2, 0);
 
-        const ColumnPtr source_col = block.getByPosition(arguments[0]).column;
+        const ColumnPtr source_col = block.get_by_position(arguments[0]).column;
 
         if (const auto* sources = check_and_get_column<ColumnVector<FromType>>(source_col.get())) {
             auto col_to = ColumnVector<ToType>::create();
 
-            const IColumn& delta_column = *block.getByPosition(arguments[1]).column;
+            const IColumn& delta_column = *block.get_by_position(arguments[1]).column;
 
             if (const auto* delta_const_column = typeid_cast<const ColumnConst*>(&delta_column)) {
-                if (delta_const_column->get_field().getType() == Field::Types::Int128) {
+                if (delta_const_column->get_field().get_type() == Field::Types::Int128) {
                     Op::vector_constant(sources->get_data(), col_to->get_data(),
                                         delta_const_column->get_field().get<Int128>());
                 } else {
@@ -222,23 +222,23 @@ struct DateTimeAddIntervalImpl {
                 Op::vector_vector(sources->get_data(), delta_vec_column->get_data(),
                                   col_to->get_data());
             }
-            block.getByPosition(result).column = std::move(col_to);
+            block.get_by_position(result).column = std::move(col_to);
         } else if (const auto* sources_const =
                            checkAndGetColumnConst<ColumnVector<FromType>>(source_col.get())) {
             auto col_to = ColumnVector<ToType>::create();
             if (const auto* delta_vec_column = check_and_get_column<ColumnVector<FromType>>(
-                    *block.getByPosition(arguments[1]).column)) {
+                    *block.get_by_position(arguments[1]).column)) {
                 Op::constant_vector(sources_const->template get_value<FromType>(), col_to->get_data(),
                                     delta_vec_column->get_data());
             } else {
                 Op::constant_vector(sources_const->template get_value<FromType>(), col_to->get_data(),
-                                    *block.getByPosition(arguments[1]).column);
+                                    *block.get_by_position(arguments[1]).column);
             }
-            block.getByPosition(result).column = std::move(col_to);
+            block.get_by_position(result).column = std::move(col_to);
         } else {
             return Status::RuntimeError(fmt::format(
                     "Illegal column {} of first argument of function {}",
-                    block.getByPosition(arguments[0]).column->get_name(), Transform::name));
+                    block.get_by_position(arguments[0]).column->get_name(), Transform::name));
         }
         return Status::OK();
     }
@@ -288,7 +288,7 @@ public:
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
-        const IDataType* from_type = block.getByPosition(arguments[0]).type.get();
+        const IDataType* from_type = block.get_by_position(arguments[0]).type.get();
         WhichDataType which(from_type);
 
         if (which.isDate()) {
@@ -300,7 +300,7 @@ public:
         } else {
             return Status::RuntimeError(
                     fmt::format("Illegal type {} of argument of function {}",
-                                block.getByPosition(arguments[0]).type->get_name(), get_name()));
+                                block.get_by_position(arguments[0]).type->get_name(), get_name()));
         }
 
         return Status::OK();

@@ -86,7 +86,7 @@ Status VSortedRunMerger::get_next(Block* output_block, bool* eos) {
         } else {
             if (current->block_ptr() != nullptr) {
                 for (int i = 0; i < current->all_columns.size(); i++) {
-                    auto& column_with_type = current->block_ptr()->getByPosition(i);
+                    auto& column_with_type = current->block_ptr()->get_by_position(i);
                     column_with_type.column = column_with_type.column->cut(current->pos,
                             current->rows - current->pos);
                 }
@@ -98,7 +98,7 @@ Status VSortedRunMerger::get_next(Block* output_block, bool* eos) {
         }
     } else {
         size_t num_columns = _empty_block.columns();
-        MutableColumns merged_columns = _empty_block.cloneEmptyColumns();
+        MutableColumns merged_columns = _empty_block.clone_empty_columns();
         /// TODO: reserve (in each column)
 
         /// Take rows from queue in right order and push to 'merged'.
@@ -124,7 +124,7 @@ Status VSortedRunMerger::get_next(Block* output_block, bool* eos) {
             return Status::OK();
         }
 
-        Block merge_block = _empty_block.cloneWithColumns(std::move(merged_columns));
+        Block merge_block = _empty_block.clone_with_columns(std::move(merged_columns));
         merge_block.swap(*output_block);
     }
 
