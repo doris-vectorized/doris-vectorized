@@ -138,7 +138,7 @@ public:
             const size_t new_size = old_size + size_to_append;
 
             chars.resize(new_size);
-            memcpySmallAllowReadWriteOverflow15(chars.data() + old_size, &src.chars[offset],
+            memcpy_small_allow_read_write_overflow15(chars.data() + old_size, &src.chars[offset],
                                                 size_to_append);
             offsets.push_back(new_size);
         }
@@ -201,7 +201,7 @@ public:
     int compare_at(size_t n, size_t m, const IColumn& rhs_,
                   int /*nan_direction_hint*/) const override {
         const ColumnString& rhs = assert_cast<const ColumnString&>(rhs_);
-        return memcmpSmallAllowOverflow15(chars.data() + offset_at(n), size_at(n) - 1,
+        return memcmp_small_allow_overflow15(chars.data() + offset_at(n), size_at(n) - 1,
                                           rhs.chars.data() + rhs.offset_at(m), rhs.size_at(m) - 1);
     }
 

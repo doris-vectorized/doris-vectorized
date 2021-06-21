@@ -206,7 +206,7 @@ Status PreparedFunctionImpl::defaultImplementationForConstantArguments(
         Block& block, const ColumnNumbers& args, size_t result, size_t input_rows_count,
         bool dry_run, bool* executed) {
     *executed = false;
-    ColumnNumbers arguments_to_remain_constants = getArgumentsThatAreAlwaysConstant();
+    ColumnNumbers arguments_to_remain_constants = get_argumentsThatAreAlwaysConstant();
 
     /// Check that these arguments are really constant.
     for (auto arg_num : arguments_to_remain_constants)
@@ -395,7 +395,7 @@ Status PreparedFunctionImpl::execute(Block& block, const ColumnNumbers& args, si
         //            if (use_cache)
         //            {
         //                const auto & dictionary = low_cardinality_column->getDictionary();
-        //                key = {dictionary.getHash(), dictionary.size()};
+        //                key = {dictionary.get_hash(), dictionary.size()};
         //
         //                auto cached_values = low_cardinality_result_cache->get(key);
         //                if (cached_values)
@@ -461,7 +461,7 @@ void FunctionBuilderImpl::checkNumberOfArguments(size_t number_of_arguments) con
             get_name(), number_of_arguments, expected_number_of_arguments);
 }
 
-DataTypePtr FunctionBuilderImpl::getReturnTypeWithoutLowCardinality(
+DataTypePtr FunctionBuilderImpl::get_return_typeWithoutLowCardinality(
         const ColumnsWithTypeAndName& arguments) const {
     checkNumberOfArguments(arguments.size());
 
@@ -477,13 +477,13 @@ DataTypePtr FunctionBuilderImpl::getReturnTypeWithoutLowCardinality(
                 numbers[i] = i;
             }
             Block nested_block = createBlockWithNestedColumns(Block(arguments), numbers);
-            auto return_type = getReturnTypeImpl(
+            auto return_type = get_return_typeImpl(
                     ColumnsWithTypeAndName(nested_block.begin(), nested_block.end()));
             return make_nullable(return_type);
         }
     }
 
-    return getReturnTypeImpl(arguments);
+    return get_return_typeImpl(arguments);
 }
 
 #if USE_EMBEDDED_COMPILER
@@ -516,7 +516,7 @@ llvm::Value* IFunction::compile(llvm::IRBuilderBase& builder, const DataTypes& a
             auto* join = llvm::BasicBlock::Create(b.GetInsertBlock()->getContext(), "",
                                                   b.GetInsertBlock()->getParent());
             auto* zero = llvm::Constant::getNullValue(
-                    toNativeType(b, make_nullable(getReturnTypeImpl(*denulled))));
+                    toNativeType(b, make_nullable(get_return_typeImpl(*denulled))));
             for (size_t i = 0; i < arguments.size(); i++) {
                 if (!arguments[i]->is_nullable()) continue;
                 /// Would be nice to evaluate all this lazily, but that'd change semantics: if only unevaluated
@@ -547,7 +547,7 @@ llvm::Value* IFunction::compile(llvm::IRBuilderBase& builder, const DataTypes& a
 
 #endif
 
-DataTypePtr FunctionBuilderImpl::getReturnType(const ColumnsWithTypeAndName& arguments) const {
+DataTypePtr FunctionBuilderImpl::get_return_type(const ColumnsWithTypeAndName& arguments) const {
     if (useDefaultImplementationForLowCardinalityColumns()) {
         //        bool has_low_cardinality = false;
         //        size_t num_full_low_cardinality_columns = 0;
@@ -579,7 +579,7 @@ DataTypePtr FunctionBuilderImpl::getReturnType(const ColumnsWithTypeAndName& arg
         //        }
 
         auto type_without_low_cardinality =
-                getReturnTypeWithoutLowCardinality(args_without_low_cardinality);
+                get_return_typeWithoutLowCardinality(args_without_low_cardinality);
 
         //        if (canBeExecutedOnLowCardinalityDictionary() && has_low_cardinality
         //            && num_full_low_cardinality_columns <= 1 && num_full_ordinary_columns == 0
@@ -589,6 +589,6 @@ DataTypePtr FunctionBuilderImpl::getReturnType(const ColumnsWithTypeAndName& arg
         return type_without_low_cardinality;
     }
 
-    return getReturnTypeWithoutLowCardinality(arguments);
+    return get_return_typeWithoutLowCardinality(arguments);
 }
 } // namespace doris::vectorized

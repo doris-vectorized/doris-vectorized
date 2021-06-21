@@ -91,7 +91,7 @@ public:
     String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 3; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         return make_nullable(std::make_shared<DataTypeString>());
     }
 
@@ -278,7 +278,7 @@ public:
     String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 1; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         return std::make_shared<DataTypeUInt8>();
     }
 
@@ -316,7 +316,7 @@ public:
     size_t getNumberOfArguments() const override { return 0; }
     bool isVariadic() const override { return true; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         return make_nullable(std::make_shared<DataTypeString>());
     }
     bool useDefaultImplementationForNulls() const override { return false; }
@@ -407,7 +407,7 @@ public:
     size_t getNumberOfArguments() const override { return 0; }
     bool isVariadic() const override { return true; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         return make_nullable(std::make_shared<DataTypeString>());
     }
     bool useDefaultImplementationForNulls() const override { return false; }
@@ -495,7 +495,7 @@ public:
     String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 2; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         return std::make_shared<DataTypeString>();
     }
     bool useDefaultImplementationForConstants() const override { return true; }
@@ -551,7 +551,7 @@ public:
     String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 3; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         return make_nullable(std::make_shared<DataTypeString>());
     }
     bool useDefaultImplementationForNulls() const override { return false; }

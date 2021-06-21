@@ -36,19 +36,19 @@ class AggregateFunctionCombinatorDistinct final : public IAggregateFunctionCombi
 public:
     String get_name() const override { return "Distinct"; }
 
-    DataTypes transformArguments(const DataTypes& arguments) const override {
+    DataTypes transform_arguments(const DataTypes& arguments) const override {
         if (arguments.empty()) {
             LOG(FATAL) << "Incorrect number of arguments for aggregate function with Distinct suffix";
         }
         return arguments;
     }
 
-    AggregateFunctionPtr transformAggregateFunction(const AggregateFunctionPtr& nested_function,
+    AggregateFunctionPtr transform_aggregate_function(const AggregateFunctionPtr& nested_function,
                                                     const DataTypes& arguments,
                                                     const Array& params) const override {
         AggregateFunctionPtr res;
         if (arguments.size() == 1) {
-            res.reset(createWithNumericType<AggregateFunctionDistinct,
+            res.reset(create_with_numeric_type<AggregateFunctionDistinct,
                                             AggregateFunctionDistinctSingleNumericData>(
                     *arguments[0], nested_function, arguments));
 
@@ -80,13 +80,13 @@ void registerAggregateFunctionCombinatorDistinct(AggregateFunctionSimpleFactory&
         std::transform(types.begin(), types.end(), nested_types.begin(),
                        [](const auto& e) { return removeNullable(e); });
         auto function_combinator = std::make_shared<AggregateFunctionCombinatorDistinct>();
-        auto transformArguments = function_combinator->transformArguments(nested_types);
+        auto transform_arguments = function_combinator->transform_arguments(nested_types);
         if (!boost::algorithm::starts_with(name, DISTINCT_FUNCTION_PREFIX)) {
             return AggregateFunctionPtr();
         }
         auto nested_function_name = name.substr(DISTINCT_FUNCTION_PREFIX.size());
-        auto nested_function = factory.get(nested_function_name, transformArguments, params);
-        return function_combinator->transformAggregateFunction(nested_function, types, params);
+        auto nested_function = factory.get(nested_function_name, transform_arguments, params);
+        return function_combinator->transform_aggregate_function(nested_function, types, params);
     };
     factory.registerDistinctFunctionCombinator(creator, DISTINCT_FUNCTION_PREFIX);
     // factory.registerCombinator(std::make_shared<AggregateFunctionCombinatorDistinct>());

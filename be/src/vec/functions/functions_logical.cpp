@@ -121,7 +121,7 @@ static bool extractConstColumns(ColumnRawPtrs& in, UInt8& res, Func&& func) {
 template <class Op>
 inline bool extractConstColumns(ColumnRawPtrs& in, UInt8& res) {
     return extractConstColumns<Op>(in, res, [](const Field& value) {
-        return !value.is_null() && applyVisitor(FieldVisitorConvertToNumber<bool>(), value);
+        return !value.is_null() && apply_visitor(FieldVisitorConvertToNumber<bool>(), value);
     });
 }
 
@@ -130,7 +130,7 @@ inline bool extractConstColumnsTernary(ColumnRawPtrs& in, UInt8& res_3v) {
     return extractConstColumns<Op>(in, res_3v, [](const Field& value) {
         return value.is_null() ? Ternary::makeValue(false, true)
                                : Ternary::makeValue(
-                                        applyVisitor(FieldVisitorConvertToNumber<bool>(), value));
+                                        apply_visitor(FieldVisitorConvertToNumber<bool>(), value));
     });
 }
 
@@ -430,7 +430,7 @@ static void basicExecuteImpl(ColumnRawPtrs arguments, ColumnWithTypeAndName& res
 } // namespace
 
 template <typename Impl, typename Name>
-DataTypePtr FunctionAnyArityLogical<Impl, Name>::getReturnTypeImpl(
+DataTypePtr FunctionAnyArityLogical<Impl, Name>::get_return_typeImpl(
         const DataTypes& arguments) const {
     if (arguments.size() < 2)
         throw Exception("Number of arguments for function \"" + get_name() +
@@ -494,7 +494,7 @@ struct UnaryOperationImpl {
 };
 
 template <template <typename> class Impl, typename Name>
-DataTypePtr FunctionUnaryLogical<Impl, Name>::getReturnTypeImpl(const DataTypes& arguments) const {
+DataTypePtr FunctionUnaryLogical<Impl, Name>::get_return_typeImpl(const DataTypes& arguments) const {
     if (!isNativeNumber(arguments[0]))
         throw Exception("Illegal type (" + arguments[0]->get_name() + ") of argument of function " +
                                 get_name(),

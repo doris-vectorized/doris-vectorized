@@ -19,7 +19,7 @@ public:
 
     size_t getNumberOfArguments() const override { return 0; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& /*arguments*/) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& /*arguments*/) const override {
         return Impl::get_return_type();
     }
 
@@ -40,7 +40,7 @@ public:
 
     size_t getNumberOfArguments() const override { return 0; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& /*arguments*/) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& /*arguments*/) const override {
         return Impl::get_return_type();
     }
 
@@ -64,7 +64,7 @@ private:
 
     size_t getNumberOfArguments() const override { return 0; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& /*arguments*/) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& /*arguments*/) const override {
         return std::make_shared<DataTypeFloat64>();
     }
 

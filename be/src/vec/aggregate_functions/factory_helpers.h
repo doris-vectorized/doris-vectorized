@@ -30,20 +30,20 @@ extern const int AGGREGATE_FUNCTION_DOESNT_ALLOW_PARAMETERS;
 extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
 } // namespace ErrorCodes
 
-inline void assertNoParameters(const std::string& name, const Array& parameters) {
+inline void assert_no_parameters(const std::string& name, const Array& parameters) {
     CHECK(parameters.empty()) << fmt::format("Aggregate function {} cannot have parameters", name);
 }
 
-inline void assertUnary(const std::string& name, const DataTypes& argument_types) {
+inline void assert_unary(const std::string& name, const DataTypes& argument_types) {
     CHECK_EQ(argument_types.size(), 1) << fmt::format("Aggregate function {} require single argument", name);
 }
 
-inline void assertBinary(const std::string& name, const DataTypes& argument_types) {
+inline void assert_binary(const std::string& name, const DataTypes& argument_types) {
     CHECK_EQ(argument_types.size(), 2) << fmt::format("Aggregate function {} require two arguments") << name;
 }
 
 template <std::size_t maximal_arity>
-inline void assertArityAtMost(const std::string& name, const DataTypes& argument_types) {
+inline void assert_arity_at_most(const std::string& name, const DataTypes& argument_types) {
     if (argument_types.size() <= maximal_arity) return;
 
     if constexpr (maximal_arity == 0) {

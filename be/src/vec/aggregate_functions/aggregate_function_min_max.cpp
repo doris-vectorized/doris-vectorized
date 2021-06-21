@@ -28,8 +28,8 @@ namespace {
 template <template <typename, bool> class AggregateFunctionTemplate, template <typename> class Data>
 static IAggregateFunction * createAggregateFunctionSingleValue(const String & name, const DataTypes & argument_types, const Array & parameters)
 {
-    assertNoParameters(name, parameters);
-    assertUnary(name, argument_types);
+    assert_no_parameters(name, parameters);
+    assert_unary(name, argument_types);
 
     const DataTypePtr & argument_type = argument_types[0];
 

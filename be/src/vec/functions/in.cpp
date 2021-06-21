@@ -88,7 +88,7 @@ public:
         return 2;
     }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes & /*arguments*/) const override
+    DataTypePtr get_return_typeImpl(const DataTypes & /*arguments*/) const override
     {
         return make_nullable(std::make_shared<DataTypeUInt8>());
     }
