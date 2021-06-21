@@ -50,7 +50,7 @@ extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
 //Columns convertConstTupleToConstantElements(const ColumnConst & column)
 //{
 //    const ColumnTuple & src_tuple = assert_cast<const ColumnTuple &>(column.get_data_column());
-//    const auto & src_tuple_columns = src_tuple.getColumns();
+//    const auto & src_tuple_columns = src_tuple.get_columns();
 //    size_t tuple_size = src_tuple_columns.size();
 //    size_t rows = column.size();
 //
@@ -67,7 +67,7 @@ static Block createBlockWithNestedColumnsImpl(const Block& block,
     size_t columns = block.columns();
 
     for (size_t i = 0; i < columns; ++i) {
-        const auto& col = block.getByPosition(i);
+        const auto& col = block.get_by_position(i);
 
         if (args.count(i) && col.type->is_nullable()) {
             const DataTypePtr& nested_type =

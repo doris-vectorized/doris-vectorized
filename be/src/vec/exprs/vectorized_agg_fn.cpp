@@ -167,7 +167,7 @@ std::vector<ColumnPtr> AggFnEvaluator::_get_argment_columns(Block* block) const 
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
         int column_id = -1;
         _input_exprs_ctxs[i]->execute(block, &column_id);
-        auto ptr = block->getByPosition(column_id).column->convert_to_full_column_if_const();
+        auto ptr = block->get_by_position(column_id).column->convert_to_full_column_if_const();
         columns[i] = ptr;
     }
     return columns;

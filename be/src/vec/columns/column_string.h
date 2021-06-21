@@ -89,7 +89,7 @@ public:
 
     void get(size_t n, Field& res) const override {
         assert(n < size());
-        res.assignString(&chars[offset_at(n)], size_at(n) - 1);
+        res.assign_string(&chars[offset_at(n)], size_at(n) - 1);
     }
 
     StringRef get_data_at(size_t n) const override {

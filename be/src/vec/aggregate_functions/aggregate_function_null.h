@@ -121,7 +121,7 @@ public:
 
     void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
         bool flag = getFlag(place);
-        if (result_is_nullable) writeBinary(flag, buf);
+        if (result_is_nullable) write_binary(flag, buf);
         if (flag) nested_function->serialize(nestedPlace(place), buf);
     }
 

@@ -50,7 +50,7 @@ public:
 
     Status executeImpl(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) override
     {
-        const ColumnWithTypeAndName & elem = block.getByPosition(arguments[0]);
+        const ColumnWithTypeAndName & elem = block.get_by_position(arguments[0]);
         if (auto * nullable = check_and_get_column<ColumnNullable>(*elem.column))
         {
             /// Return the negated null map.
@@ -61,12 +61,12 @@ public:
             for (size_t i = 0; i < input_rows_count; ++i)
                 res_data[i] = !src_data[i];
 
-            block.getByPosition(result).column = std::move(res_column);
+            block.get_by_position(result).column = std::move(res_column);
         }
         else
         {
             /// Since no element is nullable, return a constant one.
-            block.getByPosition(result).column = DataTypeUInt8().createColumnConst(elem.column->size(), 1u);
+            block.get_by_position(result).column = DataTypeUInt8().createColumnConst(elem.column->size(), 1u);
         }
         return Status::OK();
     }

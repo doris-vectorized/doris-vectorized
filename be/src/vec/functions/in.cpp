@@ -100,7 +100,7 @@ public:
         /// NOTE: after updating this code, check that FunctionIgnoreExceptNull returns the same type of column.
 
         /// Second argument must be ColumnSet.
-        ColumnPtr column_set_ptr = block.getByPosition(arguments[1]).column;
+        ColumnPtr column_set_ptr = block.get_by_position(arguments[1]).column;
         const ColumnSet * column_set = typeid_cast<const ColumnSet *>(&*column_set_ptr);
         if (!column_set) {
             return Status::RuntimeError(fmt::format("Second argument for function '{}' must be Set; found {}", get_name(), column_set_ptr->get_name()));
@@ -108,7 +108,7 @@ public:
 
         auto set = column_set->get_data();
         /// First argument may be a single column.
-        const ColumnWithTypeAndName & left_arg = block.getByPosition(arguments[0]);
+        const ColumnWithTypeAndName & left_arg = block.get_by_position(arguments[0]);
 
         auto res = ColumnUInt8::create();
         ColumnUInt8::Container & vec_res = res->get_data();
@@ -154,7 +154,7 @@ public:
            }
        }
 
-       block.getByPosition(result).column = ColumnNullable::create(std::move(res), std::move(col_null_map_to));
+        block.get_by_position(result).column = ColumnNullable::create(std::move(res), std::move(col_null_map_to));
        return Status::OK();
     }
 };

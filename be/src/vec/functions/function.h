@@ -204,7 +204,7 @@ public:
       * It could be used, for example, to remove useless function applications from GROUP BY.
       *
       * Sometimes, function is not really injective, but considered as injective, for purpose of query optimization.
-      * For example, toString function is not injective for Float64 data type,
+      * For example, to_string function is not injective for Float64 data type,
       *  as it returns 'nan' for many different representation of NaNs.
       * But we assume, that it is injective. This could be documented as implementation-specific behaviour.
       *
@@ -293,7 +293,7 @@ public:
     /// Returns indexes of arguments, that must be ColumnConst
     virtual ColumnNumbers getArgumentsThatAreAlwaysConstant() const = 0;
     /// Returns indexes if arguments, that can be Nullable without making result of function Nullable
-    /// (for functions like isNull(x))
+    /// (for functions like is_null(x))
     virtual ColumnNumbers getArgumentsThatDontImplyNullableReturnType(
             size_t number_of_arguments) const = 0;
 };

@@ -55,7 +55,7 @@ public:
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
-        const ColumnPtr column = block.getByPosition(arguments[0]).column;
+        const ColumnPtr column = block.get_by_position(arguments[0]).column;
         if (const ColumnString* col = check_and_get_column<ColumnString>(column.get())) {
             auto col_res = ColumnVector<ResultType>::create();
 
@@ -63,7 +63,7 @@ public:
             vec_res.resize(col->size());
             Impl::vector(col->get_chars(), col->get_offsets(), vec_res);
 
-            block.getByPosition(result).column = std::move(col_res);
+            block.get_by_position(result).column = std::move(col_res);
         }
         //        else if (const ColumnFixedString * col_fixed = check_and_get_column<ColumnFixedString>(column.get()))
         //        {
@@ -72,7 +72,7 @@ public:
         //                ResultType res = 0;
         //                Impl::vector_fixed_to_constant(col_fixed->get_chars(), col_fixed->getN(), res);
         //
-        //                block.getByPosition(result).column = block.getByPosition(result).type->createColumnConst(col_fixed->size(), toField(res));
+        //                block.get_by_position(result).column = block.get_by_position(result).type->createColumnConst(col_fixed->size(), toField(res));
         //            }
         //            else
         //            {
@@ -82,7 +82,7 @@ public:
         //                vec_res.resize(col_fixed->size());
         //                Impl::vector_fixed_to_vector(col_fixed->get_chars(), col_fixed->getN(), vec_res);
         //
-        //                block.getByPosition(result).column = std::move(col_res);
+        //                block.get_by_position(result).column = std::move(col_res);
         //            }
         //        }
         //        else if (const ColumnArray * col_arr = check_and_get_column<ColumnArray>(column.get()))
@@ -93,12 +93,12 @@ public:
         //            vec_res.resize(col_arr->size());
         //            Impl::array(col_arr->get_offsets(), vec_res);
         //
-        //            block.getByPosition(result).column = std::move(col_res);
+        //            block.get_by_position(result).column = std::move(col_res);
         //        }
         else {
             return Status::RuntimeError(
                     fmt::format("Illegal column {} of argument of function {}",
-                                block.getByPosition(arguments[0]).column->get_name(), get_name()));
+                                block.get_by_position(arguments[0]).column->get_name(), get_name()));
         }
 
         return Status::OK();

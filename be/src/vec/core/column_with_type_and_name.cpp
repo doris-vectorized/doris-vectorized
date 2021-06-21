@@ -19,13 +19,10 @@
 #include <sstream>
 
 #include "vec/core/columns_with_type_and_name.h"
-//#include <IO/WriteBufferFromString.h>
-//#include <IO/WriteHelpers.h>
-//#include <IO/Operators.h>
 
 namespace doris::vectorized {
 
-ColumnWithTypeAndName ColumnWithTypeAndName::cloneEmpty() const {
+ColumnWithTypeAndName ColumnWithTypeAndName::clone_empty() const {
     ColumnWithTypeAndName res;
 
     res.name = name;
@@ -42,7 +39,7 @@ bool ColumnWithTypeAndName::operator==(const ColumnWithTypeAndName& other) const
             (column && other.column && column->get_name() == other.column->get_name()));
 }
 
-void ColumnWithTypeAndName::dumpStructure(std::ostream& out) const {
+void ColumnWithTypeAndName::dump_structure(std::ostream& out) const {
     out << name;
 
     if (type)
@@ -57,9 +54,9 @@ void ColumnWithTypeAndName::dumpStructure(std::ostream& out) const {
         out << " nullptr";
 }
 
-String ColumnWithTypeAndName::dumpStructure() const {
+String ColumnWithTypeAndName::dump_structure() const {
     std::stringstream out;
-    dumpStructure(out);
+    dump_structure(out);
     return out.str();
 }
 std::string ColumnWithTypeAndName::to_string(size_t row_num) const {
