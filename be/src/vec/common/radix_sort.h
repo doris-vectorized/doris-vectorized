@@ -75,7 +75,7 @@ struct RadixSortFloatTraits {
     using Allocator = RadixSortMallocAllocator;
 
     /// The function to get the key from an array element.
-    static Key& extractKey(Element& elem) { return elem; }
+    static Key& extract_key(Element& elem) { return elem; }
 
     /// Used when fallback to comparison based sorting is needed.
     /// TODO: Correct handling of NaNs, NULLs, etc
@@ -102,7 +102,7 @@ struct RadixSortUIntTraits {
     using Transform = RadixSortIdentityTransform<KeyBits>;
     using Allocator = RadixSortMallocAllocator;
 
-    static Key& extractKey(Element& elem) { return elem; }
+    static Key& extract_key(Element& elem) { return elem; }
 
     static bool less(Key x, Key y) { return x < y; }
 };
@@ -127,7 +127,7 @@ struct RadixSortIntTraits {
     using Transform = RadixSortSignedTransform<KeyBits>;
     using Allocator = RadixSortMallocAllocator;
 
-    static Key& extractKey(Element& elem) { return elem; }
+    static Key& extract_key(Element& elem) { return elem; }
 
     static bool less(Key x, Key y) { return x < y; }
 };
@@ -155,24 +155,24 @@ private:
     static constexpr size_t NUM_PASSES =
             (KEY_BITS + (Traits::PART_SIZE_BITS - 1)) / Traits::PART_SIZE_BITS;
 
-    static ALWAYS_INLINE KeyBits getPart(size_t N, KeyBits x) {
+    static ALWAYS_INLINE KeyBits get_part(size_t N, KeyBits x) {
         if (Traits::Transform::transform_is_simple) x = Traits::Transform::forward(x);
 
         return (x >> (N * Traits::PART_SIZE_BITS)) & PART_BITMASK;
     }
 
-    static KeyBits keyToBits(Key x) { return ext::bit_cast<KeyBits>(x); }
-    static Key bitsToKey(KeyBits x) { return ext::bit_cast<Key>(x); }
+    static KeyBits key_to_bits(Key x) { return ext::bit_cast<KeyBits>(x); }
+    static Key bits_to_key(KeyBits x) { return ext::bit_cast<Key>(x); }
 
-    static void insertionSortInternal(Element* arr, size_t size) {
+    static void insertion_sort_internal(Element* arr, size_t size) {
         Element* end = arr + size;
         for (Element* i = arr + 1; i < end; ++i) {
-            if (Traits::less(Traits::extractKey(*i), Traits::extractKey(*(i - 1)))) {
+            if (Traits::less(Traits::extract_key(*i), Traits::extract_key(*(i - 1)))) {
                 Element* j;
                 Element tmp = *i;
                 *i = *(i - 1);
                 for (j = i - 1;
-                     j > arr && Traits::less(Traits::extractKey(tmp), Traits::extractKey(*(j - 1)));
+                     j > arr && Traits::less(Traits::extract_key(tmp), Traits::extract_key(*(j - 1)));
                      --j)
                     *j = *(j - 1);
                 *j = tmp;
@@ -184,12 +184,12 @@ private:
      * Puts elements to buckets based on PASS-th digit, then recursively calls insertion sort or itself on the buckets
      */
     template <size_t PASS>
-    static inline void radixSortMSDInternal(Element* arr, size_t size, size_t limit) {
+    static inline void radix_sort_msd_internal(Element* arr, size_t size, size_t limit) {
         Element* last_list[HISTOGRAM_SIZE + 1];
         Element** last = last_list + 1;
         size_t count[HISTOGRAM_SIZE] = {0};
 
-        for (Element* i = arr; i < arr + size; ++i) ++count[getPart(PASS, *i)];
+        for (Element* i = arr; i < arr + size; ++i) ++count[get_part(PASS, *i)];
 
         last_list[0] = last_list[1] = arr;
 
@@ -219,11 +219,11 @@ private:
             }
             while (last[i] != end) {
                 Element swapper = *last[i];
-                KeyBits tag = getPart(PASS, swapper);
+                KeyBits tag = get_part(PASS, swapper);
                 if (tag != i) {
                     do {
                         std::swap(swapper, *last[tag]++);
-                    } while ((tag = getPart(PASS, swapper)) != i);
+                    } while ((tag = get_part(PASS, swapper)) != i);
                     *last[i] = swapper;
                 }
                 ++last[i];
@@ -235,29 +235,29 @@ private:
             for (size_t i = 0; i < buckets_for_recursion - 1; ++i) {
                 Element* start = last[i - 1];
                 size_t subsize = last[i] - last[i - 1];
-                radixSortMSDInternalHelper<PASS - 1>(start, subsize, subsize);
+                radix_sort_msd_internal_helper<PASS - 1>(start, subsize, subsize);
             }
 
             // Sort last necessary bucket with limit
             Element* start = last[buckets_for_recursion - 2];
             size_t subsize = last[buckets_for_recursion - 1] - last[buckets_for_recursion - 2];
             size_t sublimit = limit - (last[buckets_for_recursion - 1] - arr);
-            radixSortMSDInternalHelper<PASS - 1>(start, subsize, sublimit);
+            radix_sort_msd_internal_helper<PASS - 1>(start, subsize, sublimit);
         }
     }
 
     // A helper to choose sorting algorithm based on array length
     template <size_t PASS>
-    static inline void radixSortMSDInternalHelper(Element* arr, size_t size, size_t limit) {
+    static inline void radix_sort_msd_internal_helper(Element* arr, size_t size, size_t limit) {
         if (size <= INSERTION_SORT_THRESHOLD)
-            insertionSortInternal(arr, size);
+            insertion_sort_internal(arr, size);
         else
-            radixSortMSDInternal<PASS>(arr, size, limit);
+            radix_sort_msd_internal<PASS>(arr, size, limit);
     }
 
 public:
     /// Least significant digit radix sort (stable)
-    static void executeLSD(Element* arr, size_t size) {
+    static void execute_lsd(Element* arr, size_t size) {
         /// If the array is smaller than 256, then it is better to use another algorithm.
 
         /// There are loops of NUM_PASSES. It is very important that they are unfolded at compile-time.
@@ -275,12 +275,12 @@ public:
         /// NOTE This is slightly suboptimal. Look at https://github.com/powturbo/TurboHist
         for (size_t i = 0; i < size; ++i) {
             if (!Traits::Transform::transform_is_simple)
-                Traits::extractKey(arr[i]) = bitsToKey(
-                        Traits::Transform::forward(keyToBits(Traits::extractKey(arr[i]))));
+                Traits::extract_key(arr[i]) = bits_to_key(
+                        Traits::Transform::forward(key_to_bits(Traits::extract_key(arr[i]))));
 
             for (size_t pass = 0; pass < NUM_PASSES; ++pass)
                 ++histograms[pass * HISTOGRAM_SIZE +
-                             getPart(pass, keyToBits(Traits::extractKey(arr[i])))];
+                             get_part(pass, key_to_bits(Traits::extract_key(arr[i])))];
         }
 
         {
@@ -302,7 +302,7 @@ public:
             Element* reader = pass % 2 ? swap_buffer : arr;
 
             for (size_t i = 0; i < size; ++i) {
-                size_t pos = getPart(pass, keyToBits(Traits::extractKey(reader[i])));
+                size_t pos = get_part(pass, key_to_bits(Traits::extract_key(reader[i])));
 
                 /// Place the element on the next free position.
                 auto& dest = writer[++histograms[pass * HISTOGRAM_SIZE + pos]];
@@ -310,8 +310,8 @@ public:
 
                 /// On the last pass, we do the reverse transformation.
                 if (!Traits::Transform::transform_is_simple && pass == NUM_PASSES - 1)
-                    Traits::extractKey(dest) = bitsToKey(
-                            Traits::Transform::backward(keyToBits(Traits::extractKey(reader[i]))));
+                    Traits::extract_key(dest) = bits_to_key(
+                            Traits::Transform::backward(key_to_bits(Traits::extract_key(reader[i]))));
             }
         }
 
@@ -349,9 +349,9 @@ public:
      * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
      * SOFTWARE.
      */
-    static void executeMSD(Element* arr, size_t size, size_t limit) {
+    static void execute_msd(Element* arr, size_t size, size_t limit) {
         limit = std::min(limit, size);
-        radixSortMSDInternalHelper<NUM_PASSES - 1>(arr, size, limit);
+        radix_sort_msd_internal_helper<NUM_PASSES - 1>(arr, size, limit);
     }
 };
 
@@ -359,11 +359,11 @@ public:
 /// Use RadixSort with custom traits for complex types instead.
 
 template <typename T>
-void radixSortLSD(T* arr, size_t size) {
-    RadixSort<RadixSortNumTraits<T>>::executeLSD(arr, size);
+void radix_sort_lsd(T* arr, size_t size) {
+    RadixSort<RadixSortNumTraits<T>>::execute_lsd(arr, size);
 }
 
 template <typename T>
-void radixSortMSD(T* arr, size_t size, size_t limit) {
-    RadixSort<RadixSortNumTraits<T>>::executeMSD(arr, size, limit);
+void radix_sort_msd(T* arr, size_t size, size_t limit) {
+    RadixSort<RadixSortNumTraits<T>>::execute_msd(arr, size, limit);
 }

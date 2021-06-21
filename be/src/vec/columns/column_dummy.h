@@ -64,7 +64,7 @@ public:
 
     StringRef serialize_value_into_arena(size_t /*n*/, Arena& arena,
                                          char const*& begin) const override {
-        return {arena.allocContinue(0, begin), 0};
+        return {arena.alloc_continue(0, begin), 0};
     }
 
     const char* deserialize_and_insert_from_arena(const char* pos) override {

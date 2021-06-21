@@ -255,7 +255,7 @@ public:
     bool isVariadic() const override { return true; }
     size_t getNumberOfArguments() const override { return 0; }
 
-    DataTypePtr getReturnTypeImpl(const ColumnsWithTypeAndName& arguments) const override {
+    DataTypePtr get_return_typeImpl(const ColumnsWithTypeAndName& arguments) const override {
         if (arguments.size() != 2 && arguments.size() != 3) {
             LOG(FATAL) << fmt::format(
                     "Number of arguments for function {} doesn't match: passed {} , should be 2 or "

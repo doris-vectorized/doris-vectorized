@@ -1,4 +1,3 @@
-
 /*
     pdqsort.h - Pattern-defeating quicksort.
 

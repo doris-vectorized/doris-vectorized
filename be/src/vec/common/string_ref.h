@@ -47,9 +47,9 @@ struct StringRef {
     StringRef(const std::string& s) : data(s.data()), size(s.size()) {}
     StringRef() = default;
 
-    std::string toString() const { return std::string(data, size); }
+    std::string to_string() const { return std::string(data, size); }
 
-    explicit operator std::string() const { return toString(); }
+    explicit operator std::string() const { return to_string(); }
 };
 
 using StringRefs = std::vector<StringRef>;
@@ -123,7 +123,7 @@ inline bool memequalSSE2Wide(const char* p1, const char* p2, size_t size) {
         if (p1[12] != p2[12]) return false;
         [[fallthrough]];
     case 12:
-        if (unalignedLoad<uint32_t>(p1 + 8) == unalignedLoad<uint32_t>(p2 + 8))
+        if (unaligned_load<uint32_t>(p1 + 8) == unaligned_load<uint32_t>(p2 + 8))
             goto l8;
         else
             return false;
@@ -138,7 +138,7 @@ inline bool memequalSSE2Wide(const char* p1, const char* p2, size_t size) {
     l8:
         [[fallthrough]];
     case 8:
-        return unalignedLoad<uint64_t>(p1) == unalignedLoad<uint64_t>(p2);
+        return unaligned_load<uint64_t>(p1) == unaligned_load<uint64_t>(p2);
     case 7:
         if (p1[6] != p2[6]) return false;
         [[fallthrough]];
@@ -149,12 +149,12 @@ inline bool memequalSSE2Wide(const char* p1, const char* p2, size_t size) {
         if (p1[4] != p2[4]) return false;
         [[fallthrough]];
     case 4:
-        return unalignedLoad<uint32_t>(p1) == unalignedLoad<uint32_t>(p2);
+        return unaligned_load<uint32_t>(p1) == unaligned_load<uint32_t>(p2);
     case 3:
         if (p1[2] != p2[2]) return false;
         [[fallthrough]];
     case 2:
-        return unalignedLoad<uint16_t>(p1) == unalignedLoad<uint16_t>(p2);
+        return unaligned_load<uint16_t>(p1) == unaligned_load<uint16_t>(p2);
     case 1:
         if (p1[0] != p2[0]) return false;
         [[fallthrough]];
@@ -209,26 +209,26 @@ struct StringRefHash64 {
 
 /// Parts are taken from CityHash.
 
-inline doris::vectorized::UInt64 hashLen16(doris::vectorized::UInt64 u,
-                                           doris::vectorized::UInt64 v) {
+inline doris::vectorized::UInt64 hash_len16(doris::vectorized::UInt64 u,
+                                            doris::vectorized::UInt64 v) {
     return CityHash_v1_0_2::Hash128to64(CityHash_v1_0_2::uint128(u, v));
 }
 
-inline doris::vectorized::UInt64 shiftMix(doris::vectorized::UInt64 val) {
+inline doris::vectorized::UInt64 shift_mix(doris::vectorized::UInt64 val) {
     return val ^ (val >> 47);
 }
 
-inline doris::vectorized::UInt64 rotateByAtLeast1(doris::vectorized::UInt64 val, int shift) {
+inline doris::vectorized::UInt64 rotate_by_at_least1(doris::vectorized::UInt64 val, int shift) {
     return (val >> shift) | (val << (64 - shift));
 }
 
-inline size_t hashLessThan8(const char* data, size_t size) {
+inline size_t hash_less_than8(const char* data, size_t size) {
     static constexpr doris::vectorized::UInt64 k2 = 0x9ae16a3b2f90404fULL;
     static constexpr doris::vectorized::UInt64 k3 = 0xc949d7c7509e6557ULL;
 
     if (size >= 4) {
-        doris::vectorized::UInt64 a = unalignedLoad<uint32_t>(data);
-        return hashLen16(size + (a << 3), unalignedLoad<uint32_t>(data + size - 4));
+        doris::vectorized::UInt64 a = unaligned_load<uint32_t>(data);
+        return hash_len16(size + (a << 3), unaligned_load<uint32_t>(data + size - 4));
     }
 
     if (size > 0) {
@@ -237,20 +237,20 @@ inline size_t hashLessThan8(const char* data, size_t size) {
         uint8_t c = data[size - 1];
         uint32_t y = static_cast<uint32_t>(a) + (static_cast<uint32_t>(b) << 8);
         uint32_t z = size + (static_cast<uint32_t>(c) << 2);
-        return shiftMix(y * k2 ^ z * k3) * k2;
+        return shift_mix(y * k2 ^ z * k3) * k2;
     }
 
     return k2;
 }
 
-inline size_t hashLessThan16(const char* data, size_t size) {
+inline size_t hash_less_than16(const char* data, size_t size) {
     if (size > 8) {
-        doris::vectorized::UInt64 a = unalignedLoad<doris::vectorized::UInt64>(data);
-        doris::vectorized::UInt64 b = unalignedLoad<doris::vectorized::UInt64>(data + size - 8);
-        return hashLen16(a, rotateByAtLeast1(b + size, size)) ^ b;
+        doris::vectorized::UInt64 a = unaligned_load<doris::vectorized::UInt64>(data);
+        doris::vectorized::UInt64 b = unaligned_load<doris::vectorized::UInt64>(data + size - 8);
+        return hash_len16(a, rotate_by_at_least1(b + size, size)) ^ b;
     }
 
-    return hashLessThan8(data, size);
+    return hash_less_than8(data, size);
 }
 
 struct CRC32Hash {
@@ -261,20 +261,20 @@ struct CRC32Hash {
         if (size == 0) return 0;
 
         if (size < 8) {
-            return hashLessThan8(x.data, x.size);
+            return hash_less_than8(x.data, x.size);
         }
 
         const char* end = pos + size;
         size_t res = -1ULL;
 
         do {
-            doris::vectorized::UInt64 word = unalignedLoad<doris::vectorized::UInt64>(pos);
+            doris::vectorized::UInt64 word = unaligned_load<doris::vectorized::UInt64>(pos);
             res = _mm_crc32_u64(res, word);
 
             pos += 8;
         } while (pos + 8 < end);
 
-        doris::vectorized::UInt64 word = unalignedLoad<doris::vectorized::UInt64>(
+        doris::vectorized::UInt64 word = unaligned_load<doris::vectorized::UInt64>(
                 end - 8); /// I'm not sure if this is normal.
         res = _mm_crc32_u64(res, word);
 

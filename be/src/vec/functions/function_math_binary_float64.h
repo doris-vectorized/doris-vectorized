@@ -42,7 +42,7 @@ private:
 
     size_t getNumberOfArguments() const override { return 2; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         const auto check_argument_type = [this](const IDataType* arg) -> bool {
             if (!isNativeNumber(arg)) {
                 LOG(ERROR) << "Illegal type " << arg->get_name() << " of argument of function "

@@ -60,11 +60,11 @@ public:
     /** If column isn't constant, returns nullptr (or itself).
       * If column is constant, transforms constant to full column (if column type allows such transform) and return it.
       */
-    virtual Ptr convert_to_full_column_if_const() const { return getPtr(); }
+    virtual Ptr convert_to_full_column_if_const() const { return get_ptr(); }
 
     /// If column isn't ColumnLowCardinality, return itself.
     /// If column is ColumnLowCardinality, transforms is to full column.
-    virtual Ptr convert_to_full_column_if_low_cardinality() const { return getPtr(); }
+    virtual Ptr convert_to_full_column_if_low_cardinality() const { return get_ptr(); }
 
     /// Creates empty column with the same type.
     virtual MutablePtr clone_empty() const { return clone_resized(0); }
@@ -190,7 +190,7 @@ public:
       * Serialized value can be deserialized to reconstruct original object. Is used in aggregation.
       * The method is similar to get_data_at(), but can work when element's value cannot be mapped to existing continuous memory chunk,
       *  For example, to obtain unambiguous representation of Array of strings, strings data should be interleaved with their sizes.
-      * Parameter begin should be used with Arena::allocContinue.
+      * Parameter begin should be used with Arena::alloc_continue.
       */
     virtual StringRef serialize_value_into_arena(size_t n, Arena& arena, char const*& begin) const = 0;
 
@@ -302,7 +302,7 @@ public:
     }
 
     MutablePtr mutate() const&& {
-        MutablePtr res = shallowMutate();
+        MutablePtr res = shallow_mutate();
         res->for_each_subcolumn(
                 [](WrappedPtr &subcolumn) { subcolumn = std::move(*subcolumn).mutate(); });
         return res;

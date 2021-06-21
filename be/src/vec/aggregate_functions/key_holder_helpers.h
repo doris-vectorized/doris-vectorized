@@ -6,7 +6,7 @@
 namespace doris::vectorized {
 
 template <bool is_plain_column = false>
-static auto getKeyHolder(const IColumn& column, size_t row_num, Arena& arena) {
+static auto get_key_holder(const IColumn& column, size_t row_num, Arena& arena) {
     if constexpr (is_plain_column) {
         return ArenaKeyHolder{column.get_data_at(row_num), arena};
     } else {
@@ -18,7 +18,7 @@ static auto getKeyHolder(const IColumn& column, size_t row_num, Arena& arena) {
 }
 
 template <bool is_plain_column>
-static void deserializeAndInsert(StringRef str, IColumn& data_to) {
+static void deserialize_and_insert(StringRef str, IColumn& data_to) {
     if constexpr (is_plain_column)
         data_to.insert_data(str.data, str.size);
     else

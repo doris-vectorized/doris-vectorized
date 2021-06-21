@@ -41,7 +41,7 @@ public:
     static FunctionPtr create() { return std::make_shared<FunctionUnaryToType>(); }
     String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 1; }
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         return std::make_shared<typename Impl::ReturnType>();
     }
 
@@ -115,7 +115,7 @@ public:
     static FunctionPtr create() { return std::make_shared<FunctionBinaryToType>(); }
     String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 2; }
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         using ResultDataType = typename Impl<LeftDataType, RightDataType>::ResultDataType;
         return std::make_shared<ResultDataType>();
     }
@@ -177,7 +177,7 @@ public:
     static FunctionPtr create() { return std::make_shared<FunctionBinaryToType>(); }
     String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 2; }
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         return std::make_shared<ResultDataType>();
     }
     bool useDefaultImplementationForConstants() const override { return true; }
@@ -250,7 +250,7 @@ public:
     }
     String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 2; }
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         return make_nullable(std::make_shared<typename Impl::ReturnType>());
     }
     bool useDefaultImplementationForConstants() const override { return true; }

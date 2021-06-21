@@ -57,23 +57,23 @@ protected:
       * We use prefix_size bytes for flag to satisfy the alignment requirement of nested state.
       */
 
-    AggregateDataPtr nestedPlace(AggregateDataPtr place) const noexcept {
+    AggregateDataPtr nested_place(AggregateDataPtr place) const noexcept {
         return place + prefix_size;
     }
 
-    ConstAggregateDataPtr nestedPlace(ConstAggregateDataPtr place) const noexcept {
+    ConstAggregateDataPtr nested_place(ConstAggregateDataPtr place) const noexcept {
         return place + prefix_size;
     }
 
-    static void initFlag(AggregateDataPtr place) noexcept {
+    static void init_flag(AggregateDataPtr place) noexcept {
         if (result_is_nullable) place[0] = 0;
     }
 
-    static void setFlag(AggregateDataPtr place) noexcept {
+    static void set_flag(AggregateDataPtr place) noexcept {
         if (result_is_nullable) place[0] = 1;
     }
 
-    static bool getFlag(ConstAggregateDataPtr place) noexcept {
+    static bool get_flag(ConstAggregateDataPtr place) noexcept {
         return result_is_nullable ? place[0] : 1;
     }
 
@@ -83,7 +83,7 @@ public:
             : IAggregateFunctionHelper<Derived>(arguments, params),
               nested_function{nested_function_} {
         if (result_is_nullable)
-            prefix_size = nested_function->alignOfData();
+            prefix_size = nested_function->align_of_data();
         else
             prefix_size = 0;
     }
@@ -93,69 +93,69 @@ public:
         return nested_function->get_name();
     }
 
-    DataTypePtr getReturnType() const override {
-        return result_is_nullable ? make_nullable(nested_function->getReturnType())
-                                  : nested_function->getReturnType();
+    DataTypePtr get_return_type() const override {
+        return result_is_nullable ? make_nullable(nested_function->get_return_type())
+                                  : nested_function->get_return_type();
     }
 
     void create(AggregateDataPtr place) const override {
-        initFlag(place);
-        nested_function->create(nestedPlace(place));
+        init_flag(place);
+        nested_function->create(nested_place(place));
     }
 
     void destroy(AggregateDataPtr place) const noexcept override {
-        nested_function->destroy(nestedPlace(place));
+        nested_function->destroy(nested_place(place));
     }
 
-    bool hasTrivialDestructor() const override { return nested_function->hasTrivialDestructor(); }
+    bool has_trivial_destructor() const override { return nested_function->has_trivial_destructor(); }
 
-    size_t sizeOfData() const override { return prefix_size + nested_function->sizeOfData(); }
+    size_t size_of_data() const override { return prefix_size + nested_function->size_of_data(); }
 
-    size_t alignOfData() const override { return nested_function->alignOfData(); }
+    size_t align_of_data() const override { return nested_function->align_of_data(); }
 
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena* arena) const override {
-        if (result_is_nullable && getFlag(rhs)) setFlag(place);
+        if (result_is_nullable && get_flag(rhs)) set_flag(place);
 
-        nested_function->merge(nestedPlace(place), nestedPlace(rhs), arena);
+        nested_function->merge(nested_place(place), nested_place(rhs), arena);
     }
 
     void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
-        bool flag = getFlag(place);
+        bool flag = get_flag(place);
         if (result_is_nullable) write_binary(flag, buf);
-        if (flag) nested_function->serialize(nestedPlace(place), buf);
+        if (flag) nested_function->serialize(nested_place(place), buf);
     }
 
     void deserialize(AggregateDataPtr place, std::istream& buf, Arena* arena) const override {
         bool flag = true;
         if (result_is_nullable) read_binary(flag, buf);
         if (flag) {
-            setFlag(place);
-            nested_function->deserialize(nestedPlace(place), buf, arena);
+            set_flag(place);
+            nested_function->deserialize(nested_place(place), buf, arena);
         }
     }
 
-    void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
+    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
         if (result_is_nullable) {
             ColumnNullable& to_concrete = assert_cast<ColumnNullable&>(to);
-            if (getFlag(place)) {
-                nested_function->insertResultInto(nestedPlace(place),
+            if (get_flag(place)) {
+                nested_function->insert_result_into(nested_place(place),
                                                   to_concrete.get_nested_column());
                 to_concrete.get_null_map_data().push_back(0);
             } else {
                 to_concrete.insert_default();
             }
         } else {
-            nested_function->insertResultInto(nestedPlace(place), to);
+            nested_function->insert_result_into(nested_place(place), to);
         }
     }
 
-    bool allocatesMemoryInArena() const override {
-        return nested_function->allocatesMemoryInArena();
+    bool allocates_memory_in_arena() const override {
+        return nested_function->allocates_memory_in_arena();
     }
 
-    bool isState() const override { return nested_function->isState(); }
+    bool is_state() const override { return nested_function->is_state(); }
 
-    const char* getHeaderFilePath() const override { return __FILE__; }
+    const char* get_header_file_path() const override { return __FILE__; }
 };
 
 /** There are two cases: for single argument and variadic.
@@ -176,13 +176,13 @@ public:
              Arena* arena) const override {
         const ColumnNullable* column = assert_cast<const ColumnNullable*>(columns[0]);
         if (!column->is_null_at(row_num)) {
-            this->setFlag(place);
+            this->set_flag(place);
             const IColumn* nested_column = &column->get_nested_column();
-            this->nested_function->add(this->nestedPlace(place), &nested_column, row_num, arena);
+            this->nested_function->add(this->nested_place(place), &nested_column, row_num, arena);
         }
     }
 
-    void addBatchSinglePlace(size_t batch_size, AggregateDataPtr place, const IColumn** columns,
+    void add_batch_single_place(size_t batch_size, AggregateDataPtr place, const IColumn** columns,
                              Arena* arena) const override {
         const ColumnNullable* column = assert_cast<const ColumnNullable*>(columns[0]);
         bool has_null = column->has_null();
@@ -190,14 +190,14 @@ public:
         if (has_null) {
             for (size_t i = 0; i < batch_size; ++i) {
                 if (!column->is_null_at(i)) {
-                    this->setFlag(place);
+                    this->set_flag(place);
                     this->add(place, columns, i, arena);
                 }
             }
         } else {
-            this->setFlag(place);
+            this->set_flag(place);
             const IColumn* nested_column = &column->get_nested_column();
-            this->nested_function->addBatchSinglePlace(batch_size, this->nestedPlace(place),
+            this->nested_function->add_batch_single_place(batch_size, this->nested_place(place),
                                                        &nested_column, arena);
         }
     }
@@ -245,12 +245,12 @@ public:
                 nested_columns[i] = columns[i];
         }
 
-        this->setFlag(place);
-        this->nested_function->add(this->nestedPlace(place), nested_columns, row_num, arena);
+        this->set_flag(place);
+        this->nested_function->add(this->nested_place(place), nested_columns, row_num, arena);
     }
 
-    bool allocatesMemoryInArena() const override {
-        return this->nested_function->allocatesMemoryInArena();
+    bool allocates_memory_in_arena() const override {
+        return this->nested_function->allocates_memory_in_arena();
     }
 
 private:

@@ -108,7 +108,7 @@ public:
                       argument_types_, {}),
               scale(getDecimalScale(data_type)) {}
 
-    DataTypePtr getReturnType() const override {
+    DataTypePtr get_return_type() const override {
         if constexpr (IsDecimalNumber<T>)
             return std::make_shared<ResultDataType>(ResultDataType::maxPrecision(), scale);
         else
@@ -133,12 +133,12 @@ public:
         this->data(place).read(buf);
     }
 
-    void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
+    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
         auto& column = static_cast<ColVecResult&>(to);
         column.get_data().push_back(this->data(place).get());
     }
 
-    const char* getHeaderFilePath() const override { return __FILE__; }
+    const char* get_header_file_path() const override { return __FILE__; }
 
 private:
     UInt32 scale;

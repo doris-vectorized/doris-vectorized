@@ -102,7 +102,7 @@ StringRef ColumnNullable::serialize_value_into_arena(size_t n, Arena& arena,
     const auto& arr = get_null_map_data();
     static constexpr auto s = sizeof(arr[0]);
 
-    auto pos = arena.allocContinue(s, begin);
+    auto pos = arena.alloc_continue(s, begin);
     memcpy(pos, &arr[n], s);
 
     if (arr[n]) return StringRef(pos, s);
@@ -330,11 +330,11 @@ void getExtremesFromNullableContent(const ColumnVector<T>& col, const NullMap& n
             cur_min = x;
             cur_max = x;
             has_not_null = true;
-            has_not_nan = !isNaN(x);
+            has_not_nan = !is_nan(x);
             continue;
         }
 
-        if (isNaN(x)) continue;
+        if (is_nan(x)) continue;
 
         if (!has_not_nan) {
             cur_min = x;

@@ -34,7 +34,7 @@ public:
 
     String get_name() const override { return "nothing"; }
 
-    DataTypePtr getReturnType() const override {
+    DataTypePtr get_return_type() const override {
         return std::make_shared<DataTypeNullable>(std::make_shared<DataTypeNothing>());
     }
 
@@ -42,11 +42,11 @@ public:
 
     void destroy(AggregateDataPtr) const noexcept override {}
 
-    bool hasTrivialDestructor() const override { return true; }
+    bool has_trivial_destructor() const override { return true; }
 
-    size_t sizeOfData() const override { return 0; }
+    size_t size_of_data() const override { return 0; }
 
-    size_t alignOfData() const override { return 1; }
+    size_t align_of_data() const override { return 1; }
 
     void add(AggregateDataPtr, const IColumn**, size_t, Arena*) const override {}
 
@@ -56,9 +56,9 @@ public:
 
     void deserialize(AggregateDataPtr, std::istream&, Arena*) const override {}
 
-    void insertResultInto(ConstAggregateDataPtr, IColumn& to) const override { to.insert_default(); }
+    void insert_result_into(ConstAggregateDataPtr, IColumn& to) const override { to.insert_default(); }
 
-    const char* getHeaderFilePath() const override { return __FILE__; }
+    const char* get_header_file_path() const override { return __FILE__; }
 };
 
 } // namespace doris::vectorized

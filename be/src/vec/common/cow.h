@@ -195,23 +195,23 @@ public:
     }
 
 public:
-    Ptr getPtr() const { return static_cast<Ptr>(derived()); }
-    MutablePtr getPtr() { return static_cast<MutablePtr>(derived()); }
+    Ptr get_ptr() const { return static_cast<Ptr>(derived()); }
+    MutablePtr get_ptr() { return static_cast<MutablePtr>(derived()); }
 
 protected:
-    MutablePtr shallowMutate() const {
+    MutablePtr shallow_mutate() const {
         if (this->use_count() > 1)
             return derived()->clone();
         else
-            return assumeMutable();
+            return assume_mutable();
     }
 
 public:
-    MutablePtr mutate() const&& { return shallowMutate(); }
+    MutablePtr mutate() const&& { return shallow_mutate(); }
 
-    MutablePtr assumeMutable() const { return const_cast<COW*>(this)->getPtr(); }
+    MutablePtr assume_mutable() const { return const_cast<COW*>(this)->get_ptr(); }
 
-    Derived& assumeMutableRef() const { return const_cast<Derived&>(*derived()); }
+    Derived& assume_mutable_ref() const { return const_cast<Derived&>(*derived()); }
 
 protected:
     /// It works as immutable_ptr if it is const and as mutable_ptr if it is non const.
@@ -229,13 +229,13 @@ protected:
                 : value(std::forward<std::initializer_list<U>>(arg)) {}
 
         const T* get() const { return value.get(); }
-        T* get() { return &value->assumeMutableRef(); }
+        T* get() { return &value->assume_mutable_ref(); }
 
         const T* operator->() const { return get(); }
         T* operator->() { return get(); }
 
         const T& operator*() const { return *value; }
-        T& operator*() { return value->assumeMutableRef(); }
+        T& operator*() { return value->assume_mutable_ref(); }
 
         operator const immutable_ptr<T> &() const { return value; }
         operator immutable_ptr<T> &() { return value; }
@@ -314,7 +314,7 @@ public:
     }
 
 protected:
-    MutablePtr shallowMutate() const {
-        return MutablePtr(static_cast<Derived*>(Base::shallowMutate().get()));
+    MutablePtr shallow_mutate() const {
+        return MutablePtr(static_cast<Derived*>(Base::shallow_mutate().get()));
     }
 };

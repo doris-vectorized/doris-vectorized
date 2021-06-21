@@ -513,13 +513,13 @@ public:
     bool isInjective(const Block&) override { return std::is_same_v<Name, NameToString>; }
 
     // This function should not be called for get DateType Ptr
-    // using the FunctionCast::getReturnTypeImpl
-    DataTypePtr getReturnTypeImpl(const ColumnsWithTypeAndName& arguments) const override {
+    // using the FunctionCast::get_return_typeImpl
+    DataTypePtr get_return_typeImpl(const ColumnsWithTypeAndName& arguments) const override {
         return std::make_shared<ToDataType>();
     }
 
     bool useDefaultImplementationForConstants() const override { return true; }
-    ColumnNumbers getArgumentsThatAreAlwaysConstant() const override { return {1}; }
+    ColumnNumbers get_argumentsThatAreAlwaysConstant() const override { return {1}; }
     bool canBeExecutedOnDefaultArguments() const override { return false; }
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
@@ -702,7 +702,7 @@ protected:
     bool useDefaultImplementationForNulls() const override { return false; }
     bool useDefaultImplementationForConstants() const override { return true; }
     bool useDefaultImplementationForLowCardinalityColumns() const override { return false; }
-    ColumnNumbers getArgumentsThatAreAlwaysConstant() const override { return {1}; }
+    ColumnNumbers get_argumentsThatAreAlwaysConstant() const override { return {1}; }
 
 private:
     WrapperType wrapper_function;
@@ -878,11 +878,11 @@ public:
     size_t getNumberOfArguments() const override { return 0; }
 
     bool useDefaultImplementationForConstants() const override { return true; }
-    ColumnNumbers getArgumentsThatAreAlwaysConstant() const override { return {1}; }
+    ColumnNumbers get_argumentsThatAreAlwaysConstant() const override { return {1}; }
 
     // This function should not be called for get DateType Ptr
-    // using the FunctionCast::getReturnTypeImpl
-    DataTypePtr getReturnTypeImpl(const ColumnsWithTypeAndName& arguments) const override {
+    // using the FunctionCast::get_return_typeImpl
+    DataTypePtr get_return_typeImpl(const ColumnsWithTypeAndName& arguments) const override {
         DataTypePtr res;
         if constexpr (IsDataTypeDecimal<ToDataType>) {
             //            UInt64 scale = extractToDecimalScale(arguments[1]);
@@ -968,11 +968,11 @@ public:
     size_t getNumberOfArguments() const override { return 0; }
 
     bool useDefaultImplementationForConstants() const override { return true; }
-    ColumnNumbers getArgumentsThatAreAlwaysConstant() const override { return {1}; }
+    ColumnNumbers get_argumentsThatAreAlwaysConstant() const override { return {1}; }
 
     // This function should not be called for get DateType Ptr
-    // using the FunctionCast::getReturnTypeImpl
-    DataTypePtr getReturnTypeImpl(const ColumnsWithTypeAndName& arguments) const override {
+    // using the FunctionCast::get_return_typeImpl
+    DataTypePtr get_return_typeImpl(const ColumnsWithTypeAndName& arguments) const override {
         auto res = std::make_shared<ToDataType>();
         return res;
     }
@@ -1015,13 +1015,13 @@ public:
               argument_types(argument_types_),
               return_type(return_type_) {}
 
-    const DataTypes& getArgumentTypes() const override { return argument_types; }
-    const DataTypePtr& getReturnType() const override { return return_type; }
+    const DataTypes& get_argument_types() const override { return argument_types; }
+    const DataTypePtr& get_return_type() const override { return return_type; }
 
     PreparedFunctionPtr prepare(const Block& /*sample_block*/, const ColumnNumbers& /*arguments*/,
                                 size_t /*result*/) const override {
         return std::make_shared<PreparedFunctionCast>(
-                prepareUnpackDictionaries(getArgumentTypes()[0], getReturnType()), name);
+                prepareUnpackDictionaries(get_argument_types()[0], get_return_type()), name);
     }
 
     String get_name() const override { return name; }
@@ -1060,7 +1060,7 @@ private:
             function = FunctionTo<DataType>::Type::create();
 
         /// Check conversion using underlying function
-        { function->getReturnType(ColumnsWithTypeAndName(1, {nullptr, from_type, ""})); }
+        { function->get_return_type(ColumnsWithTypeAndName(1, {nullptr, from_type, ""})); }
 
         return [function](Block& block, const ColumnNumbers& arguments, const size_t result,
                           size_t input_rows_count) {
@@ -1072,7 +1072,7 @@ private:
         FunctionPtr function = FunctionToString::create();
 
         /// Check conversion using underlying function
-        { function->getReturnType(ColumnsWithTypeAndName(1, {nullptr, from_type, ""})); }
+        { function->get_return_type(ColumnsWithTypeAndName(1, {nullptr, from_type, ""})); }
 
         return [function](Block& block, const ColumnNumbers& arguments, const size_t result,
                           size_t input_rows_count) {
@@ -1103,7 +1103,7 @@ private:
                     FunctionConvertFromString<DataTypeDecimal<FieldType>, NameCast>::create();
 
             /// Check conversion using underlying function
-            { function->getReturnType(ColumnsWithTypeAndName(1, {nullptr, from_type, ""})); }
+            { function->get_return_type(ColumnsWithTypeAndName(1, {nullptr, from_type, ""})); }
 
             return [function](Block& block, const ColumnNumbers& arguments, const size_t result,
                               size_t input_rows_count) {
@@ -1343,7 +1343,7 @@ public:
 
     size_t getNumberOfArguments() const override { return 2; }
 
-    ColumnNumbers getArgumentsThatAreAlwaysConstant() const override { return {1}; }
+    ColumnNumbers get_argumentsThatAreAlwaysConstant() const override { return {1}; }
 
 protected:
     FunctionBasePtr buildImpl(const ColumnsWithTypeAndName& arguments,
@@ -1357,7 +1357,7 @@ protected:
                                               return_type);
     }
 
-    DataTypePtr getReturnTypeImpl(const ColumnsWithTypeAndName& arguments) const override {
+    DataTypePtr get_return_typeImpl(const ColumnsWithTypeAndName& arguments) const override {
         const auto type_col = checkAndGetColumnConst<ColumnString>(arguments.back().column.get());
         if (!type_col) {
             LOG(FATAL) << fmt::format(

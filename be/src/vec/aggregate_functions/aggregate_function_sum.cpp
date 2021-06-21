@@ -62,15 +62,15 @@ template <template <typename> class Function>
 AggregateFunctionPtr createAggregateFunctionSum(const std::string& name,
                                                 const DataTypes& argument_types,
                                                 const Array& parameters) {
-    // assertNoParameters(name, parameters);
-    // assertUnary(name, argument_types);
+    // assert_no_parameters(name, parameters);
+    // assert_unary(name, argument_types);
 
     AggregateFunctionPtr res;
     DataTypePtr data_type = argument_types[0];
     if (isDecimal(data_type))
-        res.reset(createWithDecimalType<Function>(*data_type, *data_type, argument_types));
+        res.reset(create_with_decimal_type<Function>(*data_type, *data_type, argument_types));
     else
-        res.reset(createWithNumericType<Function>(*data_type, argument_types));
+        res.reset(create_with_numeric_type<Function>(*data_type, argument_types));
 
     if (!res) {
         LOG(WARNING) << fmt::format("Illegal type {} of argument for aggregate function {}", argument_types[0]->get_name(), name);

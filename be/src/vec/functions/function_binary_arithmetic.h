@@ -282,9 +282,9 @@ private:
             if constexpr (_check_overflow) {
                 bool overflow = false;
                 if constexpr (scale_left)
-                    overflow |= common::mulOverflow(a, scale, a);
+                    overflow |= common::mul_overflow(a, scale, a);
                 else
-                    overflow |= common::mulOverflow(b, scale, b);
+                    overflow |= common::mul_overflow(b, scale, b);
 
                 if constexpr (can_overflow)
                     overflow |= Op::template apply<NativeResultType>(a, b, res);
@@ -311,8 +311,8 @@ private:
             if constexpr (_check_overflow) {
                 bool overflow = false;
                 if constexpr (!IsDecimalNumber<A>)
-                    overflow |= common::mulOverflow(scale, scale, scale);
-                overflow |= common::mulOverflow(a, scale, a);
+                    overflow |= common::mul_overflow(scale, scale, scale);
+                overflow |= common::mul_overflow(a, scale, a);
                 if (overflow)
                     throw Exception("Decimal math overflow", ErrorCodes::DECIMAL_OVERFLOW);
             } else {
@@ -677,7 +677,7 @@ public:
 
     size_t getNumberOfArguments() const override { return 2; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         //        /// Special case when multiply aggregate function state
         //        if (isAggregateMultiply(arguments[0], arguments[1]))
         //        {
@@ -712,7 +712,7 @@ public:
         //            new_arguments[1].type = std::make_shared<DataTypeNumber<DataTypeInterval::FieldType>>();
         //
         //            auto function = function_builder->build(new_arguments);
-        //            return function->getReturnType();
+        //            return function->get_return_type();
         //        }
 
         DataTypePtr type_res;
