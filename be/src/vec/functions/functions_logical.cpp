@@ -92,9 +92,9 @@ void convertColumnToUInt8(const IColumn* column, UInt8Container& res) {
         !tryConvertColumnToUInt8<UInt32>(column, res) &&
         !tryConvertColumnToUInt8<UInt64>(column, res) &&
         !tryConvertColumnToUInt8<Float32>(column, res) &&
-        !tryConvertColumnToUInt8<Float64>(column, res))
-        throw Exception("Unexpected type of column: " + column->get_name(),
-                        ErrorCodes::ILLEGAL_COLUMN);
+        !tryConvertColumnToUInt8<Float64>(column, res)) {
+        LOG(FATAL) << "Unexpected type of column: " << column->get_name();
+    }
 }
 
 template <class Op, typename Func>
@@ -130,7 +130,7 @@ inline bool extractConstColumnsTernary(ColumnRawPtrs& in, UInt8& res_3v) {
     return extractConstColumns<Op>(in, res_3v, [](const Field& value) {
         return value.is_null() ? Ternary::makeValue(false, true)
                                : Ternary::makeValue(
-                                        apply_visitor(FieldVisitorConvertToNumber<bool>(), value));
+                                         apply_visitor(FieldVisitorConvertToNumber<bool>(), value));
     });
 }
 
@@ -200,10 +200,8 @@ struct ValueGetterBuilderImpl<Type, Types...> {
 
 template <>
 struct ValueGetterBuilderImpl<> {
-    static ValueGetter build(const IColumn* x) {
-        throw Exception(
-                std::string("Unknown numeric column of type: ") + demangle(typeid(x).name()),
-                ErrorCodes::LOGICAL_ERROR);
+    [[noreturn]] static ValueGetter build(const IColumn* x) {
+        LOG(FATAL) << "Unknown numeric column of type: " << demangle(typeid(x).name());
     }
 };
 
@@ -283,9 +281,7 @@ template <typename Op, template <typename, size_t> typename OperationApplierImpl
 struct OperationApplier<Op, OperationApplierImpl, 1> {
     template <typename Columns, typename Result>
     static void NO_INLINE doBatchedApply(Columns&, Result&) {
-        throw Exception(
-                "OperationApplier<...>::apply(...): not enough arguments to run this method",
-                ErrorCodes::LOGICAL_ERROR);
+        LOG(FATAL) << "OperationApplier<...>::apply(...): not enough arguments to run this method";
     }
 };
 
@@ -352,16 +348,12 @@ template <typename Op>
 struct TypedExecutorInvoker<Op> {
     template <typename T, typename Result>
     static void apply(const ColumnVector<T>&, const IColumn& y, Result&) {
-        throw Exception(
-                std::string("Unknown numeric column y of type: ") + demangle(typeid(y).name()),
-                ErrorCodes::LOGICAL_ERROR);
+        LOG(FATAL) << "Unknown numeric column y of type: " << demangle(typeid(y).name());
     }
 
     template <typename Result>
     static void apply(const IColumn& x, const IColumn&, Result&) {
-        throw Exception(
-                std::string("Unknown numeric column x of type: ") + demangle(typeid(x).name()),
-                ErrorCodes::LOGICAL_ERROR);
+        LOG(FATAL) << "Unknown numeric column x of type: " << demangle(typeid(x).name());
     }
 };
 
@@ -432,11 +424,11 @@ static void basicExecuteImpl(ColumnRawPtrs arguments, ColumnWithTypeAndName& res
 template <typename Impl, typename Name>
 DataTypePtr FunctionAnyArityLogical<Impl, Name>::get_return_typeImpl(
         const DataTypes& arguments) const {
-    if (arguments.size() < 2)
-        throw Exception("Number of arguments for function \"" + get_name() +
-                                "\" should be at least 2: passed " +
-                                std::to_string(arguments.size()),
-                        ErrorCodes::TOO_FEW_ARGUMENTS_FOR_FUNCTION);
+    if (arguments.size() < 2) {
+        LOG(FATAL) << fmt::format(
+                "Number of arguments for function \"{}\" should be at least 2: passed {}",
+                get_name(), arguments.size());
+    }
 
     bool has_nullable_arguments = false;
     for (size_t i = 0; i < arguments.size(); ++i) {
@@ -444,21 +436,20 @@ DataTypePtr FunctionAnyArityLogical<Impl, Name>::get_return_typeImpl(
 
         if (!has_nullable_arguments) {
             has_nullable_arguments = arg_type->is_nullable();
-            if (has_nullable_arguments && !Impl::specialImplementationForNulls())
-                throw Exception(
-                        "Logical error: Unexpected type of argument for function \"" + get_name() +
-                                "\": "
-                                " argument " +
-                                std::to_string(i + 1) + " is of type " + arg_type->get_name(),
-                        ErrorCodes::LOGICAL_ERROR);
+            if (has_nullable_arguments && !Impl::specialImplementationForNulls()) {
+                LOG(WARNING) << fmt::format(
+                        "Logical error: Unexpected type of argument for function \"{}\" argument "
+                        "{} is of type {}",
+                        get_name(), i + 1, arg_type->get_name());
+            }
         }
 
         if (!(isNativeNumber(arg_type) ||
               (Impl::specialImplementationForNulls() &&
-               (arg_type->only_null() || isNativeNumber(removeNullable(arg_type))))))
-            throw Exception("Illegal type (" + arg_type->get_name() + ") of " +
-                                    std::to_string(i + 1) + " argument of function " + get_name(),
-                            ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+               (arg_type->only_null() || isNativeNumber(removeNullable(arg_type)))))) {
+            LOG(FATAL) << fmt::format("Illegal type ({}) of {} argument of function {}",
+                                      arg_type->get_name(), i + 1, get_name());
+        }
     }
 
     auto result_type = std::make_shared<DataTypeUInt8>();
@@ -494,11 +485,12 @@ struct UnaryOperationImpl {
 };
 
 template <template <typename> class Impl, typename Name>
-DataTypePtr FunctionUnaryLogical<Impl, Name>::get_return_typeImpl(const DataTypes& arguments) const {
-    if (!isNativeNumber(arguments[0]))
-        throw Exception("Illegal type (" + arguments[0]->get_name() + ") of argument of function " +
-                                get_name(),
-                        ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+DataTypePtr FunctionUnaryLogical<Impl, Name>::get_return_typeImpl(
+        const DataTypes& arguments) const {
+    if (!isNativeNumber(arguments[0])) {
+        LOG(FATAL) << fmt::format("Illegal type ({}) of argument of function {}",
+                                  arguments[0]->get_name(), get_name());
+    }
 
     return std::make_shared<DataTypeUInt8>();
 }
@@ -506,7 +498,7 @@ DataTypePtr FunctionUnaryLogical<Impl, Name>::get_return_typeImpl(const DataType
 template <template <typename> class Impl, typename T>
 bool functionUnaryExecuteType(Block& block, const ColumnNumbers& arguments, size_t result) {
     if (auto col = check_and_get_column<ColumnVector<T>>(
-            block.get_by_position(arguments[0]).column.get())) {
+                block.get_by_position(arguments[0]).column.get())) {
         auto col_res = ColumnUInt8::create();
 
         typename ColumnUInt8::Container& vec_res = col_res->get_data();
@@ -532,10 +524,12 @@ Status FunctionUnaryLogical<Impl, Name>::executeImpl(Block& block, const ColumnN
           functionUnaryExecuteType<Impl, Int32>(block, arguments, result) ||
           functionUnaryExecuteType<Impl, Int64>(block, arguments, result) ||
           functionUnaryExecuteType<Impl, Float32>(block, arguments, result) ||
-          functionUnaryExecuteType<Impl, Float64>(block, arguments, result)))
-        throw Exception("Illegal column " + block.get_by_position(arguments[0]).column->get_name() +
-                        " of argument of function " + get_name(),
-                        ErrorCodes::ILLEGAL_COLUMN);
+          functionUnaryExecuteType<Impl, Float64>(block, arguments, result))) {
+        LOG(FATAL) << fmt::format("Illegal column {} of argument of function {}",
+                                  block.get_by_position(arguments[0]).column->get_name(),
+                                  get_name());
+    }
+
     return Status::OK();
 }
 

@@ -81,7 +81,9 @@ public:
 
     bool is_null_at(size_t) const override { return data->is_null_at(0); }
 
-    void insert_range_from(const IColumn&, size_t /*start*/, size_t length) override { s += length; }
+    void insert_range_from(const IColumn&, size_t /*start*/, size_t length) override {
+        s += length;
+    }
 
     void insert(const Field&) override { ++s; }
 
@@ -112,7 +114,8 @@ public:
     ColumnPtr replicate(const Offsets& offsets) const override;
     ColumnPtr permute(const Permutation& perm, size_t limit) const override;
     // ColumnPtr index(const IColumn & indexes, size_t limit) const override;
-    void get_permutation(bool reverse, size_t limit, int nan_direction_hint, Permutation & res) const override;
+    void get_permutation(bool reverse, size_t limit, int nan_direction_hint,
+                         Permutation& res) const override;
 
     size_t byte_size() const override { return data->byte_size() + sizeof(s); }
 
@@ -120,15 +123,10 @@ public:
 
     int compare_at(size_t, size_t, const IColumn& rhs, int nan_direction_hint) const override {
         return data->compare_at(0, 0, *assert_cast<const ColumnConst&>(rhs).data,
-                               nan_direction_hint);
+                                nan_direction_hint);
     }
 
     MutableColumns scatter(ColumnIndex num_columns, const Selector& selector) const override;
-
-    // void gather(ColumnGathererStream &) override
-    // {
-    //     throw Exception("Cannot gather into constant column " + get_name(), ErrorCodes::NOT_IMPLEMENTED);
-    // }
 
     void get_extremes(Field& min, Field& max) const override { data->get_extremes(min, max); }
 

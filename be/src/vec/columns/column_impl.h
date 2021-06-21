@@ -34,10 +34,10 @@ std::vector<IColumn::MutablePtr> IColumn::scatter_impl(ColumnIndex num_columns,
                                                        const Selector& selector) const {
     size_t num_rows = size();
 
-    if (num_rows != selector.size())
-        throw Exception("Size of selector: " + std::to_string(selector.size()) +
-                                " doesn't match size of column: " + std::to_string(num_rows),
-                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+    if (num_rows != selector.size()) {
+        LOG(FATAL) << fmt::format("Size of selector: {}, doesn't match size of column:{}",
+                                  selector.size(), num_rows);
+    }
 
     std::vector<MutablePtr> columns(num_columns);
     for (auto& column : columns) column = clone_empty();
