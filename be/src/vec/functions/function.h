@@ -165,7 +165,7 @@ public:
       */
     virtual llvm::Value* compile(llvm::IRBuilderBase& /*builder*/,
                                  ValuePlaceholders /*values*/) const {
-        throw Exception(get_name() + " is not JIT-compilable", ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << get_name() << " is not JIT-compilable";
     }
 
 #endif
@@ -250,7 +250,8 @@ public:
       */
     virtual Monotonicity getMonotonicityForRange(const IDataType& /*type*/, const Field& /*left*/,
                                                  const Field& /*right*/) const {
-        LOG(FATAL) << fmt::format("Function {} has no information about its monotonicity.", get_name());
+        LOG(FATAL) << fmt::format("Function {} has no information about its monotonicity.",
+                                  get_name());
         return Monotonicity{};
     }
 };
@@ -337,7 +338,8 @@ protected:
     }
 
     virtual DataTypePtr get_return_typeImpl(const DataTypes& /*arguments*/) const {
-        LOG(FATAL) << fmt::format("getReturnType is not implemented for {}", get_name());
+        LOG(FATAL) << fmt::format("get_return_type is not implemented for {}", get_name());
+        return nullptr;
     }
 
     /** If useDefaultImplementationForNulls() is true, than change arguments for get_return_type() and buildImpl():
@@ -363,7 +365,8 @@ protected:
                                       const DataTypePtr& return_type) const = 0;
 
     virtual void getLambdaArgumentTypesImpl(DataTypes& /*arguments*/) const {
-        LOG(FATAL) << fmt::format("Function {} can't have lambda-expressions as arguments", get_name());
+        LOG(FATAL) << fmt::format("Function {} can't have lambda-expressions as arguments",
+                                  get_name());
     }
 
 private:
@@ -402,31 +405,30 @@ public:
     using FunctionBuilderImpl::getLambdaArgumentTypesImpl;
     using FunctionBuilderImpl::get_return_type;
 
-    PreparedFunctionPtr prepare(const Block& /*sample_block*/, const ColumnNumbers& /*arguments*/,
-                                size_t /*result*/) const final {
+    [[noreturn]] PreparedFunctionPtr prepare(const Block& /*sample_block*/,
+                                             const ColumnNumbers& /*arguments*/,
+                                             size_t /*result*/) const final {
         LOG(FATAL) << "prepare is not implemented for IFunction";
     }
 
 #if USE_EMBEDDED_COMPILER
 
     bool isCompilable() const final {
-        throw Exception("isCompilable without explicit types is not implemented for IFunction",
-                        ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "isCompilable without explicit types is not implemented for IFunction";
     }
 
     llvm::Value* compile(llvm::IRBuilderBase& /*builder*/,
                          ValuePlaceholders /*values*/) const final {
-        throw Exception("compile without explicit types is not implemented for IFunction",
-                        ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "compile without explicit types is not implemented for IFunction";
     }
 
 #endif
 
-    const DataTypes& get_argument_types() const final {
+    [[noreturn]] const DataTypes& get_argument_types() const final {
         LOG(FATAL) << "get_argument_types is not implemented for IFunction";
     }
 
-    const DataTypePtr& get_return_type() const final {
+    [[noreturn]] const DataTypePtr& get_return_type() const final {
         LOG(FATAL) << "get_return_type is not implemented for IFunction";
     }
 
@@ -446,7 +448,7 @@ protected:
 
     virtual llvm::Value* compileImpl(llvm::IRBuilderBase&, const DataTypes&,
                                      ValuePlaceholders) const {
-        throw Exception(get_name() + " is not JIT-compilable", ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << get_name() << " is not JIT-compilable";
     }
 
 #endif

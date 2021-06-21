@@ -254,7 +254,7 @@ protected:
     /// Create a bitmap that indicates whether, for a particular row,
     /// a key column bears a null value or not.
     KeysNullMap<Key> create_bitmap(size_t row) const {
-        KeysNullMap<Key> bitmap {};
+        KeysNullMap<Key> bitmap{};
 
         for (size_t k = 0; k < null_maps.size(); ++k) {
             if (null_maps[k] != nullptr) {
@@ -284,10 +284,7 @@ protected:
     const ColumnRawPtrs& get_actual_columns() const { return actual_columns; }
 
     KeysNullMap<Key> create_bitmap(size_t) const {
-        throw Exception {
-                "Internal error: calling create_bitmap() for non-nullable keys"
-                " is forbidden",
-                ErrorCodes::LOGICAL_ERROR};
+        LOG(FATAL) << "Internal error: calling create_bitmap() for non-nullable keys is forbidden";
     }
 
 private:

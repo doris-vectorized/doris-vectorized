@@ -58,10 +58,11 @@ std::string DataTypeDecimal<T>::to_string(const IColumn& column, size_t row_num)
 
 template <typename T>
 void DataTypeDecimal<T>::to_string(const IColumn& column, size_t row_num,
-                                      BufferWritable& ostr) const {
+                                   BufferWritable& ostr) const {
     // TODO: Reduce the copy in std::string mem to ostr, like DataTypeNumber
-    DecimalV2Value value = (DecimalV2Value)assert_cast<const ColumnType&>(*column.convert_to_full_column_if_const().get())
-                      .get_data()[row_num];
+    DecimalV2Value value = (DecimalV2Value)assert_cast<const ColumnType&>(
+                                   *column.convert_to_full_column_if_const().get())
+                                   .get_data()[row_num];
     auto str = value.to_string();
     ostr.write(str.data(), str.size());
 }
@@ -113,12 +114,13 @@ MutableColumnPtr DataTypeDecimal<T>::createColumn() const {
 
 DataTypePtr createDecimal(UInt64 precision_value, UInt64 scale_value) {
     if (precision_value < minDecimalPrecision() ||
-        precision_value > maxDecimalPrecision<Decimal128>())
-        throw Exception("Wrong precision", ErrorCodes::ARGUMENT_OUT_OF_BOUND);
+        precision_value > maxDecimalPrecision<Decimal128>()) {
+        LOG(FATAL) << "Wrong precision";
+    }
 
-    if (static_cast<UInt64>(scale_value) > precision_value)
-        throw Exception("Negative scales and scales larger than precision are not supported",
-                        ErrorCodes::ARGUMENT_OUT_OF_BOUND);
+    if (static_cast<UInt64>(scale_value) > precision_value) {
+        LOG(FATAL) << "Negative scales and scales larger than precision are not supported";
+    }
 
     if (precision_value <= maxDecimalPrecision<Decimal32>())
         return std::make_shared<DataTypeDecimal<Decimal32>>(precision_value, scale_value);

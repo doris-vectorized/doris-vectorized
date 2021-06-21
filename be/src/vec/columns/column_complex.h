@@ -64,9 +64,9 @@ public:
 
     void insert_value(T value) { data.emplace_back(std::move(value)); }
 
-    void get_permutation(bool reverse, size_t limit, int nan_direction_hint,
-                        IColumn::Permutation& res) const override {
-        throw Exception("get_permutation not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] void get_permutation(bool reverse, size_t limit, int nan_direction_hint,
+                                      IColumn::Permutation& res) const override {
+        LOG(FATAL) << "get_permutation not implemented";
     }
 
     void reserve(size_t n) override { data.reserve(n); }
@@ -75,35 +75,35 @@ public:
 
     MutableColumnPtr clone_resized(size_t size) const override;
 
-    void insert(const Field& x) override {
-        throw Exception("insert field not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] void insert(const Field& x) override {
+        LOG(FATAL) << "insert field not implemented";
     }
 
-    Field operator[](size_t n) const override {
-        throw Exception("operator[] not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] Field operator[](size_t n) const override {
+        LOG(FATAL) << "operator[] not implemented";
     }
-    void get(size_t n, Field& res) const override {
-        throw Exception("get field not implemented", ErrorCodes::NOT_IMPLEMENTED);
-    }
-
-    UInt64 get64(size_t n) const override {
-        throw Exception("get field not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] void get(size_t n, Field& res) const override {
+        LOG(FATAL) << "get field not implemented";
     }
 
-    Float64 get_float64(size_t n) const override {
-        throw Exception("get field not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] UInt64 get64(size_t n) const override {
+        LOG(FATAL) << "get field not implemented";
     }
 
-    UInt64 get_uint(size_t n) const override {
-        throw Exception("get field not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] Float64 get_float64(size_t n) const override {
+        LOG(FATAL) << "get field not implemented";
     }
 
-    bool get_bool(size_t n) const override {
-        throw Exception("get field not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] UInt64 get_uint(size_t n) const override {
+        LOG(FATAL) << "get field not implemented";
     }
 
-    Int64 get_int(size_t n) const override {
-        throw Exception("get field not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] bool get_bool(size_t n) const override {
+        LOG(FATAL) << "get field not implemented";
+    }
+
+    [[noreturn]] Int64 get_int(size_t n) const override {
+        LOG(FATAL) << "get field not implemented";
     }
 
     void insert_range_from(const IColumn& src, size_t start, size_t length) {
@@ -116,25 +116,26 @@ public:
 
     void pop_back(size_t n) { data.erase(data.end() - n, data.end()); }
     // it's impossable to use ComplexType as key , so we don't have to implemnt them
-    StringRef serialize_value_into_arena(size_t n, Arena& arena, char const*& begin) const {
-        throw Exception("serialize_value_into_arena not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] StringRef serialize_value_into_arena(size_t n, Arena& arena,
+                                                      char const*& begin) const {
+        LOG(FATAL) << "serialize_value_into_arena not implemented";
     }
 
-    const char* deserialize_and_insert_from_arena(const char* pos) {
-        throw Exception("deserialize_and_insert_from_arena not implemented",
-                        ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] const char* deserialize_and_insert_from_arena(const char* pos) {
+        LOG(FATAL) << "deserialize_and_insert_from_arena not implemented";
     }
 
     void update_hash_with_value(size_t n, SipHash& hash) const {
         // TODO add hash function
     }
 
-    int compare_at(size_t n, size_t m, const IColumn& rhs, int nan_direction_hint) const {
-        throw Exception("compare_at not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] int compare_at(size_t n, size_t m, const IColumn& rhs,
+                                int nan_direction_hint) const {
+        LOG(FATAL) << "compare_at not implemented";
     }
 
     void get_extremes(Field& min, Field& max) const {
-        throw Exception("get_extremes not implemented", ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "get_extremes not implemented";
     }
 
     bool can_be_inside_nullable() const override { return true; }
@@ -164,9 +165,9 @@ public:
 
     ColumnPtr replicate(const IColumn::Offsets& replicate_offsets) const override;
 
-    MutableColumns scatter(IColumn::ColumnIndex num_columns,
-                           const IColumn::Selector& selector) const override {
-        throw Exception("scatter not implemented", ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] MutableColumns scatter(IColumn::ColumnIndex num_columns,
+                                        const IColumn::Selector& selector) const override {
+        LOG(FATAL) << "scatter not implemented";
     }
 
 private:
@@ -189,9 +190,10 @@ template <typename T>
 ColumnPtr ColumnComplexType<T>::filter(const IColumn::Filter& filt,
                                        ssize_t result_size_hint) const {
     size_t size = data.size();
-    if (size != filt.size())
-        throw Exception("Size of filter doesn't match size of column.",
-                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+    if (size != filt.size()) {
+        LOG(FATAL) << "Size of filter doesn't match size of column.";
+    }
+
     if (data.size() == 0) return this->create();
     auto res = this->create();
     Container& res_data = res->get_data();
@@ -221,9 +223,9 @@ ColumnPtr ColumnComplexType<T>::permute(const IColumn::Permutation& perm, size_t
     else
         limit = std::min(size, limit);
 
-    if (perm.size() < limit)
-        throw Exception("Size of permutation is less than required.",
-                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+    if (perm.size() < limit) {
+        LOG(FATAL) << "Size of permutation is less than required.";
+    }
 
     auto res = this->create(limit);
     typename Self::Container& res_data = res->get_data();
@@ -237,9 +239,9 @@ ColumnPtr ColumnComplexType<T>::permute(const IColumn::Permutation& perm, size_t
 template <typename T>
 ColumnPtr ColumnComplexType<T>::replicate(const IColumn::Offsets& offsets) const {
     size_t size = data.size();
-    if (size != offsets.size())
-        throw Exception("Size of offsets doesn't match size of column.",
-                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+    if (size != offsets.size()) {
+        LOG(FATAL) << "Size of offsets doesn't match size of column.";
+    }
 
     if (0 == size) return this->create();
 
