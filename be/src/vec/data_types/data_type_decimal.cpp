@@ -34,7 +34,7 @@ extern const int ARGUMENT_OUT_OF_BOUND;
 } // namespace ErrorCodes
 
 template <typename T>
-std::string DataTypeDecimal<T>::doGetName() const {
+std::string DataTypeDecimal<T>::do_get_name() const {
     std::stringstream ss;
     ss << "Decimal(" << precision << ", " << scale << ")";
     return ss.str();
@@ -95,26 +95,25 @@ void DataTypeDecimal<T>::deserialize(const PColumn& pcolumn, IColumn* column) co
 }
 
 template <typename T>
-Field DataTypeDecimal<T>::getDefault() const {
+Field DataTypeDecimal<T>::get_default() const {
     return DecimalField(T(0), scale);
 }
 
 template <typename T>
-DataTypePtr DataTypeDecimal<T>::promoteNumericType() const {
+DataTypePtr DataTypeDecimal<T>::promote_numeric_type() const {
     using PromotedType = DataTypeDecimal<Decimal128>;
-    return std::make_shared<PromotedType>(PromotedType::maxPrecision(), scale);
+    return std::make_shared<PromotedType>(PromotedType::max_precision(), scale);
 }
 
 template <typename T>
-MutableColumnPtr DataTypeDecimal<T>::createColumn() const {
+MutableColumnPtr DataTypeDecimal<T>::create_column() const {
     return ColumnType::create(0, scale);
 }
 
-//
 
-DataTypePtr createDecimal(UInt64 precision_value, UInt64 scale_value) {
-    if (precision_value < minDecimalPrecision() ||
-        precision_value > maxDecimalPrecision<Decimal128>()) {
+DataTypePtr create_decimal(UInt64 precision_value, UInt64 scale_value) {
+    if (precision_value < min_decimal_precision() ||
+        precision_value > max_decimal_precision<Decimal128>()) {
         LOG(FATAL) << "Wrong precision";
     }
 
@@ -122,25 +121,25 @@ DataTypePtr createDecimal(UInt64 precision_value, UInt64 scale_value) {
         LOG(FATAL) << "Negative scales and scales larger than precision are not supported";
     }
 
-    if (precision_value <= maxDecimalPrecision<Decimal32>())
+    if (precision_value <= max_decimal_precision<Decimal32>())
         return std::make_shared<DataTypeDecimal<Decimal32>>(precision_value, scale_value);
-    else if (precision_value <= maxDecimalPrecision<Decimal64>())
+    else if (precision_value <= max_decimal_precision<Decimal64>())
         return std::make_shared<DataTypeDecimal<Decimal64>>(precision_value, scale_value);
     return std::make_shared<DataTypeDecimal<Decimal128>>(precision_value, scale_value);
 }
 
 template <>
-Decimal32 DataTypeDecimal<Decimal32>::getScaleMultiplier(UInt32 scale_) {
+Decimal32 DataTypeDecimal<Decimal32>::get_scale_multiplier(UInt32 scale_) {
     return common::exp10_i32(scale_);
 }
 
 template <>
-Decimal64 DataTypeDecimal<Decimal64>::getScaleMultiplier(UInt32 scale_) {
+Decimal64 DataTypeDecimal<Decimal64>::get_scale_multiplier(UInt32 scale_) {
     return common::exp10_i64(scale_);
 }
 
 template <>
-Decimal128 DataTypeDecimal<Decimal128>::getScaleMultiplier(UInt32 scale_) {
+Decimal128 DataTypeDecimal<Decimal128>::get_scale_multiplier(UInt32 scale_) {
     return common::exp10_i128(scale_);
 }
 

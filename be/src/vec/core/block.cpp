@@ -122,7 +122,7 @@ inline DataTypePtr get_data_type(const PColumn& pcolumn) {
 }
 
 PColumn::DataType get_pdata_type(DataTypePtr data_type) {
-    switch (data_type->getTypeId()) {
+    switch (data_type->get_type_id()) {
     case TypeIndex::UInt8:
         return PColumn::UINT8;
     case TypeIndex::UInt16:
@@ -180,10 +180,10 @@ Block::Block(const PBlock& pblock) {
         MutableColumnPtr data_column;
         if (pcolumn.is_null_size() > 0) {
             data_column =
-                    ColumnNullable::create(std::move(type->createColumn()), ColumnUInt8::create());
+                    ColumnNullable::create(std::move(type->create_column()), ColumnUInt8::create());
             type = make_nullable(type);
         } else {
-            data_column = type->createColumn();
+            data_column = type->create_column();
         }
         type->deserialize(pcolumn, data_column.get());
         data.emplace_back(data_column->get_ptr(), type, pcolumn.name());
@@ -478,7 +478,7 @@ MutableColumns Block::clone_empty_columns() const {
     size_t num_columns = data.size();
     MutableColumns columns(num_columns);
     for (size_t i = 0; i < num_columns; ++i)
-        columns[i] = data[i].column ? data[i].column->clone_empty() : data[i].type->createColumn();
+        columns[i] = data[i].column ? data[i].column->clone_empty() : data[i].type->create_column();
     return columns;
 }
 
@@ -494,7 +494,7 @@ MutableColumns Block::mutate_columns() {
     MutableColumns columns(num_columns);
     for (size_t i = 0; i < num_columns; ++i)
         columns[i] = data[i].column ? (*std::move(data[i].column)).mutate()
-                                    : data[i].type->createColumn();
+                                    : data[i].type->create_column();
     return columns;
 }
 
@@ -790,7 +790,7 @@ void Block::serialize(PBlock* pblock) const {
         pc->set_name(c->name);
         if (c->type->is_nullable()) {
             pc->set_type(get_pdata_type(
-                    std::dynamic_pointer_cast<const DataTypeNullable>(c->type)->getNestedType()));
+                    std::dynamic_pointer_cast<const DataTypeNullable>(c->type)->get_nested_type()));
         } else {
             pc->set_type(get_pdata_type(c->type));
         }

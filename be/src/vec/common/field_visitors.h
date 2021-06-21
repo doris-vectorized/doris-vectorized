@@ -268,19 +268,19 @@ public:
 };
 
 template <typename T>
-constexpr bool isDecimalField() {
+constexpr bool is_decimalField() {
     return false;
 }
 template <>
-constexpr bool isDecimalField<DecimalField<Decimal32>>() {
+constexpr bool is_decimalField<DecimalField<Decimal32>>() {
     return true;
 }
 template <>
-constexpr bool isDecimalField<DecimalField<Decimal64>>() {
+constexpr bool is_decimalField<DecimalField<Decimal64>>() {
     return true;
 }
 template <>
-constexpr bool isDecimalField<DecimalField<Decimal128>>() {
+constexpr bool is_decimalField<DecimalField<Decimal128>>() {
     return true;
 }
 
@@ -359,7 +359,7 @@ public:
 
     template <typename T, typename U>
     bool operator()(const DecimalField<T>& l, const U& r) const {
-        if constexpr (isDecimalField<U>()) return l == r;
+        if constexpr (is_decimalField<U>()) return l == r;
         if constexpr (std::is_same_v<U, Int64> || std::is_same_v<U, UInt64>)
             return l == DecimalField<Decimal128>(r, 0);
         return cant_compare(l, r);
@@ -464,7 +464,7 @@ public:
 
     template <typename T, typename U>
     bool operator()(const DecimalField<T>& l, const U& r) const {
-        if constexpr (isDecimalField<U>())
+        if constexpr (is_decimalField<U>())
             return l < r;
         else if constexpr (std::is_same_v<U, Int64> || std::is_same_v<U, UInt64>)
             return l < DecimalField<Decimal128>(r, 0);

@@ -19,7 +19,7 @@
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
-void registerFunctionCast(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionBuilderCast>();
+void register_function_cast(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionBuilderCast>();
 }
 } // namespace doris::vectorized

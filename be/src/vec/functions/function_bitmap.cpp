@@ -294,18 +294,18 @@ using FunctionBitmapContains =
 using FunctionBitmapHasAny =
         FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapHasAny, NameBitmapHasAny>;
 
-void registerFunctionBitmap(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionBitmapEmpty>();
-    factory.registerFunction<FunctionToBitmap>();
-    factory.registerFunction<FunctionBitmapFromString>();
-    factory.registerFunction<FunctionBitmapHash>();
-    factory.registerFunction<FunctionBitmapCount>();
-    factory.registerFunction<FunctionBitmapAnd>();
-    factory.registerFunction<FunctionBitmapOr>();
-    factory.registerFunction<FunctionBitmapXor>();
-    factory.registerFunction<FunctionBitmapNot>();
-    factory.registerFunction<FunctionBitmapContains>();
-    factory.registerFunction<FunctionBitmapHasAny>();
+void register_function_bitmap(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionBitmapEmpty>();
+    factory.register_function<FunctionToBitmap>();
+    factory.register_function<FunctionBitmapFromString>();
+    factory.register_function<FunctionBitmapHash>();
+    factory.register_function<FunctionBitmapCount>();
+    factory.register_function<FunctionBitmapAnd>();
+    factory.register_function<FunctionBitmapOr>();
+    factory.register_function<FunctionBitmapXor>();
+    factory.register_function<FunctionBitmapNot>();
+    factory.register_function<FunctionBitmapContains>();
+    factory.register_function<FunctionBitmapHasAny>();
 }
 
 } // namespace doris::vectorized

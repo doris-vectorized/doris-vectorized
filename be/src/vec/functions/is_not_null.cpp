@@ -38,17 +38,17 @@ public:
         return name;
     }
 
-    size_t getNumberOfArguments() const override { return 1; }
-    bool useDefaultImplementationForNulls() const override { return false; }
-    bool useDefaultImplementationForConstants() const override { return true; }
-    ColumnNumbers get_argumentsThatDontImplyNullableReturnType(size_t /*number_of_arguments*/) const override { return {0}; }
+    size_t get_number_of_arguments() const override { return 1; }
+    bool use_default_implementation_for_nulls() const override { return false; }
+    bool use_default_implementation_for_constants() const override { return true; }
+    ColumnNumbers get_arguments_that_dont_imply_nullable_return_type(size_t /*number_of_arguments*/) const override { return {0}; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes &) const override
+    DataTypePtr get_return_type_impl(const DataTypes &) const override
     {
         return std::make_shared<DataTypeUInt8>();
     }
 
-    Status executeImpl(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) override
+    Status execute_impl(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) override
     {
         const ColumnWithTypeAndName & elem = block.get_by_position(arguments[0]);
         if (auto * nullable = check_and_get_column<ColumnNullable>(*elem.column))
@@ -66,15 +66,15 @@ public:
         else
         {
             /// Since no element is nullable, return a constant one.
-            block.get_by_position(result).column = DataTypeUInt8().createColumnConst(elem.column->size(), 1u);
+            block.get_by_position(result).column = DataTypeUInt8().create_column_const(elem.column->size(), 1u);
         }
         return Status::OK();
     }
 };
 
-void registerFunctionIsNotNull(SimpleFunctionFactory & factory)
+void register_function_is_not_null(SimpleFunctionFactory & factory)
 {
-    factory.registerFunction<FunctionIsNotNull>();
+    factory.register_function<FunctionIsNotNull>();
 }
 
 }

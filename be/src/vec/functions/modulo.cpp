@@ -35,11 +35,10 @@ struct ModuloImpl {
     using ResultType = typename NumberTraits::ResultOfModulo<A, B>::Type;
 
     template <typename Result = ResultType>
-    static inline Result apply(A a, B b) {
-        throwIfDivisionLeadsToFPE(typename NumberTraits::ToInteger<A>::Type(a),
-                                  typename NumberTraits::ToInteger<B>::Type(b));
-        return typename NumberTraits::ToInteger<A>::Type(a) %
-               typename NumberTraits::ToInteger<B>::Type(b);
+    static inline Result apply(A a, B b)
+    {
+        throw_if_division_leads_to_fpe(typename NumberTraits::ToInteger<A>::Type(a), typename NumberTraits::ToInteger<B>::Type(b));
+        return typename NumberTraits::ToInteger<A>::Type(a) % typename NumberTraits::ToInteger<B>::Type(b);
     }
 
 #if USE_EMBEDDED_COMPILER
@@ -137,8 +136,9 @@ struct NameModulo {
 };
 using FunctionModulo = FunctionBinaryArithmetic<ModuloImpl, NameModulo, false>;
 
-void registerFunctionModulo(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionModulo>();
+void register_function_modulo(SimpleFunctionFactory& factory)
+{
+    factory.register_function<FunctionModulo>();
 }
 
 } // namespace doris::vectorized

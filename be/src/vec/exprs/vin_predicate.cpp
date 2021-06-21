@@ -88,7 +88,7 @@ doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* conte
     DCHECK(_children.size() > 1);
     auto child = _children[0];
     const auto& child_name = child->expr_name();
-    auto child_column = child->data_type()->createColumn();
+    auto child_column = child->data_type()->create_column();
     ColumnsWithTypeAndName argument_template;
     argument_template.reserve(2);
     argument_template.emplace_back(std::move(child_column), child->data_type(), child_name);

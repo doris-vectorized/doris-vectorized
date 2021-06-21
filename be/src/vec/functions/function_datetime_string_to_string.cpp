@@ -24,9 +24,9 @@ namespace doris::vectorized {
 using FunctionDateFormat = FunctionDateTimeStringToString<DateFormatImpl>;
 using FunctionFromUnixTime = FunctionDateTimeStringToString<FromUnixTimeImpl>;
 
-void registerFunctionDateTimeStringToString(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionDateFormat>();
-    factory.registerFunction<FunctionFromUnixTime>();
+void register_function_date_time_string_to_string(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionDateFormat>();
+    factory.register_function<FunctionFromUnixTime>();
 }
 
 } // namespace doris::vectorized

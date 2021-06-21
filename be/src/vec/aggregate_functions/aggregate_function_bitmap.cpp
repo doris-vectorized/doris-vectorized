@@ -24,7 +24,7 @@ template <bool nullable, template <bool, typename> class AggregateFunctionTempla
 static IAggregateFunction* createWithIntDataType(const DataTypes& argument_type) {
     auto type = argument_type[0].get();
     if(type->is_nullable()) {
-        type = assert_cast<const DataTypeNullable*>(type)->getNestedType().get();
+        type = assert_cast<const DataTypeNullable*>(type)->get_nested_type().get();
     }
     WhichDataType which(type);
     if (which.idx == TypeIndex::Int8)
@@ -65,12 +65,12 @@ AggregateFunctionPtr createAggregateFunctionBitmapUnionInt(const std::string& na
 }
 
 void registerAggregateFunctionBitmap(AggregateFunctionSimpleFactory& factory) {
-    factory.registerFunction("bitmap_union", createAggregateFunctionBitmapUnion);
-    factory.registerFunction("bitmap_intersect", createAggregateFunctionBitmapIntersect);
-    factory.registerFunction("bitmap_union_count", createAggregateFunctionBitmapUnionCount<false>);
-    factory.registerFunction("bitmap_union_count", createAggregateFunctionBitmapUnionCount<true>, true);
+    factory.register_function("bitmap_union", createAggregateFunctionBitmapUnion);
+    factory.register_function("bitmap_intersect", createAggregateFunctionBitmapIntersect);
+    factory.register_function("bitmap_union_count", createAggregateFunctionBitmapUnionCount<false>);
+    factory.register_function("bitmap_union_count", createAggregateFunctionBitmapUnionCount<true>, true);
     
-    factory.registerFunction("bitmap_union_int", createAggregateFunctionBitmapUnionInt<false>);
-    factory.registerFunction("bitmap_union_int", createAggregateFunctionBitmapUnionInt<true>, true);
+    factory.register_function("bitmap_union_int", createAggregateFunctionBitmapUnionInt<false>);
+    factory.register_function("bitmap_union_int", createAggregateFunctionBitmapUnionInt<true>, true);
 }
 }

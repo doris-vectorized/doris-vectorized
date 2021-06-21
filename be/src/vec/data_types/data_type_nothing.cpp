@@ -23,7 +23,7 @@
 
 namespace doris::vectorized {
 
-MutableColumnPtr DataTypeNothing::createColumn() const {
+MutableColumnPtr DataTypeNothing::create_column() const {
     return ColumnNothing::create(0);
 }
 

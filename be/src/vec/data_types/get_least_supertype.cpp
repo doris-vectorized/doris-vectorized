@@ -52,7 +52,7 @@ String getExceptionMessagePrefix(const DataTypes& types) {
 }
 } // namespace
 
-DataTypePtr getLeastSupertype(const DataTypes& types) {
+DataTypePtr get_least_supertype(const DataTypes& types) {
     /// Trivial cases
 
     if (types.empty()) return std::make_shared<DataTypeNothing>();
@@ -83,7 +83,7 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
             if (!typeid_cast<const DataTypeNothing*>(type.get()))
                 non_nothing_types.emplace_back(type);
 
-        if (non_nothing_types.size() < types.size()) return getLeastSupertype(non_nothing_types);
+        if (non_nothing_types.size() < types.size()) return get_least_supertype(non_nothing_types);
     }
 
     /// For Nullable
@@ -99,20 +99,20 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
                 have_nullable = true;
 
                 if (!type_nullable->only_null())
-                    nested_types.emplace_back(type_nullable->getNestedType());
+                    nested_types.emplace_back(type_nullable->get_nested_type());
             } else
                 nested_types.emplace_back(type);
         }
 
         if (have_nullable) {
-            return std::make_shared<DataTypeNullable>(getLeastSupertype(nested_types));
+            return std::make_shared<DataTypeNullable>(get_least_supertype(nested_types));
         }
     }
 
     /// Non-recursive rules
 
     std::unordered_set<TypeIndex> type_ids;
-    for (const auto& type : types) type_ids.insert(type->getTypeId());
+    for (const auto& type : types) type_ids.insert(type->get_type_id());
 
     /// For String and FixedString, or for different FixedStrings, the common type is String.
     /// No other types are compatible with Strings. TODO Enums?
@@ -177,34 +177,34 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
 
             UInt32 max_scale = 0;
             for (const auto& type : types) {
-                UInt32 scale = getDecimalScale(*type, 0);
+                UInt32 scale = get_decimal_scale(*type, 0);
                 if (scale > max_scale) max_scale = scale;
             }
 
-            UInt32 min_precision = max_scale + leastDecimalPrecisionFor(max_int);
+            UInt32 min_precision = max_scale + least_decimal_precision_for(max_int);
 
             /// special cases Int32 -> Dec32, Int64 -> Dec64
             if (max_scale == 0) {
                 if (max_int == TypeIndex::Int32)
-                    min_precision = DataTypeDecimal<Decimal32>::maxPrecision();
+                    min_precision = DataTypeDecimal<Decimal32>::max_precision();
                 else if (max_int == TypeIndex::Int64)
-                    min_precision = DataTypeDecimal<Decimal64>::maxPrecision();
+                    min_precision = DataTypeDecimal<Decimal64>::max_precision();
             }
 
-            if (min_precision > DataTypeDecimal<Decimal128>::maxPrecision()) {
+            if (min_precision > DataTypeDecimal<Decimal128>::max_precision()) {
                 LOG(FATAL) << fmt::format("{} because the least supertype is Decimal({},{})",
                                           getExceptionMessagePrefix(types), min_precision,
                                           max_scale);
             }
 
-            if (have_decimal128 || min_precision > DataTypeDecimal<Decimal64>::maxPrecision())
+            if (have_decimal128 || min_precision > DataTypeDecimal<Decimal64>::max_precision())
                 return std::make_shared<DataTypeDecimal<Decimal128>>(
-                        DataTypeDecimal<Decimal128>::maxPrecision(), max_scale);
-            if (have_decimal64 || min_precision > DataTypeDecimal<Decimal32>::maxPrecision())
+                        DataTypeDecimal<Decimal128>::max_precision(), max_scale);
+            if (have_decimal64 || min_precision > DataTypeDecimal<Decimal32>::max_precision())
                 return std::make_shared<DataTypeDecimal<Decimal64>>(
-                        DataTypeDecimal<Decimal64>::maxPrecision(), max_scale);
+                        DataTypeDecimal<Decimal64>::max_precision(), max_scale);
             return std::make_shared<DataTypeDecimal<Decimal32>>(
-                    DataTypeDecimal<Decimal32>::maxPrecision(), max_scale);
+                    DataTypeDecimal<Decimal32>::max_precision(), max_scale);
         }
     }
 

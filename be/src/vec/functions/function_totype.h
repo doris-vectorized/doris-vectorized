@@ -40,22 +40,22 @@ public:
     static constexpr auto name = Name::name;
     static FunctionPtr create() { return std::make_shared<FunctionUnaryToType>(); }
     String get_name() const override { return name; }
-    size_t getNumberOfArguments() const override { return 1; }
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
+    size_t get_number_of_arguments() const override { return 1; }
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         return std::make_shared<typename Impl::ReturnType>();
     }
 
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
-        return _executeImpl<typename Impl::ReturnType>(block, arguments, result, input_rows_count);
+        return execute_impl<typename Impl::ReturnType>(block, arguments, result, input_rows_count);
     }
 
 private:
     // handle result == DataTypeString
     template <typename T, std::enable_if_t<std::is_same_v<T, DataTypeString>, T>* = nullptr>
-    Status _executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                         size_t /*input_rows_count*/) {
         const ColumnPtr column = block.get_by_position(arguments[0]).column;
         if constexpr (std::is_integer(Impl::TYPE_INDEX)) {
@@ -73,7 +73,7 @@ private:
                                                 get_name()));
     }
     template <typename T, std::enable_if_t<!std::is_same_v<T, DataTypeString>, T>* = nullptr>
-    Status _executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                         size_t /*input_rows_count*/) {
         const ColumnPtr column = block.get_by_position(arguments[0]).column;
         if constexpr (Impl::TYPE_INDEX == TypeIndex::String) {
@@ -114,15 +114,15 @@ public:
     static constexpr auto name = Name::name;
     static FunctionPtr create() { return std::make_shared<FunctionBinaryToType>(); }
     String get_name() const override { return name; }
-    size_t getNumberOfArguments() const override { return 2; }
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
+    size_t get_number_of_arguments() const override { return 2; }
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         using ResultDataType = typename Impl<LeftDataType, RightDataType>::ResultDataType;
         return std::make_shared<ResultDataType>();
     }
 
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
         DCHECK_EQ(arguments.size(), 2);
         const auto& left = block.get_by_position(arguments[0]);
@@ -176,13 +176,13 @@ public:
     static constexpr auto name = Name::name;
     static FunctionPtr create() { return std::make_shared<FunctionBinaryToType>(); }
     String get_name() const override { return name; }
-    size_t getNumberOfArguments() const override { return 2; }
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
+    size_t get_number_of_arguments() const override { return 2; }
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         return std::make_shared<ResultDataType>();
     }
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
         const auto& left = block.get_by_position(arguments[0]);
         const auto& right = block.get_by_position(arguments[1]);
@@ -249,12 +249,12 @@ public:
         return std::make_shared<FunctionBinaryStringOperateToNullType>();
     }
     String get_name() const override { return name; }
-    size_t getNumberOfArguments() const override { return 2; }
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
+    size_t get_number_of_arguments() const override { return 2; }
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         return make_nullable(std::make_shared<typename Impl::ReturnType>());
     }
-    bool useDefaultImplementationForConstants() const override { return true; }
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    bool use_default_implementation_for_constants() const override { return true; }
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
         auto null_map = ColumnUInt8::create(input_rows_count, 0);
         ColumnPtr argument_columns[2];

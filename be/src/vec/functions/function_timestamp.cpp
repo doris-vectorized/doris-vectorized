@@ -40,8 +40,8 @@ struct StrToDate {
 
 using FunctionStrToDate = FunctionBinaryStringOperateToNullType<StrToDate>;
 
-void registerFunctionStrToDate(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionStrToDate>();
+void register_function_str_to_date(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionStrToDate>();
 }
 
 } // namespace doris::vectorized

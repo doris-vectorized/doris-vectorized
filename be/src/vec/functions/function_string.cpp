@@ -472,38 +472,38 @@ using FunctionStringAppendTrailingCharIfAbsent =
 using FunctionStringLPad = FunctionStringPad<StringLPad>;
 using FunctionStringRPad = FunctionStringPad<StringRPad>;
 
-void registerFunctionString(SimpleFunctionFactory& factory) {
-    // factory.registerFunction<>();
-    factory.registerFunction<FunctionStringASCII>();
-    factory.registerFunction<FunctionStringLength>();
-    factory.registerFunction<FunctionStringUTF8Length>();
-    factory.registerFunction<FunctionStringSpace>();
-    factory.registerFunction<FunctionStringStartsWith>();
-    factory.registerFunction<FunctionStringEndsWith>();
-    factory.registerFunction<FunctionStringInstr>();
-    factory.registerFunction<FunctionStringFindInSet>();
-    factory.registerFunction<FunctionStringLocate>();
-    factory.registerFunction<FunctionReverse>();
-    factory.registerFunction<FunctionToLower>();
-    factory.registerFunction<FunctionToUpper>();
-    factory.registerFunction<FunctionLTrim>();
-    factory.registerFunction<FunctionRTrim>();
-    factory.registerFunction<FunctionTrim>();
-    factory.registerFunction<FunctionSubstring>();
-    factory.registerFunction<FunctionLeft>();
-    factory.registerFunction<FunctionRight>();
-    factory.registerFunction<FunctionNullOrEmpty>();
-    factory.registerFunction<FunctionStringConcat>();
-    factory.registerFunction<FunctionStringConcatWs>();
-    factory.registerFunction<FunctionStringAppendTrailingCharIfAbsent>();
-    factory.registerFunction<FunctionStringRepeat>();
-    factory.registerFunction<FunctionStringLPad>();
-    factory.registerFunction<FunctionStringRPad>();
+void register_function_string(SimpleFunctionFactory& factory) {
+    // factory.register_function<>();
+    factory.register_function<FunctionStringASCII>();
+    factory.register_function<FunctionStringLength>();
+    factory.register_function<FunctionStringUTF8Length>();
+    factory.register_function<FunctionStringSpace>();
+    factory.register_function<FunctionStringStartsWith>();
+    factory.register_function<FunctionStringEndsWith>();
+    factory.register_function<FunctionStringInstr>();
+    factory.register_function<FunctionStringFindInSet>();
+    factory.register_function<FunctionStringLocate>();
+    factory.register_function<FunctionReverse>();
+    factory.register_function<FunctionToLower>();
+    factory.register_function<FunctionToUpper>();
+    factory.register_function<FunctionLTrim>();
+    factory.register_function<FunctionRTrim>();
+    factory.register_function<FunctionTrim>();
+    factory.register_function<FunctionSubstring>();
+    factory.register_function<FunctionLeft>();
+    factory.register_function<FunctionRight>();
+    factory.register_function<FunctionNullOrEmpty>();
+    factory.register_function<FunctionStringConcat>();
+    factory.register_function<FunctionStringConcatWs>();
+    factory.register_function<FunctionStringAppendTrailingCharIfAbsent>();
+    factory.register_function<FunctionStringRepeat>();
+    factory.register_function<FunctionStringLPad>();
+    factory.register_function<FunctionStringRPad>();
 
-    factory.registerAlias(FunctionLeft::name, "strleft");
-    factory.registerAlias(FunctionRight::name, "strright");
-    factory.registerAlias(FunctionSubstring::name, "substr");
-    factory.registerAlias(FunctionToLower::name, "lcase");
+    factory.register_alias(FunctionLeft::name, "strleft");
+    factory.register_alias(FunctionRight::name, "strright");
+    factory.register_alias(FunctionSubstring::name, "substr");
+    factory.register_alias(FunctionToLower::name, "lcase");
 }
 
 } // namespace doris::vectorized
