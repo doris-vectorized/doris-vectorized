@@ -545,7 +545,7 @@ private:
             NumComparisonImpl<T0, T1, Op<T0, T1>>::vector_vector(col_left->get_data(),
                                                                  col_right->get_data(), vec_res);
 
-            block.getByPosition(result).column = std::move(col_res);
+            block.get_by_position(result).column = std::move(col_res);
             return true;
         } else if (auto col_right_const =
                            checkAndGetColumnConst<ColumnVector<T1>>(col_right_untyped)) {
@@ -556,7 +556,7 @@ private:
             NumComparisonImpl<T0, T1, Op<T0, T1>>::vector_constant(
                     col_left->get_data(), col_right_const->template get_value<T1>(), vec_res);
 
-            block.getByPosition(result).column = std::move(col_res);
+            block.get_by_position(result).column = std::move(col_res);
             return true;
         }
 
@@ -575,7 +575,7 @@ private:
             NumComparisonImpl<T0, T1, Op<T0, T1>>::constant_vector(
                     col_left->template get_value<T0>(), col_right->get_data(), vec_res);
 
-            block.getByPosition(result).column = std::move(col_res);
+            block.get_by_position(result).column = std::move(col_res);
             return true;
         } else if (auto col_right_const =
                            checkAndGetColumnConst<ColumnVector<T1>>(col_right_untyped)) {
@@ -584,7 +584,7 @@ private:
                     col_left->template get_value<T0>(), col_right_const->template get_value<T1>(),
                     res);
 
-            block.getByPosition(result).column =
+            block.get_by_position(result).column =
                     DataTypeUInt8().createColumnConst(col_left->size(), toField(res));
             return true;
         }
@@ -668,7 +668,7 @@ private:
             return true;
         };
 
-        if (!callOnBasicTypes<true, false, true, false>(left_number, right_number, call)) {
+        if (!call_on_basic_types<true, false, true, false>(left_number, right_number, call)) {
             return Status::RuntimeError(fmt::format("Wrong call for {} with {} and {}", get_name(),
                                                     col_left.type->get_name(),
                                                     col_right.type->get_name()));
@@ -737,9 +737,9 @@ private:
             UInt8 res = 0;
             StringImpl::constant_constant(*c0_const_chars, c0_const_size, *c1_const_chars,
                                           c1_const_size, res);
-            block.getByPosition(result).column =
-                    block.getByPosition(result).type->createColumnConst(c0_const->size(),
-                                                                        toField(res));
+            block.get_by_position(result).column =
+                    block.get_by_position(result).type->createColumnConst(c0_const->size(),
+                                                                          toField(res));
             return true;
         } else {
             auto c_res = ColumnUInt8::create();
@@ -787,7 +787,7 @@ private:
                 CHECK(false) << fmt::format("Illegal columns {} and {} of arguments of function {}", c0->get_name(), c1->get_name(), get_name());
             }
 
-            block.getByPosition(result).column = std::move(c_res);
+            block.get_by_position(result).column = std::move(c_res);
             return true;
         }
     }
@@ -800,7 +800,7 @@ private:
         if (c0_const && c1_const) {
             UInt8 res = 0;
             GenericComparisonImpl<Op<int, int>>::constant_constant(*c0, *c1, res);
-            block.getByPosition(result).column =
+            block.get_by_position(result).column =
                     DataTypeUInt8().createColumnConst(c0->size(), toField(res));
         } else {
             auto c_res = ColumnUInt8::create();
@@ -814,7 +814,7 @@ private:
             else
                 GenericComparisonImpl<Op<int, int>>::vector_vector(*c0, *c1, vec_res);
 
-            block.getByPosition(result).column = std::move(c_res);
+            block.get_by_position(result).column = std::move(c_res);
         }
     }
 
@@ -901,8 +901,8 @@ public:
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
-        const auto& col_with_type_and_name_left = block.getByPosition(arguments[0]);
-        const auto& col_with_type_and_name_right = block.getByPosition(arguments[1]);
+        const auto& col_with_type_and_name_left = block.get_by_position(arguments[0]);
+        const auto& col_with_type_and_name_right = block.get_by_position(arguments[1]);
         const IColumn* col_left_untyped = col_with_type_and_name_left.column.get();
         const IColumn* col_right_untyped = col_with_type_and_name_right.column.get();
 
@@ -918,11 +918,11 @@ public:
             if constexpr (std::is_same_v<Op<int, int>, EqualsOp<int, int>> ||
                           std::is_same_v<Op<int, int>, LessOrEqualsOp<int, int>> ||
                           std::is_same_v<Op<int, int>, GreaterOrEqualsOp<int, int>>) {
-                block.getByPosition(result).column =
+                block.get_by_position(result).column =
                         DataTypeUInt8().createColumnConst(input_rows_count, 1u);
                 return Status::OK();
             } else {
-                block.getByPosition(result).column =
+                block.get_by_position(result).column =
                         DataTypeUInt8().createColumnConst(input_rows_count, 0u);
                 return Status::OK();
             }

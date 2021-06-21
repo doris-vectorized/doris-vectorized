@@ -67,18 +67,18 @@ void BlockInfo::read(ReadBuffer & in)
 
         #undef READ_FIELD
             default:
-                throw Exception("Unknown BlockInfo field number: " + toString(field_num), ErrorCodes::UNKNOWN_BLOCK_INFO_FIELD);
+                throw Exception("Unknown BlockInfo field number: " + to_string(field_num), ErrorCodes::UNKNOWN_BLOCK_INFO_FIELD);
         }
     }
 }*/
 
-void BlockMissingValues::setBit(size_t column_idx, size_t row_idx) {
+void BlockMissingValues::set_bit(size_t column_idx, size_t row_idx) {
     RowsBitMask& mask = rows_mask_by_column_id[column_idx];
     mask.resize(row_idx + 1);
     mask[row_idx] = true;
 }
 
-const BlockMissingValues::RowsBitMask& BlockMissingValues::getDefaultsBitmask(
+const BlockMissingValues::RowsBitMask& BlockMissingValues::get_defaults_bitmask(
         size_t column_idx) const {
     static RowsBitMask none;
     auto it = rows_mask_by_column_id.find(column_idx);

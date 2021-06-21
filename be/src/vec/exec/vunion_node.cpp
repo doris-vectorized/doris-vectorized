@@ -195,7 +195,7 @@ Block VUnionNode::materialize_block(Block* src_block) {
     for (size_t i = 0; i < child_exprs.size(); ++i) {
         int result_column_id = -1;
         child_exprs[i]->execute(src_block, &result_column_id);
-        colunms.emplace_back(src_block->getByPosition(result_column_id));
+        colunms.emplace_back(src_block->get_by_position(result_column_id));
     }
     _child_row_idx += src_block->rows();
     return {colunms};

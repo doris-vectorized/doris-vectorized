@@ -47,7 +47,7 @@ struct AggregateFunctionAvgData {
 
     void write(std::ostream& buf) const {
         write_binary(sum, buf);
-        writeBinary(count, buf);
+        write_binary(count, buf);
     }
 
     void read(std::istream& buf) {

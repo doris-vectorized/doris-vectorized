@@ -42,11 +42,11 @@ struct ColumnWithTypeAndName {
     ColumnWithTypeAndName(const DataTypePtr& type_, const String& name_)
             : column(type_->createColumn()), type(type_), name(name_) {}
 
-    ColumnWithTypeAndName cloneEmpty() const;
+    ColumnWithTypeAndName clone_empty() const;
     bool operator==(const ColumnWithTypeAndName& other) const;
 
-    void dumpStructure(std::ostream& out) const;
-    String dumpStructure() const;
+    void dump_structure(std::ostream& out) const;
+    String dump_structure() const;
     std::string to_string(size_t row_num) const;
 };
 

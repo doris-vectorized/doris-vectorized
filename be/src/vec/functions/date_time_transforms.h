@@ -665,15 +665,15 @@ struct DateTimeTransformImpl {
 
         //        const DateLUTImpl & time_zone = extractTimeZoneFromFunctionArguments(block, arguments, 1, 0);
 
-        const ColumnPtr source_col = block.getByPosition(arguments[0]).column;
+        const ColumnPtr source_col = block.get_by_position(arguments[0]).column;
         if (const auto* sources = check_and_get_column<ColumnVector<FromType>>(source_col.get())) {
             auto col_to = ColumnVector<ToType>::create();
             //            Op::vector(sources->get_data(), col_to->get_data(), time_zone);
             Op::vector(sources->get_data(), col_to->get_data());
-            block.getByPosition(result).column = std::move(col_to);
+            block.get_by_position(result).column = std::move(col_to);
         } else {
             throw Exception("Illegal column " +
-                                    block.getByPosition(arguments[0]).column->get_name() +
+                                    block.get_by_position(arguments[0]).column->get_name() +
                             " of first argument of function " + Transform::name,
                             ErrorCodes::ILLEGAL_COLUMN);
         }

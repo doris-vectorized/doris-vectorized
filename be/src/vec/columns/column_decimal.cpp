@@ -25,7 +25,7 @@
 #include "vec/common/unaligned.h"
 
 template <typename T>
-bool decimalLess(T x, T y, doris::vectorized::UInt32 x_scale, doris::vectorized::UInt32 y_scale);
+bool decimal_less(T x, T y, doris::vectorized::UInt32 x_scale, doris::vectorized::UInt32 y_scale);
 
 namespace doris::vectorized {
 
@@ -42,9 +42,9 @@ int ColumnDecimal<T>::compare_at(size_t n, size_t m, const IColumn& rhs_, int) c
     const T& b = other.data[m];
 
     if (scale == other.scale) return a > b ? 1 : (a < b ? -1 : 0);
-    return decimalLess<T>(b, a, other.scale, scale)
+    return decimal_less<T>(b, a, other.scale, scale)
                    ? 1
-                   : (decimalLess<T>(a, b, scale, other.scale) ? -1 : 0);
+                   : (decimal_less<T>(a, b, scale, other.scale) ? -1 : 0);
 }
 
 template <typename T>

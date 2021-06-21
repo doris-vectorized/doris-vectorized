@@ -26,7 +26,7 @@
 #include "vec/core/block_info.h"
 #include "vec/core/column_with_type_and_name.h"
 #include "vec/core/columns_with_type_and_name.h"
-#include "vec/core/names_and_types.h"
+#include "vec/core/names.h"
 
 namespace doris {
 class Status;
@@ -64,8 +64,8 @@ public:
     void insert(const ColumnWithTypeAndName& elem);
     void insert(ColumnWithTypeAndName&& elem);
     /// insert the column to the end, if there is no column with that name yet
-    void insertUnique(const ColumnWithTypeAndName& elem);
-    void insertUnique(ColumnWithTypeAndName&& elem);
+    void insert_unique(const ColumnWithTypeAndName& elem);
+    void insert_unique(ColumnWithTypeAndName&& elem);
     /// remove the column at the specified position
     void erase(size_t position);
     /// remove the columns at the specified positions
@@ -84,14 +84,14 @@ public:
 
     /// References are invalidated after calling functions above.
 
-    ColumnWithTypeAndName& getByPosition(size_t position) { return data[position]; }
-    const ColumnWithTypeAndName& getByPosition(size_t position) const { return data[position]; }
+    ColumnWithTypeAndName& get_by_position(size_t position) { return data[position]; }
+    const ColumnWithTypeAndName& get_by_position(size_t position) const { return data[position]; }
 
-    ColumnWithTypeAndName& safeGetByPosition(size_t position);
-    const ColumnWithTypeAndName& safeGetByPosition(size_t position) const;
+    ColumnWithTypeAndName& safe_get_by_position(size_t position);
+    const ColumnWithTypeAndName& safe_get_by_position(size_t position) const;
 
-    ColumnWithTypeAndName& getByName(const std::string& name);
-    const ColumnWithTypeAndName& getByName(const std::string& name) const;
+    ColumnWithTypeAndName& get_by_name(const std::string& name);
+    const ColumnWithTypeAndName& get_by_name(const std::string& name) const;
 
     Container::iterator begin() { return data.begin(); }
     Container::iterator end() { return data.end(); }
@@ -102,12 +102,11 @@ public:
 
     bool has(const std::string& name) const;
 
-    size_t getPositionByName(const std::string& name) const;
+    size_t get_position_by_name(const std::string& name) const;
 
-    const ColumnsWithTypeAndName& getColumnsWithTypeAndName() const;
-    NamesAndTypesList getNamesAndTypesList() const;
-    Names getNames() const;
-    DataTypes getDataTypes() const;
+    const ColumnsWithTypeAndName& get_columns_with_type_and_name() const;
+    Names get_names() const;
+    DataTypes get_data_types() const;
 
     /// Returns number of rows from first column in block, not equal to nullptr. If no columns, returns 0.
     size_t rows() const;
@@ -118,7 +117,7 @@ public:
     size_t columns() const { return data.size(); }
 
     /// Checks that every column in block is not nullptr and has same number of elements.
-    void checkNumberOfRows(bool allow_null_columns = false) const;
+    void check_number_of_rows(bool allow_null_columns = false) const;
 
     /// Approximate number of bytes in memory - for profiling and limits.
     size_t bytes() const;
@@ -130,31 +129,31 @@ public:
     bool operator!() const { return !this->operator bool(); }
 
     /** Get a list of column names separated by commas. */
-    std::string dumpNames() const;
+    std::string dump_names() const;
 
     /** List of names, types and lengths of columns. Designed for debugging. */
-    std::string dumpStructure() const;
+    std::string dump_structure() const;
 
     /** Get the same block, but empty. */
-    Block cloneEmpty() const;
+    Block clone_empty() const;
 
-    Columns getColumns() const;
-    void setColumns(const Columns& columns);
-    Block cloneWithColumns(const Columns& columns) const;
-    Block cloneWithoutColumns() const;
+    Columns get_columns() const;
+    void set_columns(const Columns& columns);
+    Block clone_with_columns(const Columns& columns) const;
+    Block clone_without_columns() const;
 
     /** Get empty columns with the same types as in block. */
-    MutableColumns cloneEmptyColumns() const;
+    MutableColumns clone_empty_columns() const;
 
     /** Get columns from block for mutation. Columns in block will be nullptr. */
-    MutableColumns mutateColumns();
+    MutableColumns mutate_columns();
 
     /** Replace columns in a block */
-    void setColumns(MutableColumns&& columns);
-    Block cloneWithColumns(MutableColumns&& columns) const;
+    void set_columns(MutableColumns&& columns);
+    Block clone_with_columns(MutableColumns&& columns) const;
 
     /** Get a block with columns that have been rearranged in the order of their names. */
-    Block sortColumns() const;
+    Block sort_columns() const;
 
     void clear();
     void swap(Block& other) noexcept;
@@ -164,18 +163,18 @@ public:
       * Returns hash for block, that could be used to differentiate blocks
       *  with same structure, but different data.
       */
-    void updateHash(SipHash& hash) const;
+    void update_hash(SipHash& hash) const;
 
     /** Get block data in string. */
-    std::string dumpData(size_t row_limit = 100) const;
+    std::string dump_data(size_t row_limit = 100) const;
 
     static Status filter_block(Block* block, int filter_conlumn_id, int column_to_keep);
     // serialize block to PRowBatch
     void serialize(PBlock* pblock) const;
 
 private:
-    void eraseImpl(size_t position);
-    void initializeIndexByName();
+    void erase_impl(size_t position);
+    void initialize_index_by_name();
 };
 
 using Blocks = std::vector<Block>;
@@ -204,7 +203,7 @@ public:
     MutableBlock(MutableColumns&& columns, DataTypes&& data_types)
             : _columns(std::move(columns)), _data_types(std::move(data_types)) {}
     MutableBlock(Block* block)
-            : _columns(block->mutateColumns()), _data_types(block->getDataTypes()) {}
+            : _columns(block->mutate_columns()), _data_types(block->get_data_types()) {}
 
     size_t rows() const;
     size_t columns() const { return _columns.size(); }
@@ -217,13 +216,13 @@ public:
 
     void merge(Block&& block) {
         if (_columns.size() == 0 && _data_types.size() == 0) {
-            _data_types = std::move(block.getDataTypes());
+            _data_types = std::move(block.get_data_types());
             _columns.resize(block.columns());
             for (size_t i = 0; i < block.columns(); ++i) {
-                if (block.getByPosition(i).column) {
+                if (block.get_by_position(i).column) {
                     _columns[i] =
                             (*std::move(
-                                    block.getByPosition(i).column->convert_to_full_column_if_const()))
+                                    block.get_by_position(i).column->convert_to_full_column_if_const()))
                                     .mutate();
                 } else {
                     _columns[i] = _data_types[i]->createColumn();
@@ -232,20 +231,20 @@ public:
         } else {
             for (int i = 0; i < _columns.size(); ++i) {
                 _columns[i]->insert_range_from(
-                        *block.getByPosition(i).column->convert_to_full_column_if_const().get(), 0,
+                        *block.get_by_position(i).column->convert_to_full_column_if_const().get(), 0,
                         block.rows());
             }
         }
     }
     void merge(Block& block) {
         if (_columns.size() == 0 && _data_types.size() == 0) {
-            _data_types = block.getDataTypes();
+            _data_types = block.get_data_types();
             _columns.resize(block.columns());
             for (size_t i = 0; i < block.columns(); ++i) {
-                if (block.getByPosition(i).column) {
+                if (block.get_by_position(i).column) {
                     _columns[i] =
                             (*std::move(
-                                    block.getByPosition(i).column->convert_to_full_column_if_const()))
+                                    block.get_by_position(i).column->convert_to_full_column_if_const()))
                                     .mutate();
                 } else {
                     _columns[i] = _data_types[i]->createColumn();
@@ -254,7 +253,7 @@ public:
         } else {
             for (int i = 0; i < _columns.size(); ++i) {
                 _columns[i]->insert_range_from(
-                        *block.getByPosition(i).column->convert_to_full_column_if_const().get(), 0,
+                        *block.get_by_position(i).column->convert_to_full_column_if_const().get(), 0,
                         block.rows());
             }
         }

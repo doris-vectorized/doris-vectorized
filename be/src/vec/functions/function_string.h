@@ -112,7 +112,7 @@ public:
 
         for (int i = 0; i < 3; ++i) {
             argument_columns[i] =
-                    block.getByPosition(arguments[i]).column->convert_to_full_column_if_const();
+                    block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
             if (auto* nullable = check_and_get_column<ColumnNullable>(*argument_columns[i])) {
                 argument_columns[i] = nullable->get_nested_column_ptr();
                 VectorizedUtils::update_null_map(null_map->get_data(), nullable->get_null_map_data());
@@ -130,7 +130,7 @@ public:
                specific_start_column->get_data(), specific_len_column->get_data(),
                null_map->get_data(), res->get_chars(), res->get_offsets());
 
-        block.getByPosition(result).column =
+        block.get_by_position(result).column =
                 ColumnNullable::create(std::move(res), std::move(null_map));
     }
 
@@ -238,14 +238,14 @@ public:
         // we don't have to update null_map because FunctionSubstring will
         // update it
         // getNestedColumnIfNull arg[0]
-        auto str_col = block.getByPosition(arguments[0]).column->convert_to_full_column_if_const();
+        auto str_col = block.get_by_position(arguments[0]).column->convert_to_full_column_if_const();
         if (auto* nullable = check_and_get_column<const ColumnNullable>(*str_col)) {
             str_col = nullable->get_nested_column_ptr();
         }
         auto& str_offset = assert_cast<const ColumnString*>(str_col.get())->get_offsets();
 
         // getNestedColumnIfNull arg[1]
-        auto pos_col = block.getByPosition(arguments[1]).column->convert_to_full_column_if_const();
+        auto pos_col = block.get_by_position(arguments[1]).column->convert_to_full_column_if_const();
         if (auto* nullable = check_and_get_column<const ColumnNullable>(*pos_col)) {
             pos_col = nullable->get_nested_column_ptr();
         }
@@ -289,7 +289,7 @@ public:
                        size_t input_rows_count) override {
         auto res_map = ColumnUInt8::create(input_rows_count, 0);
 
-        auto column = block.getByPosition(arguments[0]).column;
+        auto column = block.get_by_position(arguments[0]).column;
         if (auto* nullable = check_and_get_column<const ColumnNullable>(*column)) {
             column = nullable->get_nested_column_ptr();
             VectorizedUtils::update_null_map(res_map->get_data(), nullable->get_null_map_data());
@@ -303,7 +303,7 @@ public:
             res_map_data[i] |= (size == 0);
         }
 
-        block.getByPosition(result).column = std::move(res_map);
+        block.get_by_position(result).column = std::move(res_map);
         return Status::OK();
     }
 };
@@ -327,11 +327,11 @@ public:
         DCHECK_GE(arguments.size(), 1);
 
         if (arguments.size() == 1) {
-            if (block.getByPosition(arguments[0]).column->is_nullable()) {
-                block.getByPosition(result).column = block.getByPosition(arguments[0]).column;
+            if (block.get_by_position(arguments[0]).column->is_nullable()) {
+                block.get_by_position(result).column = block.get_by_position(arguments[0]).column;
             } else {
-                block.getByPosition(result).column =
-                        make_nullable(block.getByPosition(arguments[0]).column);
+                block.get_by_position(result).column =
+                        make_nullable(block.get_by_position(arguments[0]).column);
             }
             return Status::OK();
         }
@@ -345,7 +345,7 @@ public:
 
         for (int i = 0; i < argument_size; ++i) {
             argument_columns[i] =
-                    block.getByPosition(arguments[i]).column->convert_to_full_column_if_const();
+                    block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
             if (auto* nullable = check_and_get_column<const ColumnNullable>(*argument_columns[i])) {
                 argument_columns[i] = nullable->get_nested_column_ptr();
                 VectorizedUtils::update_null_map(null_map->get_data(), nullable->get_null_map_data());
@@ -391,7 +391,7 @@ public:
             res_offset[i] = res_offset[i - 1] + current_length;
         }
 
-        block.getByPosition(result).column =
+        block.get_by_position(result).column =
                 ColumnNullable::create(std::move(res), std::move(null_map));
         return Status::OK();
     }
@@ -430,7 +430,7 @@ public:
 
         for (size_t i = 0; i < argument_size; ++i) {
             argument_columns[i] =
-                    block.getByPosition(arguments[i]).column->convert_to_full_column_if_const();
+                    block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
             if (auto* nullable = check_and_get_column<const ColumnNullable>(*argument_columns[i])) {
                 argument_columns[i] = nullable->get_nested_column_ptr();
                 null_list[i] = &nullable->get_null_map_data();
@@ -482,7 +482,7 @@ public:
                                         res_offset);
         }
 
-        block.getByPosition(result).column =
+        block.get_by_position(result).column =
                 ColumnNullable::create(std::move(res), std::move(null_map));
         return Status::OK();
     }
@@ -505,14 +505,14 @@ public:
         auto res = ColumnString::create();
 
         ColumnPtr argument_ptr[2];
-        argument_ptr[0] = block.getByPosition(arguments[0]).column->convert_to_full_column_if_const();
-        argument_ptr[1] = block.getByPosition(arguments[1]).column->convert_to_full_column_if_const();
+        argument_ptr[0] = block.get_by_position(arguments[0]).column->convert_to_full_column_if_const();
+        argument_ptr[1] = block.get_by_position(arguments[1]).column->convert_to_full_column_if_const();
 
         if (auto* col1 = check_and_get_column<ColumnString>(*argument_ptr[0])) {
             if (auto* col2 = check_and_get_column<ColumnInt32>(*argument_ptr[1])) {
                 vector_vector(col1->get_chars(), col1->get_offsets(), col2->get_data(),
                               res->get_chars(), res->get_offsets());
-                block.getByPosition(result).column = std::move(res);
+                block.get_by_position(result).column = std::move(res);
                 return Status::OK();
             }
         }
@@ -569,7 +569,7 @@ public:
         ColumnPtr argument_columns[argument_size];
         for (size_t i = 0; i < argument_size; ++i) {
             argument_columns[i] =
-                    block.getByPosition(arguments[i]).column->convert_to_full_column_if_const();
+                    block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
             if (auto* nullable = check_and_get_column<const ColumnNullable>(*argument_columns[i])) {
                 argument_columns[i] = nullable->get_nested_column_ptr();
                 VectorizedUtils::update_null_map(null_map->get_data(), nullable->get_null_map_data());
@@ -656,7 +656,7 @@ public:
             }
         }
 
-        block.getByPosition(result).column =
+        block.get_by_position(result).column =
                 ColumnNullable::create(std::move(res), std::move(null_map));
         return Status::OK();
     }
