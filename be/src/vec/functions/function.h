@@ -250,8 +250,8 @@ public:
       */
     virtual Monotonicity getMonotonicityForRange(const IDataType& /*type*/, const Field& /*left*/,
                                                  const Field& /*right*/) const {
-        throw Exception("Function " + get_name() + " has no information about its monotonicity.",
-                        ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << fmt::format("Function {} has no information about its monotonicity.", get_name());
+        return Monotonicity{};
     }
 };
 
@@ -337,8 +337,7 @@ protected:
     }
 
     virtual DataTypePtr getReturnTypeImpl(const DataTypes& /*arguments*/) const {
-        throw Exception("getReturnType is not implemented for " + get_name(),
-                        ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << fmt::format("getReturnType is not implemented for {}", get_name());
     }
 
     /** If useDefaultImplementationForNulls() is true, than change arguments for getReturnType() and buildImpl():
@@ -364,8 +363,7 @@ protected:
                                       const DataTypePtr& return_type) const = 0;
 
     virtual void getLambdaArgumentTypesImpl(DataTypes& /*arguments*/) const {
-        throw Exception("Function " + get_name() + " can't have lambda-expressions as arguments",
-                        ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        LOG(FATAL) << fmt::format("Function {} can't have lambda-expressions as arguments", get_name());
     }
 
 private:
@@ -406,7 +404,7 @@ public:
 
     PreparedFunctionPtr prepare(const Block& /*sample_block*/, const ColumnNumbers& /*arguments*/,
                                 size_t /*result*/) const final {
-        throw Exception("prepare is not implemented for IFunction", ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "prepare is not implemented for IFunction";
     }
 
 #if USE_EMBEDDED_COMPILER
@@ -425,13 +423,11 @@ public:
 #endif
 
     const DataTypes& getArgumentTypes() const final {
-        throw Exception("getArgumentTypes is not implemented for IFunction",
-                        ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "getArgumentTypes is not implemented for IFunction";
     }
 
     const DataTypePtr& getReturnType() const final {
-        throw Exception("getReturnType is not implemented for IFunction",
-                        ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "getReturnType is not implemented for IFunction";
     }
 
 #if USE_EMBEDDED_COMPILER
@@ -457,7 +453,8 @@ protected:
 
     FunctionBasePtr buildImpl(const ColumnsWithTypeAndName& /*arguments*/,
                               const DataTypePtr& /*return_type*/) const final {
-        throw Exception("buildImpl is not implemented for IFunction", ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "buildImpl is not implemented for IFunction";
+        return {};
     }
 };
 

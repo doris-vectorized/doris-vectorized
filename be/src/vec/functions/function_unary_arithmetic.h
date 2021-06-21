@@ -110,10 +110,10 @@ public:
             }
             return true;
         });
-        if (!valid)
-            throw Exception("Illegal type " + arguments[0]->get_name() +
-                                    " of argument of function " + get_name(),
-                            ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        if (!valid) {
+            LOG(FATAL) << fmt::format("Illegal type {} of argument of function {}",
+                                      arguments[0]->get_name(), get_name());
+        }
         return result;
     }
 
@@ -126,7 +126,7 @@ public:
             if constexpr (IsDataTypeDecimal<DataType>) {
                 if constexpr (allow_decimal) {
                     if (auto col = check_and_get_column<ColumnDecimal<T0>>(
-                            block.get_by_position(arguments[0]).column.get())) {
+                                block.get_by_position(arguments[0]).column.get())) {
                         auto col_res = ColumnDecimal<typename Op<T0>::ResultType>::create(
                                 0, type.get_scale());
                         auto& vec_res = col_res->get_data();
@@ -138,7 +138,7 @@ public:
                 }
             } else {
                 if (auto col = check_and_get_column<ColumnVector<T0>>(
-                        block.get_by_position(arguments[0]).column.get())) {
+                            block.get_by_position(arguments[0]).column.get())) {
                     auto col_res = ColumnVector<typename Op<T0>::ResultType>::create();
                     auto& vec_res = col_res->get_data();
                     vec_res.resize(col->get_data().size());
@@ -150,9 +150,10 @@ public:
 
             return false;
         });
-        if (!valid)
-            throw Exception(get_name() + "'s argument does not match the expected data type",
-                            ErrorCodes::LOGICAL_ERROR);
+        if (!valid) {
+            return Status::RuntimeError(
+                    fmt::format("{}'s argument does not match the expected data type", get_name()));
+        }
         return Status::OK();
     }
 
