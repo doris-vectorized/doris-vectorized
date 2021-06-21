@@ -121,15 +121,15 @@ static bool extractConstColumns(ColumnRawPtrs& in, UInt8& res, Func&& func) {
 template <class Op>
 inline bool extractConstColumns(ColumnRawPtrs& in, UInt8& res) {
     return extractConstColumns<Op>(in, res, [](const Field& value) {
-        return !value.isNull() && applyVisitor(FieldVisitorConvertToNumber<bool>(), value);
+        return !value.is_null() && applyVisitor(FieldVisitorConvertToNumber<bool>(), value);
     });
 }
 
 template <class Op>
 inline bool extractConstColumnsTernary(ColumnRawPtrs& in, UInt8& res_3v) {
     return extractConstColumns<Op>(in, res_3v, [](const Field& value) {
-        return value.isNull() ? Ternary::makeValue(false, true)
-                              : Ternary::makeValue(
+        return value.is_null() ? Ternary::makeValue(false, true)
+                               : Ternary::makeValue(
                                         applyVisitor(FieldVisitorConvertToNumber<bool>(), value));
     });
 }
@@ -472,9 +472,9 @@ Status FunctionAnyArityLogical<Impl, Name>::executeImpl(Block& block,
                                                         size_t input_rows_count) {
     ColumnRawPtrs args_in;
     for (const auto arg_index : arguments)
-        args_in.push_back(block.getByPosition(arg_index).column.get());
+        args_in.push_back(block.get_by_position(arg_index).column.get());
 
-    auto& result_info = block.getByPosition(result_index);
+    auto& result_info = block.get_by_position(result_index);
     if (result_info.type->is_nullable())
         executeForTernaryLogicImpl<Impl>(std::move(args_in), result_info, input_rows_count);
     else
@@ -506,14 +506,14 @@ DataTypePtr FunctionUnaryLogical<Impl, Name>::getReturnTypeImpl(const DataTypes&
 template <template <typename> class Impl, typename T>
 bool functionUnaryExecuteType(Block& block, const ColumnNumbers& arguments, size_t result) {
     if (auto col = check_and_get_column<ColumnVector<T>>(
-            block.getByPosition(arguments[0]).column.get())) {
+            block.get_by_position(arguments[0]).column.get())) {
         auto col_res = ColumnUInt8::create();
 
         typename ColumnUInt8::Container& vec_res = col_res->get_data();
         vec_res.resize(col->get_data().size());
         UnaryOperationImpl<T, Impl<T>>::vector(col->get_data(), vec_res);
 
-        block.getByPosition(result).column = std::move(col_res);
+        block.get_by_position(result).column = std::move(col_res);
         return true;
     }
 
@@ -533,7 +533,7 @@ Status FunctionUnaryLogical<Impl, Name>::executeImpl(Block& block, const ColumnN
           functionUnaryExecuteType<Impl, Int64>(block, arguments, result) ||
           functionUnaryExecuteType<Impl, Float32>(block, arguments, result) ||
           functionUnaryExecuteType<Impl, Float64>(block, arguments, result)))
-        throw Exception("Illegal column " + block.getByPosition(arguments[0]).column->get_name() +
+        throw Exception("Illegal column " + block.get_by_position(arguments[0]).column->get_name() +
                         " of argument of function " + get_name(),
                         ErrorCodes::ILLEGAL_COLUMN);
     return Status::OK();

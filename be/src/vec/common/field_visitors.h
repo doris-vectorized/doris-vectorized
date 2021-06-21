@@ -45,7 +45,7 @@ struct StaticVisitor {
 /// F is template parameter, to allow universal reference for field, that is useful for const and non-const values.
 template <typename Visitor, typename F>
 typename std::decay_t<Visitor>::ResultType applyVisitor(Visitor&& visitor, F&& field) {
-    switch (field.getType()) {
+    switch (field.get_type()) {
     case Field::Types::Null:
         return visitor(field.template get<Null>());
     case Field::Types::UInt64:
@@ -230,9 +230,9 @@ public:
     template <typename U>
     T operator()(const DecimalField<U>& x) const {
         if constexpr (std::is_floating_point_v<T>)
-            return static_cast<T>(x.get_value()) / x.getScaleMultiplier();
+            return static_cast<T>(x.get_value()) / x.get_scale_multiplier();
         else
-            return x.get_value() / x.getScaleMultiplier();
+            return x.get_value() / x.get_scale_multiplier();
     }
 
     T operator()(const AggregateFunctionStateData&) const {

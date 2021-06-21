@@ -75,7 +75,7 @@ doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* conte
         _children[i]->execute(&block, &result);
 
         DCHECK(result != -1);
-        const auto& column = block.getByPosition(result).column;
+        const auto& column = block.get_by_position(result).column;
         if (column->is_null_at(0)) {
             _null_in_set = true;
             continue;

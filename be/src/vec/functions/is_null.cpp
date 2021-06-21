@@ -21,7 +21,7 @@
 
 namespace doris::vectorized {
 
-/// Implements the function isNull which returns true if a value
+/// Implements the function is_null which returns true if a value
 /// is null, false otherwise.
 class FunctionIsNull : public IFunction
 {
@@ -50,17 +50,17 @@ public:
 
     Status executeImpl(Block & block, const ColumnNumbers & arguments, size_t result, size_t) override
     {
-        const ColumnWithTypeAndName & elem = block.getByPosition(arguments[0]);
+        const ColumnWithTypeAndName & elem = block.get_by_position(arguments[0]);
         if (auto * nullable = check_and_get_column<ColumnNullable>(*elem.column))
         {
             /// Merely return the embedded null map.
-            block.getByPosition(result).column = nullable->get_null_map_column_ptr();
+            block.get_by_position(result).column = nullable->get_null_map_column_ptr();
         }
         else
         {
             /// Since no element is nullable, return a zero-constant column representing
             /// a zero-filled null map.
-            block.getByPosition(result).column = DataTypeUInt8().createColumnConst(elem.column->size(), 0u);
+            block.get_by_position(result).column = DataTypeUInt8().createColumnConst(elem.column->size(), 0u);
         }
         return Status::OK();
     }

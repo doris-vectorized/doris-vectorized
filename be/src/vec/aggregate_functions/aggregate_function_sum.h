@@ -73,13 +73,13 @@ struct AggregateFunctionSumKahanData {
     }
 
     void write(WriteBuffer& buf) const {
-        writeBinary(sum, buf);
-        writeBinary(compensation, buf);
+        write_binary(sum, buf);
+        write_binary(compensation, buf);
     }
 
     void read(ReadBuffer& buf) {
-        readBinary(sum, buf);
-        readBinary(compensation, buf);
+        read_binary(sum, buf);
+        read_binary(compensation, buf);
     }
 
     T get() const { return sum; }

@@ -46,7 +46,7 @@ struct HashTableNoState {
 
     // /// Deserialization, in binary and text form.
     void read(std::istream&) {}
-    // void readText(doris::vectorized::ReadBuffer &)             {}
+    // void read_text(doris::vectorized::ReadBuffer &)             {}
 };
 
 /// These functions can be overloaded for custom types.
@@ -193,7 +193,7 @@ struct HashTableCell {
 
     /// Deserialization, in binary and text form.
     void read(std::istream& rb) { doris::vectorized::read_binary(key, rb); }
-    // void readText(doris::vectorized::ReadBuffer & rb)    { doris::vectorized::readDoubleQuoted(key, rb); }
+    // void read_text(doris::vectorized::ReadBuffer & rb)    { doris::vectorized::readDoubleQuoted(key, rb); }
 };
 
 template <typename Key, typename Hash, typename State>
@@ -888,16 +888,16 @@ public:
         }
     }
 
-    // void readText(doris::vectorized::ReadBuffer & rb)
+    // void read_text(doris::vectorized::ReadBuffer & rb)
     // {
-    //     Cell::State::readText(rb);
+    //     Cell::State::read_text(rb);
 
     //     destroyElements();
     //     this->clearHasZero();
     //     m_size = 0;
 
     //     size_t new_size = 0;
-    //     doris::vectorized::readText(new_size, rb);
+    //     doris::vectorized::read_text(new_size, rb);
 
     //     free();
     //     Grower new_grower = grower;
@@ -908,7 +908,7 @@ public:
     //     {
     //         Cell x;
     //         doris::vectorized::assertChar(',', rb);
-    //         x.readText(rb);
+    //         x.read_text(rb);
     //         insert(Cell::getKey(x.get_value()));
     //     }
     // }

@@ -128,12 +128,12 @@ ColumnPtr wrapInNullable(const ColumnPtr& src, const Block& block, const ColumnN
     }
 
     for (const auto& arg : args) {
-        const ColumnWithTypeAndName& elem = block.getByPosition(arg);
+        const ColumnWithTypeAndName& elem = block.get_by_position(arg);
         if (!elem.type->is_nullable()) continue;
 
         /// Const Nullable that are NULL.
         if (elem.column->only_null())
-            return block.getByPosition(result).type->createColumnConst(input_rows_count, Null());
+            return block.get_by_position(result).type->createColumnConst(input_rows_count, Null());
 
         if (is_column_const(*elem.column)) continue;
 
@@ -175,7 +175,7 @@ NullPresence getNullPresense(const Block& block, const ColumnNumbers& args) {
     NullPresence res;
 
     for (const auto& arg : args) {
-        const auto& elem = block.getByPosition(arg);
+        const auto& elem = block.get_by_position(arg);
 
         if (!res.has_nullable) res.has_nullable = elem.type->is_nullable();
         if (!res.has_null_constant) res.has_null_constant = elem.type->only_null();
@@ -197,7 +197,7 @@ NullPresence getNullPresense(const Block& block, const ColumnNumbers& args) {
 
 bool allArgumentsAreConstants(const Block& block, const ColumnNumbers& args) {
     for (auto arg : args)
-        if (!is_column_const(*block.getByPosition(arg).column)) return false;
+        if (!is_column_const(*block.get_by_position(arg).column)) return false;
     return true;
 }
 } // namespace
@@ -210,7 +210,7 @@ Status PreparedFunctionImpl::defaultImplementationForConstantArguments(
 
     /// Check that these arguments are really constant.
     for (auto arg_num : arguments_to_remain_constants)
-        if (arg_num < args.size() && !is_column_const(*block.getByPosition(args[arg_num]).column)) {
+        if (arg_num < args.size() && !is_column_const(*block.get_by_position(args[arg_num]).column)) {
             return Status::RuntimeError(fmt::format(
                     "Argument at index {} for function {}  must be constant", arg_num, get_name()));
         }
@@ -224,7 +224,7 @@ Status PreparedFunctionImpl::defaultImplementationForConstantArguments(
 
     size_t arguments_size = args.size();
     for (size_t arg_num = 0; arg_num < arguments_size; ++arg_num) {
-        const ColumnWithTypeAndName& column = block.getByPosition(args[arg_num]);
+        const ColumnWithTypeAndName& column = block.get_by_position(args[arg_num]);
 
         if (arguments_to_remain_constants.end() != std::find(arguments_to_remain_constants.begin(),
                                                              arguments_to_remain_constants.end(),
@@ -248,7 +248,7 @@ Status PreparedFunctionImpl::defaultImplementationForConstantArguments(
                             get_name()));
     }
 
-    temporary_block.insert(block.getByPosition(result));
+    temporary_block.insert(block.get_by_position(result));
 
     ColumnNumbers temporary_argument_numbers(arguments_size);
     for (size_t i = 0; i < arguments_size; ++i) temporary_argument_numbers[i] = i;
@@ -260,12 +260,12 @@ Status PreparedFunctionImpl::defaultImplementationForConstantArguments(
     ColumnPtr result_column;
     /// extremely rare case, when we have function with completely const arguments
     /// but some of them produced by non isDeterministic function
-    if (temporary_block.getByPosition(arguments_size).column->size() > 1)
-        result_column = temporary_block.getByPosition(arguments_size).column->clone_resized(1);
+    if (temporary_block.get_by_position(arguments_size).column->size() > 1)
+        result_column = temporary_block.get_by_position(arguments_size).column->clone_resized(1);
     else
-        result_column = temporary_block.getByPosition(arguments_size).column;
+        result_column = temporary_block.get_by_position(arguments_size).column;
 
-    block.getByPosition(result).column = ColumnConst::create(result_column, input_rows_count);
+    block.get_by_position(result).column = ColumnConst::create(result_column, input_rows_count);
     *executed = true;
     return Status::OK();
 }
@@ -279,8 +279,8 @@ Status PreparedFunctionImpl::defaultImplementationForNulls(Block& block, const C
     NullPresence null_presence = getNullPresense(block, args);
 
     if (null_presence.has_null_constant) {
-        block.getByPosition(result).column =
-                block.getByPosition(result).type->createColumnConst(input_rows_count, Null());
+        block.get_by_position(result).column =
+                block.get_by_position(result).type->createColumnConst(input_rows_count, Null());
         *executed = true;
         return Status::OK();
     }
@@ -289,8 +289,8 @@ Status PreparedFunctionImpl::defaultImplementationForNulls(Block& block, const C
         Block temporary_block = createBlockWithNestedColumns(block, args, result);
         RETURN_IF_ERROR(executeWithoutLowCardinalityColumns(temporary_block, args, result,
                                                             temporary_block.rows(), dry_run));
-        block.getByPosition(result).column =
-                wrapInNullable(temporary_block.getByPosition(result).column, block, args, result,
+        block.get_by_position(result).column =
+                wrapInNullable(temporary_block.get_by_position(result).column, block, args, result,
                                input_rows_count);
         *executed = true;
         return Status::OK();
@@ -328,7 +328,7 @@ Status PreparedFunctionImpl::executeWithoutLowCardinalityColumns(Block& block,
 //
 //    for (auto arg : args)
 //    {
-//        const ColumnWithTypeAndName & column = block.getByPosition(arg);
+//        const ColumnWithTypeAndName & column = block.get_by_position(arg);
 //        if (auto * low_cardinality_column = check_and_get_column<ColumnLowCardinality>(column.column.get()))
 //        {
 //            if (result_column)
@@ -349,7 +349,7 @@ Status PreparedFunctionImpl::executeWithoutLowCardinalityColumns(Block& block,
 
     /// Change size of constants.
     for (auto arg : args) {
-        ColumnWithTypeAndName& column = block.getByPosition(arg);
+        ColumnWithTypeAndName& column = block.get_by_position(arg);
         if (auto* column_const = check_and_get_column<ColumnConst>(column.column.get())) {
             column.column = column_const->remove_low_cardinality()->clone_resized(num_rows);
             //            column.type = remove_low_cardinality(column.type);
@@ -357,7 +357,7 @@ Status PreparedFunctionImpl::executeWithoutLowCardinalityColumns(Block& block,
     }
 
 #ifndef NDEBUG
-    block.checkNumberOfRows(true);
+    block.check_number_of_rows(true);
 #endif
 
     return indexes;
@@ -367,7 +367,7 @@ Status PreparedFunctionImpl::executeWithoutLowCardinalityColumns(Block& block,
 //{
 //    for (auto arg : args)
 //    {
-//        ColumnWithTypeAndName & column = block.getByPosition(arg);
+//        ColumnWithTypeAndName & column = block.get_by_position(arg);
 //
 //        column.column = recursiveRemoveLowCardinality(column.column);
 //        column.type = recursiveRemoveLowCardinality(column.type);
@@ -377,12 +377,12 @@ Status PreparedFunctionImpl::executeWithoutLowCardinalityColumns(Block& block,
 Status PreparedFunctionImpl::execute(Block& block, const ColumnNumbers& args, size_t result,
                                      size_t input_rows_count, bool dry_run) {
     if (useDefaultImplementationForLowCardinalityColumns()) {
-        auto& res = block.safeGetByPosition(result);
-        Block block_without_low_cardinality = block.cloneWithoutColumns();
+        auto& res = block.safe_get_by_position(result);
+        Block block_without_low_cardinality = block.clone_without_columns();
 
         for (auto arg : args)
-            block_without_low_cardinality.safeGetByPosition(arg).column =
-                    block.safeGetByPosition(arg).column;
+            block_without_low_cardinality.safe_get_by_position(arg).column =
+                    block.safe_get_by_position(arg).column;
 
         //        if (auto * res_low_cardinality_type = typeid_cast<const DataTypeLowCardinality *>(res.type.get()))
         //        {
@@ -406,13 +406,13 @@ Status PreparedFunctionImpl::execute(Block& block, const ColumnNumbers& args, si
         //                }
         //            }
         //
-        //            block_without_low_cardinality.safeGetByPosition(result).type = res_low_cardinality_type->getDictionaryType();
+        //            block_without_low_cardinality.safe_get_by_position(result).type = res_low_cardinality_type->getDictionaryType();
         //            ColumnPtr indexes = replaceLowCardinalityColumnsByNestedAndGetDictionaryIndexes(
         //                    block_without_low_cardinality, args, can_be_executed_on_default_arguments, input_rows_count);
         //
         //            executeWithoutLowCardinalityColumns(block_without_low_cardinality, args, result, block_without_low_cardinality.rows(), dry_run);
         //
-        //            auto keys = block_without_low_cardinality.safeGetByPosition(result).column->convert_to_full_column_if_const();
+        //            auto keys = block_without_low_cardinality.safe_get_by_position(result).column->convert_to_full_column_if_const();
         //
         //            auto res_mut_dictionary = DataTypeLowCardinality::createColumnUnique(*res_low_cardinality_type->getDictionaryType());
         //            ColumnPtr res_indexes = res_mut_dictionary->uniqueInsertRangeFrom(*keys, 0, keys->size());
@@ -444,7 +444,7 @@ Status PreparedFunctionImpl::execute(Block& block, const ColumnNumbers& args, si
             //            convertLowCardinalityColumnsToFull(block_without_low_cardinality, args);
             RETURN_IF_ERROR(executeWithoutLowCardinalityColumns(block_without_low_cardinality, args,
                                                                 result, input_rows_count, dry_run));
-            res.column = block_without_low_cardinality.safeGetByPosition(result).column;
+            res.column = block_without_low_cardinality.safe_get_by_position(result).column;
         }
     } else
         executeWithoutLowCardinalityColumns(block, args, result, input_rows_count, dry_run);
