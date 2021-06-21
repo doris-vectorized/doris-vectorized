@@ -137,7 +137,7 @@ void write_vector_binary(const std::vector<Type>& v, std::ostream& buf) {
 }
 
 template <typename Type>
-inline std::enable_if_t<std::is_arithmetic_v<Type>, void> writeBinary(const Type& x,
+inline std::enable_if_t<std::is_arithmetic_v<Type>, void> write_binary(const Type& x,
                                                                       std::ostream& buf) {
     write_pod_binary(x, buf);
 }

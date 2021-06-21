@@ -98,11 +98,11 @@ struct AggregateFunctionStateData {
 };
 
 template <typename T>
-bool decimalEqual(T x, T y, UInt32 x_scale, UInt32 y_scale);
+bool decimal_equal(T x, T y, UInt32 x_scale, UInt32 y_scale);
 template <typename T>
-bool decimalLess(T x, T y, UInt32 x_scale, UInt32 y_scale);
+bool decimal_less(T x, T y, UInt32 x_scale, UInt32 y_scale);
 template <typename T>
-bool decimalLessOrEqual(T x, T y, UInt32 x_scale, UInt32 y_scale);
+bool decimal_less_or_equal(T x, T y, UInt32 x_scale, UInt32 y_scale);
 
 template <typename T>
 class DecimalField {
@@ -111,25 +111,25 @@ public:
 
     operator T() const { return dec; }
     T get_value() const { return dec; }
-    T getScaleMultiplier() const;
+    T get_scale_multiplier() const;
     UInt32 get_scale() const { return scale; }
 
     template <typename U>
     bool operator<(const DecimalField<U>& r) const {
         using MaxType = std::conditional_t<(sizeof(T) > sizeof(U)), T, U>;
-        return decimalLess<MaxType>(dec, r.get_value(), scale, r.get_scale());
+        return decimal_less<MaxType>(dec, r.get_value(), scale, r.get_scale());
     }
 
     template <typename U>
     bool operator<=(const DecimalField<U>& r) const {
         using MaxType = std::conditional_t<(sizeof(T) > sizeof(U)), T, U>;
-        return decimalLessOrEqual<MaxType>(dec, r.get_value(), scale, r.get_scale());
+        return decimal_less_or_equal<MaxType>(dec, r.get_value(), scale, r.get_scale());
     }
 
     template <typename U>
     bool operator==(const DecimalField<U>& r) const {
         using MaxType = std::conditional_t<(sizeof(T) > sizeof(U)), T, U>;
-        return decimalEqual<MaxType>(dec, r.get_value(), scale, r.get_scale());
+        return decimal_equal<MaxType>(dec, r.get_value(), scale, r.get_scale());
     }
 
     template <typename U>
@@ -202,7 +202,7 @@ public:
 
         static const int MIN_NON_POD = 16;
 
-        static const char* toString(Which which) {
+        static const char* to_string(Which which) {
             switch (which) {
             case Null:
                 return "Null";
@@ -242,7 +242,7 @@ public:
     template <Types::Which which>
     struct EnumToType;
 
-    static bool IsDecimal(Types::Which which) {
+    static bool is_decimal(Types::Which which) {
         return which >= Types::Decimal32 && which <= Types::Decimal128;
     }
 
@@ -264,12 +264,12 @@ public:
     Field(const unsigned char* data, size_t size) { create(data, size); }
 
     /// NOTE In case when field already has string type, more direct assign is possible.
-    void assignString(const char* data, size_t size) {
+    void assign_string(const char* data, size_t size) {
         destroy();
         create(data, size);
     }
 
-    void assignString(const unsigned char* data, size_t size) {
+    void assign_string(const unsigned char* data, size_t size) {
         destroy();
         create(data, size);
     }
@@ -301,10 +301,10 @@ public:
 
     ~Field() { destroy(); }
 
-    Types::Which getType() const { return which; }
-    const char* getTypeName() const { return Types::toString(which); }
+    Types::Which get_type() const { return which; }
+    const char* get_type_name() const { return Types::to_string(which); }
 
-    bool isNull() const { return which == Types::Null; }
+    bool is_null() const { return which == Types::Null; }
 
     template <typename T>
     T& get() {
@@ -321,7 +321,7 @@ public:
     }
 
     template <typename T>
-    bool tryGet(T& result) {
+    bool try_get(T& result) {
         const Types::Which requested = TypeToEnum<std::decay_t<T>>::value;
         if (which != requested) return false;
         result = get<T>();
@@ -329,7 +329,7 @@ public:
     }
 
     template <typename T>
-    bool tryGet(T& result) const {
+    bool try_get(T& result) const {
         const Types::Which requested = TypeToEnum<std::decay_t<T>>::value;
         if (which != requested) return false;
         result = get<T>();
@@ -337,16 +337,16 @@ public:
     }
 
     template <typename T>
-    T& safeGet() {
+    T& safe_get() {
         const Types::Which requested = TypeToEnum<std::decay_t<T>>::value;
-        CHECK_EQ(which, requested) << fmt::format("Bad get: has {}, requested {}",getTypeName(), Types::toString(requested));
+        CHECK_EQ(which, requested) << fmt::format("Bad get: has {}, requested {}", get_type_name(), Types::to_string(requested));
         return get<T>();
     }
 
     template <typename T>
-    const T& safeGet() const {
+    const T& safe_get() const {
         const Types::Which requested = TypeToEnum<std::decay_t<T>>::value;
-        CHECK_EQ(which, requested) << fmt::format("Bad get: has {}, requested {}",getTypeName(), Types::toString(requested));
+        CHECK_EQ(which, requested) << fmt::format("Bad get: has {}, requested {}", get_type_name(), Types::to_string(requested));
         return get<T>();
     }
 
@@ -472,7 +472,7 @@ private:
 
     /// Assuming there was no allocated state or it was deallocated (see destroy).
     template <typename T>
-    void createConcrete(T&& x) {
+    void create_concrete(T&& x) {
         using UnqualifiedType = std::decay_t<T>;
 
         // In both Field and PODArray, small types may be stored as wider types,
@@ -487,7 +487,7 @@ private:
 
     /// Assuming same types.
     template <typename T>
-    void assignConcrete(T&& x) {
+    void assign_concrete(T&& x) {
         using JustT = std::decay_t<T>;
         assert(which == TypeToEnum<JustT>::value);
         JustT* MAY_ALIAS ptr = reinterpret_cast<JustT*>(&storage);
@@ -550,19 +550,19 @@ private:
     }
 
     void create(const Field& x) {
-        dispatch([this](auto& value) { createConcrete(value); }, x);
+        dispatch([this](auto& value) { create_concrete(value); }, x);
     }
 
     void create(Field&& x) {
-        dispatch([this](auto& value) { createConcrete(std::move(value)); }, x);
+        dispatch([this](auto& value) { create_concrete(std::move(value)); }, x);
     }
 
     void assign(const Field& x) {
-        dispatch([this](auto& value) { assignConcrete(value); }, x);
+        dispatch([this](auto& value) { assign_concrete(value); }, x);
     }
 
     void assign(Field&& x) {
-        dispatch([this](auto& value) { assignConcrete(std::move(value)); }, x);
+        dispatch([this](auto& value) { assign_concrete(std::move(value)); }, x);
     }
 
     void create(const char* data, size_t size) {
@@ -724,13 +724,13 @@ T get(Field& field) {
 }
 
 template <typename T>
-T safeGet(const Field& field) {
-    return field.template safeGet<T>();
+T safe_get(const Field& field) {
+    return field.template safe_get<T>();
 }
 
 template <typename T>
-T safeGet(Field& field) {
-    return field.template safeGet<T>();
+T safe_get(Field& field) {
+    return field.template safe_get<T>();
 }
 
 template <>
@@ -871,7 +871,7 @@ struct NearestFieldTypeImpl<AggregateFunctionStateData> {
 };
 
 template <typename T>
-decltype(auto) castToNearestFieldType(T&& x) {
+decltype(auto) cast_to_nearest_field_type(T&& x) {
     using U = NearestFieldType<std::decay_t<T>>;
     if constexpr (std::is_same_v<std::decay_t<T>, U>)
         return std::forward<T>(x);
@@ -888,19 +888,19 @@ decltype(auto) castToNearestFieldType(T&& x) {
 /// 2. customized types needs explicit cast
 template <typename T>
 Field::Field(T&& rhs, std::enable_if_t<!std::is_same_v<std::decay_t<T>, Field>, void*>) {
-    auto&& val = castToNearestFieldType(std::forward<T>(rhs));
-    createConcrete(std::forward<decltype(val)>(val));
+    auto&& val = cast_to_nearest_field_type(std::forward<T>(rhs));
+        create_concrete(std::forward<decltype(val)>(val));
 }
 
 template <typename T>
 std::enable_if_t<!std::is_same_v<std::decay_t<T>, Field>, Field&> Field::operator=(T&& rhs) {
-    auto&& val = castToNearestFieldType(std::forward<T>(rhs));
+    auto&& val = cast_to_nearest_field_type(std::forward<T>(rhs));
     using U = decltype(val);
     if (which != TypeToEnum<std::decay_t<U>>::value) {
         destroy();
-        createConcrete(std::forward<U>(val));
+        create_concrete(std::forward<U>(val));
     } else
-        assignConcrete(std::forward<U>(val));
+        assign_concrete(std::forward<U>(val));
 
     return *this;
 }

@@ -158,7 +158,7 @@ public:
 
     template <typename T>
     T get_value() const {
-        return get_field().safeGet<NearestFieldType<T>>();
+        return get_field().safe_get<NearestFieldType<T>>();
     }
 };
 

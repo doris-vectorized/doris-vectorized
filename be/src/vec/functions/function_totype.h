@@ -57,31 +57,31 @@ private:
     template <typename T, std::enable_if_t<std::is_same_v<T, DataTypeString>, T>* = nullptr>
     Status _executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                         size_t /*input_rows_count*/) {
-        const ColumnPtr column = block.getByPosition(arguments[0]).column;
+        const ColumnPtr column = block.get_by_position(arguments[0]).column;
         if constexpr (std::is_integer(Impl::TYPE_INDEX)) {
             if (auto* col = check_and_get_column<ColumnVector<typename Impl::Type>>(column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
                 RETURN_IF_ERROR(
                         Impl::vector(col->get_data(), col_res->get_chars(), col_res->get_offsets()));
-                block.getByPosition(result).column = std::move(col_res);
+                block.get_by_position(result).column = std::move(col_res);
                 return Status::OK();
             }
         }
 
         return Status::RuntimeError(fmt::format("Illegal column {} of argument of function {}",
-                                                block.getByPosition(arguments[0]).column->get_name(),
+                                                block.get_by_position(arguments[0]).column->get_name(),
                                                 get_name()));
     }
     template <typename T, std::enable_if_t<!std::is_same_v<T, DataTypeString>, T>* = nullptr>
     Status _executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                         size_t /*input_rows_count*/) {
-        const ColumnPtr column = block.getByPosition(arguments[0]).column;
+        const ColumnPtr column = block.get_by_position(arguments[0]).column;
         if constexpr (Impl::TYPE_INDEX == TypeIndex::String) {
             if (const ColumnString* col = check_and_get_column<ColumnString>(column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
                 RETURN_IF_ERROR(
                         Impl::vector(col->get_chars(), col->get_offsets(), col_res->get_data()));
-                block.getByPosition(result).column = std::move(col_res);
+                block.get_by_position(result).column = std::move(col_res);
                 return Status::OK();
             }
         } else if constexpr (std::is_integer(Impl::TYPE_INDEX)) {
@@ -89,7 +89,7 @@ private:
                     check_and_get_column<ColumnVector<typename Impl::Type>>(column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
                 RETURN_IF_ERROR(Impl::vector(col->get_data(), col_res->get_data()));
-                block.getByPosition(result).column = std::move(col_res);
+                block.get_by_position(result).column = std::move(col_res);
                 return Status::OK();
             }
         } else if constexpr (is_complex_v<typename Impl::Type>) {
@@ -97,12 +97,12 @@ private:
                     check_and_get_column<ColumnComplexType<typename Impl::Type>>(column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
                 RETURN_IF_ERROR(Impl::vector(col->get_data(), col_res->get_data()));
-                block.getByPosition(result).column = std::move(col_res);
+                block.get_by_position(result).column = std::move(col_res);
                 return Status::OK();
             }
         }
         return Status::RuntimeError(fmt::format("Illegal column {} of argument of function {}",
-                                                block.getByPosition(arguments[0]).column->get_name(),
+                                                block.get_by_position(arguments[0]).column->get_name(),
                                                 get_name()));
     }
 };
@@ -125,9 +125,9 @@ public:
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
         DCHECK_EQ(arguments.size(), 2);
-        const auto& left = block.getByPosition(arguments[0]);
+        const auto& left = block.get_by_position(arguments[0]);
         auto lcol = left.column->convert_to_full_column_if_const();
-        const auto& right = block.getByPosition(arguments[1]);
+        const auto& right = block.get_by_position(arguments[1]);
         auto rcol = right.column->convert_to_full_column_if_const();
 
         using ResultDataType = typename Impl<LeftDataType, RightDataType>::ResultDataType;
@@ -155,7 +155,7 @@ public:
             if (auto col_right = check_and_get_column<ColVecRight>(rcol.get())) {
                 Impl<LeftDataType, RightDataType>::vector_vector(col_left->get_data(),
                                                                  col_right->get_data(), vec_res);
-                block.getByPosition(result).column = std::move(col_res);
+                block.get_by_position(result).column = std::move(col_res);
                 return Status::OK();
             }
         }
@@ -184,8 +184,8 @@ public:
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
-        const auto& left = block.getByPosition(arguments[0]);
-        const auto& right = block.getByPosition(arguments[1]);
+        const auto& left = block.get_by_position(arguments[0]);
+        const auto& right = block.get_by_position(arguments[1]);
         return execute_inner_impl<ResultDataType>(left, right, block, arguments, result);
     }
 
@@ -210,7 +210,7 @@ private:
                 Impl<LeftDataType, RightDataType>::vector_vector(
                         col_left->get_chars(), col_left->get_offsets(), col_right->get_chars(),
                         col_right->get_offsets(), vec_res);
-                block.getByPosition(result).column = std::move(col_res);
+                block.get_by_position(result).column = std::move(col_res);
                 return Status::OK();
             }
         }
@@ -232,7 +232,7 @@ private:
                 Impl<LeftDataType, RightDataType>::vector_vector(
                         col_left->get_chars(), col_left->get_offsets(), col_right->get_chars(),
                         col_right->get_offsets(), col_res->get_chars(), col_res->get_offsets());
-                block.getByPosition(result).column = std::move(col_res);
+                block.get_by_position(result).column = std::move(col_res);
                 return Status::OK();
             }
         }
@@ -263,7 +263,7 @@ public:
         // handle
         for (int i = 0; i < 2; ++i) {
             argument_columns[i] =
-                    block.getByPosition(arguments[i]).column->convert_to_full_column_if_const();
+                    block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
             if (auto* nullable = check_and_get_column<ColumnNullable>(*argument_columns[i])) {
                 argument_columns[i] = nullable->get_nested_column_ptr();
                 VectorizedUtils::update_null_map(null_map->get_data(), nullable->get_null_map_data());
@@ -292,7 +292,7 @@ public:
                                 null_map->get_data());
         }
 
-        block.getByPosition(result).column =
+        block.get_by_position(result).column =
                 ColumnNullable::create(std::move(res), std::move(null_map));
         return Status::OK();
     }
