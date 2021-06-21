@@ -63,9 +63,8 @@ public:
 
     std::string to_string(const IColumn& column, size_t row_num) const { return "BitMap()"; }
 
-    virtual Field getDefault() const {
-        throw Exception("Method getDefault() is not implemented for data type " + get_name(),
-                        ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] virtual Field getDefault() const {
+        LOG(FATAL) << "Method getDefault() is not implemented for data type " << get_name();
     }
 };
 

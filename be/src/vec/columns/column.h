@@ -73,7 +73,8 @@ public:
     /// If size is less current size, then data is cut.
     /// If size is greater, than default values are appended.
     virtual MutablePtr clone_resized(size_t s) const {
-        throw Exception("Cannot clone_resized() column " + get_name(), ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "Cannot clone_resized() column " << get_name();
+        return nullptr;
     }
 
     /// Returns number of values in column.
@@ -101,15 +102,15 @@ public:
     /// If column stores floating point numbers, bits of n-th elements are copied to lower bits of UInt64, the remaining bits are zeros.
     /// Is used to optimize some computations (in aggregation, for example).
     virtual UInt64 get64(size_t /*n*/) const {
-        throw Exception("Method get64 is not supported for " + get_name(),
-                        ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "Method get64 is not supported for ";
+        return 0;
     }
 
     /// If column stores native numeric type, it returns n-th element casted to Float64
     /// Is used in regression methods to cast each features into uniform type
     virtual Float64 get_float64(size_t /*n*/) const {
-        throw Exception("Method get_float64 is not supported for " + get_name(),
-                        ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "Method get_float64 is not supported for " << get_name();
+        return 0;
     }
 
     /** If column is numeric, return value of n-th element, casted to UInt64.
@@ -117,13 +118,13 @@ public:
       * Otherwise throw an exception.
       */
     virtual UInt64 get_uint(size_t /*n*/) const {
-        throw Exception("Method get_uint is not supported for " + get_name(),
-                        ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "Method get_uint is not supported for " << get_name();
+        return 0;
     }
 
     virtual Int64 get_int(size_t /*n*/) const {
-        throw Exception("Method get_int is not supported for " + get_name(),
-                        ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "Method get_int is not supported for " << get_name();
+        return 0;
     }
 
     virtual bool is_default_at(size_t n) const { return get64(n) == 0; }
@@ -134,8 +135,8 @@ public:
       * Otherwise throw an exception.
       */
     virtual bool get_bool(size_t /*n*/) const {
-        throw Exception("Method get_bool is not supported for " + get_name(),
-                        ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "Method get_bool is not supported for " << get_name();
+        return false;
     }
 
     /// Removes all elements outside of specified range.
@@ -192,7 +193,8 @@ public:
       *  For example, to obtain unambiguous representation of Array of strings, strings data should be interleaved with their sizes.
       * Parameter begin should be used with Arena::alloc_continue.
       */
-    virtual StringRef serialize_value_into_arena(size_t n, Arena& arena, char const*& begin) const = 0;
+    virtual StringRef serialize_value_into_arena(size_t n, Arena& arena,
+                                                 char const*& begin) const = 0;
 
     /// Deserializes a value that was serialized using IColumn::serialize_value_into_arena method.
     /// Returns pointer to the position after the read data.
@@ -232,7 +234,8 @@ public:
       *
       * For non Nullable and non floating point types, nan_direction_hint is ignored.
       */
-    virtual int compare_at(size_t n, size_t m, const IColumn& rhs, int nan_direction_hint) const = 0;
+    virtual int compare_at(size_t n, size_t m, const IColumn& rhs,
+                           int nan_direction_hint) const = 0;
 
     /** Returns a permutation that sorts elements of this column,
       *  i.e. perm[i]-th element of source column should be i-th element of sorted column.
@@ -298,13 +301,14 @@ public:
     /// Columns have equal structure.
     /// If true - you can use "compare_at", "insert_from", etc. methods.
     virtual bool structure_equals(const IColumn&) const {
-         throw Exception("Method structure_equals is not supported for " + get_name(), ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "Method structure_equals is not supported for " << get_name();
+        return false;
     }
 
     MutablePtr mutate() const&& {
         MutablePtr res = shallow_mutate();
         res->for_each_subcolumn(
-                [](WrappedPtr &subcolumn) { subcolumn = std::move(*subcolumn).mutate(); });
+                [](WrappedPtr& subcolumn) { subcolumn = std::move(*subcolumn).mutate(); });
         return res;
     }
 
@@ -348,15 +352,15 @@ public:
     virtual bool is_fixed_and_contiguous() const { return false; }
 
     /// If is_fixed_and_contiguous, returns the underlying data array, otherwise throws an exception.
-    virtual StringRef get_raw_data()
-            const {
-        throw Exception("Column " + get_name() + " is not a contiguous block of memory", ErrorCodes::NOT_IMPLEMENTED);
+    virtual StringRef get_raw_data() const {
+        LOG(FATAL) << fmt::format("Column {} is not a contiguous block of memory", get_name());
+        return StringRef{};
     }
 
     /// If values_have_fixed_size, returns size of value, otherwise throw an exception.
-    virtual size_t size_of_value_if_fixed()
-            const {
-        throw Exception("Values of column " + get_name() + " are not fixed size.", ErrorCodes::CANNOT_GET_SIZE_OF_FIELD);
+    virtual size_t size_of_value_if_fixed() const {
+        LOG(FATAL) << fmt::format("Values of column {} are not fixed size.", get_name());
+        return 0;
     }
 
     /// Column is ColumnVector of numbers or ColumnConst of it. Note that Nullable columns are not numeric.

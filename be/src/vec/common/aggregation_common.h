@@ -57,8 +57,8 @@ using KeysNullMap = std::array<UInt8, get_bitmap_size<T>()>;
 template <typename T, bool has_low_cardinality = false>
 static inline T ALWAYS_INLINE
 pack_fixed(size_t i, size_t keys_size, const ColumnRawPtrs& key_columns, const Sizes& key_sizes,
-          const ColumnRawPtrs* low_cardinality_positions [[maybe_unused]] = nullptr,
-          const Sizes* low_cardinality_sizes [[maybe_unused]] = nullptr) {
+           const ColumnRawPtrs* low_cardinality_positions [[maybe_unused]] = nullptr,
+           const Sizes* low_cardinality_sizes [[maybe_unused]] = nullptr) {
     union {
         T key;
         char bytes[sizeof(key)] = {};
@@ -85,8 +85,7 @@ pack_fixed(size_t i, size_t keys_size, const ColumnRawPtrs& key_columns, const S
                     index = assert_cast<const ColumnUInt64*>(positions)->get_element(i);
                     break;
                 default:
-                    throw Exception("Unexpected size of index type for low cardinality column.",
-                                    ErrorCodes::LOGICAL_ERROR);
+                    LOG(FATAL) << "Unexpected size of index type for low cardinality column.";
                 }
             }
         }
@@ -94,24 +93,28 @@ pack_fixed(size_t i, size_t keys_size, const ColumnRawPtrs& key_columns, const S
         switch (key_sizes[j]) {
         case 1:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(column)->get_raw_data_begin<1>() + index, 1);
+                   static_cast<const ColumnVectorHelper*>(column)->get_raw_data_begin<1>() + index,
+                   1);
             offset += 1;
             break;
         case 2:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(column)->get_raw_data_begin<2>() + index * 2,
+                   static_cast<const ColumnVectorHelper*>(column)->get_raw_data_begin<2>() +
+                           index * 2,
                    2);
             offset += 2;
             break;
         case 4:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(column)->get_raw_data_begin<4>() + index * 4,
+                   static_cast<const ColumnVectorHelper*>(column)->get_raw_data_begin<4>() +
+                           index * 4,
                    4);
             offset += 4;
             break;
         case 8:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(column)->get_raw_data_begin<8>() + index * 8,
+                   static_cast<const ColumnVectorHelper*>(column)->get_raw_data_begin<8>() +
+                           index * 8,
                    8);
             offset += 8;
             break;
@@ -130,8 +133,8 @@ pack_fixed(size_t i, size_t keys_size, const ColumnRawPtrs& key_columns, const S
 /// Similar as above but supports nullable values.
 template <typename T>
 static inline T ALWAYS_INLINE pack_fixed(size_t i, size_t keys_size,
-                                        const ColumnRawPtrs& key_columns, const Sizes& key_sizes,
-                                        const KeysNullMap<T>& bitmap) {
+                                         const ColumnRawPtrs& key_columns, const Sizes& key_sizes,
+                                         const KeysNullMap<T>& bitmap) {
     union {
         T key;
         char bytes[sizeof(key)] = {};
@@ -163,7 +166,8 @@ static inline T ALWAYS_INLINE pack_fixed(size_t i, size_t keys_size,
         switch (key_sizes[j]) {
         case 1:
             memcpy(bytes + offset,
-                   static_cast<const ColumnVectorHelper*>(key_columns[j])->get_raw_data_begin<1>() + i,
+                   static_cast<const ColumnVectorHelper*>(key_columns[j])->get_raw_data_begin<1>() +
+                           i,
                    1);
             offset += 1;
             break;
@@ -215,7 +219,7 @@ static inline UInt128 ALWAYS_INLINE hash128(size_t i, size_t keys_size,
 
 /// Copy keys to the pool. Then put into pool StringRefs to them and return the pointer to the first.
 static inline StringRef* ALWAYS_INLINE place_keys_in_pool(size_t keys_size, StringRefs& keys,
-                                                       Arena& pool) {
+                                                          Arena& pool) {
     for (size_t j = 0; j < keys_size; ++j) {
         char* place = pool.alloc(keys[j].size);
         memcpy_small_allow_read_write_overflow15(place, keys[j].data, keys[j].size);

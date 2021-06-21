@@ -47,7 +47,7 @@ extern const int ILLEGAL_COLUMN;
   *  factor-transformation F is "round to the nearest month" (2015-02-03 -> 2015-02-01).
   */
 
-static [[noreturn]] inline UInt32 dateIsNotSupported(const char* name) {
+[[noreturn]] static inline UInt32 dateIsNotSupported(const char* name) {
     LOG(FATAL) << fmt::format("Illegal type Date of argument for function {}", name);
 }
 

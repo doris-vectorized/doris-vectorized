@@ -255,7 +255,7 @@ private:
         return nullptr;
     }
 #else
-    void* getMmapHint() { return nullptr; }
+    void* get_mmap_hint() { return nullptr; }
 #endif
 };
 
