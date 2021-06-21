@@ -18,7 +18,7 @@ struct MultiplyImpl {
     /// Apply operation and check overflow. It's used for Deciamal operations. @returns true if overflowed, false otherwise.
     template <typename Result = ResultType>
     static inline bool apply(A a, B b, Result& c) {
-        return common::mulOverflow(static_cast<Result>(a), b, c);
+        return common::mul_overflow(static_cast<Result>(a), b, c);
     }
 
 #if USE_EMBEDDED_COMPILER

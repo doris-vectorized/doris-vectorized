@@ -19,6 +19,6 @@
 
 namespace doris::vectorized {
 /// Used for left padding of PODArray when empty
-const char EmptyPODArray[EmptyPODArraySize] {};
+const char empty_pod_array[EmptyPODArraySize] {};
 
 } // namespace doris::vectorized

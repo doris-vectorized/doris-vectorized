@@ -54,7 +54,7 @@ std::string DataTypeString::to_string(const IColumn& column, size_t row_num) con
     const StringRef& s =
             assert_cast<const ColumnString&>(*column.convert_to_full_column_if_const().get())
                     .get_data_at(row_num);
-    return s.toString();
+    return s.to_string();
 }
 
 Field DataTypeString::getDefault() const {

@@ -567,7 +567,7 @@ vectorized::Block RowBatch::convert_to_vec_block() const {
     auto n_columns = 0;
     for (const auto tuple_desc : _row_desc.tuple_descriptors()) {
         for (const auto slot_desc : tuple_desc->slots()) {
-            columns_with_type_and_name.emplace_back(columns[n_columns++]->getPtr(),
+            columns_with_type_and_name.emplace_back(columns[n_columns++]->get_ptr(),
                                                     slot_desc->get_data_type_ptr(),
                                                     slot_desc->col_name());
         }

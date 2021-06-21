@@ -87,7 +87,7 @@ Status AggFnEvaluator::prepare(RuntimeState* state, const RowDescriptor& desc, M
         return Status::InternalError(
                 fmt::format("Agg Function {} is not implemented", _fn.name.function_name));
     }
-    _data_type = _function->getReturnType();
+    _data_type = _function->get_return_type();
     _expr_name = fmt::format("{}({})", _fn.name.function_name, child_expr_name);
     return Status::OK();
 }
@@ -109,28 +109,28 @@ void AggFnEvaluator::destroy(AggregateDataPtr place) {
 void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place, Arena* arena) {
     auto columns = _get_argment_columns(block);
     // Because the `convert_to_full_column_if_const()` may return a temporary variable, so we need keep the reference of it
-    // to make sure program do not destroy it before we call `addBatchSinglePlace`.
+    // to make sure program do not destroy it before we call `add_batch_single_place`.
     // WARNING:
     //      There's danger to call `convert_to_full_column_if_const().get()` to get the `const IColumn*` directly.
     std::vector<const IColumn*> column_arguments(columns.size());
     std::transform(columns.cbegin(), columns.cend(), column_arguments.begin(),
                    [](const auto& ptr) { return ptr.get(); });
     SCOPED_TIMER(_exec_timer);
-    _function->addBatchSinglePlace(block->rows(), place, column_arguments.data(), nullptr);
+    _function->add_batch_single_place(block->rows(), place, column_arguments.data(), nullptr);
 }
 
 void AggFnEvaluator::execute_batch_add(Block* block, size_t offset, AggregateDataPtr* places,
                                        Arena* arena) {
     auto columns = _get_argment_columns(block);
     // Because the `convert_to_full_column_if_const()` may return a temporary variable, so we need keep the reference of it
-    // to make sure program do not destroy it before we call `addBatchSinglePlace`.
+    // to make sure program do not destroy it before we call `add_batch_single_place`.
     // WARNING:
     //      There's danger to call `convert_to_full_column_if_const().get()` to get the `const IColumn*` directly.
     std::vector<const IColumn*> column_arguments(columns.size());
     std::transform(columns.cbegin(), columns.cend(), column_arguments.begin(),
                    [](const auto& ptr) { return ptr.get(); });
     SCOPED_TIMER(_exec_timer);
-    _function->addBatch(block->rows(), places, offset, column_arguments.data(), arena);
+    _function->add_batch(block->rows(), places, offset, column_arguments.data(), arena);
 }
 
 void AggFnEvaluator::execute_single_merge(AggregateDataPtr place, ConstAggregateDataPtr rhs,
@@ -140,7 +140,7 @@ void AggFnEvaluator::execute_single_merge(AggregateDataPtr place, ConstAggregate
 }
 
 void AggFnEvaluator::insert_result_info(AggregateDataPtr place, IColumn* column) {
-    _function->insertResultInto(place, *column);
+    _function->insert_result_into(place, *column);
 }
 std::string AggFnEvaluator::debug_string(const std::vector<AggFnEvaluator*>& exprs) {
     std::stringstream out;

@@ -37,7 +37,7 @@ namespace doris::vectorized {
 /** Create an aggregate function with a numeric type in the template parameter, depending on the type of the argument.
   */
 template <template <typename> class AggregateFunctionTemplate, typename... TArgs>
-static IAggregateFunction* createWithNumericType(const IDataType& argument_type, TArgs&&... args) {
+static IAggregateFunction* create_with_numeric_type(const IDataType& argument_type, TArgs&&... args) {
     WhichDataType which(argument_type);
 #define DISPATCH(TYPE)                \
     if (which.idx == TypeIndex::TYPE) \
@@ -53,7 +53,7 @@ static IAggregateFunction* createWithNumericType(const IDataType& argument_type,
 
 template <template <typename, bool> class AggregateFunctionTemplate, bool bool_param,
           typename... TArgs>
-static IAggregateFunction* createWithNumericType(const IDataType& argument_type, TArgs&&... args) {
+static IAggregateFunction* create_with_numeric_type(const IDataType& argument_type, TArgs&&... args) {
     WhichDataType which(argument_type);
 #define DISPATCH(TYPE)                \
     if (which.idx == TypeIndex::TYPE) \
@@ -69,7 +69,7 @@ static IAggregateFunction* createWithNumericType(const IDataType& argument_type,
 
 template <template <typename, typename> class AggregateFunctionTemplate, typename Data,
           typename... TArgs>
-static IAggregateFunction* createWithNumericType(const IDataType& argument_type, TArgs&&... args) {
+static IAggregateFunction* create_with_numeric_type(const IDataType& argument_type, TArgs&&... args) {
     WhichDataType which(argument_type);
 #define DISPATCH(TYPE)                \
     if (which.idx == TypeIndex::TYPE) \
@@ -85,7 +85,7 @@ static IAggregateFunction* createWithNumericType(const IDataType& argument_type,
 
 template <template <typename, typename> class AggregateFunctionTemplate,
           template <typename> class Data, typename... TArgs>
-static IAggregateFunction* createWithNumericType(const IDataType& argument_type, TArgs&&... args) {
+static IAggregateFunction* create_with_numeric_type(const IDataType& argument_type, TArgs&&... args) {
     WhichDataType which(argument_type);
 #define DISPATCH(TYPE)                \
     if (which.idx == TypeIndex::TYPE) \
@@ -101,7 +101,7 @@ static IAggregateFunction* createWithNumericType(const IDataType& argument_type,
 
 template <template <typename> class AggregateFunctionTemplate, template <typename> class Data,
           typename... TArgs>
-static IAggregateFunction* createWithNumericType(const IDataType& argument_type, TArgs&&... args) {
+static IAggregateFunction* create_with_numeric_type(const IDataType& argument_type, TArgs&&... args) {
     WhichDataType which(argument_type);
 #define DISPATCH(TYPE)                \
     if (which.idx == TypeIndex::TYPE) \
@@ -115,7 +115,7 @@ static IAggregateFunction* createWithNumericType(const IDataType& argument_type,
 
 template <template <typename, typename> class AggregateFunctionTemplate,
           template <typename> class Data, typename... TArgs>
-static IAggregateFunction* createWithUnsignedIntegerType(const IDataType& argument_type,
+static IAggregateFunction* create_with_unsigned_integer_type(const IDataType& argument_type,
                                                          TArgs&&... args) {
     WhichDataType which(argument_type);
     if (which.idx == TypeIndex::UInt8)
@@ -130,9 +130,9 @@ static IAggregateFunction* createWithUnsignedIntegerType(const IDataType& argume
 }
 
 template <template <typename> class AggregateFunctionTemplate, typename... TArgs>
-static IAggregateFunction* createWithNumericBasedType(const IDataType& argument_type,
+static IAggregateFunction* create_with_numeric_based_type(const IDataType& argument_type,
                                                       TArgs&&... args) {
-    IAggregateFunction* f = createWithNumericType<AggregateFunctionTemplate>(
+    IAggregateFunction* f = create_with_numeric_type<AggregateFunctionTemplate>(
             argument_type, std::forward<TArgs>(args)...);
     if (f) return f;
 
@@ -148,7 +148,7 @@ static IAggregateFunction* createWithNumericBasedType(const IDataType& argument_
 }
 
 template <template <typename> class AggregateFunctionTemplate, typename... TArgs>
-static IAggregateFunction* createWithDecimalType(const IDataType& argument_type, TArgs&&... args) {
+static IAggregateFunction* create_with_decimal_type(const IDataType& argument_type, TArgs&&... args) {
     WhichDataType which(argument_type);
     if (which.idx == TypeIndex::Decimal32)
         return new AggregateFunctionTemplate<Decimal32>(std::forward<TArgs>(args)...);
@@ -161,7 +161,7 @@ static IAggregateFunction* createWithDecimalType(const IDataType& argument_type,
 
 template <template <typename, typename> class AggregateFunctionTemplate, typename Data,
           typename... TArgs>
-static IAggregateFunction* createWithDecimalType(const IDataType& argument_type, TArgs&&... args) {
+static IAggregateFunction* create_with_decimal_type(const IDataType& argument_type, TArgs&&... args) {
     WhichDataType which(argument_type);
     if (which.idx == TypeIndex::Decimal32)
         return new AggregateFunctionTemplate<Decimal32, Data>(std::forward<TArgs>(args)...);
@@ -176,7 +176,7 @@ static IAggregateFunction* createWithDecimalType(const IDataType& argument_type,
   */
 template <typename FirstType, template <typename, typename> class AggregateFunctionTemplate,
           typename... TArgs>
-static IAggregateFunction* createWithTwoNumericTypesSecond(const IDataType& second_type,
+static IAggregateFunction* create_with_two_numeric_types_second(const IDataType& second_type,
                                                            TArgs&&... args) {
     WhichDataType which(second_type);
 #define DISPATCH(TYPE)                \
@@ -192,21 +192,21 @@ static IAggregateFunction* createWithTwoNumericTypesSecond(const IDataType& seco
 }
 
 template <template <typename, typename> class AggregateFunctionTemplate, typename... TArgs>
-static IAggregateFunction* createWithTwoNumericTypes(const IDataType& first_type,
+static IAggregateFunction* create_with_two_numeric_types(const IDataType& first_type,
                                                      const IDataType& second_type,
                                                      TArgs&&... args) {
     WhichDataType which(first_type);
 #define DISPATCH(TYPE)                                                           \
     if (which.idx == TypeIndex::TYPE)                                            \
-        return createWithTwoNumericTypesSecond<TYPE, AggregateFunctionTemplate>( \
+        return create_with_two_numeric_types_second<TYPE, AggregateFunctionTemplate>( \
                 second_type, std::forward<TArgs>(args)...);
     FOR_NUMERIC_TYPES(DISPATCH)
 #undef DISPATCH
     if (which.idx == TypeIndex::Enum8)
-        return createWithTwoNumericTypesSecond<Int8, AggregateFunctionTemplate>(
+        return create_with_two_numeric_types_second<Int8, AggregateFunctionTemplate>(
                 second_type, std::forward<TArgs>(args)...);
     if (which.idx == TypeIndex::Enum16)
-        return createWithTwoNumericTypesSecond<Int16, AggregateFunctionTemplate>(
+        return create_with_two_numeric_types_second<Int16, AggregateFunctionTemplate>(
                 second_type, std::forward<TArgs>(args)...);
     return nullptr;
 }

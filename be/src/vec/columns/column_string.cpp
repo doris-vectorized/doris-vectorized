@@ -143,7 +143,7 @@ ColumnPtr ColumnString::permute(const Permutation& perm, size_t limit) const {
         size_t string_offset = offsets[j - 1];
         size_t string_size = offsets[j] - string_offset;
 
-        memcpySmallAllowReadWriteOverflow15(&res_chars[current_new_offset], &chars[string_offset],
+        memcpy_small_allow_read_write_overflow15(&res_chars[current_new_offset], &chars[string_offset],
                                             string_size);
 
         current_new_offset += string_size;
@@ -159,7 +159,7 @@ StringRef ColumnString::serialize_value_into_arena(size_t n, Arena& arena, char 
 
     StringRef res;
     res.size = sizeof(string_size) + string_size;
-    char* pos = arena.allocContinue(res.size, begin);
+    char* pos = arena.alloc_continue(res.size, begin);
     memcpy(pos, &string_size, sizeof(string_size));
     memcpy(pos + sizeof(string_size), &chars[offset], string_size);
     res.data = pos;
@@ -168,7 +168,7 @@ StringRef ColumnString::serialize_value_into_arena(size_t n, Arena& arena, char 
 }
 
 const char* ColumnString::deserialize_and_insert_from_arena(const char* pos) {
-    const size_t string_size = unalignedLoad<size_t>(pos);
+    const size_t string_size = unaligned_load<size_t>(pos);
     pos += sizeof(string_size);
 
     const size_t old_size = chars.size();
@@ -207,7 +207,7 @@ ColumnPtr ColumnString::index_impl(const PaddedPODArray<Type>& indexes, size_t l
         size_t string_offset = offsets[j - 1];
         size_t string_size = offsets[j] - string_offset;
 
-        memcpySmallAllowReadWriteOverflow15(&res_chars[current_new_offset], &chars[string_offset],
+        memcpy_small_allow_read_write_overflow15(&res_chars[current_new_offset], &chars[string_offset],
                                             string_size);
 
         current_new_offset += string_size;
@@ -222,7 +222,7 @@ struct ColumnString::less {
     const ColumnString& parent;
     explicit less(const ColumnString& parent_) : parent(parent_) {}
     bool operator()(size_t lhs, size_t rhs) const {
-        int res = memcmpSmallAllowOverflow15(
+        int res = memcmp_small_allow_overflow15(
                 parent.chars.data() + parent.offset_at(lhs), parent.size_at(lhs) - 1,
                 parent.chars.data() + parent.offset_at(rhs), parent.size_at(rhs) - 1);
 
@@ -279,7 +279,7 @@ ColumnPtr ColumnString::replicate(const Offsets& replicate_offsets) const {
             res_offsets.push_back(current_new_offset);
 
             res_chars.resize(res_chars.size() + string_size);
-            memcpySmallAllowReadWriteOverflow15(&res_chars[res_chars.size() - string_size],
+            memcpy_small_allow_read_write_overflow15(&res_chars[res_chars.size() - string_size],
                                                 &chars[prev_string_offset], string_size);
         }
 

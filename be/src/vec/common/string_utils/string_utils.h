@@ -23,32 +23,32 @@
 #include <type_traits>
 
 namespace detail {
-bool startsWith(const std::string& s, const char* prefix, size_t prefix_size);
-bool endsWith(const std::string& s, const char* suffix, size_t suffix_size);
+bool starts_with(const std::string& s, const char* prefix, size_t prefix_size);
+bool ends_with(const std::string& s, const char* suffix, size_t suffix_size);
 } // namespace detail
 
-inline bool startsWith(const std::string& s, const std::string& prefix) {
-    return detail::startsWith(s, prefix.data(), prefix.size());
+inline bool starts_with(const std::string& s, const std::string& prefix) {
+    return detail::starts_with(s, prefix.data(), prefix.size());
 }
 
-inline bool endsWith(const std::string& s, const std::string& suffix) {
-    return detail::endsWith(s, suffix.data(), suffix.size());
+inline bool ends_with(const std::string& s, const std::string& suffix) {
+    return detail::ends_with(s, suffix.data(), suffix.size());
 }
 
 /// With GCC, strlen is evaluated compile time if we pass it a constant
 /// string that is known at compile time.
-inline bool startsWith(const std::string& s, const char* prefix) {
-    return detail::startsWith(s, prefix, strlen(prefix));
+inline bool starts_with(const std::string& s, const char* prefix) {
+    return detail::starts_with(s, prefix, strlen(prefix));
 }
 
-inline bool endsWith(const std::string& s, const char* suffix) {
-    return detail::endsWith(s, suffix, strlen(suffix));
+inline bool ends_with(const std::string& s, const char* suffix) {
+    return detail::ends_with(s, suffix, strlen(suffix));
 }
 
 /// Given an integer, return the adequate suffix for
 /// printing an ordinal number.
 template <typename T>
-std::string getOrdinalSuffix(T n) {
+std::string get_ordinal_suffix(T n) {
     static_assert(std::is_integral_v<T> && std::is_unsigned_v<T>,
                   "Unsigned integer value required");
 
@@ -70,60 +70,60 @@ std::string getOrdinalSuffix(T n) {
 
 /// More efficient than libc, because doesn't respect locale. But for some functions table implementation could be better.
 
-inline bool isASCII(char c) {
+inline bool is_ascii(char c) {
     return static_cast<unsigned char>(c) < 0x80;
 }
 
-inline bool isAlphaASCII(char c) {
+inline bool is_alpha_ascii(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
-inline bool isNumericASCII(char c) {
+inline bool is_numeric_ascii(char c) {
     /// This is faster than
     /// return UInt8(UInt8(c) - UInt8('0')) < UInt8(10);
     /// on Intel CPUs when compiled by gcc 8.
     return (c >= '0' && c <= '9');
 }
 
-inline bool isHexDigit(char c) {
-    return isNumericASCII(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+inline bool is_hex_digit(char c) {
+    return is_numeric_ascii(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
 
-inline bool isAlphaNumericASCII(char c) {
-    return isAlphaASCII(c) || isNumericASCII(c);
+inline bool is_alpha_numeric_ascii(char c) {
+    return is_alpha_ascii(c) || is_numeric_ascii(c);
 }
 
-inline bool isWordCharASCII(char c) {
-    return isAlphaNumericASCII(c) || c == '_';
+inline bool is_word_char_ascii(char c) {
+    return is_alpha_numeric_ascii(c) || c == '_';
 }
 
-inline bool isValidIdentifierBegin(char c) {
-    return isAlphaASCII(c) || c == '_';
+inline bool is_valid_identifier_begin(char c) {
+    return is_alpha_ascii(c) || c == '_';
 }
 
-inline bool isWhitespaceASCII(char c) {
+inline bool is_whitespace_ascii(char c) {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
 }
 
-inline bool isControlASCII(char c) {
+inline bool is_control_ascii(char c) {
     return static_cast<unsigned char>(c) <= 31;
 }
 
-/// Works assuming isAlphaASCII.
-inline char toLowerIfAlphaASCII(char c) {
+/// Works assuming is_alpha_ascii.
+inline char to_lower_if_alpha_ascii(char c) {
     return c | 0x20;
 }
 
-inline char toUpperIfAlphaASCII(char c) {
+inline char to_upper_if_alpha_ascii(char c) {
     return c & (~0x20);
 }
 
-inline char alternateCaseIfAlphaASCII(char c) {
+inline char alternate_case_if_alpha_ascii(char c) {
     return c ^ 0x20;
 }
 
-inline bool equalsCaseInsensitive(char a, char b) {
-    return a == b || (isAlphaASCII(a) && alternateCaseIfAlphaASCII(a) == b);
+inline bool equals_case_insensitive(char a, char b) {
+    return a == b || (is_alpha_ascii(a) && alternate_case_if_alpha_ascii(a) == b);
 }
 
 template <typename F>

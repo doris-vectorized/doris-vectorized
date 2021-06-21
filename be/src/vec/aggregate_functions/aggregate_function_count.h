@@ -49,7 +49,7 @@ public:
 
     String get_name() const override { return "count"; }
 
-    DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
+    DataTypePtr get_return_type() const override { return std::make_shared<DataTypeInt64>(); }
 
     void add(AggregateDataPtr place, const IColumn**, size_t, Arena*) const override {
         ++data(place).count;
@@ -67,11 +67,11 @@ public:
         read_var_uint(data(place).count, buf);
     }
 
-    void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
+    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
         assert_cast<ColumnInt64&>(to).get_data().push_back(data(place).count);
     }
 
-    const char* getHeaderFilePath() const override { return __FILE__; }
+    const char* get_header_file_path() const override { return __FILE__; }
 };
 
 /// Simply count number of not-NULL values.
@@ -92,7 +92,7 @@ public:
 
     String get_name() const override { return "count"; }
 
-    DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
+    DataTypePtr get_return_type() const override { return std::make_shared<DataTypeInt64>(); }
 
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
@@ -111,11 +111,11 @@ public:
         read_var_uint(data(place).count, buf);
     }
 
-    void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
+    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
         assert_cast<ColumnInt64&>(to).get_data().push_back(data(place).count);
     }
 
-    const char* getHeaderFilePath() const override { return __FILE__; }
+    const char* get_header_file_path() const override { return __FILE__; }
 };
 
 } // namespace doris::vectorized

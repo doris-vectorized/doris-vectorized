@@ -76,7 +76,7 @@ public:
     AggregateFunctionHLLUnionAgg(const IDataType& data_type, const DataTypes& argument_types_)
             : IAggregateFunctionDataHelper(argument_types_, {}) {}
 
-    virtual DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
+    virtual DataTypePtr get_return_type() const override { return std::make_shared<DataTypeInt64>(); }
 
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
@@ -96,12 +96,12 @@ public:
         this->data(place).read(buf);
     }
 
-    virtual void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
+    virtual void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
         auto& column = static_cast<ColumnVector<Int64>&>(to);
         column.get_data().push_back(this->data(place).get_cardinality());
     }
 
-    const char* getHeaderFilePath() const override { return __FILE__; }
+    const char* get_header_file_path() const override { return __FILE__; }
 };
 
 class AggregateFunctionHLLUnion final : public AggregateFunctionHLLUnionAgg {
@@ -114,9 +114,9 @@ public:
     AggregateFunctionHLLUnion(const IDataType& data_type, const DataTypes& argument_types_)
             : AggregateFunctionHLLUnionAgg(data_type, argument_types_) {}
 
-    DataTypePtr getReturnType() const override { return std::make_shared<DataTypeString>(); }
+    DataTypePtr get_return_type() const override { return std::make_shared<DataTypeString>(); }
 
-    void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
+    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
         auto& column = static_cast<ColumnString&>(to);
         auto result = this->data(place).get();
         column.insert_data(result.c_str(), result.length());
