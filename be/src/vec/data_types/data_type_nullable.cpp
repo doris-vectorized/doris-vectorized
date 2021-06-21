@@ -36,7 +36,8 @@ extern const int ILLEGAL_TYPE_OF_ARGUMENT;
 DataTypeNullable::DataTypeNullable(const DataTypePtr& nested_data_type_)
         : nested_data_type{nested_data_type_} {
     if (!nested_data_type->can_be_inside_nullable()) {
-        LOG(FATAL) << fmt::format("Nested type {} cannot be inside Nullable type", nested_data_type->get_name());
+        LOG(FATAL) << fmt::format("Nested type {} cannot be inside Nullable type",
+                                  nested_data_type->get_name());
     }
 }
 
@@ -87,8 +88,8 @@ Field DataTypeNullable::getDefault() const {
 }
 
 size_t DataTypeNullable::getSizeOfValueInMemory() const {
-    throw Exception("Value of type " + get_name() + " in memory is not of fixed size.",
-                    ErrorCodes::LOGICAL_ERROR);
+    LOG(FATAL) << fmt::format("Value of type {} in memory is not of fixed size.", get_name());
+    return 0;
 }
 
 bool DataTypeNullable::equals(const IDataType& rhs) const {

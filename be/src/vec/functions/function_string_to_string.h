@@ -45,10 +45,10 @@ public:
     bool isInjective(const Block&) override { return is_injective; }
 
     DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
-        if (!isStringOrFixedString(arguments[0]))
-            throw Exception("Illegal type " + arguments[0]->get_name() +
-                                    " of argument of function " + get_name(),
-                            ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        if (!isStringOrFixedString(arguments[0])) {
+            LOG(FATAL) << fmt::format("Illegal type {} of argument of function {}",
+                                      arguments[0]->get_name(), get_name());
+        }
 
         return arguments[0];
     }
@@ -70,11 +70,11 @@ public:
         //            Impl::vector_fixed(col_fixed->get_chars(), col_fixed->getN(), col_res->get_chars());
         //            block.get_by_position(result).column = std::move(col_res);
         //        }
-        else
-            throw Exception("Illegal column " +
-                                    block.get_by_position(arguments[0]).column->get_name() +
-                            " of argument of function " + get_name(),
-                            ErrorCodes::ILLEGAL_COLUMN);
+        else {
+            return Status::RuntimeError(fmt::format(
+                    "Illegal column {} of argument of function {}",
+                    block.get_by_position(arguments[0]).column->get_name(), get_name()));
+        }
         return Status::OK();
     }
 };

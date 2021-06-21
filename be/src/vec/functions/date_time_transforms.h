@@ -17,13 +17,14 @@
 
 #pragma once
 
+#include "common/status.h"
 #include "runtime/datetime_value.h"
+#include "util/binary_cast.hpp"
 #include "vec/columns/column_string.h"
 #include "vec/columns/column_vector.h"
 #include "vec/common/exception.h"
 #include "vec/core/types.h"
 #include "vec/functions/function_helpers.h"
-#include "util/binary_cast.hpp"
 //#include "vec/functions/extract_time_zone_from_function_arguments.h>
 
 namespace doris::vectorized {
@@ -46,9 +47,8 @@ extern const int ILLEGAL_COLUMN;
   *  factor-transformation F is "round to the nearest month" (2015-02-03 -> 2015-02-01).
   */
 
-static inline UInt32 dateIsNotSupported(const char* name) {
-    throw Exception("Illegal type Date of argument for function " + std::string(name),
-                    ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+static [[noreturn]] inline UInt32 dateIsNotSupported(const char* name) {
+    LOG(FATAL) << fmt::format("Illegal type Date of argument for function {}", name);
 }
 
 ///// This factor transformation will say that the function is monotone everywhere.
@@ -659,24 +659,21 @@ struct Transformer {
 
 template <typename FromType, typename ToType, typename Transform>
 struct DateTimeTransformImpl {
-    static void execute(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t /*input_rows_count*/) {
+    static Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
+                          size_t /*input_rows_count*/) {
         using Op = Transformer<FromType, ToType, Transform>;
-
-        //        const DateLUTImpl & time_zone = extractTimeZoneFromFunctionArguments(block, arguments, 1, 0);
 
         const ColumnPtr source_col = block.get_by_position(arguments[0]).column;
         if (const auto* sources = check_and_get_column<ColumnVector<FromType>>(source_col.get())) {
             auto col_to = ColumnVector<ToType>::create();
-            //            Op::vector(sources->get_data(), col_to->get_data(), time_zone);
             Op::vector(sources->get_data(), col_to->get_data());
             block.get_by_position(result).column = std::move(col_to);
         } else {
-            throw Exception("Illegal column " +
-                                    block.get_by_position(arguments[0]).column->get_name() +
-                            " of first argument of function " + Transform::name,
-                            ErrorCodes::ILLEGAL_COLUMN);
+            return Status::RuntimeError(fmt::format(
+                    "Illegal column {} of first argument of function {}",
+                    block.get_by_position(arguments[0]).column->get_name(), Transform::name));
         }
+        return Status::OK();
     }
 };
 
