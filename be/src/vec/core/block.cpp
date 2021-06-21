@@ -187,7 +187,7 @@ Block::Block(const PBlock& pblock) {
             data_column = type->createColumn();
         }
         type->deserialize(pcolumn, data_column.get());
-        data.emplace_back(data_column->getPtr(), type, pcolumn.name());
+        data.emplace_back(data_column->get_ptr(), type, pcolumn.name());
     }
     initialize_index_by_name();
 }
@@ -617,7 +617,7 @@ DataTypes Block::get_data_types() const {
 
 //     if (actual_value != expected_value)
 //         return on_error("Block structure mismatch in " + context_description + " stream: different values of constants, actual: "
-//             + applyVisitor(FieldVisitorToString(), actual_value) + ", expected: " + applyVisitor(FieldVisitorToString(), expected_value),
+//             + apply_visitor(FieldVisitorToString(), actual_value) + ", expected: " + apply_visitor(FieldVisitorToString(), expected_value),
 //             ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
 // }
 //     }

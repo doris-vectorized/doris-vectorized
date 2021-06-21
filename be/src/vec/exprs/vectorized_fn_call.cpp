@@ -46,7 +46,7 @@ doris::Status VectorizedFnCall::prepare(doris::RuntimeState* state,
         return Status::InternalError(
                 fmt::format("Function {} is not implemented", _fn.name.function_name));
     }
-    _data_type = _function->getReturnType();
+    _data_type = _function->get_return_type();
     _expr_name = fmt::format("{}({})", _fn.name.function_name, child_expr_name);
     return Status::OK();
 }

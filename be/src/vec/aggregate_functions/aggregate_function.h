@@ -61,7 +61,7 @@ public:
     virtual String get_name() const = 0;
 
     /// Get the result type.
-    virtual DataTypePtr getReturnType() const = 0;
+    virtual DataTypePtr get_return_type() const = 0;
 
     virtual ~IAggregateFunction() {}
 
@@ -74,13 +74,13 @@ public:
     virtual void destroy(AggregateDataPtr place) const noexcept = 0;
 
     /// It is not necessary to delete data.
-    virtual bool hasTrivialDestructor() const = 0;
+    virtual bool has_trivial_destructor() const = 0;
 
     /// Get `sizeof` of structure with data.
-    virtual size_t sizeOfData() const = 0;
+    virtual size_t size_of_data() const = 0;
 
     /// How the data structure should be aligned. NOTE: Currently not used (structures with aggregation state are put without alignment).
-    virtual size_t alignOfData() const = 0;
+    virtual size_t align_of_data() const = 0;
 
     /** Adds a value into aggregation data on which place points to.
      *  columns points to columns containing arguments of aggregation function.
@@ -102,15 +102,15 @@ public:
     virtual void deserialize(AggregateDataPtr place, std::istream& buf, Arena* arena) const = 0;
 
     /// Returns true if a function requires Arena to handle own states (see add(), merge(), deserialize()).
-    virtual bool allocatesMemoryInArena() const { return false; }
+    virtual bool allocates_memory_in_arena() const { return false; }
 
     /// Inserts results into a column.
-    virtual void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const = 0;
+    virtual void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const = 0;
 
     /** Returns true for aggregate functions of type -State.
       * They are executed as other aggregate functions, but not finalized (return an aggregation state that can be combined with another).
       */
-    virtual bool isState() const { return false; }
+    virtual bool is_state() const { return false; }
 
     /** The inner loop that uses the function pointer is better than using the virtual function.
       * The reason is that in the case of virtual functions GCC 5.1.2 generates code,
@@ -120,27 +120,27 @@ public:
       */
     using AddFunc = void (*)(const IAggregateFunction*, AggregateDataPtr, const IColumn**, size_t,
                              Arena*);
-    virtual AddFunc getAddressOfAddFunction() const = 0;
+    virtual AddFunc get_address_of_add_function() const = 0;
 
     /** Contains a loop with calls to "add" function. You can collect arguments into array "places"
-      *  and do a single call to "addBatch" for devirtualization and inlining.
+      *  and do a single call to "add_batch" for devirtualization and inlining.
       */
-    virtual void addBatch(size_t batch_size, AggregateDataPtr* places, size_t place_offset,
+    virtual void add_batch(size_t batch_size, AggregateDataPtr* places, size_t place_offset,
                           const IColumn** columns, Arena* arena) const = 0;
 
     /** The same for single place.
       */
-    virtual void addBatchSinglePlace(size_t batch_size, AggregateDataPtr place,
+    virtual void add_batch_single_place(size_t batch_size, AggregateDataPtr place,
                                      const IColumn** columns, Arena* arena) const = 0;
 
     /** This is used for runtime code generation to determine, which header files to include in generated source.
       * Always implement it as
-      * const char * getHeaderFilePath() const override { return __FILE__; }
+      * const char * get_header_file_path() const override { return __FILE__; }
       */
-    virtual const char* getHeaderFilePath() const = 0;
+    virtual const char* get_header_file_path() const = 0;
 
-    const DataTypes& getArgumentTypes() const { return argument_types; }
-    const Array& getParameters() const { return parameters; }
+    const DataTypes& get_argument_types() const { return argument_types; }
+    const Array& get_parameters() const { return parameters; }
 
 protected:
     DataTypes argument_types;
@@ -151,7 +151,7 @@ protected:
 template <typename Derived>
 class IAggregateFunctionHelper : public IAggregateFunction {
 private:
-    static void addFree(const IAggregateFunction* that, AggregateDataPtr place,
+    static void add_free(const IAggregateFunction* that, AggregateDataPtr place,
                         const IColumn** columns, size_t row_num, Arena* arena) {
         static_cast<const Derived&>(*that).add(place, columns, row_num, arena);
     }
@@ -160,15 +160,15 @@ public:
     IAggregateFunctionHelper(const DataTypes& argument_types_, const Array& parameters_)
             : IAggregateFunction(argument_types_, parameters_) {}
 
-    AddFunc getAddressOfAddFunction() const override { return &addFree; }
+    AddFunc get_address_of_add_function() const override { return &add_free; }
 
-    void addBatch(size_t batch_size, AggregateDataPtr* places, size_t place_offset,
+    void add_batch(size_t batch_size, AggregateDataPtr* places, size_t place_offset,
                   const IColumn** columns, Arena* arena) const override {
         for (size_t i = 0; i < batch_size; ++i)
             static_cast<const Derived*>(this)->add(places[i] + place_offset, columns, i, arena);
     }
 
-    void addBatchSinglePlace(size_t batch_size, AggregateDataPtr place, const IColumn** columns,
+    void add_batch_single_place(size_t batch_size, AggregateDataPtr place, const IColumn** columns,
                              Arena* arena) const override {
         for (size_t i = 0; i < batch_size; ++i)
             static_cast<const Derived*>(this)->add(place, columns, i, arena);
@@ -194,12 +194,12 @@ public:
 
     void destroy(AggregateDataPtr place) const noexcept override { data(place).~Data(); }
 
-    bool hasTrivialDestructor() const override { return std::is_trivially_destructible_v<Data>; }
+    bool has_trivial_destructor() const override { return std::is_trivially_destructible_v<Data>; }
 
-    size_t sizeOfData() const override { return sizeof(Data); }
+    size_t size_of_data() const override { return sizeof(Data); }
 
     /// NOTE: Currently not used (structures with aggregation state are put without alignment).
-    size_t alignOfData() const override { return alignof(Data); }
+    size_t align_of_data() const override { return alignof(Data); }
 };
 
 using AggregateFunctionPtr = std::shared_ptr<IAggregateFunction>;

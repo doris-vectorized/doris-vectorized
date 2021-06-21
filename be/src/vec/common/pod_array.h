@@ -79,7 +79,7 @@ extern const int CANNOT_MPROTECT;
   * TODO Allow greater alignment than alignof(T). Example: array of char aligned to page size.
   */
 static constexpr size_t EmptyPODArraySize = 1024;
-extern const char EmptyPODArray[EmptyPODArraySize];
+extern const char empty_pod_array[EmptyPODArraySize];
 
 /** Base class that depend only on size of element, not on element itself.
   * You can static_cast to this class if you want to insert some data regardless to the actual type T.
@@ -96,7 +96,7 @@ protected:
     static constexpr size_t pad_left = integerRoundUp(integerRoundUp(pad_left_, ELEMENT_SIZE), 16);
     /// Empty array will point to this static memory as padding.
     static constexpr char* null =
-            pad_left ? const_cast<char*>(EmptyPODArray) + EmptyPODArraySize : nullptr;
+            pad_left ? const_cast<char*>(empty_pod_array) + EmptyPODArraySize : nullptr;
 
     static_assert(pad_left <= EmptyPODArraySize &&
                   "Left Padding exceeds EmptyPODArraySize. Is the element size too large?");
@@ -114,7 +114,7 @@ protected:
     }
 
     void alloc_for_num_elements(size_t num_elements) {
-        alloc(roundUpToPowerOfTwoOrZero(minimum_memory_for_elements(num_elements)));
+        alloc(round_up_to_power_of_two_or_zero(minimum_memory_for_elements(num_elements)));
     }
 
     template <typename... TAllocatorParams>
@@ -155,17 +155,17 @@ protected:
         c_end_of_storage = c_start + bytes - pad_right - pad_left;
     }
 
-    bool isInitialized() const {
+    bool is_initialized() const {
         return (c_start != null) && (c_end != null) && (c_end_of_storage != null);
     }
 
-    bool isAllocatedFromStack() const {
+    bool is_allocated_from_stack() const {
         constexpr size_t stack_threshold = TAllocator::getStackThreshold();
         return (stack_threshold > 0) && (allocated_bytes() <= stack_threshold);
     }
 
     template <typename... TAllocatorParams>
-    void reserveForNextSize(TAllocatorParams&&... allocator_params) {
+    void reserve_for_next_size(TAllocatorParams&&... allocator_params) {
         if (size() == 0) {
             // The allocated memory should be multiplication of ELEMENT_SIZE to hold the element, otherwise,
             // memory issue such as corruption could appear in edge case.
@@ -179,7 +179,7 @@ protected:
 #ifndef NDEBUG
     /// Make memory region readonly with mprotect if it is large enough.
     /// The operation is slow and performed only for debug builds.
-    void protectImpl(int prot) {
+    void protect_impl(int prot) {
         static constexpr size_t PROTECT_PAGE_SIZE = 4096;
 
         char* left_rounded_up = reinterpret_cast<char*>(
@@ -213,7 +213,7 @@ public:
     template <typename... TAllocatorParams>
     void reserve(size_t n, TAllocatorParams&&... allocator_params) {
         if (n > capacity())
-            realloc(roundUpToPowerOfTwoOrZero(minimum_memory_for_elements(n)),
+            realloc(round_up_to_power_of_two_or_zero(minimum_memory_for_elements(n)),
                     std::forward<TAllocatorParams>(allocator_params)...);
     }
 
@@ -230,7 +230,7 @@ public:
     template <typename... TAllocatorParams>
     void push_back_raw(const char* ptr, TAllocatorParams&&... allocator_params) {
         if (UNLIKELY(c_end == c_end_of_storage))
-            reserveForNextSize(std::forward<TAllocatorParams>(allocator_params)...);
+            reserve_for_next_size(std::forward<TAllocatorParams>(allocator_params)...);
 
         memcpy(c_end, ptr, ELEMENT_SIZE);
         c_end += byte_size(1);
@@ -238,14 +238,14 @@ public:
 
     void protect() {
 #ifndef NDEBUG
-        protectImpl(PROT_READ);
+        protect_impl(PROT_READ);
         mprotected = true;
 #endif
     }
 
     void unprotect() {
 #ifndef NDEBUG
-        if (mprotected) protectImpl(PROT_WRITE);
+        if (mprotected) protect_impl(PROT_WRITE);
         mprotected = false;
 #endif
     }
@@ -358,7 +358,7 @@ public:
     template <typename U, typename... TAllocatorParams>
     void push_back(U&& x, TAllocatorParams&&... allocator_params) {
         if (UNLIKELY(this->c_end == this->c_end_of_storage))
-            this->reserveForNextSize(std::forward<TAllocatorParams>(allocator_params)...);
+            this->reserve_for_next_size(std::forward<TAllocatorParams>(allocator_params)...);
 
         new (t_end()) T(std::forward<U>(x));
         this->c_end += this->byte_size(1);
@@ -369,7 +369,7 @@ public:
       */
     template <typename... Args>
     void emplace_back(Args&&... args) {
-        if (UNLIKELY(this->c_end == this->c_end_of_storage)) this->reserveForNextSize();
+        if (UNLIKELY(this->c_end == this->c_end_of_storage)) this->reserve_for_next_size();
 
         new (t_end()) T(std::forward<Args>(args)...);
         this->c_end += this->byte_size(1);
@@ -379,35 +379,35 @@ public:
 
     /// Do not insert into the array a piece of itself. Because with the resize, the iterators on themselves can be invalidated.
     template <typename It1, typename It2, typename... TAllocatorParams>
-    void insertPrepare(It1 from_begin, It2 from_end, TAllocatorParams&&... allocator_params) {
+    void insert_prepare(It1 from_begin, It2 from_end, TAllocatorParams&&... allocator_params) {
         size_t required_capacity = this->size() + (from_end - from_begin);
         if (required_capacity > this->capacity())
-            this->reserve(roundUpToPowerOfTwoOrZero(required_capacity),
+            this->reserve(round_up_to_power_of_two_or_zero(required_capacity),
                           std::forward<TAllocatorParams>(allocator_params)...);
     }
 
     /// Do not insert into the array a piece of itself. Because with the resize, the iterators on themselves can be invalidated.
     template <typename It1, typename It2, typename... TAllocatorParams>
     void insert(It1 from_begin, It2 from_end, TAllocatorParams&&... allocator_params) {
-        insertPrepare(from_begin, from_end, std::forward<TAllocatorParams>(allocator_params)...);
+        insert_prepare(from_begin, from_end, std::forward<TAllocatorParams>(allocator_params)...);
         insert_assume_reserved(from_begin, from_end);
     }
 
     /// Works under assumption, that it's possible to read up to 15 excessive bytes after `from_end` and this PODArray is padded.
     template <typename It1, typename It2, typename... TAllocatorParams>
-    void insertSmallAllowReadWriteOverflow15(It1 from_begin, It2 from_end,
+    void insert_small_allow_read_write_overflow15(It1 from_begin, It2 from_end,
                                              TAllocatorParams&&... allocator_params) {
         static_assert(pad_right_ >= 15);
-        insertPrepare(from_begin, from_end, std::forward<TAllocatorParams>(allocator_params)...);
+        insert_prepare(from_begin, from_end, std::forward<TAllocatorParams>(allocator_params)...);
         size_t bytes_to_copy = this->byte_size(from_end - from_begin);
-        memcpySmallAllowReadWriteOverflow15(
+        memcpy_small_allow_read_write_overflow15(
                 this->c_end, reinterpret_cast<const void*>(&*from_begin), bytes_to_copy);
         this->c_end += bytes_to_copy;
     }
 
     template <typename It1, typename It2>
     void insert(iterator it, It1 from_begin, It2 from_end) {
-        insertPrepare(from_begin, from_end);
+        insert_prepare(from_begin, from_end);
 
         size_t bytes_to_copy = this->byte_size(from_end - from_begin);
         size_t bytes_to_move = (end() - it) * sizeof(T);
@@ -460,7 +460,7 @@ public:
         };
 
         auto do_move = [this](PODArray& src, PODArray& dest) {
-            if (src.isAllocatedFromStack()) {
+            if (src.is_allocated_from_stack()) {
                 dest.dealloc();
                 dest.alloc(src.allocated_bytes());
                 memcpy(dest.c_start, src.c_start, this->byte_size(src.size()));
@@ -476,17 +476,17 @@ public:
             }
         };
 
-        if (!this->isInitialized() && !rhs.isInitialized()) {
+        if (!this->is_initialized() && !rhs.is_initialized()) {
             return;
-        } else if (!this->isInitialized() && rhs.isInitialized()) {
+        } else if (!this->is_initialized() && rhs.is_initialized()) {
             do_move(rhs, *this);
             return;
-        } else if (this->isInitialized() && !rhs.isInitialized()) {
+        } else if (this->is_initialized() && !rhs.is_initialized()) {
             do_move(*this, rhs);
             return;
         }
 
-        if (this->isAllocatedFromStack() && rhs.isAllocatedFromStack()) {
+        if (this->is_allocated_from_stack() && rhs.is_allocated_from_stack()) {
             size_t min_size = std::min(this->size(), rhs.size());
             size_t max_size = std::max(this->size(), rhs.size());
 
@@ -509,9 +509,9 @@ public:
 
             this->c_end = this->c_start + this->byte_size(rhs_size);
             rhs.c_end = rhs.c_start + this->byte_size(lhs_size);
-        } else if (this->isAllocatedFromStack() && !rhs.isAllocatedFromStack()) {
+        } else if (this->is_allocated_from_stack() && !rhs.is_allocated_from_stack()) {
             swap_stack_heap(*this, rhs);
-        } else if (!this->isAllocatedFromStack() && rhs.isAllocatedFromStack()) {
+        } else if (!this->is_allocated_from_stack() && rhs.is_allocated_from_stack()) {
             swap_stack_heap(rhs, *this);
         } else {
             std::swap(this->c_start, rhs.c_start);
@@ -529,7 +529,7 @@ public:
     void assign(It1 from_begin, It2 from_end) {
         size_t required_capacity = from_end - from_begin;
         if (required_capacity > this->capacity())
-            this->reserve(roundUpToPowerOfTwoOrZero(required_capacity));
+            this->reserve(round_up_to_power_of_two_or_zero(required_capacity));
 
         size_t bytes_to_copy = this->byte_size(required_capacity);
         memcpy(this->c_start, reinterpret_cast<const void*>(&*from_begin), bytes_to_copy);

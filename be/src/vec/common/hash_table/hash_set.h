@@ -4,12 +4,6 @@
 #include <vec/common/hash_table/hash_table.h>
 #include <vec/common/hash_table/hash_table_allocator.h>
 
-// #include <IO/WriteBuffer.h>
-// #include <IO/WriteHelpers.h>
-// #include <IO/ReadBuffer.h>
-// #include <IO/ReadHelpers.h>
-// #include <IO/VarInt.h>
-
 /** NOTE HashSet could only be used for memmoveable (position independent) types.
   * Example: std::string is not position independent in libstdc++ with C++11 ABI or in libc++.
   * Also, key must be of type, that zero bytes is compared equals to zero key.
@@ -26,13 +20,13 @@ public:
     using typename Base::LookupResult;
 
     void merge(const Self& rhs) {
-        if (!this->hasZero() && rhs.hasZero()) {
-            this->setHasZero();
+        if (!this->get_has_zero() && rhs.get_has_zero()) {
+            this->set_get_has_zero();
             ++this->m_size;
         }
 
-        for (size_t i = 0; i < rhs.grower.bufSize(); ++i)
-            if (!rhs.buf[i].isZero(*this)) this->insert(Cell::getKey(rhs.buf[i].get_value()));
+        for (size_t i = 0; i < rhs.grower.buf_size(); ++i)
+            if (!rhs.buf[i].is_zero(*this)) this->insert(Cell::get_key(rhs.buf[i].get_value()));
     }
 
     // void readAndMerge(DB::ReadBuffer & rb)
@@ -48,7 +42,7 @@ public:
     //     {
     //         Cell x;
     //         x.read(rb);
-    //         this->insert(Cell::getKey(x.get_value()));
+    //         this->insert(Cell::get_key(x.get_value()));
     //     }
     // }
 };
@@ -63,25 +57,25 @@ struct HashSetCellWithSavedHash : public HashTableCell<Key, Hash, TState> {
     HashSetCellWithSavedHash(const Key& key_, const typename Base::State& state)
             : Base(key_, state) {}
 
-    bool keyEquals(const Key& key_) const { return this->key == key_; }
-    bool keyEquals(const Key& key_, size_t hash_) const {
+    bool key_equals(const Key& key_) const { return this->key == key_; }
+    bool key_equals(const Key& key_, size_t hash_) const {
         return saved_hash == hash_ && this->key == key_;
     }
-    bool keyEquals(const Key& key_, size_t hash_, const typename Base::State&) const {
-        return keyEquals(key_, hash_);
+    bool key_equals(const Key& key_, size_t hash_, const typename Base::State&) const {
+        return key_equals(key_, hash_);
     }
 
-    void setHash(size_t hash_value) { saved_hash = hash_value; }
-    size_t getHash(const Hash& /*hash_function*/) const { return saved_hash; }
+    void set_hash(size_t hash_value) { saved_hash = hash_value; }
+    size_t get_hash(const Hash& /*hash_function*/) const { return saved_hash; }
 };
 
 template <typename Key, typename Hash, typename State>
-ALWAYS_INLINE inline auto lookupResultGetKey(HashSetCellWithSavedHash<Key, Hash, State>* cell) {
+ALWAYS_INLINE inline auto lookup_result_get_key(HashSetCellWithSavedHash<Key, Hash, State>* cell) {
     return &cell->key;
 }
 
 template <typename Key, typename Hash, typename State>
-ALWAYS_INLINE inline void* lookupResultGetMapped(HashSetCellWithSavedHash<Key, Hash, State>*) {
+ALWAYS_INLINE inline void* lookup_result_get_mapped(HashSetCellWithSavedHash<Key, Hash, State>*) {
     return nullptr;
 }
 

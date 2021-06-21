@@ -126,7 +126,7 @@ public:
         cnt += end - data;
 
         while (data + 8 <= end) {
-            current_word = unalignedLoad<doris::vectorized::UInt64>(data);
+            current_word = unaligned_load<doris::vectorized::UInt64>(data);
 
             v3 ^= current_word;
             SIPROUND;
@@ -202,13 +202,13 @@ public:
 
 #include <cstddef>
 
-inline void sipHash128(const char* data, const size_t size, char* out) {
+inline void sip_hash128(const char* data, const size_t size, char* out) {
     SipHash hash;
     hash.update(data, size);
     hash.get128(out);
 }
 
-inline doris::vectorized::UInt64 sipHash64(const char* data, const size_t size) {
+inline doris::vectorized::UInt64 sip_hash64(const char* data, const size_t size) {
     SipHash hash;
     hash.update(data, size);
     return hash.get64();
@@ -217,12 +217,12 @@ inline doris::vectorized::UInt64 sipHash64(const char* data, const size_t size) 
 template <typename T>
 std::enable_if_t<std::/*has_unique_object_representations_v*/ is_standard_layout_v<T>,
                  doris::vectorized::UInt64>
-sipHash64(const T& x) {
+sip_hash64(const T& x) {
     SipHash hash;
     hash.update(x);
     return hash.get64();
 }
 
-inline doris::vectorized::UInt64 sipHash64(const std::string& s) {
-    return sipHash64(s.data(), s.size());
+inline doris::vectorized::UInt64 sip_hash64(const std::string& s) {
+    return sip_hash64(s.data(), s.size());
 }

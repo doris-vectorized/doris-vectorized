@@ -118,7 +118,7 @@ struct StringComparisonImpl {
         ColumnString::Offset prev_b_offset = 0;
 
         for (size_t i = 0; i < size; ++i) {
-            c[i] = Op::apply(memcmpSmallAllowOverflow15(a_data.data() + prev_a_offset,
+            c[i] = Op::apply(memcmp_small_allow_overflow15(a_data.data() + prev_a_offset,
                                                         a_offsets[i] - prev_a_offset - 1,
                                                         b_data.data() + prev_b_offset,
                                                         b_offsets[i] - prev_b_offset - 1),
@@ -138,7 +138,7 @@ struct StringComparisonImpl {
         ColumnString::Offset prev_a_offset = 0;
 
         for (size_t i = 0; i < size; ++i) {
-            c[i] = Op::apply(memcmpSmallAllowOverflow15(a_data.data() + prev_a_offset,
+            c[i] = Op::apply(memcmp_small_allow_overflow15(a_data.data() + prev_a_offset,
                                                         a_offsets[i] - prev_a_offset - 1,
                                                         b_data.data() + i * b_n, b_n),
                              0);
@@ -156,7 +156,7 @@ struct StringComparisonImpl {
         ColumnString::Offset prev_a_offset = 0;
 
         for (size_t i = 0; i < size; ++i) {
-            c[i] = Op::apply(memcmpSmallAllowOverflow15(a_data.data() + prev_a_offset,
+            c[i] = Op::apply(memcmp_small_allow_overflow15(a_data.data() + prev_a_offset,
                                                         a_offsets[i] - prev_a_offset - 1,
                                                         b_data.data(), b_size),
                              0);
@@ -206,12 +206,12 @@ struct StringComparisonImpl {
             size_t size = a_data.size();
             for (size_t i = 0, j = 0; i < size; i += a_n, ++j)
                 c[j] = Op::apply(
-                        memcmpSmallAllowOverflow15(a_data.data() + i, b_data.data() + i, a_n), 0);
+                        memcmp_small_allow_overflow15(a_data.data() + i, b_data.data() + i, a_n), 0);
         } else {
             size_t size = a_data.size() / a_n;
 
             for (size_t i = 0; i < size; ++i)
-                c[i] = Op::apply(memcmpSmallAllowOverflow15(a_data.data() + i * a_n, a_n,
+                c[i] = Op::apply(memcmp_small_allow_overflow15(a_data.data() + i * a_n, a_n,
                                                             b_data.data() + i * b_n, b_n),
                                  0);
         }
@@ -227,13 +227,13 @@ struct StringComparisonImpl {
         } else if (a_n == b_size) {
             size_t size = a_data.size();
             for (size_t i = 0, j = 0; i < size; i += a_n, ++j)
-                c[j] = Op::apply(memcmpSmallAllowOverflow15(a_data.data() + i, b_data.data(), a_n),
+                c[j] = Op::apply(memcmp_small_allow_overflow15(a_data.data() + i, b_data.data(), a_n),
                                  0);
         } else {
             size_t size = a_data.size();
             for (size_t i = 0, j = 0; i < size; i += a_n, ++j)
                 c[j] = Op::apply(
-                        memcmpSmallAllowOverflow15(a_data.data() + i, a_n, b_data.data(), b_size),
+                        memcmp_small_allow_overflow15(a_data.data() + i, a_n, b_data.data(), b_size),
                         0);
         }
     }
@@ -258,7 +258,7 @@ struct StringComparisonImpl {
     static void constant_constant(const ColumnString::Chars& a_data, ColumnString::Offset a_size,
                                   const ColumnString::Chars& b_data, ColumnString::Offset b_size,
                                   UInt8& c) {
-        c = Op::apply(memcmpSmallAllowOverflow15(a_data.data(), a_size, b_data.data(), b_size), 0);
+        c = Op::apply(memcmp_small_allow_overflow15(a_data.data(), a_size, b_data.data(), b_size), 0);
     }
 };
 
@@ -278,7 +278,7 @@ struct StringEqualsImpl {
             auto a_size = a_offsets[i] - prev_a_offset - 1;
             auto b_size = b_offsets[i] - prev_b_offset - 1;
 
-            c[i] = positive == memequalSmallAllowOverflow15(a_data.data() + prev_a_offset, a_size,
+            c[i] = positive == memequal_small_allow_overflow15(a_data.data() + prev_a_offset, a_size,
                                                             b_data.data() + prev_b_offset, b_size);
 
             prev_a_offset = a_offsets[i];
@@ -297,7 +297,7 @@ struct StringEqualsImpl {
         for (size_t i = 0; i < size; ++i) {
             auto a_size = a_offsets[i] - prev_a_offset - 1;
 
-            c[i] = positive == memequalSmallAllowOverflow15(a_data.data() + prev_a_offset, a_size,
+            c[i] = positive == memequal_small_allow_overflow15(a_data.data() + prev_a_offset, a_size,
                                                             b_data.data() + b_n * i, b_n);
 
             prev_a_offset = a_offsets[i];
@@ -315,7 +315,7 @@ struct StringEqualsImpl {
         for (size_t i = 0; i < size; ++i) {
             auto a_size = a_offsets[i] - prev_a_offset - 1;
 
-            c[i] = positive == memequalSmallAllowOverflow15(a_data.data() + prev_a_offset, a_size,
+            c[i] = positive == memequal_small_allow_overflow15(a_data.data() + prev_a_offset, a_size,
                                                             b_data.data(), b_size);
 
             prev_a_offset = a_offsets[i];
@@ -353,7 +353,7 @@ struct StringEqualsImpl {
         } else {
             size_t size = a_data.size() / a_n;
             for (size_t i = 0; i < size; ++i)
-                c[i] = positive == memequalSmallAllowOverflow15(a_data.data() + i * a_n, a_n,
+                c[i] = positive == memequal_small_allow_overflow15(a_data.data() + i * a_n, a_n,
                                                                 b_data.data() + i * b_n, b_n);
         }
     }
@@ -368,7 +368,7 @@ struct StringEqualsImpl {
         } else {
             size_t size = a_data.size() / a_n;
             for (size_t i = 0; i < size; ++i)
-                c[i] = positive == memequalSmallAllowOverflow15(a_data.data() + i * a_n, a_n,
+                c[i] = positive == memequal_small_allow_overflow15(a_data.data() + i * a_n, a_n,
                                                                 b_data.data(), b_size);
         }
     }
@@ -399,7 +399,7 @@ struct StringEqualsImpl {
     static void constant_constant(const ColumnString::Chars& a_data, ColumnString::Offset a_size,
                                   const ColumnString::Chars& b_data, ColumnString::Offset b_size,
                                   UInt8& c) {
-        c = positive == memequalSmallAllowOverflow15(a_data.data(), a_size, b_data.data(), b_size);
+        c = positive == memequal_small_allow_overflow15(a_data.data(), a_size, b_data.data(), b_size);
     }
 };
 
@@ -838,7 +838,7 @@ private:
 
         auto bool_column = ColumnUInt8::create();
         bool_column->insert_many_defaults(arg.column->size());
-        return doris::vectorized::ColumnNullable::create(arg.column, bool_column->getPtr());
+        return doris::vectorized::ColumnNullable::create(arg.column, bool_column->get_ptr());
     }
 
 public:
@@ -847,7 +847,7 @@ public:
     size_t getNumberOfArguments() const override { return 2; }
 
     /// Get result types by argument types. If the function does not apply to these arguments, throw an exception.
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         WhichDataType left(arguments[0].get());
         WhichDataType right(arguments[1].get());
 
@@ -892,7 +892,7 @@ public:
         //            {
         //                ColumnsWithTypeAndName args = {{nullptr, left_tuple->getElements()[i], ""},
         //                                               {nullptr, right_tuple->getElements()[i], ""}};
-        //                getReturnType(args);
+        //                get_return_type(args);
         //            }
         //        }
 

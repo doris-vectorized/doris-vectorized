@@ -343,7 +343,7 @@ struct DayNameImpl {
             res_data[offset - 1] = 0;
         } else {
             auto len = strlen(day_name);
-            memcpySmallAllowReadWriteOverflow15(&res_data[offset], day_name, len);
+            memcpy_small_allow_read_write_overflow15(&res_data[offset], day_name, len);
             offset += len + 1;
             res_data[offset - 1] = 0;
         }
@@ -363,7 +363,7 @@ struct MonthNameImpl {
             res_data[offset - 1] = 0;
         } else {
             auto len = strlen(month_name);
-            memcpySmallAllowReadWriteOverflow15(&res_data[offset], month_name, len);
+            memcpy_small_allow_read_write_overflow15(&res_data[offset], month_name, len);
             offset += len + 1;
             res_data[offset - 1] = 0;
         }
