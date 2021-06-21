@@ -41,36 +41,36 @@ struct HashMapCell {
     HashMapCell(const Key& key_, const State&) : value(key_, NoInitTag()) {}
     HashMapCell(const value_type& value_, const State&) : value(value_) {}
 
-    const Key& getFirst() const { return value.first; }
-    Mapped& getSecond() { return value.second; }
-    const Mapped& getSecond() const { return value.second; }
+    const Key& get_first() const { return value.first; }
+    Mapped& get_second() { return value.second; }
+    const Mapped& get_second() const { return value.second; }
 
     const value_type& get_value() const { return value; }
 
-    static const Key& getKey(const value_type& value) { return value.first; }
+    static const Key& get_key(const value_type& value) { return value.first; }
 
-    bool keyEquals(const Key& key_) const { return value.first == key_; }
-    bool keyEquals(const Key& key_, size_t /*hash_*/) const { return value.first == key_; }
-    bool keyEquals(const Key& key_, size_t /*hash_*/, const State& /*state*/) const {
+    bool key_equals(const Key& key_) const { return value.first == key_; }
+    bool key_equals(const Key& key_, size_t /*hash_*/) const { return value.first == key_; }
+    bool key_equals(const Key& key_, size_t /*hash_*/, const State& /*state*/) const {
         return value.first == key_;
     }
 
-    void setHash(size_t /*hash_value*/) {}
-    size_t getHash(const Hash& hash) const { return hash(value.first); }
+    void set_hash(size_t /*hash_value*/) {}
+    size_t get_hash(const Hash& hash) const { return hash(value.first); }
 
-    bool isZero(const State& state) const { return isZero(value.first, state); }
-    static bool isZero(const Key& key, const State& /*state*/) { return ZeroTraits::check(key); }
+    bool is_zero(const State& state) const { return is_zero(value.first, state); }
+    static bool is_zero(const Key& key, const State& /*state*/) { return ZeroTraits::check(key); }
 
     /// Set the key value to zero.
-    void setZero() { ZeroTraits::set(value.first); }
+    void set_zero() { ZeroTraits::set(value.first); }
 
     /// Do I need to store the zero key separately (that is, can a zero key be inserted into the hash table).
     static constexpr bool need_zero_value_storage = true;
 
     /// Whether the cell was deleted.
-    bool isDeleted() const { return false; }
+    bool is_deleted() const { return false; }
 
-    void setMapped(const value_type& value_) { value.second = value_.second; }
+    void set_mapped(const value_type& value_) { value.second = value_.second; }
 
     // /// Serialization, in binary and text form.
     // void write(DB::WriteBuffer & wb) const
@@ -102,13 +102,13 @@ struct HashMapCell {
 };
 
 template <typename Key, typename Mapped, typename Hash, typename State>
-ALWAYS_INLINE inline auto lookupResultGetKey(HashMapCell<Key, Mapped, Hash, State>* cell) {
-    return &cell->getFirst();
+ALWAYS_INLINE inline auto lookup_result_get_key(HashMapCell<Key, Mapped, Hash, State>* cell) {
+    return &cell->get_first();
 }
 
 template <typename Key, typename Mapped, typename Hash, typename State>
-ALWAYS_INLINE inline auto lookupResultGetMapped(HashMapCell<Key, Mapped, Hash, State>* cell) {
-    return &cell->getSecond();
+ALWAYS_INLINE inline auto lookup_result_get_mapped(HashMapCell<Key, Mapped, Hash, State>* cell) {
+    return &cell->get_second();
 }
 
 template <typename Key, typename TMapped, typename Hash, typename TState = HashTableNoState>
@@ -119,28 +119,28 @@ struct HashMapCellWithSavedHash : public HashMapCell<Key, TMapped, Hash, TState>
 
     using Base::Base;
 
-    bool keyEquals(const Key& key_) const { return this->value.first == key_; }
-    bool keyEquals(const Key& key_, size_t hash_) const {
+    bool key_equals(const Key& key_) const { return this->value.first == key_; }
+    bool key_equals(const Key& key_, size_t hash_) const {
         return saved_hash == hash_ && this->value.first == key_;
     }
-    bool keyEquals(const Key& key_, size_t hash_, const typename Base::State&) const {
-        return keyEquals(key_, hash_);
+    bool key_equals(const Key& key_, size_t hash_, const typename Base::State&) const {
+        return key_equals(key_, hash_);
     }
 
-    void setHash(size_t hash_value) { saved_hash = hash_value; }
-    size_t getHash(const Hash& /*hash_function*/) const { return saved_hash; }
+    void set_hash(size_t hash_value) { saved_hash = hash_value; }
+    size_t get_hash(const Hash& /*hash_function*/) const { return saved_hash; }
 };
 
 template <typename Key, typename Mapped, typename Hash, typename State>
-ALWAYS_INLINE inline auto lookupResultGetKey(
+ALWAYS_INLINE inline auto lookup_result_get_key(
         HashMapCellWithSavedHash<Key, Mapped, Hash, State>* cell) {
-    return &cell->getFirst();
+    return &cell->get_first();
 }
 
 template <typename Key, typename Mapped, typename Hash, typename State>
-ALWAYS_INLINE inline auto lookupResultGetMapped(
+ALWAYS_INLINE inline auto lookup_result_get_mapped(
         HashMapCellWithSavedHash<Key, Mapped, Hash, State>* cell) {
-    return &cell->getSecond();
+    return &cell->get_second();
 }
 
 template <typename Key, typename Cell, typename Hash = DefaultHash<Key>,
@@ -165,12 +165,12 @@ public:
     ///  and func is invoked with the third argument emplaced set to true. Otherwise
     ///  emplaced is set to false.
     template <typename Func>
-    void ALWAYS_INLINE mergeToViaEmplace(Self& that, Func&& func) {
+    void ALWAYS_INLINE merge_to_via_emplace(Self& that, Func&& func) {
         for (auto it = this->begin(), end = this->end(); it != end; ++it) {
             typename Self::LookupResult res_it;
             bool inserted;
-            that.emplace(it->getFirst(), res_it, inserted, it.getHash());
-            func(*lookupResultGetMapped(res_it), it->getSecond(), inserted);
+            that.emplace(it->get_first(), res_it, inserted, it.get_hash());
+            func(*lookup_result_get_mapped(res_it), it->get_second(), inserted);
         }
     }
 
@@ -180,26 +180,26 @@ public:
     ///  have a key equals to the given cell, func is invoked with the third argument
     ///  exist set to false. Otherwise exist is set to true.
     template <typename Func>
-    void ALWAYS_INLINE mergeToViaFind(Self& that, Func&& func) {
+    void ALWAYS_INLINE merge_to_via_find(Self& that, Func&& func) {
         for (auto it = this->begin(), end = this->end(); it != end; ++it) {
-            auto res_it = that.find(it->getFirst(), it.getHash());
+            auto res_it = that.find(it->get_first(), it.get_hash());
             if (!res_it)
-                func(it->getSecond(), it->getSecond(), false);
+                func(it->get_second(), it->get_second(), false);
             else
-                func(*lookupResultGetMapped(res_it), it->getSecond(), true);
+                func(*lookup_result_get_mapped(res_it), it->get_second(), true);
         }
     }
 
     /// Call func(const Key &, Mapped &) for each hash map element.
     template <typename Func>
-    void forEachValue(Func&& func) {
-        for (auto& v : *this) func(v.getFirst(), v.getSecond());
+    void for_each_value(Func&& func) {
+        for (auto& v : *this) func(v.get_first(), v.get_second());
     }
 
     /// Call func(Mapped &) for each hash map element.
     template <typename Func>
-    void forEachMapped(Func&& func) {
-        for (auto& v : *this) func(v.getSecond());
+    void for_each_mapped(Func&& func) {
+        for (auto& v : *this) func(v.get_second());
     }
 
     mapped_type& ALWAYS_INLINE operator[](Key x) {
@@ -221,9 +221,9 @@ public:
           * And if we did not initialize, then even though there was zero in the cell,
           *  the compiler can not guess about this, and generates the `load`, `increment`, `store` code.
           */
-        if (inserted) new (lookupResultGetMapped(it)) mapped_type();
+        if (inserted) new (lookup_result_get_mapped(it)) mapped_type();
 
-        return *lookupResultGetMapped(it);
+        return *lookup_result_get_mapped(it);
     }
 };
 

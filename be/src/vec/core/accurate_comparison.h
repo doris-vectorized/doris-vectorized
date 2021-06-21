@@ -430,7 +430,7 @@ inline bool_if_safe_conversion<A, B> lessOp(A a, B b) {
 
 template <typename A, typename B>
 inline bool_if_not_safe_conversion<A, B> lessOrEqualsOp(A a, B b) {
-    if (isNaN(a) || isNaN(b)) return false;
+    if (is_nan(a) || is_nan(b)) return false;
     return !greaterOp(a, b);
 }
 
@@ -441,7 +441,7 @@ inline bool_if_safe_conversion<A, B> lessOrEqualsOp(A a, B b) {
 
 template <typename A, typename B>
 inline bool_if_not_safe_conversion<A, B> greaterOrEqualsOp(A a, B b) {
-    if (isNaN(a) || isNaN(b)) return false;
+    if (is_nan(a) || is_nan(b)) return false;
     return !greaterOp(b, a);
 }
 
@@ -460,7 +460,7 @@ inline bool convertNumeric(From value, To& result) {
     }
 
     /// Note that NaNs doesn't compare equal to anything, but they are still in range of any Float type.
-    if (isNaN(value) && std::is_floating_point_v<To>) {
+    if (is_nan(value) && std::is_floating_point_v<To>) {
         result = value;
         return true;
     }

@@ -125,7 +125,7 @@ public:
     }
 
     /// Get result types by argument types. If the function does not apply to these arguments, throw an exception.
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override;
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override;
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result_index,
                        size_t input_rows_count) override;
@@ -180,7 +180,7 @@ public:
 
     size_t getNumberOfArguments() const override { return 1; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override;
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override;
 
     bool useDefaultImplementationForConstants() const override { return true; }
 

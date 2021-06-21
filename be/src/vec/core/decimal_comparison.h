@@ -236,8 +236,8 @@ private:
             if constexpr (std::is_unsigned_v<A>) overflow |= (x < 0);
             if constexpr (std::is_unsigned_v<B>) overflow |= (y < 0);
 
-            if constexpr (scale_left) overflow |= common::mulOverflow(x, scale, x);
-            if constexpr (scale_right) overflow |= common::mulOverflow(y, scale, y);
+            if constexpr (scale_left) overflow |= common::mul_overflow(x, scale, x);
+            if constexpr (scale_right) overflow |= common::mul_overflow(y, scale, y);
 
             if (overflow) throw Exception("Can't compare", ErrorCodes::DECIMAL_OVERFLOW);
         } else {

@@ -65,13 +65,13 @@ void set(T& x) {
 } // namespace ZeroTraits
 
 /**
-  * lookupResultGetKey/Mapped -- functions to get key/"mapped" values from the
+  * lookup_result_get_key/Mapped -- functions to get key/"mapped" values from the
   * LookupResult returned by find() and emplace() methods of HashTable.
   * Must not be called for a null LookupResult.
   *
   * We don't use iterators for lookup result to avoid creating temporary
   * objects. Instead, LookupResult is a pointer of some kind. There are global
-  * functions lookupResultGetKey/Mapped, overloaded for this pointer type, that
+  * functions lookup_result_get_key/Mapped, overloaded for this pointer type, that
   * return pointers to key/"mapped" values. They are implemented as global
   * functions and not as methods, because they have to be overloaded for POD
   * types, e.g. in StringHashTable where different components have different
@@ -93,7 +93,7 @@ void set(T& x) {
   *    GetKey returns the key, and GetMapped returns a zero void pointer. This
   *    simplifies generic code that works with mapped values: it can overload
   *    on the return type of GetMapped(), and doesn't need other parameters. One
-  *    example is insertSetMapped() function.
+  *    example is insert_set_mapped() function.
   *
   * 4) Hash tables that store both the key and the "mapped" value, e.g. HashMap.
   *    Both GetKey and GetMapped are supported.
@@ -111,18 +111,18 @@ void set(T& x) {
   * The default implementation of GetMapped that is used for the above case (2).
   */
 template <typename PointerLike>
-ALWAYS_INLINE inline auto lookupResultGetMapped(PointerLike&& ptr) {
+ALWAYS_INLINE inline auto lookup_result_get_mapped(PointerLike&& ptr) {
     return &*ptr;
 }
 
 /**
-  * Generic const wrapper for lookupResultGetMapped, that calls a non-const
+  * Generic const wrapper for lookup_result_get_mapped, that calls a non-const
   * version. Should be safe, given that these functions only do pointer
   * arithmetics.
   */
 template <typename T>
-ALWAYS_INLINE inline auto lookupResultGetMapped(const T* obj) {
-    auto mapped_ptr = lookupResultGetMapped(const_cast<T*>(obj));
+ALWAYS_INLINE inline auto lookup_result_get_mapped(const T* obj) {
+    auto mapped_ptr = lookup_result_get_mapped(const_cast<T*>(obj));
     const auto const_mapped_ptr = mapped_ptr;
     return const_mapped_ptr;
 }
@@ -152,40 +152,40 @@ struct HashTableCell {
     const value_type& get_value() const { return key; }
 
     /// Get the key.
-    static const Key& getKey(const value_type& value) { return value; }
+    static const Key& get_key(const value_type& value) { return value; }
 
     /// Are the keys at the cells equal?
-    bool keyEquals(const Key& key_) const { return key == key_; }
-    bool keyEquals(const Key& key_, size_t /*hash_*/) const { return key == key_; }
-    bool keyEquals(const Key& key_, size_t /*hash_*/, const State& /*state*/) const {
+    bool key_equals(const Key& key_) const { return key == key_; }
+    bool key_equals(const Key& key_, size_t /*hash_*/) const { return key == key_; }
+    bool key_equals(const Key& key_, size_t /*hash_*/, const State& /*state*/) const {
         return key == key_;
     }
 
     /// If the cell can remember the value of the hash function, then remember it.
-    void setHash(size_t /*hash_value*/) {}
+    void set_hash(size_t /*hash_value*/) {}
 
     /// If the cell can store the hash value in itself, then return the stored value.
     /// It must be at least once calculated before.
     /// If storing the hash value is not provided, then just compute the hash.
-    size_t getHash(const Hash& hash) const { return hash(key); }
+    size_t get_hash(const Hash& hash) const { return hash(key); }
 
     /// Whether the key is zero. In the main buffer, cells with a zero key are considered empty.
     /// If zero keys can be inserted into the table, then the cell for the zero key is stored separately, not in the main buffer.
     /// Zero keys must be such that the zeroed-down piece of memory is a zero key.
-    bool isZero(const State& state) const { return isZero(key, state); }
-    static bool isZero(const Key& key, const State& /*state*/) { return ZeroTraits::check(key); }
+    bool is_zero(const State& state) const { return is_zero(key, state); }
+    static bool is_zero(const Key& key, const State& /*state*/) { return ZeroTraits::check(key); }
 
     /// Set the key value to zero.
-    void setZero() { ZeroTraits::set(key); }
+    void set_zero() { ZeroTraits::set(key); }
 
     /// Do the hash table need to store the zero key separately (that is, can a zero key be inserted into the hash table).
     static constexpr bool need_zero_value_storage = true;
 
     /// Whether the cell is deleted.
-    bool isDeleted() const { return false; }
+    bool is_deleted() const { return false; }
 
     /// Set the mapped value, if any (for HashMap), to the corresponding `value`.
-    void setMapped(const value_type& /*value*/) {}
+    void set_mapped(const value_type& /*value*/) {}
 
     /// Serialization, in binary and text form.
     void write(std::ostream& wb) const { doris::vectorized::write_binary(key, wb); }
@@ -197,12 +197,12 @@ struct HashTableCell {
 };
 
 template <typename Key, typename Hash, typename State>
-ALWAYS_INLINE inline auto lookupResultGetKey(HashTableCell<Key, Hash, State>* cell) {
+ALWAYS_INLINE inline auto lookup_result_get_key(HashTableCell<Key, Hash, State>* cell) {
     return &cell->key;
 }
 
 template <typename Key, typename Hash, typename State>
-ALWAYS_INLINE inline void* lookupResultGetMapped(HashTableCell<Key, Hash, State>*) {
+ALWAYS_INLINE inline void* lookup_result_get_mapped(HashTableCell<Key, Hash, State>*) {
     return nullptr;
 }
 
@@ -211,10 +211,10 @@ ALWAYS_INLINE inline void* lookupResultGetMapped(HashTableCell<Key, Hash, State>
   * Overloaded on the mapped type, does nothing if it's void.
   */
 template <typename ValueType>
-void insertSetMapped(void* /* dest */, const ValueType& /* src */) {}
+void insert_set_mapped(void* /* dest */, const ValueType& /* src */) {}
 
 template <typename MappedType, typename ValueType>
-void insertSetMapped(MappedType* dest, const ValueType& src) {
+void insert_set_mapped(MappedType* dest, const ValueType& src) {
     *dest = src.second;
 }
 
@@ -227,10 +227,10 @@ struct HashTableGrower {
     doris::vectorized::UInt8 size_degree = initial_size_degree;
 
     /// The size of the hash table in the cells.
-    size_t bufSize() const { return 1ULL << size_degree; }
+    size_t buf_size() const { return 1ULL << size_degree; }
 
-    size_t maxFill() const { return 1ULL << (size_degree - 1); }
-    size_t mask() const { return bufSize() - 1; }
+    size_t max_fill() const { return 1ULL << (size_degree - 1); }
+    size_t mask() const { return buf_size() - 1; }
 
     /// From the hash value, get the cell number in the hash table.
     size_t place(size_t x) const { return x & mask(); }
@@ -242,10 +242,10 @@ struct HashTableGrower {
     }
 
     /// Whether the hash table is sufficiently full. You need to increase the size of the hash table, or remove something unnecessary from it.
-    bool overflow(size_t elems) const { return elems > maxFill(); }
+    bool overflow(size_t elems) const { return elems > max_fill(); }
 
     /// Increase the size of the hash table.
-    void increaseSize() { size_degree += size_degree >= 23 ? 1 : 2; }
+    void increase_size() { size_degree += size_degree >= 23 ? 1 : 2; }
 
     /// Set the buffer size by the number of elements in the hash table. Used when deserializing a hash table.
     void set(size_t num_elems) {
@@ -257,7 +257,7 @@ struct HashTableGrower {
                                    : (static_cast<size_t>(log2(num_elems - 1)) + 2));
     }
 
-    void setBufSize(size_t buf_size_) {
+    void set_buf_size(size_t buf_size_) {
         size_degree = static_cast<size_t>(log2(buf_size_ - 1) + 1);
     }
 };
@@ -269,15 +269,15 @@ struct HashTableGrower {
   */
 template <size_t key_bits>
 struct HashTableFixedGrower {
-    size_t bufSize() const { return 1ULL << key_bits; }
+    size_t buf_size() const { return 1ULL << key_bits; }
     size_t place(size_t x) const { return x; }
     /// You could write __builtin_unreachable(), but the compiler does not optimize everything, and it turns out less efficiently.
     size_t next(size_t pos) const { return pos + 1; }
     bool overflow(size_t /*elems*/) const { return false; }
 
-    void increaseSize() { __builtin_unreachable(); }
+    void increase_size() { __builtin_unreachable(); }
     void set(size_t /*num_elems*/) {}
-    void setBufSize(size_t /*buf_size_*/) {}
+    void set_buf_size(size_t /*buf_size_*/) {}
 };
 
 /** If you want to store the zero key separately - a place to store it. */
@@ -292,33 +292,33 @@ private:
             zero_value_storage; /// Storage of element with zero key.
 
 public:
-    bool hasZero() const { return has_zero; }
+    bool get_has_zero() const { return has_zero; }
 
-    void setHasZero() {
+    void set_get_has_zero() {
         has_zero = true;
-        new (zeroValue()) Cell();
+        new (zero_value()) Cell();
     }
 
-    void clearHasZero() {
+    void clear_get_has_zero() {
         has_zero = false;
-        zeroValue()->~Cell();
+        zero_value()->~Cell();
     }
 
-    Cell* zeroValue() { return reinterpret_cast<Cell*>(&zero_value_storage); }
-    const Cell* zeroValue() const { return reinterpret_cast<const Cell*>(&zero_value_storage); }
+    Cell* zero_value() { return reinterpret_cast<Cell*>(&zero_value_storage); }
+    const Cell* zero_value() const { return reinterpret_cast<const Cell*>(&zero_value_storage); }
 };
 
 template <typename Cell>
 struct ZeroValueStorage<false, Cell> {
-    bool hasZero() const { return false; }
-    void setHasZero() {
+    bool get_has_zero() const { return false; }
+    void set_get_has_zero() {
         throw doris::vectorized::Exception("HashTable: logical error",
                                            doris::vectorized::ErrorCodes::LOGICAL_ERROR);
     }
-    void clearHasZero() {}
+    void clear_get_has_zero() {}
 
-    Cell* zeroValue() { return nullptr; }
-    const Cell* zeroValue() const { return nullptr; }
+    Cell* zero_value() { return nullptr; }
+    const Cell* zero_value() const { return nullptr; }
 };
 
 template <typename Key, typename Cell, typename Hash, typename Grower, typename Allocator>
@@ -350,9 +350,9 @@ protected:
 #endif
 
     /// Find a cell with the same key or an empty cell, starting from the specified position and further along the collision resolution chain.
-    size_t ALWAYS_INLINE findCell(const Key& x, size_t hash_value, size_t place_value) const {
-        while (!buf[place_value].isZero(*this) &&
-               !buf[place_value].keyEquals(x, hash_value, *this)) {
+    size_t ALWAYS_INLINE find_cell(const Key& x, size_t hash_value, size_t place_value) const {
+        while (!buf[place_value].is_zero(*this) &&
+               !buf[place_value].key_equals(x, hash_value, *this)) {
             place_value = grower.next(place_value);
 #ifdef DBMS_HASH_MAP_COUNT_COLLISIONS
             ++collisions;
@@ -363,8 +363,8 @@ protected:
     }
 
     /// Find an empty cell, starting with the specified position and further along the collision resolution chain.
-    size_t ALWAYS_INLINE findEmptyCell(size_t place_value) const {
-        while (!buf[place_value].isZero(*this)) {
+    size_t ALWAYS_INLINE find_empty_cell(size_t place_value) const {
+        while (!buf[place_value].is_zero(*this)) {
             place_value = grower.next(place_value);
 #ifdef DBMS_HASH_MAP_COUNT_COLLISIONS
             ++collisions;
@@ -375,13 +375,13 @@ protected:
     }
 
     void alloc(const Grower& new_grower) {
-        buf = reinterpret_cast<Cell*>(Allocator::alloc(new_grower.bufSize() * sizeof(Cell)));
+        buf = reinterpret_cast<Cell*>(Allocator::alloc(new_grower.buf_size() * sizeof(Cell)));
         grower = new_grower;
     }
 
     void free() {
         if (buf) {
-            Allocator::free(buf, getBufferSizeInBytes());
+            Allocator::free(buf, get_buffer_size_in_bytes());
             buf = nullptr;
         }
     }
@@ -392,7 +392,7 @@ protected:
         Stopwatch watch;
 #endif
 
-        size_t old_size = grower.bufSize();
+        size_t old_size = grower.buf_size();
 
         /** In case of exception for the object to remain in the correct state,
           *  changing the variable `grower` (which determines the buffer size of the hash table)
@@ -403,16 +403,16 @@ protected:
 
         if (for_num_elems) {
             new_grower.set(for_num_elems);
-            if (new_grower.bufSize() <= old_size) return;
+            if (new_grower.buf_size() <= old_size) return;
         } else if (for_buf_size) {
-            new_grower.setBufSize(for_buf_size);
-            if (new_grower.bufSize() <= old_size) return;
+            new_grower.set_buf_size(for_buf_size);
+            if (new_grower.buf_size() <= old_size) return;
         } else
-            new_grower.increaseSize();
+            new_grower.increase_size();
 
         /// Expand the space.
-        buf = reinterpret_cast<Cell*>(Allocator::realloc(buf, getBufferSizeInBytes(),
-                                                         new_grower.bufSize() * sizeof(Cell)));
+        buf = reinterpret_cast<Cell*>(Allocator::realloc(buf, get_buffer_size_in_bytes(),
+                                                         new_grower.buf_size() * sizeof(Cell)));
         grower = new_grower;
 
         /** Now some items may need to be moved to a new location.
@@ -421,8 +421,8 @@ protected:
           */
         size_t i = 0;
         for (; i < old_size; ++i)
-            if (!buf[i].isZero(*this) && !buf[i].isDeleted())
-                reinsert(buf[i], buf[i].getHash(*this));
+            if (!buf[i].is_zero(*this) && !buf[i].is_deleted())
+                reinsert(buf[i], buf[i].get_hash(*this));
 
         /** There is also a special case:
           *    if the element was to be at the end of the old buffer,                  [        x]
@@ -432,13 +432,13 @@ protected:
           *    after transferring all the elements from the old halves you need to     [         o   x    ]
           *    process tail from the collision resolution chain immediately after it   [        o    x    ]
           */
-        for (; !buf[i].isZero(*this) && !buf[i].isDeleted(); ++i)
-            reinsert(buf[i], buf[i].getHash(*this));
+        for (; !buf[i].is_zero(*this) && !buf[i].is_deleted(); ++i)
+            reinsert(buf[i], buf[i].get_hash(*this));
 
 #ifdef DBMS_HASH_MAP_DEBUG_RESIZES
         watch.stop();
         std::cerr << std::fixed << std::setprecision(3) << "Resize from " << old_size << " to "
-                  << grower.bufSize() << " took " << watch.elapsedSeconds() << " sec." << std::endl;
+                  << grower.buf_size() << " took " << watch.elapsedSeconds() << " sec." << std::endl;
 #endif
     }
 
@@ -452,20 +452,20 @@ protected:
         if (&x == &buf[place_value]) return;
 
         /// Compute a new location, taking into account the collision resolution chain.
-        place_value = findCell(Cell::getKey(x.get_value()), hash_value, place_value);
+        place_value = find_cell(Cell::get_key(x.get_value()), hash_value, place_value);
 
         /// If the item remains in its place in the old collision resolution chain.
-        if (!buf[place_value].isZero(*this)) return;
+        if (!buf[place_value].is_zero(*this)) return;
 
         /// Copy to a new location and zero the old one.
-        x.setHash(hash_value);
+        x.set_hash(hash_value);
         memcpy(static_cast<void*>(&buf[place_value]), &x, sizeof(x));
-        x.setZero();
+        x.set_zero();
 
         /// Then the elements that previously were in collision with this can move to the old place.
     }
 
-    void destroyElements() {
+    void destroy_elements() {
         if (!std::is_trivially_destructible_v<Cell>)
             for (iterator it = begin(), it_end = end(); it != it_end; ++it) it.ptr->~Cell();
     }
@@ -489,14 +489,14 @@ protected:
 
         Derived& operator++() {
             /// If iterator was pointed to ZeroValueStorage, move it to the beginning of the main buffer.
-            if (UNLIKELY(ptr->isZero(*container)))
+            if (UNLIKELY(ptr->is_zero(*container)))
                 ptr = container->buf;
             else
                 ++ptr;
 
             /// Skip empty cells in the main buffer.
-            auto buf_end = container->buf + container->grower.bufSize();
-            while (ptr < buf_end && ptr->isZero(*container)) ++ptr;
+            auto buf_end = container->buf + container->grower.buf_size();
+            while (ptr < buf_end && ptr->is_zero(*container)) ++ptr;
 
             return static_cast<Derived&>(*this);
         }
@@ -504,12 +504,12 @@ protected:
         auto& operator*() const { return *ptr; }
         auto* operator->() const { return ptr; }
 
-        auto getPtr() const { return ptr; }
-        size_t getHash() const { return ptr->getHash(*container); }
+        auto get_ptr() const { return ptr; }
+        size_t get_hash() const { return ptr->get_hash(*container); }
 
-        size_t getCollisionChainLength() const {
+        size_t get_collision_chain_length() const {
             return container->grower.place((ptr - container->buf) -
-                                           container->grower.place(getHash()));
+                                           container->grower.place(get_hash()));
         }
 
         /**
@@ -534,19 +534,19 @@ public:
     using key_type = Key;
     using value_type = typename Cell::value_type;
 
-    // Use lookupResultGetMapped/Key to work with these values.
+    // Use lookup_result_get_mapped/Key to work with these values.
     using LookupResult = Cell*;
     using ConstLookupResult = const Cell*;
 
     size_t hash(const Key& x) const { return Hash::operator()(x); }
 
     HashTable() {
-        if (Cell::need_zero_value_storage) this->zeroValue()->setZero();
+        if (Cell::need_zero_value_storage) this->zero_value()->set_zero();
         alloc(grower);
     }
 
     HashTable(size_t reserve_for_num_elements) {
-        if (Cell::need_zero_value_storage) this->zeroValue()->setZero();
+        if (Cell::need_zero_value_storage) this->zero_value()->set_zero();
         grower.set(reserve_for_num_elements);
         alloc(grower);
     }
@@ -554,12 +554,12 @@ public:
     HashTable(HashTable&& rhs) : buf(nullptr) { *this = std::move(rhs); }
 
     ~HashTable() {
-        destroyElements();
+        destroy_elements();
         free();
     }
 
     HashTable& operator=(HashTable&& rhs) {
-        destroyElements();
+        destroy_elements();
         free();
 
         std::swap(buf, rhs.buf);
@@ -636,11 +636,11 @@ public:
     const_iterator begin() const {
         if (!buf) return end();
 
-        if (this->hasZero()) return iteratorToZero();
+        if (this->get_has_zero()) return iterator_to_zero();
 
         const Cell* ptr = buf;
-        auto buf_end = buf + grower.bufSize();
-        while (ptr < buf_end && ptr->isZero(*this)) ++ptr;
+        auto buf_end = buf + grower.buf_size();
+        while (ptr < buf_end && ptr->is_zero(*this)) ++ptr;
 
         return const_iterator(this, ptr);
     }
@@ -650,39 +650,39 @@ public:
     iterator begin() {
         if (!buf) return end();
 
-        if (this->hasZero()) return iteratorToZero();
+        if (this->get_has_zero()) return iterator_to_zero();
 
         Cell* ptr = buf;
-        auto buf_end = buf + grower.bufSize();
-        while (ptr < buf_end && ptr->isZero(*this)) ++ptr;
+        auto buf_end = buf + grower.buf_size();
+        while (ptr < buf_end && ptr->is_zero(*this)) ++ptr;
 
         return iterator(this, ptr);
     }
 
-    const_iterator end() const { return const_iterator(this, buf + grower.bufSize()); }
+    const_iterator end() const { return const_iterator(this, buf + grower.buf_size()); }
     const_iterator cend() const { return end(); }
-    iterator end() { return iterator(this, buf + grower.bufSize()); }
+    iterator end() { return iterator(this, buf + grower.buf_size()); }
 
 protected:
-    const_iterator iteratorTo(const Cell* ptr) const { return const_iterator(this, ptr); }
-    iterator iteratorTo(Cell* ptr) { return iterator(this, ptr); }
-    const_iterator iteratorToZero() const { return iteratorTo(this->zeroValue()); }
-    iterator iteratorToZero() { return iteratorTo(this->zeroValue()); }
+    const_iterator iterator_to(const Cell* ptr) const { return const_iterator(this, ptr); }
+    iterator iterator_to(Cell* ptr) { return iterator(this, ptr); }
+    const_iterator iterator_to_zero() const { return iterator_to(this->zero_value()); }
+    iterator iterator_to_zero() { return iterator_to(this->zero_value()); }
 
     /// If the key is zero, insert it into a special place and return true.
     /// We don't have to persist a zero key, because it's not actually inserted.
     /// That's why we just take a Key by value, an not a key holder.
-    bool ALWAYS_INLINE emplaceIfZero(Key x, LookupResult& it, bool& inserted, size_t hash_value) {
+    bool ALWAYS_INLINE emplace_if_zero(Key x, LookupResult& it, bool& inserted, size_t hash_value) {
         /// If it is claimed that the zero key can not be inserted into the table.
         if (!Cell::need_zero_value_storage) return false;
 
-        if (Cell::isZero(x, *this)) {
-            it = this->zeroValue();
+        if (Cell::is_zero(x, *this)) {
+            it = this->zero_value();
 
-            if (!this->hasZero()) {
+            if (!this->get_has_zero()) {
                 ++m_size;
-                this->setHasZero();
-                this->zeroValue()->setHash(hash_value);
+                this->set_get_has_zero();
+                this->zero_value()->set_hash(hash_value);
                 inserted = true;
             } else
                 inserted = false;
@@ -694,21 +694,21 @@ protected:
     }
 
     template <typename KeyHolder>
-    void ALWAYS_INLINE emplaceNonZeroImpl(size_t place_value, KeyHolder&& key_holder,
+    void ALWAYS_INLINE emplace_non_zero_impl(size_t place_value, KeyHolder&& key_holder,
                                           LookupResult& it, bool& inserted, size_t hash_value) {
         it = &buf[place_value];
 
-        if (!buf[place_value].isZero(*this)) {
-            keyHolderDiscardKey(key_holder);
+        if (!buf[place_value].is_zero(*this)) {
+            key_holder_discard_key(key_holder);
             inserted = false;
             return;
         }
 
-        keyHolderPersistKey(key_holder);
-        const auto& key = keyHolderGetKey(key_holder);
+        key_holder_persist_key(key_holder);
+        const auto& key = key_holder_get_key(key_holder);
 
         new (&buf[place_value]) Cell(key, *this);
-        buf[place_value].setHash(hash_value);
+        buf[place_value].set_hash(hash_value);
         inserted = true;
         ++m_size;
 
@@ -721,24 +721,24 @@ protected:
                   *  which, perhaps, can not even be called a destructor.
                   */
                 --m_size;
-                buf[place_value].setZero();
+                buf[place_value].set_zero();
                 throw;
             }
 
             // The hash table was rehashed, so we have to re-find the key.
-            size_t new_place = findCell(key, hash_value, grower.place(hash_value));
-            assert(!buf[new_place].isZero(*this));
+            size_t new_place = find_cell(key, hash_value, grower.place(hash_value));
+            assert(!buf[new_place].is_zero(*this));
             it = &buf[new_place];
         }
     }
 
     /// Only for non-zero keys. Find the right place, insert the key there, if it does not already exist. Set iterator to the cell in output parameter.
     template <typename KeyHolder>
-    void ALWAYS_INLINE emplaceNonZero(KeyHolder&& key_holder, LookupResult& it, bool& inserted,
+    void ALWAYS_INLINE emplace_non_zero(KeyHolder&& key_holder, LookupResult& it, bool& inserted,
                                       size_t hash_value) {
-        const auto& key = keyHolderGetKey(key_holder);
-        size_t place_value = findCell(key, hash_value, grower.place(hash_value));
-        emplaceNonZeroImpl(place_value, key_holder, it, inserted, hash_value);
+        const auto& key = key_holder_get_key(key_holder);
+        size_t place_value = find_cell(key, hash_value, grower.place(hash_value));
+        emplace_non_zero_impl(place_value, key_holder, it, inserted, hash_value);
     }
 
 public:
@@ -746,19 +746,19 @@ public:
     std::pair<LookupResult, bool> ALWAYS_INLINE insert(const value_type& x) {
         std::pair<LookupResult, bool> res;
 
-        size_t hash_value = hash(Cell::getKey(x));
-        if (!emplaceIfZero(Cell::getKey(x), res.first, res.second, hash_value)) {
-            emplaceNonZero(Cell::getKey(x), res.first, res.second, hash_value);
+        size_t hash_value = hash(Cell::get_key(x));
+        if (!emplace_if_zero(Cell::get_key(x), res.first, res.second, hash_value)) {
+            emplace_non_zero(Cell::get_key(x), res.first, res.second, hash_value);
         }
 
-        if (res.second) insertSetMapped(lookupResultGetMapped(res.first), x);
+        if (res.second) insert_set_mapped(lookup_result_get_mapped(res.first), x);
 
         return res;
     }
 
     /// Reinsert node pointed to by iterator
     void ALWAYS_INLINE reinsert(iterator& it, size_t hash_value) {
-        reinsert(*it.getPtr(), hash_value);
+        reinsert(*it.get_ptr(), hash_value);
     }
 
     /** Insert the key.
@@ -779,21 +779,21 @@ public:
       */
     template <typename KeyHolder>
     void ALWAYS_INLINE emplace(KeyHolder&& key_holder, LookupResult& it, bool& inserted) {
-        const auto& key = keyHolderGetKey(key_holder);
+        const auto& key = key_holder_get_key(key_holder);
         emplace(key_holder, it, inserted, hash(key));
     }
 
     template <typename KeyHolder>
     void ALWAYS_INLINE emplace(KeyHolder&& key_holder, LookupResult& it, bool& inserted,
                                size_t hash_value) {
-        const auto& key = keyHolderGetKey(key_holder);
-        if (!emplaceIfZero(key, it, inserted, hash_value))
-            emplaceNonZero(key_holder, it, inserted, hash_value);
+        const auto& key = key_holder_get_key(key_holder);
+        if (!emplace_if_zero(key, it, inserted, hash_value))
+            emplace_non_zero(key_holder, it, inserted, hash_value);
     }
 
     /// Copy the cell from another hash table. It is assumed that the cell is not zero, and also that there was no such key in the table yet.
-    void ALWAYS_INLINE insertUniqueNonZero(const Cell* cell, size_t hash_value) {
-        size_t place_value = findEmptyCell(grower.place(hash_value));
+    void ALWAYS_INLINE insert_unique_non_zero(const Cell* cell, size_t hash_value) {
+        size_t place_value = find_empty_cell(grower.place(hash_value));
 
         memcpy(static_cast<void*>(&buf[place_value]), cell, sizeof(*cell));
         ++m_size;
@@ -802,11 +802,11 @@ public:
     }
 
     LookupResult ALWAYS_INLINE find(Key x) {
-        if (Cell::isZero(x, *this)) return this->hasZero() ? this->zeroValue() : nullptr;
+        if (Cell::is_zero(x, *this)) return this->get_has_zero() ? this->zero_value() : nullptr;
 
         size_t hash_value = hash(x);
-        size_t place_value = findCell(x, hash_value, grower.place(hash_value));
-        return !buf[place_value].isZero(*this) ? &buf[place_value] : nullptr;
+        size_t place_value = find_cell(x, hash_value, grower.place(hash_value));
+        return !buf[place_value].is_zero(*this) ? &buf[place_value] : nullptr;
     }
 
     ConstLookupResult ALWAYS_INLINE find(Key x) const {
@@ -814,35 +814,35 @@ public:
     }
 
     LookupResult ALWAYS_INLINE find(Key x, size_t hash_value) {
-        if (Cell::isZero(x, *this)) return this->hasZero() ? this->zeroValue() : nullptr;
+        if (Cell::is_zero(x, *this)) return this->get_has_zero() ? this->zero_value() : nullptr;
 
-        size_t place_value = findCell(x, hash_value, grower.place(hash_value));
-        return !buf[place_value].isZero(*this) ? &buf[place_value] : nullptr;
+        size_t place_value = find_cell(x, hash_value, grower.place(hash_value));
+        return !buf[place_value].is_zero(*this) ? &buf[place_value] : nullptr;
     }
 
     bool ALWAYS_INLINE has(Key x) const {
-        if (Cell::isZero(x, *this)) return this->hasZero();
+        if (Cell::is_zero(x, *this)) return this->get_has_zero();
 
         size_t hash_value = hash(x);
-        size_t place_value = findCell(x, hash_value, grower.place(hash_value));
-        return !buf[place_value].isZero(*this);
+        size_t place_value = find_cell(x, hash_value, grower.place(hash_value));
+        return !buf[place_value].is_zero(*this);
     }
 
     bool ALWAYS_INLINE has(Key x, size_t hash_value) const {
-        if (Cell::isZero(x, *this)) return this->hasZero();
+        if (Cell::is_zero(x, *this)) return this->get_has_zero();
 
-        size_t place_value = findCell(x, hash_value, grower.place(hash_value));
-        return !buf[place_value].isZero(*this);
+        size_t place_value = find_cell(x, hash_value, grower.place(hash_value));
+        return !buf[place_value].is_zero(*this);
     }
 
     void write(std::ostream& wb) const {
         Cell::State::write(wb);
         doris::vectorized::write_var_uint(m_size, wb);
 
-        if (this->hasZero()) this->zeroValue()->write(wb);
+        if (this->get_has_zero()) this->zero_value()->write(wb);
 
-        for (auto ptr = buf, buf_end = buf + grower.bufSize(); ptr < buf_end; ++ptr)
-            if (!ptr->isZero(*this)) ptr->write(wb);
+        for (auto ptr = buf, buf_end = buf + grower.buf_size(); ptr < buf_end; ++ptr)
+            if (!ptr->is_zero(*this)) ptr->write(wb);
     }
 
     // void write_text(doris::vectorized::WriteBuffer & wb) const
@@ -850,15 +850,15 @@ public:
     //     Cell::State::write_text(wb);
     //     doris::vectorized::write_text(m_size, wb);
 
-    //     if (this->hasZero())
+    //     if (this->get_has_zero())
     //     {
     //         doris::vectorized::writeChar(',', wb);
-    //         this->zeroValue()->write_text(wb);
+    //         this->zero_value()->write_text(wb);
     //     }
 
-    //     for (auto ptr = buf, buf_end = buf + grower.bufSize(); ptr < buf_end; ++ptr)
+    //     for (auto ptr = buf, buf_end = buf + grower.buf_size(); ptr < buf_end; ++ptr)
     //     {
-    //         if (!ptr->isZero(*this))
+    //         if (!ptr->is_zero(*this))
     //         {
     //             doris::vectorized::writeChar(',', wb);
     //             ptr->write_text(wb);
@@ -869,8 +869,8 @@ public:
     void read(std::istream& rb) {
         Cell::State::read(rb);
 
-        destroyElements();
-        this->clearHasZero();
+        destroy_elements();
+        this->clear_get_has_zero();
         m_size = 0;
 
         size_t new_size = 0;
@@ -884,7 +884,7 @@ public:
         for (size_t i = 0; i < new_size; ++i) {
             Cell x;
             x.read(rb);
-            insert(Cell::getKey(x.get_value()));
+            insert(Cell::get_key(x.get_value()));
         }
     }
 
@@ -892,8 +892,8 @@ public:
     // {
     //     Cell::State::read_text(rb);
 
-    //     destroyElements();
-    //     this->clearHasZero();
+    //     destroy_elements();
+    //     this->clear_get_has_zero();
     //     m_size = 0;
 
     //     size_t new_size = 0;
@@ -909,7 +909,7 @@ public:
     //         Cell x;
     //         doris::vectorized::assertChar(',', rb);
     //         x.read_text(rb);
-    //         insert(Cell::getKey(x.get_value()));
+    //         insert(Cell::get_key(x.get_value()));
     //     }
     // }
 
@@ -918,25 +918,25 @@ public:
     bool empty() const { return 0 == m_size; }
 
     void clear() {
-        destroyElements();
-        this->clearHasZero();
+        destroy_elements();
+        this->clear_get_has_zero();
         m_size = 0;
 
-        memset(static_cast<void*>(buf), 0, grower.bufSize() * sizeof(*buf));
+        memset(static_cast<void*>(buf), 0, grower.buf_size() * sizeof(*buf));
     }
 
     /// After executing this function, the table can only be destroyed,
     ///  and also you can use the methods `size`, `empty`, `begin`, `end`.
-    void clearAndShrink() {
-        destroyElements();
-        this->clearHasZero();
+    void clear_and_shrink() {
+        destroy_elements();
+        this->clear_get_has_zero();
         m_size = 0;
         free();
     }
 
-    size_t getBufferSizeInBytes() const { return grower.bufSize() * sizeof(Cell); }
+    size_t get_buffer_size_in_bytes() const { return grower.buf_size() * sizeof(Cell); }
 
-    size_t getBufferSizeInCells() const { return grower.bufSize(); }
+    size_t get_buffer_size_in_cells() const { return grower.buf_size(); }
 
     bool add_elem_size_overflow(size_t add_size) const {
         return grower.overflow(add_size + m_size);

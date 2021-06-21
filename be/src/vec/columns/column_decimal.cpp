@@ -50,14 +50,14 @@ int ColumnDecimal<T>::compare_at(size_t n, size_t m, const IColumn& rhs_, int) c
 template <typename T>
 StringRef ColumnDecimal<T>::serialize_value_into_arena(size_t n, Arena& arena,
                                                     char const*& begin) const {
-    auto pos = arena.allocContinue(sizeof(T), begin);
+    auto pos = arena.alloc_continue(sizeof(T), begin);
     memcpy(pos, &data[n], sizeof(T));
     return StringRef(pos, sizeof(T));
 }
 
 template <typename T>
 const char* ColumnDecimal<T>::deserialize_and_insert_from_arena(const char* pos) {
-    data.push_back(unalignedLoad<T>(pos));
+    data.push_back(unaligned_load<T>(pos));
     return pos + sizeof(T);
 }
 

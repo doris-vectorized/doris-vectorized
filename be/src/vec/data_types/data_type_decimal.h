@@ -265,7 +265,7 @@ convertDecimals(const typename FromDataType::FieldType& value, UInt32 scale_from
     MaxNativeType converted_value;
     if (scale_to > scale_from) {
         converted_value = DataTypeDecimal<MaxFieldType>::getScaleMultiplier(scale_to - scale_from);
-        if (common::mulOverflow(static_cast<MaxNativeType>(value), converted_value,
+        if (common::mul_overflow(static_cast<MaxNativeType>(value), converted_value,
                                 converted_value))
             throw Exception("Decimal convert overflow", ErrorCodes::DECIMAL_OVERFLOW);
     } else

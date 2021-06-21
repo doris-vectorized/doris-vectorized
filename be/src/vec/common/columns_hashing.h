@@ -39,17 +39,17 @@ struct HashMethodOneNumber : public columns_hashing_impl::HashMethodBase<
     /// Emplace key into HashTable or HashMap. If Data is HashMap, returns ptr to value, otherwise nullptr.
     /// Data is a HashTable where to insert key from column's row.
     /// For Serialized method, key may be placed in pool.
-    using Base::emplaceKey; /// (Data & data, size_t row, Arena & pool) -> EmplaceResult
+    using Base::emplace_key; /// (Data & data, size_t row, Arena & pool) -> EmplaceResult
 
     /// Find key into HashTable or HashMap. If Data is HashMap and key was found, returns ptr to value, otherwise nullptr.
-    using Base::findKey; /// (Data & data, size_t row, Arena & pool) -> FindResult
+    using Base::find_key; /// (Data & data, size_t row, Arena & pool) -> FindResult
 
     /// Get hash value of row.
-    using Base::getHash; /// (const Data & data, size_t row, Arena & pool) -> size_t
+    using Base::get_hash; /// (const Data & data, size_t row, Arena & pool) -> size_t
 
     /// Is used for default implementation in HashMethodBase.
-    FieldType getKeyHolder(size_t row, Arena&) const {
-        return unalignedLoad<FieldType>(vec + row * sizeof(FieldType));
+    FieldType get_key_holder(size_t row, Arena&) const {
+        return unaligned_load<FieldType>(vec + row * sizeof(FieldType));
     }
 };
 
@@ -72,7 +72,7 @@ struct HashMethodString : public columns_hashing_impl::HashMethodBase<
         chars = column_string.get_chars().data();
     }
 
-    auto getKeyHolder(ssize_t row, [[maybe_unused]] Arena& pool) const {
+    auto get_key_holder(ssize_t row, [[maybe_unused]] Arena& pool) const {
         StringRef key(chars + offsets[row - 1], offsets[row] - offsets[row - 1] - 1);
 
         if constexpr (place_string_to_arena) {
@@ -108,8 +108,8 @@ struct HashMethodSerialized
 protected:
     friend class columns_hashing_impl::HashMethodBase<Self, Value, Mapped, false>;
 
-    ALWAYS_INLINE SerializedKeyHolder getKeyHolder(size_t row, Arena& pool) const {
-        return SerializedKeyHolder{serializeKeysToPoolContiguous(row, keys_size, key_columns, pool),
+    ALWAYS_INLINE SerializedKeyHolder get_key_holder(size_t row, Arena& pool) const {
+        return SerializedKeyHolder{serialize_keys_to_pool_contiguous(row, keys_size, key_columns, pool),
                                    pool};
     }
 };
@@ -128,7 +128,7 @@ struct HashMethodHashed
     HashMethodHashed(ColumnRawPtrs key_columns_, const Sizes&, const HashMethodContextPtr&)
             : key_columns(std::move(key_columns_)) {}
 
-    ALWAYS_INLINE Key getKeyHolder(size_t row, Arena&) const {
+    ALWAYS_INLINE Key get_key_holder(size_t row, Arena&) const {
         return hash128(row, key_columns.size(), key_columns);
     }
 };

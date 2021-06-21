@@ -159,15 +159,15 @@ Status AggregationNode::prepare(RuntimeState* state) {
 
         const auto& agg_function = _aggregate_evaluators[i]->function();
         // aggreate states are aligned based on maximum requirement
-        _align_aggregate_states = std::max(_align_aggregate_states, agg_function->alignOfData());
-        _total_size_of_aggregate_states += agg_function->sizeOfData();
+        _align_aggregate_states = std::max(_align_aggregate_states, agg_function->align_of_data());
+        _total_size_of_aggregate_states += agg_function->size_of_data();
 
         // If not the last aggregate_state, we need pad it so that next aggregate_state will be aligned.
         if (i + 1 < _aggregate_evaluators.size()) {
             size_t alignment_of_next_state =
-                    _aggregate_evaluators[i + 1]->function()->alignOfData();
+                    _aggregate_evaluators[i + 1]->function()->align_of_data();
             if ((alignment_of_next_state & (alignment_of_next_state - 1)) != 0) {
-                return Status::RuntimeError(fmt::format("Logical error: alignOfData is not 2^N"));
+                return Status::RuntimeError(fmt::format("Logical error: align_of_data is not 2^N"));
             }
 
             /// Extend total_size to next alignment requirement
@@ -335,7 +335,7 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
     MutableColumns columns(agg_size);
     std::vector<DataTypePtr> data_types(agg_size);
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
-        data_types[i] = _aggregate_evaluators[i]->function()->getReturnType();
+        data_types[i] = _aggregate_evaluators[i]->function()->get_return_type();
         columns[i] = data_types[i]->createColumn();
     }
 
@@ -449,7 +449,7 @@ bool AggregationNode::_should_expand_preagg_hash_tables() {
     if (!_should_expand_hash_table) return false;
 
     auto& hash_tbl = _agg_data.serialized->data;
-    auto [ht_mem, ht_rows] = std::pair{hash_tbl.getBufferSizeInBytes(), hash_tbl.size()};
+    auto [ht_mem, ht_rows] = std::pair{hash_tbl.get_buffer_size_in_bytes(), hash_tbl.size()};
 
     // Need some rows in tables to have valid statistics.
     if (ht_rows == 0) return true;
@@ -530,7 +530,7 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
         // do not try to do agg, just init and serialize directly return the out_block
         if (!_should_expand_preagg_hash_tables()) {
             if (_streaming_pre_agg_buffer == nullptr) {
-                _streaming_pre_agg_buffer = _agg_arena_pool.alignedAlloc(
+                _streaming_pre_agg_buffer = _agg_arena_pool.aligned_alloc(
                         _total_size_of_aggregate_states * _max_size_of_stream_pre_agg_buffer,
                         _align_aggregate_states);
             }
@@ -581,20 +581,20 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
     for (size_t i = 0; i < rows; ++i) {
         AggregateDataPtr aggregate_data = nullptr;
 
-        auto emplace_result = state.emplaceKey(method.data, i, _agg_arena_pool);
+        auto emplace_result = state.emplace_key(method.data, i, _agg_arena_pool);
 
         /// If a new key is inserted, initialize the states of the aggregate functions, and possibly something related to the key.
-        if (emplace_result.isInserted()) {
+        if (emplace_result.is_inserted()) {
             /// exception-safety - if you can not allocate memory or create states, then destructors will not be called.
-            emplace_result.setMapped(nullptr);
+            emplace_result.set_mapped(nullptr);
 
-            aggregate_data = _agg_arena_pool.alignedAlloc(_total_size_of_aggregate_states,
-                                                          _align_aggregate_states);
+            aggregate_data = _agg_arena_pool.aligned_alloc(_total_size_of_aggregate_states,
+                                                           _align_aggregate_states);
             _create_agg_status(aggregate_data);
 
-            emplace_result.setMapped(aggregate_data);
+            emplace_result.set_mapped(aggregate_data);
         } else
-            aggregate_data = emplace_result.getMapped();
+            aggregate_data = emplace_result.get_mapped();
 
         places[i] = aggregate_data;
         assert(places[i] != nullptr);
@@ -642,20 +642,20 @@ Status AggregationNode::_execute_with_serialized_key(Block* block) {
     for (size_t i = 0; i < rows; ++i) {
         AggregateDataPtr aggregate_data = nullptr;
 
-        auto emplace_result = state.emplaceKey(method.data, i, _agg_arena_pool);
+        auto emplace_result = state.emplace_key(method.data, i, _agg_arena_pool);
 
         /// If a new key is inserted, initialize the states of the aggregate functions, and possibly something related to the key.
-        if (emplace_result.isInserted()) {
+        if (emplace_result.is_inserted()) {
             /// exception-safety - if you can not allocate memory or create states, then destructors will not be called.
-            emplace_result.setMapped(nullptr);
+            emplace_result.set_mapped(nullptr);
 
-            aggregate_data = _agg_arena_pool.alignedAlloc(_total_size_of_aggregate_states,
-                                                          _align_aggregate_states);
+            aggregate_data = _agg_arena_pool.aligned_alloc(_total_size_of_aggregate_states,
+                                                           _align_aggregate_states);
             _create_agg_status(aggregate_data);
 
-            emplace_result.setMapped(aggregate_data);
+            emplace_result.set_mapped(aggregate_data);
         } else
-            aggregate_data = emplace_result.getMapped();
+            aggregate_data = emplace_result.get_mapped();
 
         places[i] = aggregate_data;
         assert(places[i] != nullptr);
@@ -696,8 +696,8 @@ Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Blo
     }
 
     while (iter != data.end() && key_columns[0]->size() < state->batch_size()) {
-        const auto& key = iter->getFirst();
-        auto& mapped = iter->getSecond();
+        const auto& key = iter->get_first();
+        auto& mapped = iter->get_second();
         method.insertKeyIntoColumns(key, key_columns, {});
         for (size_t i = 0; i < _aggregate_evaluators.size(); ++i)
             _aggregate_evaluators[i]->insert_result_info(mapped + _offsets_of_aggregate_states[i],
@@ -751,8 +751,8 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
     }
 
     while (iter != data.end() && key_columns[0]->size() < state->batch_size()) {
-        const auto& key = iter->getFirst();
-        auto& mapped = iter->getSecond();
+        const auto& key = iter->get_first();
+        auto& mapped = iter->get_second();
         // insert keys
         method.insertKeyIntoColumns(key, key_columns, {});
 
@@ -814,20 +814,20 @@ Status AggregationNode::_merge_with_serialized_key(Block* block) {
     for (size_t i = 0; i < rows; ++i) {
         AggregateDataPtr aggregate_data = nullptr;
 
-        auto emplace_result = state.emplaceKey(method.data, i, _agg_arena_pool);
+        auto emplace_result = state.emplace_key(method.data, i, _agg_arena_pool);
 
         /// If a new key is inserted, initialize the states of the aggregate functions, and possibly something related to the key.
-        if (emplace_result.isInserted()) {
+        if (emplace_result.is_inserted()) {
             /// exception-safety - if you can not allocate memory or create states, then destructors will not be called.
-            emplace_result.setMapped(nullptr);
+            emplace_result.set_mapped(nullptr);
 
-            aggregate_data = _agg_arena_pool.alignedAlloc(_total_size_of_aggregate_states,
-                                                          _align_aggregate_states);
+            aggregate_data = _agg_arena_pool.aligned_alloc(_total_size_of_aggregate_states,
+                                                           _align_aggregate_states);
             _create_agg_status(aggregate_data);
 
-            emplace_result.setMapped(aggregate_data);
+            emplace_result.set_mapped(aggregate_data);
         } else
-            aggregate_data = emplace_result.getMapped();
+            aggregate_data = emplace_result.get_mapped();
 
         places[i] = aggregate_data;
         assert(places[i] != nullptr);
@@ -870,7 +870,7 @@ void AggregationNode::_close_with_serialized_key() {
 
     auto& data = _agg_data.serialized->data;
 
-    data.forEachValue([&](const auto& key, auto& mapped) { _destory_agg_status(mapped); });
+    data.for_each_value([&](const auto& key, auto& mapped) { _destory_agg_status(mapped); });
 }
 
 } // namespace doris::vectorized

@@ -47,7 +47,7 @@ namespace doris::vectorized {
   */
 class Arena : private boost::noncopyable {
 private:
-    /// Padding allows to use 'memcpySmallAllowReadWriteOverflow15' instead of 'memcpy'.
+    /// Padding allows to use 'memcpy_small_allow_read_write_overflow15' instead of 'memcpy'.
     static constexpr size_t pad_right = 15;
 
     /// Contiguous chunk of memory and pointer to free space inside it. Member of single-linked list.
@@ -94,17 +94,17 @@ private:
     Chunk* head;
     size_t size_in_bytes;
 
-    static size_t roundUpToPageSize(size_t s) { return (s + 4096 - 1) / 4096 * 4096; }
+    static size_t round_up_to_page_size(size_t s) { return (s + 4096 - 1) / 4096 * 4096; }
 
     /// If chunks size is less than 'linear_growth_threshold', then use exponential growth, otherwise - linear growth
     ///  (to not allocate too much excessive memory).
-    size_t nextSize(size_t min_next_size) const {
+    size_t next_size(size_t min_next_size) const {
         size_t size_after_grow = 0;
 
         if (head->size() < linear_growth_threshold) {
             size_after_grow = std::max(min_next_size, head->size() * growth_factor);
         } else {
-            // allocContinue() combined with linear growth results in quadratic
+            // alloc_continue() combined with linear growth results in quadratic
             // behavior: we append the data by small amounts, and when it
             // doesn't fit, we create a new chunk and copy all the previous data
             // into it. The number of times we do this is directly proportional
@@ -117,12 +117,12 @@ private:
         }
 
         assert(size_after_grow >= min_next_size);
-        return roundUpToPageSize(size_after_grow);
+        return round_up_to_page_size(size_after_grow);
     }
 
     /// Add next contiguous chunk of memory with size not less than specified.
-    void NO_INLINE addChunk(size_t min_size) {
-        head = new Chunk(nextSize(min_size + pad_right), head);
+    void NO_INLINE add_chunk(size_t min_size) {
+        head = new Chunk(next_size(min_size + pad_right), head);
         size_in_bytes += head->size();
     }
 
@@ -142,7 +142,7 @@ public:
 
     /// Get piece of memory, without alignment.
     char* alloc(size_t size) {
-        if (UNLIKELY(head->pos + size > head->end)) addChunk(size);
+        if (UNLIKELY(head->pos + size > head->end)) add_chunk(size);
 
         char* res = head->pos;
         head->pos += size;
@@ -151,7 +151,7 @@ public:
     }
 
     /// Get peice of memory with alignment
-    char* alignedAlloc(size_t size, size_t alignment) {
+    char* aligned_alloc(size_t size, size_t alignment) {
         do {
             void* head_pos = head->pos;
             size_t space = head->end - head->pos;
@@ -164,13 +164,13 @@ public:
                 return res;
             }
 
-            addChunk(size + alignment);
+            add_chunk(size + alignment);
         } while (true);
     }
 
     template <typename T>
     T* alloc() {
-        return reinterpret_cast<T*>(alignedAlloc(sizeof(T), alignof(T)));
+        return reinterpret_cast<T*>(aligned_alloc(sizeof(T), alignof(T)));
     }
 
     /** Rollback just performed allocation.
@@ -196,11 +196,11 @@ public:
       * NOTE This method is usable only for the last allocation made on this
       * Arena. For earlier allocations, see 'realloc' method.
       */
-    char* allocContinue(size_t additional_bytes, char const*& range_start,
-                        size_t start_alignment = 0) {
+    char* alloc_continue(size_t additional_bytes, char const*& range_start,
+                         size_t start_alignment = 0) {
         if (!range_start) {
             // Start a new memory range.
-            char* result = start_alignment ? alignedAlloc(additional_bytes, start_alignment)
+            char* result = start_alignment ? aligned_alloc(additional_bytes, start_alignment)
                                            : alloc(additional_bytes);
 
             range_start = result;
@@ -235,7 +235,7 @@ public:
         const char* old_range = range_start;
 
         char* new_range =
-                start_alignment ? alignedAlloc(new_bytes, start_alignment) : alloc(new_bytes);
+                start_alignment ? aligned_alloc(new_bytes, start_alignment) : alloc(new_bytes);
 
         memcpy(new_range, old_range, existing_bytes);
 
@@ -253,8 +253,8 @@ public:
         return res;
     }
 
-    char* alignedRealloc(const char* old_data, size_t old_size, size_t new_size, size_t alignment) {
-        char* res = alignedAlloc(new_size, alignment);
+    char* aligned_realloc(const char* old_data, size_t old_size, size_t new_size, size_t alignment) {
+        char* res = aligned_alloc(new_size, alignment);
         if (old_data) {
             memcpy(res, old_data, old_size);
             ASAN_POISON_MEMORY_REGION(old_data, old_size);
@@ -269,8 +269,8 @@ public:
         return res;
     }
 
-    const char* alignedInsert(const char* data, size_t size, size_t alignment) {
-        char* res = alignedAlloc(size, alignment);
+    const char* aligned_insert(const char* data, size_t size, size_t alignment) {
+        char* res = aligned_alloc(size, alignment);
         memcpy(res, data, size);
         return res;
     }
@@ -278,7 +278,7 @@ public:
     /// Size of chunks in bytes.
     size_t size() const { return size_in_bytes; }
 
-    size_t remainingSpaceInCurrentChunk() const { return head->remaining(); }
+    size_t remaining_space_in_current_chunk() const { return head->remaining(); }
 };
 
 using ArenaPtr = std::shared_ptr<Arena>;

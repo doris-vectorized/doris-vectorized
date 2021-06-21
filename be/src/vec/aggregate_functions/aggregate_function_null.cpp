@@ -34,16 +34,16 @@ class AggregateFunctionCombinatorNull final : public IAggregateFunctionCombinato
 public:
     String get_name() const override { return "Null"; }
 
-    bool isForInternalUsageOnly() const override { return true; }
+    bool is_for_internal_usage_only() const override { return true; }
 
-    DataTypes transformArguments(const DataTypes& arguments) const override {
+    DataTypes transform_arguments(const DataTypes& arguments) const override {
         size_t size = arguments.size();
         DataTypes res(size);
         for (size_t i = 0; i < size; ++i) res[i] = removeNullable(arguments[i]);
         return res;
     }
 
-    AggregateFunctionPtr transformAggregateFunction(const AggregateFunctionPtr& nested_function,
+    AggregateFunctionPtr transform_aggregate_function(const AggregateFunctionPtr& nested_function,
                                                     const DataTypes& arguments,
                                                     const Array& params) const override {
         bool has_nullable_types = false;
@@ -70,7 +70,7 @@ public:
 
         if (has_null_types) return std::make_shared<AggregateFunctionNothing>(arguments, params);
 
-        bool return_type_is_nullable = nested_function->getReturnType()->can_be_inside_nullable();
+        bool return_type_is_nullable = nested_function->get_return_type()->can_be_inside_nullable();
 
         if (arguments.size() == 1) {
             if (return_type_is_nullable)
@@ -95,9 +95,9 @@ void registerAggregateFunctionCombinatorNull(AggregateFunctionSimpleFactory& fac
     AggregateFunctionCreator creator = [&](const std::string& name, const DataTypes& types,
                                            const Array& params) {
         auto function_combinator = std::make_shared<AggregateFunctionCombinatorNull>();
-        auto transformArguments = function_combinator->transformArguments(types);
-        auto nested_function = factory.get(name, transformArguments, params);
-        return function_combinator->transformAggregateFunction(nested_function, types, params);
+        auto transform_arguments = function_combinator->transform_arguments(types);
+        auto nested_function = factory.get(name, transform_arguments, params);
+        return function_combinator->transform_aggregate_function(nested_function, types, params);
     };
     factory.registerNullableFunctionCombinator(creator);
 }
