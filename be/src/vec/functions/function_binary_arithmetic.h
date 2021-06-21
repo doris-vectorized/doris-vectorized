@@ -883,12 +883,14 @@ public:
                                     if constexpr (IsDataTypeDecimal<RightDataType> && is_division)
                                         scale_a = right.getScaleMultiplier();
 
-                                    OpImpl::constant_vector(col_left_const->template get_value<T0>(),
-                                                            col_right->get_data(), vec_res, scale_a,
-                                                            scale_b, check_decimal_overflow);
+                                    OpImpl::constant_vector(
+                                            col_left_const->template get_value<T0>(),
+                                            col_right->get_data(), vec_res, scale_a, scale_b,
+                                            check_decimal_overflow);
                                 } else
-                                    OpImpl::constant_vector(col_left_const->template get_value<T0>(),
-                                                            col_right->get_data(), vec_res);
+                                    OpImpl::constant_vector(
+                                            col_left_const->template get_value<T0>(),
+                                            col_right->get_data(), vec_res);
                             } else
                                 return false;
                         } else if (auto col_left = check_and_get_column<ColVecT0>(col_left_raw)) {
@@ -902,10 +904,11 @@ public:
                                         type.scaleFactorFor(right, is_multiply || is_division);
                                 if constexpr (IsDataTypeDecimal<RightDataType> && is_division)
                                     scale_a = right.getScaleMultiplier();
-                                if (auto col_right = check_and_get_column<ColVecT1>(col_right_raw)) {
-                                    OpImpl::vector_vector(col_left->get_data(), col_right->get_data(),
-                                                          vec_res, scale_a, scale_b,
-                                                          check_decimal_overflow);
+                                if (auto col_right =
+                                            check_and_get_column<ColVecT1>(col_right_raw)) {
+                                    OpImpl::vector_vector(col_left->get_data(),
+                                                          col_right->get_data(), vec_res, scale_a,
+                                                          scale_b, check_decimal_overflow);
                                 } else if (auto col_right_const = checkAndGetColumnConst<ColVecT1>(
                                                    col_right_raw)) {
                                     OpImpl::vector_constant(
@@ -916,8 +919,8 @@ public:
                                     return false;
                             } else {
                                 if (auto col_right = check_and_get_column<ColVecT1>(col_right_raw))
-                                    OpImpl::vector_vector(col_left->get_data(), col_right->get_data(),
-                                                          vec_res);
+                                    OpImpl::vector_vector(col_left->get_data(),
+                                                          col_right->get_data(), vec_res);
                                 else if (auto col_right_const =
                                                  checkAndGetColumnConst<ColVecT1>(col_right_raw))
                                     OpImpl::vector_constant(
@@ -934,9 +937,11 @@ public:
                     }
                     return false;
                 });
-        if (!valid)
-            throw Exception(get_name() + "'s arguments do not match the expected data types",
-                            ErrorCodes::LOGICAL_ERROR);
+        if (!valid) {
+            return Status::RuntimeError(
+                    fmt::format("{}'s arguments do not match the expected data types", get_name()));
+        }
+
         return Status::OK();
     }
 

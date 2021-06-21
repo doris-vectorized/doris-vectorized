@@ -47,14 +47,12 @@ public:
 
     void serialize(const IColumn& column, PColumn* pcolumn) const override;
     void deserialize(const PColumn& pcolumn, IColumn* column) const override;
-    Field getDefault() const override {
-        throw Exception("Method getDefault() is not implemented for data type " + get_name(),
-                        ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] Field getDefault() const override {
+        LOG(FATAL) << "Method getDefault() is not implemented for data type " << get_name();
     }
 
     void insertDefaultInto(IColumn&) const override {
-        throw Exception("Method insertDefaultInto() is not implemented for data type " + get_name(),
-                        ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "Method insertDefaultInto() is not implemented for data type " << get_name();
     }
 
     bool haveSubtypes() const override { return false; }
