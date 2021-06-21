@@ -33,7 +33,7 @@ size_t count_bytes_in_filter(const IColumn::Filter& filt);
 /// Returns vector with num_columns elements. vector[i] is the count of i values in selector.
 /// Selector must contain values from 0 to num_columns - 1. NOTE: this is not checked.
 std::vector<size_t> count_columns_size_in_selector(IColumn::ColumnIndex num_columns,
-                                               const IColumn::Selector& selector);
+                                                   const IColumn::Selector& selector);
 
 /// Returns true, if the memory contains only zeros.
 bool memory_is_zero(const void* data, size_t size);
@@ -42,8 +42,8 @@ bool memory_is_byte(const void* data, size_t size, uint8_t byte);
 /// The general implementation of `filter` function for ColumnArray and ColumnString.
 template <typename T>
 void filter_arrays_impl(const PaddedPODArray<T>& src_elems, const IColumn::Offsets& src_offsets,
-                      PaddedPODArray<T>& res_elems, IColumn::Offsets& res_offsets,
-                      const IColumn::Filter& filt, ssize_t result_size_hint);
+                        PaddedPODArray<T>& res_elems, IColumn::Offsets& res_offsets,
+                        const IColumn::Filter& filt, ssize_t result_size_hint);
 
 /// Same as above, but not fills res_offsets.
 template <typename T>
@@ -61,9 +61,9 @@ template <typename Column>
 ColumnPtr select_index_impl(const Column& column, const IColumn& indexes, size_t limit) {
     if (limit == 0) limit = indexes.size();
 
-    if (indexes.size() < limit)
-        throw Exception("Size of indexes is less than required.",
-                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+    if (indexes.size() < limit) {
+        LOG(FATAL) << "Size of indexes is less than required.";
+    }
 
     if (auto* data_uint8 = detail::get_indexes_data<UInt8>(indexes))
         return column.template index_impl<UInt8>(*data_uint8, limit);
@@ -73,10 +73,11 @@ ColumnPtr select_index_impl(const Column& column, const IColumn& indexes, size_t
         return column.template index_impl<UInt32>(*data_uint32, limit);
     else if (auto* data_uint64 = detail::get_indexes_data<UInt64>(indexes))
         return column.template index_impl<UInt64>(*data_uint64, limit);
-    else
-        throw Exception(
-                "Indexes column for IColumn::select must be ColumnUInt, got" + indexes.get_name(),
-                ErrorCodes::LOGICAL_ERROR);
+    else {
+        LOG(FATAL) << "Indexes column for IColumn::select must be ColumnUInt, got"
+                   << indexes.get_name();
+        return nullptr;
+    }
 }
 
 #define INSTANTIATE_INDEX_IMPL(Column)                                                  \

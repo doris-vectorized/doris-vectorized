@@ -114,10 +114,9 @@ inline DataTypePtr get_data_type(const PColumn& pcolumn) {
         return std::make_shared<DataTypeBitMap>();
     }
     default: {
-        throw Exception("Unknown data type: " + std::to_string(pcolumn.type()) +
-                                ", data type name: " + PColumn::DataType_Name(pcolumn.type()),
-                        ErrorCodes::UNKNOWN_TYPE);
-        break;
+        LOG(FATAL) << fmt::format("Unknown data type: {}, data type name: {}", pcolumn.type(),
+                                  PColumn::DataType_Name(pcolumn.type()));
+        return nullptr;
     }
     }
 }
@@ -197,10 +196,10 @@ void Block::initialize_index_by_name() {
 }
 
 void Block::insert(size_t position, const ColumnWithTypeAndName& elem) {
-    if (position > data.size())
-        throw Exception("Position out of bound in Block::insert(), max position = " +
-                                std::to_string(data.size()),
-                        ErrorCodes::POSITION_OUT_OF_BOUND);
+    if (position > data.size()) {
+        LOG(FATAL) << fmt::format("Position out of bound in Block::insert(), max position = {}",
+                                  data.size());
+    }
 
     for (auto& name_pos : index_by_name)
         if (name_pos.second >= position) ++name_pos.second;
@@ -210,10 +209,10 @@ void Block::insert(size_t position, const ColumnWithTypeAndName& elem) {
 }
 
 void Block::insert(size_t position, ColumnWithTypeAndName&& elem) {
-    if (position > data.size())
-        throw Exception("Position out of bound in Block::insert(), max position = " +
-                                std::to_string(data.size()),
-                        ErrorCodes::POSITION_OUT_OF_BOUND);
+    if (position > data.size()) {
+        LOG(FATAL) << fmt::format("Position out of bound in Block::insert(), max position = {}",
+                                  data.size());
+    }
 
     for (auto& name_pos : index_by_name)
         if (name_pos.second >= position) ++name_pos.second;
@@ -245,12 +244,14 @@ void Block::erase(const std::set<size_t>& positions) {
 }
 
 void Block::erase(size_t position) {
-    if (data.empty()) throw Exception("Block is empty", ErrorCodes::POSITION_OUT_OF_BOUND);
+    if (data.empty()) {
+        LOG(FATAL) << "Block is empty";
+    }
 
-    if (position >= data.size())
-        throw Exception("Position out of bound in Block::erase(), max position = " +
-                                std::to_string(data.size() - 1),
-                        ErrorCodes::POSITION_OUT_OF_BOUND);
+    if (position >= data.size()) {
+        LOG(FATAL) << fmt::format("Position out of bound in Block::erase(), max position = {}",
+                                  data.size() - 1);
+    }
 
     erase_impl(position);
 }
@@ -270,57 +271,59 @@ void Block::erase_impl(size_t position) {
 
 void Block::erase(const String& name) {
     auto index_it = index_by_name.find(name);
-    if (index_it == index_by_name.end())
-        throw Exception("No such name in Block::erase(): '" + name + "'",
-                        ErrorCodes::NOT_FOUND_COLUMN_IN_BLOCK);
+    if (index_it == index_by_name.end()) {
+        LOG(FATAL) << fmt::format("No such name in Block::erase(): '{}'", name);
+    }
 
     erase_impl(index_it->second);
 }
 
 ColumnWithTypeAndName& Block::safe_get_by_position(size_t position) {
-    if (data.empty()) throw Exception("Block is empty", ErrorCodes::POSITION_OUT_OF_BOUND);
+    if (data.empty()) {
+        LOG(FATAL) << "Block is empty";
+    }
 
-    if (position >= data.size())
-        throw Exception("Position " + std::to_string(position) +
-                        " is out of bound in Block::safe_get_by_position(), max position = " +
-                        std::to_string(data.size() - 1) +
-                        ", there are columns: " + dump_names(),
-                        ErrorCodes::POSITION_OUT_OF_BOUND);
+    if (position >= data.size()) {
+        LOG(FATAL) << fmt::format(
+                "Position {} is out of bound in Block::safe_get_by_position(), max position = {}, "
+                "there are columns: {}",
+                position, data.size() - 1, dump_names());
+    }
 
     return data[position];
 }
 
 const ColumnWithTypeAndName& Block::safe_get_by_position(size_t position) const {
-    if (data.empty()) throw Exception("Block is empty", ErrorCodes::POSITION_OUT_OF_BOUND);
+    if (data.empty()) {
+        LOG(FATAL) << "Block is empty";
+    }
 
-    if (position >= data.size())
-        throw Exception(
-                "Position " + std::to_string(position) +
-                        " is out of bound in Block::safe_get_by_position(), max position = " +
-                        std::to_string(data.size() - 1)
-                        // + ", there are columns: " + dump_names(), ErrorCodes::POSITION_OUT_OF_BOUND);
-                        + ", there are columns: ",
-                ErrorCodes::POSITION_OUT_OF_BOUND);
+    if (position >= data.size()) {
+        LOG(FATAL) << fmt::format(
+                "Position {} is out of bound in Block::safe_get_by_position(), max position = {}, "
+                "there are columns: {}",
+                position, data.size() - 1, dump_names());
+    }
 
     return data[position];
 }
 
 ColumnWithTypeAndName& Block::get_by_name(const std::string& name) {
     auto it = index_by_name.find(name);
-    if (index_by_name.end() == it)
-        throw Exception(
-                "Not found column " + name + " in block. There are only columns: " + dump_names(),
-                ErrorCodes::NOT_FOUND_COLUMN_IN_BLOCK);
+    if (index_by_name.end() == it) {
+        LOG(FATAL) << fmt::format("Not found column {} in block. There are only columns: {}", name,
+                                  dump_names());
+    }
 
     return data[it->second];
 }
 
 const ColumnWithTypeAndName& Block::get_by_name(const std::string& name) const {
     auto it = index_by_name.find(name);
-    if (index_by_name.end() == it)
-        throw Exception(
-                "Not found column " + name + " in block. There are only columns: " + dump_names(),
-                ErrorCodes::NOT_FOUND_COLUMN_IN_BLOCK);
+    if (index_by_name.end() == it) {
+        LOG(FATAL) << fmt::format("Not found column {} in block. There are only columns: {}", name,
+                                  dump_names());
+    }
 
     return data[it->second];
 }
@@ -332,7 +335,8 @@ bool Block::has(const std::string& name) const {
 size_t Block::get_position_by_name(const std::string& name) const {
     auto it = index_by_name.find(name);
     if (index_by_name.end() == it) {
-        LOG(FATAL) << fmt::format("Not found column {} in block. There are only columns: {}", name, dump_names());
+        LOG(FATAL) << fmt::format("Not found column {} in block. There are only columns: {}", name,
+                                  dump_names());
     }
 
     return it->second;
@@ -343,20 +347,19 @@ void Block::check_number_of_rows(bool allow_null_columns) const {
     for (const auto& elem : data) {
         if (!elem.column && allow_null_columns) continue;
 
-        if (!elem.column)
-            throw Exception(
-                    "Column " + elem.name + " in block is nullptr, in method check_number_of_rows.",
-                    ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+        if (!elem.column) {
+            LOG(FATAL) << fmt::format(
+                    "Column {} in block is nullptr, in method check_number_of_rows.", elem.name);
+        }
 
         ssize_t size = elem.column->size();
 
         if (rows == -1)
             rows = size;
-        else if (rows != size)
-            throw Exception("Sizes of columns doesn't match: " + data.front().name + ": " +
-                                    std::to_string(rows) + ", " + elem.name + ": " +
-                                    std::to_string(size),
-                            ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+        else if (rows != size) {
+            LOG(FATAL) << fmt::format("Sizes of columns doesn't match: {}:{},{}:{}",
+                                      data.front().name, rows, elem.name, size);
+        }
     }
 }
 
@@ -522,13 +525,12 @@ Block Block::clone_with_columns(const Columns& columns) const {
 
     size_t num_columns = data.size();
 
-    if (num_columns != columns.size())
-        throw Exception("Cannot clone block with columns because block has " +
-                                std::to_string(num_columns) +
-                                " columns, "
-                                "but " +
-                                std::to_string(columns.size()) + " columns given.",
-                        ErrorCodes::LOGICAL_ERROR);
+    if (num_columns != columns.size()) {
+        LOG(FATAL) << fmt::format(
+                "Cannot clone block with columns because block has {} columns, but {} columns "
+                "given.",
+                num_columns, columns.size());
+    }
 
     for (size_t i = 0; i < num_columns; ++i) res.insert({columns[i], data[i].type, data[i].name});
 
@@ -730,7 +732,8 @@ void filter_block_internal(Block* block, const IColumn::Filter& filter, int colu
     } else {
         if (count != block->rows()) {
             for (size_t i = 0; i < column_to_keep; ++i) {
-                block->get_by_position(i).column = block->get_by_position(i).column->filter(filter, 0);
+                block->get_by_position(i).column =
+                        block->get_by_position(i).column->filter(filter, 0);
             }
         }
         for (size_t i = column_to_keep; i < block->columns(); ++i) {

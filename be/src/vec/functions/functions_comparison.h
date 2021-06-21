@@ -119,9 +119,9 @@ struct StringComparisonImpl {
 
         for (size_t i = 0; i < size; ++i) {
             c[i] = Op::apply(memcmp_small_allow_overflow15(a_data.data() + prev_a_offset,
-                                                        a_offsets[i] - prev_a_offset - 1,
-                                                        b_data.data() + prev_b_offset,
-                                                        b_offsets[i] - prev_b_offset - 1),
+                                                           a_offsets[i] - prev_a_offset - 1,
+                                                           b_data.data() + prev_b_offset,
+                                                           b_offsets[i] - prev_b_offset - 1),
                              0);
 
             prev_a_offset = a_offsets[i];
@@ -139,8 +139,8 @@ struct StringComparisonImpl {
 
         for (size_t i = 0; i < size; ++i) {
             c[i] = Op::apply(memcmp_small_allow_overflow15(a_data.data() + prev_a_offset,
-                                                        a_offsets[i] - prev_a_offset - 1,
-                                                        b_data.data() + i * b_n, b_n),
+                                                           a_offsets[i] - prev_a_offset - 1,
+                                                           b_data.data() + i * b_n, b_n),
                              0);
 
             prev_a_offset = a_offsets[i];
@@ -157,8 +157,8 @@ struct StringComparisonImpl {
 
         for (size_t i = 0; i < size; ++i) {
             c[i] = Op::apply(memcmp_small_allow_overflow15(a_data.data() + prev_a_offset,
-                                                        a_offsets[i] - prev_a_offset - 1,
-                                                        b_data.data(), b_size),
+                                                           a_offsets[i] - prev_a_offset - 1,
+                                                           b_data.data(), b_size),
                              0);
 
             prev_a_offset = a_offsets[i];
@@ -206,13 +206,14 @@ struct StringComparisonImpl {
             size_t size = a_data.size();
             for (size_t i = 0, j = 0; i < size; i += a_n, ++j)
                 c[j] = Op::apply(
-                        memcmp_small_allow_overflow15(a_data.data() + i, b_data.data() + i, a_n), 0);
+                        memcmp_small_allow_overflow15(a_data.data() + i, b_data.data() + i, a_n),
+                        0);
         } else {
             size_t size = a_data.size() / a_n;
 
             for (size_t i = 0; i < size; ++i)
                 c[i] = Op::apply(memcmp_small_allow_overflow15(a_data.data() + i * a_n, a_n,
-                                                            b_data.data() + i * b_n, b_n),
+                                                               b_data.data() + i * b_n, b_n),
                                  0);
         }
     }
@@ -227,14 +228,14 @@ struct StringComparisonImpl {
         } else if (a_n == b_size) {
             size_t size = a_data.size();
             for (size_t i = 0, j = 0; i < size; i += a_n, ++j)
-                c[j] = Op::apply(memcmp_small_allow_overflow15(a_data.data() + i, b_data.data(), a_n),
-                                 0);
+                c[j] = Op::apply(
+                        memcmp_small_allow_overflow15(a_data.data() + i, b_data.data(), a_n), 0);
         } else {
             size_t size = a_data.size();
             for (size_t i = 0, j = 0; i < size; i += a_n, ++j)
-                c[j] = Op::apply(
-                        memcmp_small_allow_overflow15(a_data.data() + i, a_n, b_data.data(), b_size),
-                        0);
+                c[j] = Op::apply(memcmp_small_allow_overflow15(a_data.data() + i, a_n,
+                                                               b_data.data(), b_size),
+                                 0);
         }
     }
 
@@ -258,7 +259,8 @@ struct StringComparisonImpl {
     static void constant_constant(const ColumnString::Chars& a_data, ColumnString::Offset a_size,
                                   const ColumnString::Chars& b_data, ColumnString::Offset b_size,
                                   UInt8& c) {
-        c = Op::apply(memcmp_small_allow_overflow15(a_data.data(), a_size, b_data.data(), b_size), 0);
+        c = Op::apply(memcmp_small_allow_overflow15(a_data.data(), a_size, b_data.data(), b_size),
+                      0);
     }
 };
 
@@ -278,8 +280,9 @@ struct StringEqualsImpl {
             auto a_size = a_offsets[i] - prev_a_offset - 1;
             auto b_size = b_offsets[i] - prev_b_offset - 1;
 
-            c[i] = positive == memequal_small_allow_overflow15(a_data.data() + prev_a_offset, a_size,
-                                                            b_data.data() + prev_b_offset, b_size);
+            c[i] = positive ==
+                   memequal_small_allow_overflow15(a_data.data() + prev_a_offset, a_size,
+                                                   b_data.data() + prev_b_offset, b_size);
 
             prev_a_offset = a_offsets[i];
             prev_b_offset = b_offsets[i];
@@ -297,8 +300,9 @@ struct StringEqualsImpl {
         for (size_t i = 0; i < size; ++i) {
             auto a_size = a_offsets[i] - prev_a_offset - 1;
 
-            c[i] = positive == memequal_small_allow_overflow15(a_data.data() + prev_a_offset, a_size,
-                                                            b_data.data() + b_n * i, b_n);
+            c[i] = positive == memequal_small_allow_overflow15(a_data.data() + prev_a_offset,
+                                                               a_size, b_data.data() + b_n * i,
+                                                               b_n);
 
             prev_a_offset = a_offsets[i];
         }
@@ -315,8 +319,8 @@ struct StringEqualsImpl {
         for (size_t i = 0; i < size; ++i) {
             auto a_size = a_offsets[i] - prev_a_offset - 1;
 
-            c[i] = positive == memequal_small_allow_overflow15(a_data.data() + prev_a_offset, a_size,
-                                                            b_data.data(), b_size);
+            c[i] = positive == memequal_small_allow_overflow15(a_data.data() + prev_a_offset,
+                                                               a_size, b_data.data(), b_size);
 
             prev_a_offset = a_offsets[i];
         }
@@ -354,7 +358,7 @@ struct StringEqualsImpl {
             size_t size = a_data.size() / a_n;
             for (size_t i = 0; i < size; ++i)
                 c[i] = positive == memequal_small_allow_overflow15(a_data.data() + i * a_n, a_n,
-                                                                b_data.data() + i * b_n, b_n);
+                                                                   b_data.data() + i * b_n, b_n);
         }
     }
 
@@ -369,7 +373,7 @@ struct StringEqualsImpl {
             size_t size = a_data.size() / a_n;
             for (size_t i = 0; i < size; ++i)
                 c[i] = positive == memequal_small_allow_overflow15(a_data.data() + i * a_n, a_n,
-                                                                b_data.data(), b_size);
+                                                                   b_data.data(), b_size);
         }
     }
 
@@ -399,7 +403,8 @@ struct StringEqualsImpl {
     static void constant_constant(const ColumnString::Chars& a_data, ColumnString::Offset a_size,
                                   const ColumnString::Chars& b_data, ColumnString::Offset b_size,
                                   UInt8& c) {
-        c = positive == memequal_small_allow_overflow15(a_data.data(), a_size, b_data.data(), b_size);
+        c = positive ==
+            memequal_small_allow_overflow15(a_data.data(), a_size, b_data.data(), b_size);
     }
 };
 
@@ -537,7 +542,7 @@ private:
     bool executeNumRightType(Block& block, size_t result, const ColumnVector<T0>* col_left,
                              const IColumn* col_right_untyped) {
         if (const ColumnVector<T1>* col_right =
-                check_and_get_column<ColumnVector<T1>>(col_right_untyped)) {
+                    check_and_get_column<ColumnVector<T1>>(col_right_untyped)) {
             auto col_res = ColumnUInt8::create();
 
             ColumnUInt8::Container& vec_res = col_res->get_data();
@@ -567,7 +572,7 @@ private:
     bool executeNumConstRightType(Block& block, size_t result, const ColumnConst* col_left,
                                   const IColumn* col_right_untyped) {
         if (const ColumnVector<T1>* col_right =
-                check_and_get_column<ColumnVector<T1>>(col_right_untyped)) {
+                    check_and_get_column<ColumnVector<T1>>(col_right_untyped)) {
             auto col_res = ColumnUInt8::create();
 
             ColumnUInt8::Container& vec_res = col_res->get_data();
@@ -596,7 +601,7 @@ private:
     bool executeNumLeftType(Block& block, size_t result, const IColumn* col_left_untyped,
                             const IColumn* col_right_untyped) {
         if (const ColumnVector<T0>* col_left =
-                check_and_get_column<ColumnVector<T0>>(col_left_untyped)) {
+                    check_and_get_column<ColumnVector<T0>>(col_left_untyped)) {
             if (executeNumRightType<T0, UInt8>(block, result, col_left, col_right_untyped) ||
                 executeNumRightType<T0, UInt16>(block, result, col_left, col_right_untyped) ||
                 executeNumRightType<T0, UInt32>(block, result, col_left, col_right_untyped) ||
@@ -610,10 +615,11 @@ private:
                 executeNumRightType<T0, Float32>(block, result, col_left, col_right_untyped) ||
                 executeNumRightType<T0, Float64>(block, result, col_left, col_right_untyped))
                 return true;
-            else
-                throw Exception("Illegal column " + col_right_untyped->get_name() +
-                                " of second argument of function " + get_name(),
-                                ErrorCodes::ILLEGAL_COLUMN);
+            else {
+                LOG(FATAL) << "Illegal column " << col_right_untyped->get_name()
+                           << " of second argument of function " << get_name();
+            }
+
         } else if (auto col_left_const =
                            checkAndGetColumnConst<ColumnVector<T0>>(col_left_untyped)) {
             if (executeNumConstRightType<T0, UInt8>(block, result, col_left_const,
@@ -641,10 +647,10 @@ private:
                 executeNumConstRightType<T0, Float64>(block, result, col_left_const,
                                                       col_right_untyped))
                 return true;
-            else
-                throw Exception("Illegal column " + col_right_untyped->get_name() +
-                                " of second argument of function " + get_name(),
-                                ErrorCodes::ILLEGAL_COLUMN);
+            else {
+                LOG(FATAL) << "Illegal column " << col_right_untyped->get_name()
+                           << " of second argument of function " << get_name();
+            }
         }
 
         return false;
@@ -708,7 +714,8 @@ private:
             //                c0_const_size = c0_const_fixed_string->getN();
             //            }
             else {
-                CHECK(false) << "Logical error: ColumnConst contains not String nor FixedString column";
+                LOG(FATAL)
+                        << "Logical error: ColumnConst contains not String nor FixedString column";
             }
         }
 
@@ -727,7 +734,8 @@ private:
             //                c1_const_size = c1_const_fixed_string->getN();
             //            }
             else {
-                CHECK(false) << "Logical error: ColumnConst contains not String nor FixedString column";
+                LOG(FATAL)
+                        << "Logical error: ColumnConst contains not String nor FixedString column";
             }
         }
 
@@ -784,7 +792,8 @@ private:
             //                    c1_fixed_string->getChars(), c1_fixed_string->getN(),
             //                    c_res->getData());
             else {
-                CHECK(false) << fmt::format("Illegal columns {} and {} of arguments of function {}", c0->get_name(), c1->get_name(), get_name());
+                LOG(FATAL) << fmt::format("Illegal columns {} and {} of arguments of function {}",
+                                          c0->get_name(), c1->get_name(), get_name());
             }
 
             block.get_by_position(result).column = std::move(c_res);
@@ -819,7 +828,7 @@ private:
     }
 
     Status executeGeneric(Block& block, size_t result, const ColumnWithTypeAndName& c0,
-                        const ColumnWithTypeAndName& c1) {
+                          const ColumnWithTypeAndName& c1) {
         DataTypePtr common_type = getLeastSupertype({c0.type, c1.type});
         // TODO: Support full castColumn
         //        ColumnPtr c0_converted = castColumn(c0, common_type, context);
@@ -979,7 +988,7 @@ public:
         //        }
         else {
             return executeGeneric(block, result, col_with_type_and_name_left,
-                           col_with_type_and_name_right);
+                                  col_with_type_and_name_right);
         }
         return Status::OK();
     }

@@ -48,14 +48,16 @@ public:
     size_t allocated_bytes() const override { return 0; }
     int compare_at(size_t, size_t, const IColumn&, int) const override { return 0; }
 
-    Field operator[](size_t) const override {
-        throw Exception("Cannot get value from " + get_name(), ErrorCodes::NOT_IMPLEMENTED);
+    [[noreturn]] Field operator[](size_t) const override {
+        LOG(FATAL) << "Cannot get value from " << get_name();
     }
+
     void get(size_t, Field&) const override {
-        throw Exception("Cannot get value from " + get_name(), ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "Cannot get value from " << get_name();
     }
+
     void insert(const Field&) override {
-        throw Exception("Cannot insert element into " + get_name(), ErrorCodes::NOT_IMPLEMENTED);
+        LOG(FATAL) << "Cannot insert element into " << get_name();
     }
 
     StringRef get_data_at(size_t) const override { return {}; }
@@ -85,9 +87,9 @@ public:
     }
 
     ColumnPtr permute(const Permutation& perm, size_t limit) const override {
-        if (s != perm.size())
-            throw Exception("Size of permutation doesn't match size of column.",
-                            ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+        if (s != perm.size()) {
+            LOG(FATAL) << "Size of permutation doesn't match size of column.";
+        }
 
         return clone_dummy(limit ? std::min(s, limit) : s);
     }
@@ -100,25 +102,24 @@ public:
     //     return clone_dummy(limit ? limit : s);
     // }
 
-    void get_permutation(bool /*reverse*/, size_t /*limit*/, int /*nan_direction_hint*/, Permutation & res) const override
-    {
+    void get_permutation(bool /*reverse*/, size_t /*limit*/, int /*nan_direction_hint*/,
+                         Permutation& res) const override {
         res.resize(s);
-        for (size_t i = 0; i < s; ++i)
-            res[i] = i;
+        for (size_t i = 0; i < s; ++i) res[i] = i;
     }
 
     ColumnPtr replicate(const Offsets& offsets) const override {
-        if (s != offsets.size())
-            throw Exception("Size of offsets doesn't match size of column.",
-                            ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+        if (s != offsets.size()) {
+            LOG(FATAL) << "Size of offsets doesn't match size of column.";
+        }
 
         return clone_dummy(offsets.back());
     }
 
     MutableColumns scatter(ColumnIndex num_columns, const Selector& selector) const override {
-        if (s != selector.size())
-            throw Exception("Size of selector doesn't match size of column.",
-                            ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+        if (s != selector.size()) {
+            LOG(FATAL) << "Size of selector doesn't match size of column.";
+        }
 
         std::vector<size_t> counts(num_columns);
         for (auto idx : selector) ++counts[idx];

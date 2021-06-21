@@ -77,10 +77,10 @@ public:
 
     DecimalComparison(Block& block, size_t result, const ColumnWithTypeAndName& col_left,
                       const ColumnWithTypeAndName& col_right) {
-        if (!apply(block, result, col_left, col_right))
-            throw Exception("Wrong decimal comparison with " + col_left.type->get_name() + " and " +
-                                    col_right.type->get_name(),
-                            ErrorCodes::LOGICAL_ERROR);
+        if (!apply(block, result, col_left, col_right)) {
+            LOG(FATAL) << fmt::format("Wrong decimal comparison with {} and {}",
+                                      col_left.type->get_name(), col_right.type->get_name());
+        }
     }
 
     static bool apply(Block& block, size_t result [[maybe_unused]],
@@ -99,8 +99,9 @@ public:
 
     static bool compare(A a, B b, UInt32 scale_a, UInt32 scale_b) {
         static const UInt32 max_scale = maxDecimalPrecision<Decimal128>();
-        if (scale_a > max_scale || scale_b > max_scale)
-            throw Exception("Bad scale of decimal field", ErrorCodes::DECIMAL_OVERFLOW);
+        if (scale_a > max_scale || scale_b > max_scale) {
+            LOG(FATAL) << "Bad scale of decimal field";
+        }
 
         Shift shift;
         if (scale_a < scale_b)
@@ -195,28 +196,28 @@ private:
                 A a = c0_const->template get_value<A>();
                 if (const ColVecB* c1_vec = check_and_get_column<ColVecB>(c1.get()))
                     constant_vector<scale_left, scale_right>(a, c1_vec->get_data(), vec_res, scale);
-                else
-                    throw Exception("Wrong column in Decimal comparison",
-                                    ErrorCodes::LOGICAL_ERROR);
+                else {
+                    LOG(FATAL) << "Wrong column in Decimal comparison";
+                }
             } else if (c1_is_const) {
                 const ColumnConst* c1_const = checkAndGetColumnConst<ColVecB>(c1.get());
                 B b = c1_const->template get_value<B>();
                 if (const ColVecA* c0_vec = check_and_get_column<ColVecA>(c0.get()))
                     vector_constant<scale_left, scale_right>(c0_vec->get_data(), b, vec_res, scale);
-                else
-                    throw Exception("Wrong column in Decimal comparison",
-                                    ErrorCodes::LOGICAL_ERROR);
+                else {
+                    LOG(FATAL) << "Wrong column in Decimal comparison";
+                }
             } else {
                 if (const ColVecA* c0_vec = check_and_get_column<ColVecA>(c0.get())) {
                     if (const ColVecB* c1_vec = check_and_get_column<ColVecB>(c1.get()))
-                        vector_vector<scale_left, scale_right>(c0_vec->get_data(), c1_vec->get_data(),
-                                                               vec_res, scale);
-                    else
-                        throw Exception("Wrong column in Decimal comparison",
-                                        ErrorCodes::LOGICAL_ERROR);
-                } else
-                    throw Exception("Wrong column in Decimal comparison",
-                                    ErrorCodes::LOGICAL_ERROR);
+                        vector_vector<scale_left, scale_right>(c0_vec->get_data(),
+                                                               c1_vec->get_data(), vec_res, scale);
+                    else {
+                        LOG(FATAL) << "Wrong column in Decimal comparison";
+                    }
+                } else {
+                    LOG(FATAL) << "Wrong column in Decimal comparison";
+                }
             }
         }
 
@@ -239,7 +240,9 @@ private:
             if constexpr (scale_left) overflow |= common::mul_overflow(x, scale, x);
             if constexpr (scale_right) overflow |= common::mul_overflow(y, scale, y);
 
-            if (overflow) throw Exception("Can't compare", ErrorCodes::DECIMAL_OVERFLOW);
+            if (overflow) {
+                LOG(FATAL) << "Can't compare";
+            }
         } else {
             if constexpr (scale_left) x *= scale;
             if constexpr (scale_right) y *= scale;

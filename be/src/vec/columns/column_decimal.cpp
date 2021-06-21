@@ -49,7 +49,7 @@ int ColumnDecimal<T>::compare_at(size_t n, size_t m, const IColumn& rhs_, int) c
 
 template <typename T>
 StringRef ColumnDecimal<T>::serialize_value_into_arena(size_t n, Arena& arena,
-                                                    char const*& begin) const {
+                                                       char const*& begin) const {
     auto pos = arena.alloc_continue(sizeof(T), begin);
     memcpy(pos, &data[n], sizeof(T));
     return StringRef(pos, sizeof(T));
@@ -63,9 +63,9 @@ const char* ColumnDecimal<T>::deserialize_and_insert_from_arena(const char* pos)
 
 template <typename T>
 UInt64 ColumnDecimal<T>::get64(size_t n) const {
-    if constexpr (sizeof(T) > sizeof(UInt64))
-        throw Exception(String("Method get64 is not supported for ") + get_family_name(),
-                        ErrorCodes::NOT_IMPLEMENTED);
+    if constexpr (sizeof(T) > sizeof(UInt64)) {
+        LOG(FATAL) << "Method get64 is not supported for " << get_family_name();
+    }
     return static_cast<typename T::NativeType>(data[n]);
 }
 
@@ -76,7 +76,7 @@ void ColumnDecimal<T>::update_hash_with_value(size_t n, SipHash& hash) const {
 
 template <typename T>
 void ColumnDecimal<T>::get_permutation(bool reverse, size_t limit, int,
-                                      IColumn::Permutation& res) const {
+                                       IColumn::Permutation& res) const {
 #if 1 /// TODO: perf test
     if (data.size() <= std::numeric_limits<UInt32>::max()) {
         PaddedPODArray<UInt32> tmp_res;
@@ -94,9 +94,9 @@ void ColumnDecimal<T>::get_permutation(bool reverse, size_t limit, int,
 template <typename T>
 ColumnPtr ColumnDecimal<T>::permute(const IColumn::Permutation& perm, size_t limit) const {
     size_t size = limit ? std::min(data.size(), limit) : data.size();
-    if (perm.size() < size)
-        throw Exception("Size of permutation is less than required.",
-                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+    if (perm.size() < size) {
+        LOG(FATAL) << "Size of permutation is less than required.";
+    }
 
     auto res = this->create(size, scale);
     typename Self::Container& res_data = res->get_data();
@@ -137,13 +137,12 @@ template <typename T>
 void ColumnDecimal<T>::insert_range_from(const IColumn& src, size_t start, size_t length) {
     const ColumnDecimal& src_vec = assert_cast<const ColumnDecimal&>(src);
 
-    if (start + length > src_vec.data.size())
-        throw Exception("Parameters start = " + std::to_string(start) +
-                                ", length = " + std::to_string(length) +
-                                " are out of bound in ColumnDecimal<T>::insert_range_from method "
-                                "(data.size() = " +
-                                std::to_string(src_vec.data.size()) + ").",
-                        ErrorCodes::PARAMETER_OUT_OF_BOUND);
+    if (start + length > src_vec.data.size()) {
+        LOG(FATAL) << fmt::format(
+                "Parameters start = {}, length = {} are out of bound in "
+                "ColumnDecimal<T>::insert_range_from method (data.size() = {})",
+                start, length, src_vec.data.size());
+    }
 
     size_t old_size = data.size();
     data.resize(old_size + length);
@@ -153,9 +152,9 @@ void ColumnDecimal<T>::insert_range_from(const IColumn& src, size_t start, size_
 template <typename T>
 ColumnPtr ColumnDecimal<T>::filter(const IColumn::Filter& filt, ssize_t result_size_hint) const {
     size_t size = data.size();
-    if (size != filt.size())
-        throw Exception("Size of filter doesn't match size of column.",
-                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+    if (size != filt.size()) {
+        LOG(FATAL) << "Size of filter doesn't match size of column.";
+    }
 
     auto res = this->create(0, scale);
     Container& res_data = res->get_data();
@@ -185,9 +184,9 @@ ColumnPtr ColumnDecimal<T>::filter(const IColumn::Filter& filt, ssize_t result_s
 template <typename T>
 ColumnPtr ColumnDecimal<T>::replicate(const IColumn::Offsets& offsets) const {
     size_t size = data.size();
-    if (size != offsets.size())
-        throw Exception("Size of offsets doesn't match size of column.",
-                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+    if (size != offsets.size()) {
+        LOG(FATAL) << "Size of offsets doesn't match size of column.";
+    }
 
     auto res = this->create(0, scale);
     if (0 == size) return res;
