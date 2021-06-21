@@ -17,6 +17,8 @@
 
 #include "vec/columns/column_vector.h"
 
+#include <vec/common/radix_sort.h>
+
 #include <cmath>
 #include <cstring>
 
@@ -25,7 +27,6 @@
 #include "vec/common/nan_utils.h"
 #include "vec/common/sip_hash.h"
 #include "vec/common/unaligned.h"
-#include <vec/common/radix_sort.h>
 //#include <vec/Common/assert_cast.h>
 //#include <IO/WriteBuffer.h>
 //#include <IO/WriteHelpers.h>
@@ -48,7 +49,7 @@ extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
 
 template <typename T>
 StringRef ColumnVector<T>::serialize_value_into_arena(size_t n, Arena& arena,
-                                                   char const*& begin) const {
+                                                      char const*& begin) const {
     auto pos = arena.allocContinue(sizeof(T), begin);
     unalignedStore<T>(pos, data[n]);
     return StringRef(pos, sizeof(T));
@@ -87,66 +88,54 @@ struct ColumnVector<T>::greater {
     }
 };
 
-namespace
-{
-    template <typename T>
-    struct ValueWithIndex
-    {
-        T value;
-        UInt32 index;
-    };
-
-    template <typename T>
-    struct RadixSortTraits : RadixSortNumTraits<T>
-    {
-        using Element = ValueWithIndex<T>;
-        static T & extractKey(Element & elem) { return elem.value; }
-    };
-}
+namespace {
+template <typename T>
+struct ValueWithIndex {
+    T value;
+    UInt32 index;
+};
 
 template <typename T>
-void ColumnVector<T>::get_permutation(bool reverse, size_t limit, int nan_direction_hint, IColumn::Permutation & res) const
-{
+struct RadixSortTraits : RadixSortNumTraits<T> {
+    using Element = ValueWithIndex<T>;
+    static T& extractKey(Element& elem) { return elem.value; }
+};
+} // namespace
+
+template <typename T>
+void ColumnVector<T>::get_permutation(bool reverse, size_t limit, int nan_direction_hint,
+                                      IColumn::Permutation& res) const {
     size_t s = data.size();
     res.resize(s);
 
-    if (s == 0)
-        return;
+    if (s == 0) return;
 
-    if (limit >= s)
-        limit = 0;
+    if (limit >= s) limit = 0;
 
-    if (limit)
-    {
-        for (size_t i = 0; i < s; ++i)
-            res[i] = i;
+    if (limit) {
+        for (size_t i = 0; i < s; ++i) res[i] = i;
 
         if (reverse)
-            std::partial_sort(res.begin(), res.begin() + limit, res.end(), greater(*this, nan_direction_hint));
+            std::partial_sort(res.begin(), res.begin() + limit, res.end(),
+                              greater(*this, nan_direction_hint));
         else
-            std::partial_sort(res.begin(), res.begin() + limit, res.end(), less(*this, nan_direction_hint));
-    }
-    else
-    {
+            std::partial_sort(res.begin(), res.begin() + limit, res.end(),
+                              less(*this, nan_direction_hint));
+    } else {
         /// A case for radix sort
-        if constexpr (std::is_arithmetic_v<T> && !std::is_same_v<T, UInt128>)
-        {
+        if constexpr (std::is_arithmetic_v<T> && !std::is_same_v<T, UInt128>) {
             /// Thresholds on size. Lower threshold is arbitrary. Upper threshold is chosen by the type for histogram counters.
-            if (s >= 256 && s <= std::numeric_limits<UInt32>::max())
-            {
+            if (s >= 256 && s <= std::numeric_limits<UInt32>::max()) {
                 PaddedPODArray<ValueWithIndex<T>> pairs(s);
-                for (UInt32 i = 0; i < s; ++i)
-                    pairs[i] = {data[i], i};
+                for (UInt32 i = 0; i < s; ++i) pairs[i] = {data[i], i};
 
                 RadixSort<RadixSortTraits<T>>::executeLSD(pairs.data(), s);
 
                 /// Radix sort treats all NaNs to be greater than all numbers.
                 /// If the user needs the opposite, we must move them accordingly.
                 size_t nans_to_move = 0;
-                if (std::is_floating_point_v<T> && nan_direction_hint < 0)
-                {
-                    for (ssize_t i = s - 1; i >= 0; --i)
-                    {
+                if (std::is_floating_point_v<T> && nan_direction_hint < 0) {
+                    for (ssize_t i = s - 1; i >= 0; --i) {
                         if (isNaN(pairs[i].value))
                             ++nans_to_move;
                         else
@@ -154,34 +143,23 @@ void ColumnVector<T>::get_permutation(bool reverse, size_t limit, int nan_direct
                     }
                 }
 
-                if (reverse)
-                {
-                    if (nans_to_move)
-                    {
+                if (reverse) {
+                    if (nans_to_move) {
                         for (size_t i = 0; i < s - nans_to_move; ++i)
                             res[i] = pairs[s - nans_to_move - 1 - i].index;
                         for (size_t i = s - nans_to_move; i < s; ++i)
                             res[i] = pairs[s - 1 - (i - (s - nans_to_move))].index;
+                    } else {
+                        for (size_t i = 0; i < s; ++i) res[s - 1 - i] = pairs[i].index;
                     }
-                    else
-                    {
-                        for (size_t i = 0; i < s; ++i)
-                            res[s - 1 - i] = pairs[i].index;
-                    }
-                }
-                else
-                {
-                    if (nans_to_move)
-                    {
+                } else {
+                    if (nans_to_move) {
                         for (size_t i = 0; i < nans_to_move; ++i)
                             res[i] = pairs[i + s - nans_to_move].index;
                         for (size_t i = nans_to_move; i < s; ++i)
                             res[i] = pairs[i - nans_to_move].index;
-                    }
-                    else
-                    {
-                        for (size_t i = 0; i < s; ++i)
-                            res[i] = pairs[i].index;
+                    } else {
+                        for (size_t i = 0; i < s; ++i) res[i] = pairs[i].index;
                     }
                 }
 
@@ -190,8 +168,7 @@ void ColumnVector<T>::get_permutation(bool reverse, size_t limit, int nan_direct
         }
 
         /// Default sorting algorithm.
-        for (size_t i = 0; i < s; ++i)
-            res[i] = i;
+        for (size_t i = 0; i < s; ++i) res[i] = i;
 
         if (reverse)
             pdqsort(res.begin(), res.end(), greater(*this, nan_direction_hint));
@@ -238,13 +215,12 @@ template <typename T>
 void ColumnVector<T>::insert_range_from(const IColumn& src, size_t start, size_t length) {
     const ColumnVector& src_vec = dynamic_cast<const ColumnVector&>(src);
 
-    if (start + length > src_vec.data.size())
-        throw Exception("Parameters start = " + std::to_string(start) +
-                                ", length = " + std::to_string(length) +
-                                " are out of bound in ColumnVector<T>::insert_range_from method"
-                                " (data.size() = " +
-                                std::to_string(src_vec.data.size()) + ").",
-                        ErrorCodes::PARAMETER_OUT_OF_BOUND);
+    if (start + length > src_vec.data.size()) {
+        LOG(FATAL) << fmt::format(
+                "Parameters start = {}, length = {}, are out of bound in "
+                "ColumnVector<T>::insert_range_from method (data.size() = {}).",
+                start, length, src_vec.data.size());
+    }
 
     size_t old_size = data.size();
     data.resize(old_size + length);
