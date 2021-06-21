@@ -53,7 +53,7 @@ public:
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
-        const ColumnPtr source_col = block.getByPosition(arguments[0]).column;
+        const ColumnPtr source_col = block.get_by_position(arguments[0]).column;
 
         const auto* nullable_column = check_and_get_column<ColumnNullable>(source_col.get());
         const auto* sources = check_and_get_column<ColumnVector<typename Transform::FromType>>(
@@ -66,7 +66,7 @@ public:
             auto& vec_null_map_to = col_null_map_to->get_data();
 
             if (arguments.size() == 2) {
-                const IColumn& source_col1 = *block.getByPosition(arguments[1]).column;
+                const IColumn& source_col1 = *block.get_by_position(arguments[1]).column;
                 if (const auto* delta_const_column =
                             typeid_cast<const ColumnConst*>(&source_col1)) {
                     TransformerToStringTwoArgument<Transform>::vector_constant(
@@ -75,7 +75,7 @@ public:
                 } else {
                     return Status::InternalError(
                             "Illegal column " +
-                                    block.getByPosition(arguments[1]).column->get_name() + " is not const" +
+                                    block.get_by_position(arguments[1]).column->get_name() + " is not const" +
                             name);
                 }
             } else {
@@ -90,11 +90,11 @@ public:
                     vec_null_map_to[i] |= origin_null_map[i];
                 }
             }
-            block.getByPosition(result).column =
+            block.get_by_position(result).column =
                     ColumnNullable::create(std::move(col_res), std::move(col_null_map_to));
         } else {
             return Status::InternalError("Illegal column " +
-                                                 block.getByPosition(arguments[0]).column->get_name() +
+                                                 block.get_by_position(arguments[0]).column->get_name() +
                                          " of first argument of function " + name);
         }
         return Status::OK();

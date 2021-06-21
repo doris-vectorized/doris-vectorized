@@ -91,7 +91,7 @@ public:
             Shift shift = getScales<A, B>(col_left.type, col_right.type);
 
             c_res = applyWithScale(col_left.column, col_right.column, shift);
-            if (c_res) block.getByPosition(result).column = std::move(c_res);
+            if (c_res) block.get_by_position(result).column = std::move(c_res);
             return true;
         }
         return false;

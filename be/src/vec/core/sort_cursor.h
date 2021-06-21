@@ -1,3 +1,20 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
 #include "vec/common/typeid_cast.h"
@@ -65,7 +82,7 @@ struct SortCursorImpl
     /// Set the cursor to the beginning of the new block.
     void reset(const Block & block)
     {
-        reset(block.getColumns(), block);
+        reset(block.get_columns(), block);
     }
 
     /// Set the cursor to the beginning of the new block.
@@ -83,7 +100,7 @@ struct SortCursorImpl
         {
             auto & column_desc = desc[j];
             size_t column_number = !column_desc.column_name.empty()
-                                   ? block.getPositionByName(column_desc.column_name)
+                                   ? block.get_position_by_name(column_desc.column_name)
                                    : column_desc.column_number;
             sort_columns.push_back(columns[column_number].get());
 
@@ -143,7 +160,7 @@ struct ReceiveQueueSortCursorImpl : public SortCursorImpl {
         MutableColumns columns(num_columns);
         for (size_t i = 0; i < num_columns; ++i)
             columns[i] = all_columns[i]->clone_empty();
-        return _block_ptr->cloneWithColumns(std::move(columns));
+        return _block_ptr->clone_with_columns(std::move(columns));
     }
 
     const std::vector<VExprContext*>& _ordering_expr;
@@ -162,7 +179,7 @@ struct SortCursor
     const SortCursorImpl * operator-> () const { return impl; }
 
     /// The specified row of this cursor is greater than the specified row of another cursor.
-    bool greaterAt(const SortCursor & rhs, size_t lhs_pos, size_t rhs_pos) const
+    bool greater_at(const SortCursor & rhs, size_t lhs_pos, size_t rhs_pos) const
     {
         for (size_t i = 0; i < impl->sort_columns_size; ++i)
         {
@@ -179,18 +196,18 @@ struct SortCursor
     }
 
     /// Checks that all rows in the current block of this cursor are less than or equal to all the rows of the current block of another cursor.
-    bool totallyLessOrEquals(const SortCursor & rhs) const
+    bool totally_less_or_equals(const SortCursor & rhs) const
     {
         if (impl->rows == 0 || rhs.impl->rows == 0)
             return false;
 
         /// The last row of this cursor is no larger than the first row of the another cursor.
-        return !greaterAt(rhs, impl->rows - 1, 0);
+        return !greater_at(rhs, impl->rows - 1, 0);
     }
 
     bool greater(const SortCursor & rhs) const
     {
-        return greaterAt(rhs, impl->pos, rhs.impl->pos);
+        return greater_at(rhs, impl->pos, rhs.impl->pos);
     }
 
     /// Inverted so that the priority queue elements are removed in ascending order.
@@ -210,7 +227,7 @@ struct SortCursor
 //    SortCursorImpl * operator-> () { return impl; }
 //    const SortCursorImpl * operator-> () const { return impl; }
 //
-//    bool greaterAt(const SortCursorWithCollation & rhs, size_t lhs_pos, size_t rhs_pos) const
+//    bool greater_at(const SortCursorWithCollation & rhs, size_t lhs_pos, size_t rhs_pos) const
 //    {
 //        for (size_t i = 0; i < impl->sort_columns_size; ++i)
 //        {
@@ -234,18 +251,18 @@ struct SortCursor
 //        return impl->order > rhs.impl->order;
 //    }
 //
-//    bool totallyLessOrEquals(const SortCursorWithCollation & rhs) const
+//    bool totally_less_or_equals(const SortCursorWithCollation & rhs) const
 //    {
 //        if (impl->rows == 0 || rhs.impl->rows == 0)
 //            return false;
 //
 //        /// The last row of this cursor is no larger than the first row of the another cursor.
-//        return !greaterAt(rhs, impl->rows - 1, 0);
+//        return !greater_at(rhs, impl->rows - 1, 0);
 //    }
 //
 //    bool greater(const SortCursorWithCollation & rhs) const
 //    {
-//        return greaterAt(rhs, impl->pos, rhs.impl->pos);
+//        return greater_at(rhs, impl->pos, rhs.impl->pos);
 //    }
 //
 //    bool operator< (const SortCursorWithCollation & rhs) const

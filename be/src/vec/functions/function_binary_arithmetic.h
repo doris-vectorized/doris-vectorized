@@ -541,14 +541,14 @@ class FunctionBinaryArithmetic : public IFunction {
     //    void executeAggregateMultiply(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) const
     //    {
     //        ColumnNumbers new_arguments = arguments;
-    //        if (WhichDataType(block.getByPosition(new_arguments[1]).type).isAggregateFunction())
+    //        if (WhichDataType(block.get_by_position(new_arguments[1]).type).isAggregateFunction())
     //            std::swap(new_arguments[0], new_arguments[1]);
     //
-    //        if (!is_column_const(*block.getByPosition(new_arguments[1]).column))
-    //            throw Exception{"Illegal column " + block.getByPosition(new_arguments[1]).column->get_name()
+    //        if (!is_column_const(*block.get_by_position(new_arguments[1]).column))
+    //            throw Exception{"Illegal column " + block.get_by_position(new_arguments[1]).column->get_name()
     //                + " of argument of aggregation state multiply. Should be integer constant", ErrorCodes::ILLEGAL_COLUMN};
     //
-    //        const IColumn & agg_state_column = *block.getByPosition(new_arguments[0]).column;
+    //        const IColumn & agg_state_column = *block.get_by_position(new_arguments[0]).column;
     //        bool agg_state_is_const = is_column_const(agg_state_column);
     //        const ColumnAggregateFunction & column = typeid_cast<const ColumnAggregateFunction &>(
     //            agg_state_is_const ? assert_cast<const ColumnConst &>(agg_state_column).get_data_column() : agg_state_column);
@@ -573,7 +573,7 @@ class FunctionBinaryArithmetic : public IFunction {
     //        auto & vec_to = column_to->get_data();
     //        auto & vec_from = column_from->get_data();
     //
-    //        UInt64 m = typeid_cast<const ColumnConst *>(block.getByPosition(new_arguments[1]).column.get())->get_value<UInt64>();
+    //        UInt64 m = typeid_cast<const ColumnConst *>(block.get_by_position(new_arguments[1]).column.get())->get_value<UInt64>();
     //
     //        // Since we merge the function states by ourselves, we have to have an
     //        // Arena for this. Pass it to the resulting column so that the arena
@@ -600,16 +600,16 @@ class FunctionBinaryArithmetic : public IFunction {
     //        }
     //
     //        if (agg_state_is_const)
-    //            block.getByPosition(result).column = ColumnConst::create(std::move(column_to), input_rows_count);
+    //            block.get_by_position(result).column = ColumnConst::create(std::move(column_to), input_rows_count);
     //        else
-    //            block.getByPosition(result).column = std::move(column_to);
+    //            block.get_by_position(result).column = std::move(column_to);
     //    }
 
     /// Merge two aggregation states together.
     //    void executeAggregateAddition(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) const
     //    {
-    //        const IColumn & lhs_column = *block.getByPosition(arguments[0]).column;
-    //        const IColumn & rhs_column = *block.getByPosition(arguments[1]).column;
+    //        const IColumn & lhs_column = *block.get_by_position(arguments[0]).column;
+    //        const IColumn & rhs_column = *block.get_by_position(arguments[1]).column;
     //
     //        bool lhs_is_const = is_column_const(lhs_column);
     //        bool rhs_is_const = is_column_const(rhs_column);
@@ -633,9 +633,9 @@ class FunctionBinaryArithmetic : public IFunction {
     //        }
     //
     //        if (lhs_is_const && rhs_is_const)
-    //            block.getByPosition(result).column = ColumnConst::create(std::move(column_to), input_rows_count);
+    //            block.get_by_position(result).column = ColumnConst::create(std::move(column_to), input_rows_count);
     //        else
-    //            block.getByPosition(result).column = std::move(column_to);
+    //            block.get_by_position(result).column = std::move(column_to);
     //    }
 
     //    void executeDateTimeIntervalPlusMinus(Block & block, const ColumnNumbers & arguments,
@@ -644,19 +644,19 @@ class FunctionBinaryArithmetic : public IFunction {
     //        ColumnNumbers new_arguments = arguments;
     //
     //        /// Interval argument must be second.
-    //        if (WhichDataType(block.getByPosition(arguments[0]).type).isInterval())
+    //        if (WhichDataType(block.get_by_position(arguments[0]).type).isInterval())
     //            std::swap(new_arguments[0], new_arguments[1]);
     //
     //        /// Change interval argument type to its representation
     //        Block new_block = block;
-    //        new_block.getByPosition(new_arguments[1]).type = std::make_shared<DataTypeNumber<DataTypeInterval::FieldType>>();
+    //        new_block.get_by_position(new_arguments[1]).type = std::make_shared<DataTypeNumber<DataTypeInterval::FieldType>>();
     //
     //        ColumnsWithTypeAndName new_arguments_with_type_and_name =
-    //                {new_block.getByPosition(new_arguments[0]), new_block.getByPosition(new_arguments[1])};
+    //                {new_block.get_by_position(new_arguments[0]), new_block.get_by_position(new_arguments[1])};
     //        auto function = function_builder->build(new_arguments_with_type_and_name);
     //
     //        function->execute(new_block, new_arguments, result, input_rows_count);
-    //        block.getByPosition(result).column = new_block.getByPosition(result).column;
+    //        block.get_by_position(result).column = new_block.get_by_position(result).column;
     //    }
 
 public:
@@ -763,28 +763,28 @@ public:
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
         //        /// Special case when multiply aggregate function state
-        //        if (isAggregateMultiply(block.getByPosition(arguments[0]).type, block.getByPosition(arguments[1]).type))
+        //        if (isAggregateMultiply(block.get_by_position(arguments[0]).type, block.get_by_position(arguments[1]).type))
         //        {
         //            executeAggregateMultiply(block, arguments, result, input_rows_count);
         //            return;
         //        }
         //
         //        /// Special case - addition of two aggregate functions states
-        //        if (isAggregateAddition(block.getByPosition(arguments[0]).type, block.getByPosition(arguments[1]).type))
+        //        if (isAggregateAddition(block.get_by_position(arguments[0]).type, block.get_by_position(arguments[1]).type))
         //        {
         //            executeAggregateAddition(block, arguments, result, input_rows_count);
         //            return;
         //        }
 
         //        /// Special case when the function is plus or minus, one of arguments is Date/DateTime and another is Interval.
-        //        if (auto function_builder = getFunctionForIntervalArithmetic(block.getByPosition(arguments[0]).type, block.getByPosition(arguments[1]).type))
+        //        if (auto function_builder = getFunctionForIntervalArithmetic(block.get_by_position(arguments[0]).type, block.get_by_position(arguments[1]).type))
         //        {
         //            executeDateTimeIntervalPlusMinus(block, arguments, result, input_rows_count, function_builder);
         //            return;
         //        }
 
-        auto* left_generic = block.getByPosition(arguments[0]).type.get();
-        auto* right_generic = block.getByPosition(arguments[1]).type.get();
+        auto* left_generic = block.get_by_position(arguments[0]).type.get();
+        auto* right_generic = block.get_by_position(arguments[1]).type.get();
         bool valid = castBothTypes(
                 left_generic, right_generic, [&](const auto& left, const auto& right) {
                     using LeftDataType = std::decay_t<decltype(left)>;
@@ -822,8 +822,8 @@ public:
                                 DecimalBinaryOperation<T0, T1, Op, ResultType>,
                                 BinaryOperationImpl<T0, T1, Op<T0, T1>, ResultType>>;
 
-                        auto col_left_raw = block.getByPosition(arguments[0]).column.get();
-                        auto col_right_raw = block.getByPosition(arguments[1]).column.get();
+                        auto col_left_raw = block.get_by_position(arguments[0]).column.get();
+                        auto col_right_raw = block.get_by_position(arguments[1]).column.get();
                         if (auto col_left = checkAndGetColumnConst<ColVecT0>(col_left_raw)) {
                             if (auto col_right = checkAndGetColumnConst<ColVecT1>(col_right_raw)) {
                                 /// the only case with a non-vector result
@@ -841,7 +841,7 @@ public:
                                             col_left->template get_value<T0>(),
                                             col_right->template get_value<T1>(), scale_a, scale_b,
                                             check_decimal_overflow);
-                                    block.getByPosition(result).column =
+                                    block.get_by_position(result).column =
                                             ResultDataType(type.getPrecision(), type.get_scale())
                                                     .createColumnConst(
                                                             col_left->size(),
@@ -851,7 +851,7 @@ public:
                                     auto res = OpImpl::constant_constant(
                                             col_left->template get_value<T0>(),
                                             col_right->template get_value<T1>());
-                                    block.getByPosition(result).column =
+                                    block.get_by_position(result).column =
                                             ResultDataType().createColumnConst(col_left->size(),
                                                                                toField(res));
                                 }
@@ -929,7 +929,7 @@ public:
                         } else
                             return false;
 
-                        block.getByPosition(result).column = std::move(col_res);
+                        block.get_by_position(result).column = std::move(col_res);
                         return true;
                     }
                     return false;

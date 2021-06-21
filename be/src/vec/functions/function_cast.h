@@ -88,10 +88,11 @@ struct ConvertImpl {
     using ToFieldType = typename ToDataType::FieldType;
 
     template <typename Additions = void*>
-    static Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
-                          size_t /*input_rows_count*/,
-                          Additions additions [[maybe_unused]] = Additions()) {
-        const ColumnWithTypeAndName& named_from = block.getByPosition(arguments[0]);
+    static Status  execute(Block& block, const ColumnNumbers& arguments,
+                                                size_t result, size_t /*input_rows_count*/,
+                                                Additions additions
+                                                [[maybe_unused]] = Additions()) {
+        const ColumnWithTypeAndName& named_from = block.get_by_position(arguments[0]);
 
         using ColVecFrom =
                 std::conditional_t<IsDecimalNumber<FromFieldType>, ColumnDecimal<FromFieldType>,
@@ -148,7 +149,7 @@ struct ConvertImpl {
                     vec_to[i] = static_cast<ToFieldType>(vec_from[i]);
             }
 
-            block.getByPosition(result).column = std::move(col_to);
+            block.get_by_position(result).column = std::move(col_to);
         } else
             throw Exception("Illegal column " + named_from.column->get_name() +
                             " of first argument of function " + Name::name,
@@ -163,7 +164,7 @@ template <typename T, typename Name>
 struct ConvertImpl<std::enable_if_t<!T::is_parametric, T>, T, Name> {
     static Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
                           size_t /*input_rows_count*/) {
-        block.getByPosition(result).column = block.getByPosition(arguments[0]).column;
+        block.get_by_position(result).column = block.get_by_position(arguments[0]).column;
         return Status::OK();
     }
 };
@@ -175,9 +176,9 @@ struct ConvertImplToTimeType {
     using FromFieldType = typename FromDataType::FieldType;
     using ToFieldType = typename ToDataType::FieldType;
 
-    static Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
-                          size_t /*input_rows_count*/) {
-        const ColumnWithTypeAndName& named_from = block.getByPosition(arguments[0]);
+    static Status execute(Block& block, const ColumnNumbers& arguments,
+                                                size_t result, size_t /*input_rows_count*/) {
+        const ColumnWithTypeAndName& named_from = block.get_by_position(arguments[0]);
 
         using ColVecFrom =
                 std::conditional_t<IsDecimalNumber<FromFieldType>, ColumnDecimal<FromFieldType>,
@@ -206,7 +207,7 @@ struct ConvertImplToTimeType {
                     date_value.cast_to_date();
                 }
             }
-            block.getByPosition(result).column =
+            block.get_by_position(result).column =
                     ColumnNullable::create(std::move(col_to), std::move(col_null_map_to));
         } else {
             return Status::RuntimeError(
@@ -221,7 +222,7 @@ struct ConvertImplToTimeType {
 // Generic conversion of any type to String.
 struct ConvertImplGenericToString {
     static Status execute(Block& block, const ColumnNumbers& arguments, size_t result) {
-        const auto& col_with_type_and_name = block.getByPosition(arguments[0]);
+        const auto& col_with_type_and_name = block.get_by_position(arguments[0]);
         const IDataType& type = *col_with_type_and_name.type;
         const IColumn& col_from = *col_with_type_and_name.column;
 
@@ -241,7 +242,7 @@ struct ConvertImplGenericToString {
             offsets_to[i] = write_buffer.count();
         }
 
-        block.getByPosition(result).column = std::move(col_to);
+        block.get_by_position(result).column = std::move(col_to);
         return Status::OK();
     }
 };
@@ -258,7 +259,7 @@ struct ConvertImpl<DataTypeString, ToDataType, Name> {
 };
 
 struct NameToString {
-    static constexpr auto name = "toString";
+    static constexpr auto name = "to_string";
 };
 struct NameToDecimal32 {
     static constexpr auto name = "toDecimal32";
@@ -372,7 +373,7 @@ struct ToNumberMonotonicity {
 
         /// If converting from Float, for monotonicity, arguments must fit in range of result type.
         if (WhichDataType(type).isFloat()) {
-            if (left.isNull() || right.isNull()) return {};
+            if (left.is_null() || right.is_null()) return {};
 
             Float64 left_float = left.get<Float64>();
             Float64 right_float = right.get<Float64>();
@@ -394,10 +395,10 @@ struct ToNumberMonotonicity {
         const size_t size_of_from = type.getSizeOfValueInMemory();
         const size_t size_of_to = sizeof(T);
 
-        const bool left_in_first_half = left.isNull() ? from_is_unsigned : (left.get<Int64>() >= 0);
+        const bool left_in_first_half = left.is_null() ? from_is_unsigned : (left.get<Int64>() >= 0);
 
         const bool right_in_first_half =
-                right.isNull() ? !from_is_unsigned : (right.get<Int64>() >= 0);
+                right.is_null() ? !from_is_unsigned : (right.get<Int64>() >= 0);
 
         /// Size of type is the same.
         if (size_of_from == size_of_to) {
@@ -423,7 +424,7 @@ struct ToNumberMonotonicity {
         /// Size of type is shrinked.
         if (size_of_from > size_of_to) {
             /// Function cannot be monotonic on unbounded ranges.
-            if (left.isNull() || right.isNull()) return {};
+            if (left.is_null() || right.is_null()) return {};
 
             if (from_is_unsigned == to_is_unsigned) {
                 /// all bits other than that fits, must be same.
@@ -449,7 +450,7 @@ struct ToNumberMonotonicity {
     }
 };
 
-/** The monotonicity for the `toString` function is mainly determined for test purposes.
+/** The monotonicity for the `to_string` function is mainly determined for test purposes.
   * It is doubtful that anyone is looking to optimize queries with conditions `std::to_string(CounterID) = 34`.
   */
 struct ToStringMonotonicity {
@@ -460,15 +461,15 @@ struct ToStringMonotonicity {
         IFunction::Monotonicity positive(true, true);
         IFunction::Monotonicity not_monotonic;
 
-        /// `toString` function is monotonous if the argument is Date or DateTime, or non-negative numbers with the same number of symbols.
+        /// `to_string` function is monotonous if the argument is Date or DateTime, or non-negative numbers with the same number of symbols.
 
         // if (checkAndGetDataType<DataTypeDate>(&type)
         //     || typeid_cast<const DataTypeDateTime *>(&type))
         //     return positive;
 
-        if (left.isNull() || right.isNull()) return {};
+        if (left.is_null() || right.is_null()) return {};
 
-        if (left.getType() == Field::Types::UInt64 && right.getType() == Field::Types::UInt64) {
+        if (left.get_type() == Field::Types::UInt64 && right.get_type() == Field::Types::UInt64) {
             return (left.get<Int64>() == 0 && right.get<Int64>() == 0) ||
                                    (floor(log10(left.get<UInt64>())) ==
                                     floor(log10(right.get<UInt64>())))
@@ -476,7 +477,7 @@ struct ToStringMonotonicity {
                            : not_monotonic;
         }
 
-        if (left.getType() == Field::Types::Int64 && right.getType() == Field::Types::Int64) {
+        if (left.get_type() == Field::Types::Int64 && right.get_type() == Field::Types::Int64) {
             return (left.get<Int64>() == 0 && right.get<Int64>() == 0) ||
                                    (left.get<Int64>() > 0 && right.get<Int64>() > 0 &&
                                     floor(log10(left.get<Int64>())) ==
@@ -537,7 +538,7 @@ private:
                     fmt::format("Function {} expects at least 1 arguments", get_name()));
         }
 
-        const IDataType* from_type = block.getByPosition(arguments[0]).type.get();
+        const IDataType* from_type = block.get_by_position(arguments[0]).type.get();
 
         Status ret_status;
         /// Generic conversion of any type to String.
@@ -557,7 +558,7 @@ private:
                         return true;
                     }
 
-                    const ColumnWithTypeAndName& scale_column = block.getByPosition(arguments[1]);
+                    const ColumnWithTypeAndName& scale_column = block.get_by_position(arguments[1]);
                     UInt32 scale = extractToDecimalScale(scale_column);
 
                     ret_status = ConvertImpl<LeftDataType, RightDataType, Name>::execute(
@@ -568,11 +569,11 @@ private:
                 return true;
             };
 
-            bool done = callOnIndexAndDataType<ToDataType>(from_type->getTypeId(), call);
+            bool done = call_on_index_and_data_type<ToDataType>(from_type->getTypeId(), call);
             if (!done) {
                 ret_status = Status::RuntimeError(
                         fmt::format("Illegal type {} of argument of function {}",
-                                    block.getByPosition(arguments[0]).type->get_name(), get_name()));
+                                    block.get_by_position(arguments[0]).type->get_name(), get_name()));
             }
             return ret_status;
         }
@@ -750,7 +751,7 @@ struct ConvertThroughParsing {
         //                utc_time_zone = &DateLUT::instance("UTC");
         //        }
 
-        const IColumn* col_from = block.getByPosition(arguments[0]).column.get();
+        const IColumn* col_from = block.get_by_position(arguments[0]).column.get();
         const ColumnString* col_from_string = check_and_get_column<ColumnString>(col_from);
         //        const ColumnFixedString * col_from_fixed_string = check_and_get_column<ColumnFixedString>(col_from);
 
@@ -819,7 +820,7 @@ struct ConvertThroughParsing {
             //                else
             //                {
             //                    if constexpr (IsDataTypeDecimal<ToDataType>)
-            //                        ToDataType::readText(vec_to[i], read_buffer, ToDataType::maxPrecision(), vec_to.get_scale());
+            //                        ToDataType::read_text(vec_to[i], read_buffer, ToDataType::maxPrecision(), vec_to.get_scale());
             //                    else
             //                        parseImpl<ToDataType>(vec_to[i], read_buffer, local_time_zone);
             //                }
@@ -856,7 +857,7 @@ struct ConvertThroughParsing {
             current_offset = next_offset;
         }
 
-        block.getByPosition(result).column =
+        block.get_by_position(result).column =
                 ColumnNullable::create(std::move(col_to), std::move(col_null_map_to));
         return Status::OK();
     }
@@ -900,7 +901,7 @@ public:
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
-        const IDataType* from_type = block.getByPosition(arguments[0]).type.get();
+        const IDataType* from_type = block.get_by_position(arguments[0]).type.get();
 
         bool ok = true;
         //        if constexpr (to_decimal)
@@ -908,7 +909,7 @@ public:
         //            if (arguments.size() != 2)
         //                throw Exception{"Function " + get_name() + " expects 2 arguments for Decimal.", ErrorCodes::TOO_FEW_ARGUMENTS_FOR_FUNCTION};
         //
-        //            UInt32 scale = extractToDecimalScale(block.getByPosition(arguments[1]));
+        //            UInt32 scale = extractToDecimalScale(block.get_by_position(arguments[1]));
         //
         //            if (checkAndGetDataType<DataTypeString>(from_type))
         //            {
@@ -943,7 +944,7 @@ public:
                     "Illegal type {} of argument of function {} . Only String or FixedString "
                     "argument is accepted for try-conversion function. For other arguments, use "
                     "function without 'orZero' or 'orNull'.",
-                    block.getByPosition(arguments[0]).type->get_name(), get_name()));
+                    block.get_by_position(arguments[0]).type->get_name(), get_name()));
         }
 
         return Status::OK();
@@ -974,7 +975,7 @@ public:
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
         Status ret_status = Status::OK();
-        const IDataType* from_type = block.getByPosition(arguments[0]).type.get();
+        const IDataType* from_type = block.get_by_position(arguments[0]).type.get();
         auto call = [&](const auto& types) -> bool {
             using Types = std::decay_t<decltype(types)>;
             using LeftDataType = typename Types::LeftType;
@@ -987,8 +988,8 @@ public:
 
         bool done = callOnIndexAndNumberDataType<ToDataType>(from_type->getTypeId(), call);
         if (!done) {
-            throw Exception("Illegal type " + block.getByPosition(arguments[0]).type->get_name() +
-                                    " of argument of function " + get_name(),
+            throw Exception("Illegal type " + block.get_by_position(arguments[0]).type->get_name() +
+                            " of argument of function " + get_name(),
                             ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
         }
 
@@ -1107,7 +1108,7 @@ private:
         return [type_index, precision, scale](Block& block, const ColumnNumbers& arguments,
                                               const size_t result, size_t input_rows_count) {
             auto res =
-                    callOnIndexAndDataType<ToDataType>(type_index, [&](const auto& types) -> bool {
+                    call_on_index_and_data_type<ToDataType>(type_index, [&](const auto &types) -> bool {
                         using Types = std::decay_t<decltype(types)>;
                         using LeftDataType = typename Types::LeftType;
                         using RightDataType = typename Types::RightType;
@@ -1117,7 +1118,7 @@ private:
                         return true;
                     });
 
-            /// Additionally check if callOnIndexAndDataType wasn't called at all.
+            /// Additionally check if call_on_index_and_data_type wasn't called at all.
             if (!res) {
                 auto to = DataTypeDecimal<FieldType>(precision, scale);
                 throw Exception{"Conversion from " + std::string(getTypeName(type_index)) + " to " +
@@ -1131,7 +1132,7 @@ private:
     WrapperType createIdentityWrapper(const DataTypePtr&) const {
         return [](Block& block, const ColumnNumbers& arguments, const size_t result,
                   size_t /*input_rows_count*/) {
-            block.getByPosition(result).column = block.getByPosition(arguments.front()).column;
+            block.get_by_position(result).column = block.get_by_position(arguments.front()).column;
             return Status::OK();
         };
     }
@@ -1141,7 +1142,7 @@ private:
         return [res](Block& block, const ColumnNumbers&, const size_t result,
                      size_t input_rows_count) {
             /// Column of Nothing type is trivially convertible to any other column
-            block.getByPosition(result).column =
+            block.get_by_position(result).column =
                     res->clone_resized(input_rows_count)->convert_to_full_column_if_const();
             return Status::OK();
         };
@@ -1159,7 +1160,7 @@ private:
 
             return [](Block& block, const ColumnNumbers&, const size_t result,
                       size_t input_rows_count) {
-                auto& res = block.getByPosition(result);
+                auto& res = block.get_by_position(result);
                 res.column = res.type->createColumnConstWithDefaultValue(input_rows_count)
                         ->convert_to_full_column_if_const();
                 return Status::OK();
@@ -1187,7 +1188,7 @@ private:
             return [wrapper, source_is_nullable](Block& block, const ColumnNumbers& arguments,
                                                  const size_t result, size_t input_rows_count) {
                 /// Create a temporary block on which to perform the operation.
-                auto& res = block.getByPosition(result);
+                auto& res = block.get_by_position(result);
                 const auto& ret_type = res.type;
                 const auto& nullable_type = static_cast<const DataTypeNullable&>(*ret_type);
                 const auto& nested_type = nullable_type.getNestedType();
@@ -1204,18 +1205,18 @@ private:
                 /// Perform the requested conversion.
                 wrapper(tmp_block, arguments, tmp_res_index, input_rows_count);
 
-                const auto& tmp_res = tmp_block.getByPosition(tmp_res_index);
+                const auto& tmp_res = tmp_block.get_by_position(tmp_res_index);
 
                 /// May happen in fuzzy tests. For debug purpose.
                 if (!tmp_res.column) {
                     return Status::RuntimeError(fmt::format(
                             "Couldn't convert {} to {} in prepareRemoveNullable wrapper.",
-                            block.getByPosition(arguments[0]).type->get_name(),
+                            block.get_by_position(arguments[0]).type->get_name(),
                             nested_type->get_name()));
                 }
 
                 res.column = wrapInNullable(tmp_res.column,
-                                            Block({block.getByPosition(arguments[0]), tmp_res}),
+                                            Block({block.get_by_position(arguments[0]), tmp_res}),
                                             {0}, 1, input_rows_count);
                 return Status::OK();
             };
@@ -1230,7 +1231,7 @@ private:
                 /// Check can be skipped in case if LowCardinality dictionary is transformed.
                 /// In that case, correctness will be checked beforehand.
                 if (!skip_not_null_check) {
-                    const auto& col = block.getByPosition(arguments[0]).column;
+                    const auto& col = block.get_by_position(arguments[0]).column;
                     const auto& nullable_col = assert_cast<const ColumnNullable&>(*col);
                     const auto& null_map = nullable_col.get_null_map_data();
 
@@ -1241,7 +1242,7 @@ private:
                 }
 
                 wrapper(tmp_block, arguments, result, input_rows_count);
-                block.getByPosition(result).column = tmp_block.getByPosition(result).column;
+                block.get_by_position(result).column = tmp_block.get_by_position(result).column;
                 return Status::OK();
             };
         } else
@@ -1298,7 +1299,7 @@ private:
             return false;
         };
 
-        if (callOnIndexAndDataType<void>(to_type->getTypeId(), make_default_wrapper)) return ret;
+        if (call_on_index_and_data_type<void>(to_type->getTypeId(), make_default_wrapper)) return ret;
 
         switch (to_type->getTypeId()) {
         case TypeIndex::String:

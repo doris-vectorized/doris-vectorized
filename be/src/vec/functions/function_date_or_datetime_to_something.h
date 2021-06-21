@@ -96,7 +96,7 @@ public:
 
     Status executeImpl(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) override
     {
-        const IDataType * from_type = block.getByPosition(arguments[0]).type.get();
+        const IDataType * from_type = block.get_by_position(arguments[0]).type.get();
         WhichDataType which(from_type);
 
 //        if (which.isDate())
@@ -104,7 +104,7 @@ public:
 //        else if (which.isDateTime())
         DateTimeTransformImpl<Int128, typename ToDataType::FieldType, Transform>::execute(block, arguments, result, input_rows_count);
 //        else
-//            throw Exception("Illegal type " + block.getByPosition(arguments[0]).type->get_name() + " of argument of function " + get_name(),
+//            throw Exception("Illegal type " + block.get_by_position(arguments[0]).type->get_name() + " of argument of function " + get_name(),
 //                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
         return Status::OK();
     }
@@ -129,7 +129,7 @@ public:
 //        /// This method is called only if the function has one argument. Therefore, we do not care about the non-local time zone.
 //        const DateLUTImpl & date_lut = DateLUT::instance();
 //
-//        if (left.isNull() || right.isNull())
+//        if (left.isNull() || right.is_null())
 //            return is_not_monotonic;
 //
 //        /// The function is monotonous on the [left, right] segment, if the factor transformation returns the same values for them.

@@ -32,7 +32,6 @@
 #include "vec/columns/columns_number.h"
 #include "vec/common/assert_cast.h"
 #include "vec/common/exception.h"
-#include "vec/common/field_visitors.h"
 #include "vec/common/typeid_cast.h"
 #include "vec/data_types/data_type_bitmap.h"
 #include "vec/data_types/data_type_date.h"
@@ -169,11 +168,11 @@ PColumn::DataType get_pdata_type(DataTypePtr data_type) {
 }
 
 Block::Block(std::initializer_list<ColumnWithTypeAndName> il) : data{il} {
-    initializeIndexByName();
+    initialize_index_by_name();
 }
 
 Block::Block(const ColumnsWithTypeAndName& data_) : data{data_} {
-    initializeIndexByName();
+    initialize_index_by_name();
 }
 
 Block::Block(const PBlock& pblock) {
@@ -190,10 +189,10 @@ Block::Block(const PBlock& pblock) {
         type->deserialize(pcolumn, data_column.get());
         data.emplace_back(data_column->getPtr(), type, pcolumn.name());
     }
-    initializeIndexByName();
+    initialize_index_by_name();
 }
 
-void Block::initializeIndexByName() {
+void Block::initialize_index_by_name() {
     for (size_t i = 0, size = data.size(); i < size; ++i) index_by_name[data[i].name] = i;
 }
 
@@ -233,11 +232,11 @@ void Block::insert(ColumnWithTypeAndName&& elem) {
     data.emplace_back(std::move(elem));
 }
 
-void Block::insertUnique(const ColumnWithTypeAndName& elem) {
+void Block::insert_unique(const ColumnWithTypeAndName& elem) {
     if (index_by_name.end() == index_by_name.find(elem.name)) insert(elem);
 }
 
-void Block::insertUnique(ColumnWithTypeAndName&& elem) {
+void Block::insert_unique(ColumnWithTypeAndName&& elem) {
     if (index_by_name.end() == index_by_name.find(elem.name)) insert(std::move(elem));
 }
 
@@ -253,10 +252,10 @@ void Block::erase(size_t position) {
                                 std::to_string(data.size() - 1),
                         ErrorCodes::POSITION_OUT_OF_BOUND);
 
-    eraseImpl(position);
+    erase_impl(position);
 }
 
-void Block::eraseImpl(size_t position) {
+void Block::erase_impl(size_t position) {
     data.erase(data.begin() + position);
 
     for (auto it = index_by_name.begin(); it != index_by_name.end();) {
@@ -275,52 +274,52 @@ void Block::erase(const String& name) {
         throw Exception("No such name in Block::erase(): '" + name + "'",
                         ErrorCodes::NOT_FOUND_COLUMN_IN_BLOCK);
 
-    eraseImpl(index_it->second);
+    erase_impl(index_it->second);
 }
 
-ColumnWithTypeAndName& Block::safeGetByPosition(size_t position) {
+ColumnWithTypeAndName& Block::safe_get_by_position(size_t position) {
     if (data.empty()) throw Exception("Block is empty", ErrorCodes::POSITION_OUT_OF_BOUND);
 
     if (position >= data.size())
         throw Exception("Position " + std::to_string(position) +
-                                " is out of bound in Block::safeGetByPosition(), max position = " +
-                                std::to_string(data.size() - 1) +
-                                ", there are columns: " + dumpNames(),
+                        " is out of bound in Block::safe_get_by_position(), max position = " +
+                        std::to_string(data.size() - 1) +
+                        ", there are columns: " + dump_names(),
                         ErrorCodes::POSITION_OUT_OF_BOUND);
 
     return data[position];
 }
 
-const ColumnWithTypeAndName& Block::safeGetByPosition(size_t position) const {
+const ColumnWithTypeAndName& Block::safe_get_by_position(size_t position) const {
     if (data.empty()) throw Exception("Block is empty", ErrorCodes::POSITION_OUT_OF_BOUND);
 
     if (position >= data.size())
         throw Exception(
                 "Position " + std::to_string(position) +
-                        " is out of bound in Block::safeGetByPosition(), max position = " +
+                        " is out of bound in Block::safe_get_by_position(), max position = " +
                         std::to_string(data.size() - 1)
-                        // + ", there are columns: " + dumpNames(), ErrorCodes::POSITION_OUT_OF_BOUND);
+                        // + ", there are columns: " + dump_names(), ErrorCodes::POSITION_OUT_OF_BOUND);
                         + ", there are columns: ",
                 ErrorCodes::POSITION_OUT_OF_BOUND);
 
     return data[position];
 }
 
-ColumnWithTypeAndName& Block::getByName(const std::string& name) {
+ColumnWithTypeAndName& Block::get_by_name(const std::string& name) {
     auto it = index_by_name.find(name);
     if (index_by_name.end() == it)
         throw Exception(
-                "Not found column " + name + " in block. There are only columns: " + dumpNames(),
+                "Not found column " + name + " in block. There are only columns: " + dump_names(),
                 ErrorCodes::NOT_FOUND_COLUMN_IN_BLOCK);
 
     return data[it->second];
 }
 
-const ColumnWithTypeAndName& Block::getByName(const std::string& name) const {
+const ColumnWithTypeAndName& Block::get_by_name(const std::string& name) const {
     auto it = index_by_name.find(name);
     if (index_by_name.end() == it)
         throw Exception(
-                "Not found column " + name + " in block. There are only columns: " + dumpNames(),
+                "Not found column " + name + " in block. There are only columns: " + dump_names(),
                 ErrorCodes::NOT_FOUND_COLUMN_IN_BLOCK);
 
     return data[it->second];
@@ -330,23 +329,23 @@ bool Block::has(const std::string& name) const {
     return index_by_name.end() != index_by_name.find(name);
 }
 
-size_t Block::getPositionByName(const std::string& name) const {
+size_t Block::get_position_by_name(const std::string& name) const {
     auto it = index_by_name.find(name);
     if (index_by_name.end() == it) {
-        LOG(FATAL) << fmt::format("Not found column {} in block. There are only columns: {}", name, dumpNames());
+        LOG(FATAL) << fmt::format("Not found column {} in block. There are only columns: {}", name, dump_names());
     }
 
     return it->second;
 }
 
-void Block::checkNumberOfRows(bool allow_null_columns) const {
+void Block::check_number_of_rows(bool allow_null_columns) const {
     ssize_t rows = -1;
     for (const auto& elem : data) {
         if (!elem.column && allow_null_columns) continue;
 
         if (!elem.column)
             throw Exception(
-                    "Column " + elem.name + " in block is nullptr, in method checkNumberOfRows.",
+                    "Column " + elem.name + " in block is nullptr, in method check_number_of_rows.",
                     ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
 
         ssize_t size = elem.column->size();
@@ -392,7 +391,7 @@ size_t Block::allocated_bytes() const {
     return res;
 }
 
-std::string Block::dumpNames() const {
+std::string Block::dump_names() const {
     // WriteBufferFromOwnString out;
     std::stringstream out;
     for (auto it = data.begin(); it != data.end(); ++it) {
@@ -402,7 +401,7 @@ std::string Block::dumpNames() const {
     return out.str();
 }
 
-std::string Block::dumpData(size_t row_limit) const {
+std::string Block::dump_data(size_t row_limit) const {
     if (rows() == 0) {
         return "empty block.";
     }
@@ -454,25 +453,25 @@ std::string Block::dumpData(size_t row_limit) const {
     return out.str();
 }
 
-std::string Block::dumpStructure() const {
+std::string Block::dump_structure() const {
     // WriteBufferFromOwnString out;
     std::stringstream out;
     for (auto it = data.begin(); it != data.end(); ++it) {
         if (it != data.begin()) out << ", ";
-        out << it->dumpStructure();
+        out << it->dump_structure();
     }
     return out.str();
 }
 
-Block Block::cloneEmpty() const {
+Block Block::clone_empty() const {
     Block res;
 
-    for (const auto& elem : data) res.insert(elem.cloneEmpty());
+    for (const auto& elem : data) res.insert(elem.clone_empty());
 
     return res;
 }
 
-MutableColumns Block::cloneEmptyColumns() const {
+MutableColumns Block::clone_empty_columns() const {
     size_t num_columns = data.size();
     MutableColumns columns(num_columns);
     for (size_t i = 0; i < num_columns; ++i)
@@ -480,14 +479,14 @@ MutableColumns Block::cloneEmptyColumns() const {
     return columns;
 }
 
-Columns Block::getColumns() const {
+Columns Block::get_columns() const {
     size_t num_columns = data.size();
     Columns columns(num_columns);
     for (size_t i = 0; i < num_columns; ++i) columns[i] = data[i].column;
     return columns;
 }
 
-MutableColumns Block::mutateColumns() {
+MutableColumns Block::mutate_columns() {
     size_t num_columns = data.size();
     MutableColumns columns(num_columns);
     for (size_t i = 0; i < num_columns; ++i)
@@ -496,19 +495,19 @@ MutableColumns Block::mutateColumns() {
     return columns;
 }
 
-void Block::setColumns(MutableColumns&& columns) {
+void Block::set_columns(MutableColumns&& columns) {
     /// TODO: assert if |columns| doesn't match |data|!
     size_t num_columns = data.size();
     for (size_t i = 0; i < num_columns; ++i) data[i].column = std::move(columns[i]);
 }
 
-void Block::setColumns(const Columns& columns) {
+void Block::set_columns(const Columns& columns) {
     /// TODO: assert if |columns| doesn't match |data|!
     size_t num_columns = data.size();
     for (size_t i = 0; i < num_columns; ++i) data[i].column = columns[i];
 }
 
-Block Block::cloneWithColumns(MutableColumns&& columns) const {
+Block Block::clone_with_columns(MutableColumns&& columns) const {
     Block res;
 
     size_t num_columns = data.size();
@@ -518,7 +517,7 @@ Block Block::cloneWithColumns(MutableColumns&& columns) const {
     return res;
 }
 
-Block Block::cloneWithColumns(const Columns& columns) const {
+Block Block::clone_with_columns(const Columns& columns) const {
     Block res;
 
     size_t num_columns = data.size();
@@ -536,7 +535,7 @@ Block Block::cloneWithColumns(const Columns& columns) const {
     return res;
 }
 
-Block Block::cloneWithoutColumns() const {
+Block Block::clone_without_columns() const {
     Block res;
 
     size_t num_columns = data.size();
@@ -545,7 +544,7 @@ Block Block::cloneWithoutColumns() const {
     return res;
 }
 
-Block Block::sortColumns() const {
+Block Block::sort_columns() const {
     Block sorted_block;
 
     for (const auto& name : index_by_name) sorted_block.insert(data[name.second]);
@@ -553,19 +552,11 @@ Block Block::sortColumns() const {
     return sorted_block;
 }
 
-const ColumnsWithTypeAndName& Block::getColumnsWithTypeAndName() const {
+const ColumnsWithTypeAndName& Block::get_columns_with_type_and_name() const {
     return data;
 }
 
-NamesAndTypesList Block::getNamesAndTypesList() const {
-    NamesAndTypesList res;
-
-    for (const auto& elem : data) res.emplace_back(elem.name, elem.type);
-
-    return res;
-}
-
-Names Block::getNames() const {
+Names Block::get_names() const {
     Names res;
     res.reserve(columns());
 
@@ -574,7 +565,7 @@ Names Block::getNames() const {
     return res;
 }
 
-DataTypes Block::getDataTypes() const {
+DataTypes Block::get_data_types() const {
     DataTypes res;
     res.reserve(columns());
 
@@ -597,27 +588,27 @@ DataTypes Block::getDataTypes() const {
 //     size_t columns = rhs.columns();
 //     if (lhs.columns() != columns)
 //         return on_error("Block structure mismatch in " + context_description + " stream: different number of columns:\n"
-//             + lhs.dumpStructure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
+//             + lhs.dump_structure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
 
 //     for (size_t i = 0; i < columns; ++i)
 //     {
-//         const auto & expected = rhs.getByPosition(i);
-//         const auto & actual = lhs.getByPosition(i);
+//         const auto & expected = rhs.get_by_position(i);
+//         const auto & actual = lhs.get_by_position(i);
 
 //         if (actual.name != expected.name)
 //             return on_error("Block structure mismatch in " + context_description + " stream: different names of columns:\n"
-//                 + lhs.dumpStructure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
+//                 + lhs.dump_structure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
 
 //         if (!actual.type->equals(*expected.type))
 //             return on_error("Block structure mismatch in " + context_description + " stream: different types:\n"
-//                 + lhs.dumpStructure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
+//                 + lhs.dump_structure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
 
 //         if (!actual.column || !expected.column)
 //             continue;
 
 //         if (actual.column->get_name() != expected.column->get_name())
 //             return on_error("Block structure mismatch in " + context_description + " stream: different columns:\n"
-//                 + lhs.dumpStructure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
+//                 + lhs.dump_structure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
 
 // if (isColumnConst(*actual.column) && is_column_const(*expected.column))
 // {
@@ -657,7 +648,7 @@ DataTypes Block::getDataTypes() const {
 //     {
 //         for (size_t j = 1; j <= rhs.columns(); ++j)
 //         {
-//             if (lhs.safeGetByPosition(i - 1) == rhs.safeGetByPosition(j - 1))
+//             if (lhs.safe_get_by_position(i - 1) == rhs.safe_get_by_position(j - 1))
 //                 lcs[i][j] = lcs[i - 1][j - 1] + 1;
 //             else
 //                 lcs[i][j] = std::max(lcs[i - 1][j], lcs[i][j - 1]);
@@ -671,7 +662,7 @@ DataTypes Block::getDataTypes() const {
 //     size_t r = rhs.columns();
 //     while (l > 0 && r > 0)
 //     {
-//         if (lhs.safeGetByPosition(l - 1) == rhs.safeGetByPosition(r - 1))
+//         if (lhs.safe_get_by_position(l - 1) == rhs.safe_get_by_position(r - 1))
 //         {
 //             /// This element is in both sequences, so it does not get into `diff`.
 //             --l;
@@ -683,16 +674,16 @@ DataTypes Block::getDataTypes() const {
 //             /// Therefore, the preference will be given to the field, which is in the left block (expected_block), therefore
 //             /// in `diff` the column from `actual_block` will get.
 //             if (lcs[l][r - 1] >= lcs[l - 1][r])
-//                 right_columns.push_back(rhs.safeGetByPosition(--r));
+//                 right_columns.push_back(rhs.safe_get_by_position(--r));
 //             else
-//                 left_columns.push_back(lhs.safeGetByPosition(--l));
+//                 left_columns.push_back(lhs.safe_get_by_position(--l));
 //         }
 //     }
 
 //     while (l > 0)
-//         left_columns.push_back(lhs.safeGetByPosition(--l));
+//         left_columns.push_back(lhs.safe_get_by_position(--l));
 //     while (r > 0)
-//         right_columns.push_back(rhs.safeGetByPosition(--r));
+//         right_columns.push_back(rhs.safe_get_by_position(--r));
 
 //     WriteBufferFromString lhs_diff_writer(out_lhs_diff);
 //     WriteBufferFromString rhs_diff_writer(out_rhs_diff);
@@ -700,12 +691,12 @@ DataTypes Block::getDataTypes() const {
 //     for (auto it = left_columns.rbegin(); it != left_columns.rend(); ++it)
 //     {
 //         lhs_diff_writer << it->dump_structure();
-//         lhs_diff_writer << ", position: " << lhs.getPositionByName(it->name) << '\n';
+//         lhs_diff_writer << ", position: " << lhs.get_position_by_name(it->name) << '\n';
 //     }
 //     for (auto it = right_columns.rbegin(); it != right_columns.rend(); ++it)
 //     {
 //         rhs_diff_writer << it->dump_structure();
-//         rhs_diff_writer << ", position: " << rhs.getPositionByName(it->name) << '\n';
+//         rhs_diff_writer << ", position: " << rhs.get_position_by_name(it->name) << '\n';
 //     }
 // }
 
@@ -724,10 +715,10 @@ void Block::swap(Block& other) noexcept {
 void Block::swap(Block&& other) noexcept {
     clear();
     data = std::move(other.data);
-    initializeIndexByName();
+    initialize_index_by_name();
 }
 
-void Block::updateHash(SipHash& hash) const {
+void Block::update_hash(SipHash& hash) const {
     for (size_t row_no = 0, num_rows = rows(); row_no < num_rows; ++row_no)
         for (const auto& col : data) col.column->update_hash_with_value(row_no, hash);
 }
@@ -735,11 +726,11 @@ void Block::updateHash(SipHash& hash) const {
 void filter_block_internal(Block* block, const IColumn::Filter& filter, int column_to_keep) {
     auto count = count_bytes_in_filter(filter);
     if (count == 0) {
-        block->getByPosition(0).column = block->getByPosition(0).column->clone_empty();
+        block->get_by_position(0).column = block->get_by_position(0).column->clone_empty();
     } else {
         if (count != block->rows()) {
             for (size_t i = 0; i < column_to_keep; ++i) {
-                block->getByPosition(i).column = block->getByPosition(i).column->filter(filter, 0);
+                block->get_by_position(i).column = block->get_by_position(i).column->filter(filter, 0);
             }
         }
         for (size_t i = column_to_keep; i < block->columns(); ++i) {
@@ -749,7 +740,7 @@ void filter_block_internal(Block* block, const IColumn::Filter& filter, int colu
 }
 
 Status Block::filter_block(Block* block, int filter_column_id, int column_to_keep) {
-    ColumnPtr filter_column = block->getByPosition(filter_column_id).column;
+    ColumnPtr filter_column = block->get_by_position(filter_column_id).column;
     if (auto* nullable_column = check_and_get_column<ColumnNullable>(*filter_column)) {
         ColumnPtr nested_column = nullable_column->get_nested_column_ptr();
 
@@ -772,7 +763,7 @@ Status Block::filter_block(Block* block, int filter_column_id, int column_to_kee
     } else if (auto* const_column = check_and_get_column<ColumnConst>(*filter_column)) {
         UInt64 ret = const_column->get_uint(0);
         if (ret == 0) {
-            block->getByPosition(0).column = block->getByPosition(0).column->clone_empty();
+            block->get_by_position(0).column = block->get_by_position(0).column->clone_empty();
         } else if (ret == 1) {
             for (size_t i = column_to_keep; i < block->columns(); ++i) {
                 block->erase(i);
@@ -814,7 +805,7 @@ size_t MutableBlock::rows() const {
 }
 
 void MutableBlock::add_row(const Block* block, int row) {
-    auto& src_columns_with_schema = block->getColumnsWithTypeAndName();
+    auto& src_columns_with_schema = block->get_columns_with_type_and_name();
     for (size_t i = 0; i < _columns.size(); ++i) {
         _columns[i]->insert_from(*src_columns_with_schema[i].column.get(), row);
     }

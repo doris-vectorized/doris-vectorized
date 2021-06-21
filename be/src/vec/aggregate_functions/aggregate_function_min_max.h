@@ -46,7 +46,7 @@ public:
     }
 
     void write(std::ostream& buf) const {
-        writeBinary(has(), buf);
+        write_binary(has(), buf);
         if (has()) write_binary(value, buf);
     }
 
@@ -326,7 +326,7 @@ private:
     Field value;
 
 public:
-    bool has() const { return !value.isNull(); }
+    bool has() const { return !value.is_null(); }
 
     void insertResultInto(IColumn& to) const {
         if (has())
@@ -337,7 +337,7 @@ public:
 
     // void write(WriteBuffer & buf, const IDataType & data_type) const
     // {
-    //     if (!value.isNull())
+    //     if (!value.is_null())
     //     {
     //         write_binary(true, buf);
     //         data_type.serializeBinary(value, buf);

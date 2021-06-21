@@ -63,8 +63,8 @@ class BlockMissingValues {
 public:
     using RowsBitMask = std::vector<bool>; /// a bit per row for a column
 
-    const RowsBitMask& getDefaultsBitmask(size_t column_idx) const;
-    void setBit(size_t column_idx, size_t row_idx);
+    const RowsBitMask& get_defaults_bitmask(size_t column_idx) const;
+    void set_bit(size_t column_idx, size_t row_idx);
     bool empty() const { return rows_mask_by_column_id.empty(); }
     size_t size() const { return rows_mask_by_column_id.size(); }
     void clear() { rows_mask_by_column_id.clear(); }

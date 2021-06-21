@@ -15,16 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//#include <IO/ReadBuffer.h>
-//#include <IO/WriteBuffer.h>
-//#include <IO/ReadHelpers.h>
-//#include <IO/WriteHelpers.h>
-
 #include "vec/core/field.h"
 
 #include "vec/core/decimal_comparison.h"
 #include "vec/io/io_helper.h"
-//#include <vec/Common/FieldVisitors.h>
 
 namespace doris::vectorized {
 //    void read_binary(Array & x, ReadBuffer & buf)
@@ -109,7 +103,7 @@ namespace doris::vectorized {
 //        UInt8 type = Field::Types::Null;
 //        size_t size = x.size();
 //        if (size)
-//            type = x.front().getType();
+//            type = x.front().get_type();
 //        doris::vectorized::write_binary(type, buf);
 //        doris::vectorized::write_binary(size, buf);
 //
@@ -254,7 +248,7 @@ namespace doris::vectorized {
 //
 //        for (auto it = x.begin(); it != x.end(); ++it)
 //        {
-//            const UInt8 type = it->getType();
+//            const UInt8 type = it->get_type();
 //            doris::vectorized::write_binary(type, buf);
 //
 //            switch (type)
@@ -307,15 +301,15 @@ namespace doris::vectorized {
 //
 //    void write_text(const Tuple & x, WriteBuffer & buf)
 //    {
-//        writeFieldText(doris::vectorized::Field(x), buf);
+//        write_field_text(doris::vectorized::Field(x), buf);
 //    }
 //
-//    void writeFieldText(const Field & x, WriteBuffer & buf)
+//    void write_field_text(const Field & x, WriteBuffer & buf)
 //    {
 //        doris::vectorized::String res = applyVisitor(doris::vectorized::FieldVisitorToString(), x);
 //        buf.write(res.data(), res.size());
 //    }
-void readBinary(Array& x, std::istream& buf) {
+void read_binary(Array& x, std::istream& buf) {
     size_t size;
     UInt8 type;
         doris::vectorized::read_binary(type, buf);
@@ -380,12 +374,12 @@ void readBinary(Array& x, std::istream& buf) {
     }
 }
 
-void writeBinary(const Array& x, std::ostream& buf) {
+void write_binary(const Array& x, std::ostream& buf) {
     UInt8 type = Field::Types::Null;
     size_t size = x.size();
-    if (size) type = x.front().getType();
-    doris::vectorized::writeBinary(type, buf);
-    doris::vectorized::writeBinary(size, buf);
+    if (size) type = x.front().get_type();
+    doris::vectorized::write_binary(type, buf);
+    doris::vectorized::write_binary(size, buf);
 
     for (Array::const_iterator it = x.begin(); it != x.end(); ++it) {
         switch (type) {
@@ -429,74 +423,74 @@ void writeBinary(const Array& x, std::ostream& buf) {
 }
 
 template <>
-Decimal32 DecimalField<Decimal32>::getScaleMultiplier() const {
+Decimal32 DecimalField<Decimal32>::get_scale_multiplier() const {
     return DataTypeDecimal<Decimal32>::getScaleMultiplier(scale);
 }
 
 template <>
-Decimal64 DecimalField<Decimal64>::getScaleMultiplier() const {
+Decimal64 DecimalField<Decimal64>::get_scale_multiplier() const {
     return DataTypeDecimal<Decimal64>::getScaleMultiplier(scale);
 }
 
 template <>
-Decimal128 DecimalField<Decimal128>::getScaleMultiplier() const {
+Decimal128 DecimalField<Decimal128>::get_scale_multiplier() const {
     return DataTypeDecimal<Decimal128>::getScaleMultiplier(scale);
 }
 
 template <typename T>
-static bool decEqual(T x, T y, UInt32 x_scale, UInt32 y_scale) {
+static bool dec_equal(T x, T y, UInt32 x_scale, UInt32 y_scale) {
     using Comparator = DecimalComparison<T, T, EqualsOp>;
     return Comparator::compare(x, y, x_scale, y_scale);
 }
 
 template <typename T>
-static bool decLess(T x, T y, UInt32 x_scale, UInt32 y_scale) {
+static bool dec_less(T x, T y, UInt32 x_scale, UInt32 y_scale) {
     using Comparator = DecimalComparison<T, T, LessOp>;
     return Comparator::compare(x, y, x_scale, y_scale);
 }
 
 template <typename T>
-static bool decLessOrEqual(T x, T y, UInt32 x_scale, UInt32 y_scale) {
+static bool dec_less_or_equal(T x, T y, UInt32 x_scale, UInt32 y_scale) {
     using Comparator = DecimalComparison<T, T, LessOrEqualsOp>;
     return Comparator::compare(x, y, x_scale, y_scale);
 }
 
 template <>
-bool decimalEqual(Decimal32 x, Decimal32 y, UInt32 xs, UInt32 ys) {
-    return decEqual(x, y, xs, ys);
+bool decimal_equal(Decimal32 x, Decimal32 y, UInt32 xs, UInt32 ys) {
+    return dec_equal(x, y, xs, ys);
 }
 template <>
-bool decimalLess(Decimal32 x, Decimal32 y, UInt32 xs, UInt32 ys) {
-    return decLess(x, y, xs, ys);
+bool decimal_less(Decimal32 x, Decimal32 y, UInt32 xs, UInt32 ys) {
+    return dec_less(x, y, xs, ys);
 }
 template <>
-bool decimalLessOrEqual(Decimal32 x, Decimal32 y, UInt32 xs, UInt32 ys) {
-    return decLessOrEqual(x, y, xs, ys);
-}
-
-template <>
-bool decimalEqual(Decimal64 x, Decimal64 y, UInt32 xs, UInt32 ys) {
-    return decEqual(x, y, xs, ys);
-}
-template <>
-bool decimalLess(Decimal64 x, Decimal64 y, UInt32 xs, UInt32 ys) {
-    return decLess(x, y, xs, ys);
-}
-template <>
-bool decimalLessOrEqual(Decimal64 x, Decimal64 y, UInt32 xs, UInt32 ys) {
-    return decLessOrEqual(x, y, xs, ys);
+bool decimal_less_or_equal(Decimal32 x, Decimal32 y, UInt32 xs, UInt32 ys) {
+    return dec_less_or_equal(x, y, xs, ys);
 }
 
 template <>
-bool decimalEqual(Decimal128 x, Decimal128 y, UInt32 xs, UInt32 ys) {
-    return decEqual(x, y, xs, ys);
+bool decimal_equal(Decimal64 x, Decimal64 y, UInt32 xs, UInt32 ys) {
+    return dec_equal(x, y, xs, ys);
 }
 template <>
-bool decimalLess(Decimal128 x, Decimal128 y, UInt32 xs, UInt32 ys) {
-    return decLess(x, y, xs, ys);
+bool decimal_less(Decimal64 x, Decimal64 y, UInt32 xs, UInt32 ys) {
+    return dec_less(x, y, xs, ys);
 }
 template <>
-bool decimalLessOrEqual(Decimal128 x, Decimal128 y, UInt32 xs, UInt32 ys) {
-    return decLessOrEqual(x, y, xs, ys);
+bool decimal_less_or_equal(Decimal64 x, Decimal64 y, UInt32 xs, UInt32 ys) {
+    return dec_less_or_equal(x, y, xs, ys);
+}
+
+template <>
+bool decimal_equal(Decimal128 x, Decimal128 y, UInt32 xs, UInt32 ys) {
+    return dec_equal(x, y, xs, ys);
+}
+template <>
+bool decimal_less(Decimal128 x, Decimal128 y, UInt32 xs, UInt32 ys) {
+    return dec_less(x, y, xs, ys);
+}
+template <>
+bool decimal_less_or_equal(Decimal128 x, Decimal128 y, UInt32 xs, UInt32 ys) {
+    return dec_less_or_equal(x, y, xs, ys);
 }
 } // namespace doris::vectorized

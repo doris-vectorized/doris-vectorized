@@ -93,7 +93,7 @@ struct HashMapCell {
     //     DB::read_binary(value.second, rb);
     // }
 
-    // void readText(DB::ReadBuffer & rb)
+    // void read_text(DB::ReadBuffer & rb)
     // {
     //     DB::readDoubleQuoted(value.first, rb);
     //     DB::assertChar(',', rb);

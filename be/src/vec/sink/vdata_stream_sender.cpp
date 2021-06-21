@@ -98,9 +98,9 @@ Status VDataStreamSender::Channel::add_row(Block* block, int row) {
         RETURN_IF_ERROR(send_current_block());
     }
     if (_mutable_block->rows() == 0) {
-        auto empty_block = block->cloneEmpty();
+        auto empty_block = block->clone_empty();
         _mutable_block.reset(
-                new MutableBlock(empty_block.mutateColumns(), empty_block.getDataTypes()));
+                new MutableBlock(empty_block.mutate_columns(), empty_block.get_data_types()));
     }
     _mutable_block->add_row(block, row);
     return Status::OK();
@@ -318,7 +318,7 @@ Status VDataStreamSender::send(RuntimeState* state, Block* block) {
         for (int i = 0; i < rows; ++i) {
             SipHash siphash;
             for (int j = 0; j < result.size(); ++j) {
-                auto column = block->getByPosition(result[j]).column;
+                auto column = block->get_by_position(result[j]).column;
                 column->update_hash_with_value(i, siphash);
             }
             auto target_channel_id = siphash.get64() % num_channels;
