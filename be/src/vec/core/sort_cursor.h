@@ -17,25 +17,23 @@
 
 #pragma once
 
-#include "vec/common/typeid_cast.h"
-#include "vec/common/assert_cast.h"
-#include "vec/core/sort_description.h"
-#include "vec/core/block.h"
-#include "vec/core/column_numbers.h"
 #include "vec/columns/column.h"
 #include "vec/columns/column_string.h"
+#include "vec/common/assert_cast.h"
+#include "vec/common/typeid_cast.h"
+#include "vec/core/block.h"
+#include "vec/core/column_numbers.h"
+#include "vec/core/sort_description.h"
 #include "vec/exprs/vexpr_context.h"
 #include "vec/runtime/vdata_stream_recvr.h"
 
-namespace doris::vectorized
-{
+namespace doris::vectorized {
 
 /** Cursor allows to compare rows in different blocks (and parts).
   * Cursor moves inside single block.
   * It is used in priority queue.
   */
-struct SortCursorImpl
-{
+struct SortCursorImpl {
     ColumnRawPtrs all_columns;
     ColumnRawPtrs sort_columns;
     SortDescription desc;
@@ -61,18 +59,24 @@ struct SortCursorImpl
 
     SortCursorImpl() = default;
 
-    SortCursorImpl(const Block & block, const SortDescription & desc_, size_t order_ = 0)
-        : desc(desc_), sort_columns_size(desc.size()), order(order_), need_collation(desc.size()) {
+    SortCursorImpl(const Block& block, const SortDescription& desc_, size_t order_ = 0)
+            : desc(desc_),
+              sort_columns_size(desc.size()),
+              order(order_),
+              need_collation(desc.size()) {
         reset(block);
     }
 
-    SortCursorImpl(const Columns & columns, const SortDescription & desc_, size_t order_ = 0)
-        : desc(desc_), sort_columns_size(desc.size()), order(order_), need_collation(desc.size()) {
-        for (auto & column_desc : desc)
-        {
-            if (!column_desc.column_name.empty())
-                throw Exception("SortDesctiption should contain column position if SortCursor was used without header.",
-                        ErrorCodes::LOGICAL_ERROR);
+    SortCursorImpl(const Columns& columns, const SortDescription& desc_, size_t order_ = 0)
+            : desc(desc_),
+              sort_columns_size(desc.size()),
+              order(order_),
+              need_collation(desc.size()) {
+        for (auto& column_desc : desc) {
+            if (!column_desc.column_name.empty()) {
+                LOG(FATAL) << "SortDesctiption should contain column position if SortCursor was "
+                              "used without header.";
+            }
         }
         reset(columns, {});
     }
@@ -80,32 +84,26 @@ struct SortCursorImpl
     bool empty() const { return rows == 0; }
 
     /// Set the cursor to the beginning of the new block.
-    void reset(const Block & block)
-    {
-        reset(block.get_columns(), block);
-    }
+    void reset(const Block& block) { reset(block.get_columns(), block); }
 
     /// Set the cursor to the beginning of the new block.
-    void reset(const Columns & columns, const Block & block)
-    {
+    void reset(const Columns& columns, const Block& block) {
         all_columns.clear();
         sort_columns.clear();
 
         size_t num_columns = columns.size();
 
-        for (size_t j = 0; j < num_columns; ++j)
-            all_columns.push_back(columns[j].get());
+        for (size_t j = 0; j < num_columns; ++j) all_columns.push_back(columns[j].get());
 
-        for (size_t j = 0, size = desc.size(); j < size; ++j)
-        {
-            auto & column_desc = desc[j];
+        for (size_t j = 0, size = desc.size(); j < size; ++j) {
+            auto& column_desc = desc[j];
             size_t column_number = !column_desc.column_name.empty()
-                                   ? block.get_position_by_name(column_desc.column_name)
-                                   : column_desc.column_number;
+                                           ? block.get_position_by_name(column_desc.column_name)
+                                           : column_desc.column_number;
             sort_columns.push_back(columns[column_number].get());
 
-//            need_collation[j] = desc[j].collator != nullptr && typeid_cast<const ColumnString *>(sort_columns.back());    /// TODO Nullable(String)
-//            has_collation |= need_collation[j];
+            //            need_collation[j] = desc[j].collator != nullptr && typeid_cast<const ColumnString *>(sort_columns.back());    /// TODO Nullable(String)
+            //            has_collation |= need_collation[j];
         }
 
         pos = 0;
@@ -120,12 +118,14 @@ struct SortCursorImpl
     virtual Block* block_ptr() { return nullptr; }
 };
 
-using BlockSupplier = std::function<Status(Block **)>;
+using BlockSupplier = std::function<Status(Block**)>;
 
 struct ReceiveQueueSortCursorImpl : public SortCursorImpl {
-    ReceiveQueueSortCursorImpl(const BlockSupplier& block_supplier, const std::vector<VExprContext*>& ordering_expr, const std::vector<bool>& is_asc_order,
-            const std::vector<bool>& nulls_first):
-        SortCursorImpl(), _ordering_expr(ordering_expr), _block_supplier(block_supplier){
+    ReceiveQueueSortCursorImpl(const BlockSupplier& block_supplier,
+                               const std::vector<VExprContext*>& ordering_expr,
+                               const std::vector<bool>& is_asc_order,
+                               const std::vector<bool>& nulls_first)
+            : SortCursorImpl(), _ordering_expr(ordering_expr), _block_supplier(block_supplier) {
         sort_columns_size = ordering_expr.size();
 
         desc.resize(ordering_expr.size());
@@ -149,17 +149,14 @@ struct ReceiveQueueSortCursorImpl : public SortCursorImpl {
         return false;
     }
 
-    Block* block_ptr() override {
-        return _block_ptr;
-    }
+    Block* block_ptr() override { return _block_ptr; }
 
     size_t columns_num() const { return all_columns.size(); }
 
     Block create_empty_blocks() const {
         size_t num_columns = columns_num();
         MutableColumns columns(num_columns);
-        for (size_t i = 0; i < num_columns; ++i)
-            columns[i] = all_columns[i]->clone_empty();
+        for (size_t i = 0; i < num_columns; ++i) columns[i] = all_columns[i]->clone_empty();
         return _block_ptr->clone_with_columns(std::move(columns));
     }
 
@@ -170,53 +167,40 @@ struct ReceiveQueueSortCursorImpl : public SortCursorImpl {
 };
 
 /// For easy copying.
-struct SortCursor
-{
-    SortCursorImpl * impl;
+struct SortCursor {
+    SortCursorImpl* impl;
 
-    SortCursor(SortCursorImpl * impl_) : impl(impl_) {}
-    SortCursorImpl * operator-> () { return impl; }
-    const SortCursorImpl * operator-> () const { return impl; }
+    SortCursor(SortCursorImpl* impl_) : impl(impl_) {}
+    SortCursorImpl* operator->() { return impl; }
+    const SortCursorImpl* operator->() const { return impl; }
 
     /// The specified row of this cursor is greater than the specified row of another cursor.
-    bool greater_at(const SortCursor & rhs, size_t lhs_pos, size_t rhs_pos) const
-    {
-        for (size_t i = 0; i < impl->sort_columns_size; ++i)
-        {
+    bool greater_at(const SortCursor& rhs, size_t lhs_pos, size_t rhs_pos) const {
+        for (size_t i = 0; i < impl->sort_columns_size; ++i) {
             int direction = impl->desc[i].direction;
             int nulls_direction = impl->desc[i].nulls_direction;
-            int res = direction *
-                    impl->sort_columns[i]->compare_at(lhs_pos, rhs_pos, *(rhs.impl->sort_columns[i]), nulls_direction);
-            if (res > 0)
-                return true;
-            if (res < 0)
-                return false;
+            int res = direction * impl->sort_columns[i]->compare_at(lhs_pos, rhs_pos,
+                                                                    *(rhs.impl->sort_columns[i]),
+                                                                    nulls_direction);
+            if (res > 0) return true;
+            if (res < 0) return false;
         }
         return impl->order > rhs.impl->order;
     }
 
     /// Checks that all rows in the current block of this cursor are less than or equal to all the rows of the current block of another cursor.
-    bool totally_less_or_equals(const SortCursor & rhs) const
-    {
-        if (impl->rows == 0 || rhs.impl->rows == 0)
-            return false;
+    bool totally_less_or_equals(const SortCursor& rhs) const {
+        if (impl->rows == 0 || rhs.impl->rows == 0) return false;
 
         /// The last row of this cursor is no larger than the first row of the another cursor.
         return !greater_at(rhs, impl->rows - 1, 0);
     }
 
-    bool greater(const SortCursor & rhs) const
-    {
-        return greater_at(rhs, impl->pos, rhs.impl->pos);
-    }
+    bool greater(const SortCursor& rhs) const { return greater_at(rhs, impl->pos, rhs.impl->pos); }
 
     /// Inverted so that the priority queue elements are removed in ascending order.
-    bool operator< (const SortCursor & rhs) const
-    {
-        return greater(rhs);
-    }
+    bool operator<(const SortCursor& rhs) const { return greater(rhs); }
 };
-
 
 /// Separate comparator for locale-sensitive string comparisons
 //struct SortCursorWithCollation
@@ -271,4 +255,4 @@ struct SortCursor
 //    }
 //};
 
-}
+} // namespace doris::vectorized

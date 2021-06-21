@@ -71,9 +71,9 @@ void ColumnString::insert_range_from(const IColumn& src, size_t start, size_t le
 
     const ColumnString& src_concrete = assert_cast<const ColumnString&>(src);
 
-    if (start + length > src_concrete.offsets.size())
-        throw Exception("Parameter out of bound in IColumnString::insert_range_from method.",
-                        ErrorCodes::PARAMETER_OUT_OF_BOUND);
+    if (start + length > src_concrete.offsets.size()) {
+        LOG(FATAL) << "Parameter out of bound in IColumnString::insert_range_from method.";
+    }
 
     size_t nested_offset = src_concrete.offset_at(start);
     size_t nested_length = src_concrete.offsets[start + length - 1] - nested_offset;
@@ -115,9 +115,9 @@ ColumnPtr ColumnString::permute(const Permutation& perm, size_t limit) const {
     else
         limit = std::min(size, limit);
 
-    if (perm.size() < limit)
-        throw Exception("Size of permutation is less than required.",
-                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+    if (perm.size() < limit) {
+        LOG(FATAL) << "Size of permutation is less than required.";
+    }
 
     if (limit == 0) return ColumnString::create();
 
@@ -143,8 +143,8 @@ ColumnPtr ColumnString::permute(const Permutation& perm, size_t limit) const {
         size_t string_offset = offsets[j - 1];
         size_t string_size = offsets[j] - string_offset;
 
-        memcpy_small_allow_read_write_overflow15(&res_chars[current_new_offset], &chars[string_offset],
-                                            string_size);
+        memcpy_small_allow_read_write_overflow15(&res_chars[current_new_offset],
+                                                 &chars[string_offset], string_size);
 
         current_new_offset += string_size;
         res_offsets[i] = current_new_offset;
@@ -153,7 +153,8 @@ ColumnPtr ColumnString::permute(const Permutation& perm, size_t limit) const {
     return res;
 }
 
-StringRef ColumnString::serialize_value_into_arena(size_t n, Arena& arena, char const*& begin) const {
+StringRef ColumnString::serialize_value_into_arena(size_t n, Arena& arena,
+                                                   char const*& begin) const {
     size_t string_size = size_at(n);
     size_t offset = offset_at(n);
 
@@ -207,8 +208,8 @@ ColumnPtr ColumnString::index_impl(const PaddedPODArray<Type>& indexes, size_t l
         size_t string_offset = offsets[j - 1];
         size_t string_size = offsets[j] - string_offset;
 
-        memcpy_small_allow_read_write_overflow15(&res_chars[current_new_offset], &chars[string_offset],
-                                            string_size);
+        memcpy_small_allow_read_write_overflow15(&res_chars[current_new_offset],
+                                                 &chars[string_offset], string_size);
 
         current_new_offset += string_size;
         res_offsets[i] = current_new_offset;
@@ -231,7 +232,7 @@ struct ColumnString::less {
 };
 
 void ColumnString::get_permutation(bool reverse, size_t limit, int /*nan_direction_hint*/,
-                                  Permutation& res) const {
+                                   Permutation& res) const {
     size_t s = offsets.size();
     res.resize(s);
     for (size_t i = 0; i < s; ++i) res[i] = i;
@@ -253,9 +254,9 @@ void ColumnString::get_permutation(bool reverse, size_t limit, int /*nan_directi
 
 ColumnPtr ColumnString::replicate(const Offsets& replicate_offsets) const {
     size_t col_size = size();
-    if (col_size != replicate_offsets.size())
-        throw Exception("Size of offsets doesn't match size of column.",
-                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+    if (col_size != replicate_offsets.size()) {
+        LOG(FATAL) << "Size of offsets doesn't match size of column.";
+    }
 
     auto res = ColumnString::create();
 
@@ -280,7 +281,7 @@ ColumnPtr ColumnString::replicate(const Offsets& replicate_offsets) const {
 
             res_chars.resize(res_chars.size() + string_size);
             memcpy_small_allow_read_write_overflow15(&res_chars[res_chars.size() - string_size],
-                                                &chars[prev_string_offset], string_size);
+                                                     &chars[prev_string_offset], string_size);
         }
 
         prev_replicate_offset = replicate_offsets[i];
@@ -324,7 +325,7 @@ void ColumnString::get_extremes(Field& min, Field& max) const {
 }
 
 int ColumnString::compare_at_with_collation(size_t n, size_t m, const IColumn& rhs_,
-                                         const Collator& collator) const {
+                                            const Collator& collator) const {
     const ColumnString& rhs = assert_cast<const ColumnString&>(rhs_);
 
     return collator.compare(reinterpret_cast<const char*>(&chars[offset_at(n)]), size_at(n),
@@ -341,18 +342,18 @@ struct ColumnString::lessWithCollation {
             : parent(parent_), collator(collator_) {}
 
     bool operator()(size_t lhs, size_t rhs) const {
-        int res =
-                collator.compare(reinterpret_cast<const char*>(&parent.chars[parent.offset_at(lhs)]),
-                                 parent.size_at(lhs),
-                                 reinterpret_cast<const char*>(&parent.chars[parent.offset_at(rhs)]),
-                                 parent.size_at(rhs));
+        int res = collator.compare(
+                reinterpret_cast<const char*>(&parent.chars[parent.offset_at(lhs)]),
+                parent.size_at(lhs),
+                reinterpret_cast<const char*>(&parent.chars[parent.offset_at(rhs)]),
+                parent.size_at(rhs));
 
         return positive ? (res < 0) : (res > 0);
     }
 };
 
-void ColumnString::get_permutation_with_collation(const Collator& collator, bool reverse, size_t limit,
-                                               Permutation& res) const {
+void ColumnString::get_permutation_with_collation(const Collator& collator, bool reverse,
+                                                  size_t limit, Permutation& res) const {
     size_t s = offsets.size();
     res.resize(s);
     for (size_t i = 0; i < s; ++i) res[i] = i;

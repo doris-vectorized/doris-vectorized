@@ -103,12 +103,13 @@ public:
     static constexpr size_t maxPrecision() { return maxDecimalPrecision<T>(); }
 
     DataTypeDecimal(UInt32 precision_, UInt32 scale_) : precision(precision_), scale(scale_) {
-        if (UNLIKELY(precision < 1 || precision > maxPrecision()))
-            throw Exception("Precision " + std::to_string(precision) + " is out of bounds",
-                            ErrorCodes::ARGUMENT_OUT_OF_BOUND);
-        if (UNLIKELY(scale < 0 || static_cast<UInt32>(scale) > maxPrecision()))
-            throw Exception("Scale " + std::to_string(scale) + " is out of bounds",
-                            ErrorCodes::ARGUMENT_OUT_OF_BOUND);
+        if (UNLIKELY(precision < 1 || precision > maxPrecision())) {
+            LOG(FATAL) << fmt::format("Precision {} is out of bounds", precision);
+        }
+
+        if (UNLIKELY(scale < 0 || static_cast<UInt32>(scale) > maxPrecision())) {
+            LOG(FATAL) << fmt::format("Scale {} is out of bounds", scale);
+        }
     }
 
     const char* get_family_name() const override { return "Decimal"; }
@@ -139,7 +140,6 @@ public:
     std::string to_string(const IColumn& column, size_t row_num) const;
     void to_string(const IColumn& column, size_t row_num, BufferWritable& ostr) const;
 
-
     /// Decimal specific
 
     UInt32 getPrecision() const { return precision; }
@@ -168,9 +168,10 @@ public:
     /// @returns multiplier for U to become T with correct scale
     template <typename U>
     T scaleFactorFor(const DataTypeDecimal<U>& x, bool) const {
-        if (get_scale() < x.get_scale())
-            throw Exception("Decimal result's scale is less then argiment's one",
-                            ErrorCodes::ARGUMENT_OUT_OF_BOUND);
+        if (get_scale() < x.get_scale()) {
+            LOG(FATAL) << "Decimal result's scale is less then argiment's one";
+        }
+
         UInt32 scale_delta = get_scale() - x.get_scale(); /// scale_delta >= 0
         return getScaleMultiplier(scale_delta);
     }
@@ -266,16 +267,18 @@ convertDecimals(const typename FromDataType::FieldType& value, UInt32 scale_from
     if (scale_to > scale_from) {
         converted_value = DataTypeDecimal<MaxFieldType>::getScaleMultiplier(scale_to - scale_from);
         if (common::mul_overflow(static_cast<MaxNativeType>(value), converted_value,
-                                converted_value))
-            throw Exception("Decimal convert overflow", ErrorCodes::DECIMAL_OVERFLOW);
+                                 converted_value)) {
+            LOG(FATAL) << "Decimal convert overflow";
+        }
     } else
         converted_value =
                 value / DataTypeDecimal<MaxFieldType>::getScaleMultiplier(scale_from - scale_to);
 
     if constexpr (sizeof(FromFieldType) > sizeof(ToFieldType)) {
         if (converted_value < std::numeric_limits<typename ToFieldType::NativeType>::min() ||
-            converted_value > std::numeric_limits<typename ToFieldType::NativeType>::max())
-            throw Exception("Decimal convert overflow", ErrorCodes::DECIMAL_OVERFLOW);
+            converted_value > std::numeric_limits<typename ToFieldType::NativeType>::max()) {
+            LOG(FATAL) << "Decimal convert overflow";
+        }
     }
 
     return converted_value;
@@ -298,16 +301,18 @@ convertFromDecimal(const typename FromDataType::FieldType& value, UInt32 scale) 
                       !std::numeric_limits<ToFieldType>::is_signed) {
             if constexpr (std::numeric_limits<ToFieldType>::is_signed) {
                 if (converted_value < std::numeric_limits<ToFieldType>::min() ||
-                    converted_value > std::numeric_limits<ToFieldType>::max())
-                    throw Exception("Decimal convert overflow", ErrorCodes::DECIMAL_OVERFLOW);
+                    converted_value > std::numeric_limits<ToFieldType>::max()) {
+                    LOG(FATAL) << "Decimal convert overflow";
+                }
             } else {
                 using CastIntType =
                         std::conditional_t<std::is_same_v<ToFieldType, UInt64>, Int128, Int64>;
 
                 if (converted_value < 0 ||
                     converted_value >
-                            static_cast<CastIntType>(std::numeric_limits<ToFieldType>::max()))
-                    throw Exception("Decimal convert overflow", ErrorCodes::DECIMAL_OVERFLOW);
+                            static_cast<CastIntType>(std::numeric_limits<ToFieldType>::max())) {
+                    LOG(FATAL) << "Decimal convert overflow";
+                }
             }
         }
         return converted_value;
@@ -322,9 +327,9 @@ convertToDecimal(const typename FromDataType::FieldType& value, UInt32 scale) {
     using ToNativeType = typename ToDataType::FieldType::NativeType;
 
     if constexpr (std::is_floating_point_v<FromFieldType>) {
-        if (!std::isfinite(value))
-            throw Exception("Decimal convert overflow. Cannot convert infinity or NaN to decimal",
-                            ErrorCodes::DECIMAL_OVERFLOW);
+        if (!std::isfinite(value)) {
+            LOG(FATAL) << "Decimal convert overflow. Cannot convert infinity or NaN to decimal";
+        }
 
         auto out = value * ToDataType::getScaleMultiplier(scale);
         if constexpr (std::is_same_v<ToNativeType, Int128>) {
@@ -332,14 +337,14 @@ convertToDecimal(const typename FromDataType::FieldType& value, UInt32 scale) {
             static constexpr __int128 max_int128 =
                     (__int128(0x7fffffffffffffffll) << 64) + 0xffffffffffffffffll;
             if (out <= static_cast<ToNativeType>(min_int128) ||
-                out >= static_cast<ToNativeType>(max_int128))
-                throw Exception("Decimal convert overflow. Float is out of Decimal range",
-                                ErrorCodes::DECIMAL_OVERFLOW);
+                out >= static_cast<ToNativeType>(max_int128)) {
+                LOG(FATAL) << "Decimal convert overflow. Float is out of Decimal range";
+            }
         } else {
             if (out <= std::numeric_limits<ToNativeType>::min() ||
-                out >= std::numeric_limits<ToNativeType>::max())
-                throw Exception("Decimal convert overflow. Float is out of Decimal range",
-                                ErrorCodes::DECIMAL_OVERFLOW);
+                out >= std::numeric_limits<ToNativeType>::max()) {
+                LOG(FATAL) << "Decimal convert overflow. Float is out of Decimal range";
+            }
         }
         return out;
     } else {

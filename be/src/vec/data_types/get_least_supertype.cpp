@@ -122,11 +122,11 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
 
         if (have_string || have_fixed_string) {
             bool all_strings = type_ids.size() == (have_string + have_fixed_string);
-            if (!all_strings)
-                throw Exception(getExceptionMessagePrefix(types) +
-                                        " because some of them are String/FixedString and some of "
-                                        "them are not",
-                                ErrorCodes::NO_COMMON_TYPE);
+            if (!all_strings) {
+                LOG(FATAL)
+                        << getExceptionMessagePrefix(types)
+                        << " because some of them are String/FixedString and some of them are not";
+            }
 
             return std::make_shared<DataTypeString>();
         }
@@ -139,11 +139,10 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
 
         if (have_date || have_datetime) {
             bool all_date_or_datetime = type_ids.size() == (have_date + have_datetime);
-            if (!all_date_or_datetime)
-                throw Exception(
-                        getExceptionMessagePrefix(types) +
-                                " because some of them are Date/DateTime and some of them are not",
-                        ErrorCodes::NO_COMMON_TYPE);
+            if (!all_date_or_datetime) {
+                LOG(FATAL) << getExceptionMessagePrefix(types)
+                           << " because some of them are Date/DateTime and some of them are not";
+            }
 
             return std::make_shared<DataTypeDateTime>();
         }
@@ -171,11 +170,10 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
                 if (num) max_int = int_ids[i];
             }
 
-            if (num_supported != type_ids.size())
-                throw Exception(
-                        getExceptionMessagePrefix(types) +
-                                " because some of them have no lossless convertion to Decimal",
-                        ErrorCodes::NO_COMMON_TYPE);
+            if (num_supported != type_ids.size()) {
+                LOG(FATAL) << getExceptionMessagePrefix(types)
+                           << " because some of them have no lossless convertion to Decimal";
+            }
 
             UInt32 max_scale = 0;
             for (const auto& type : types) {
@@ -193,12 +191,11 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
                     min_precision = DataTypeDecimal<Decimal64>::maxPrecision();
             }
 
-            if (min_precision > DataTypeDecimal<Decimal128>::maxPrecision())
-                throw Exception(getExceptionMessagePrefix(types) +
-                                        " because the least supertype is Decimal(" +
-                                        std::to_string(min_precision) + ',' +
-                                        std::to_string(max_scale) + ')',
-                                ErrorCodes::NO_COMMON_TYPE);
+            if (min_precision > DataTypeDecimal<Decimal128>::maxPrecision()) {
+                LOG(FATAL) << fmt::format("{} because the least supertype is Decimal({},{})",
+                                          getExceptionMessagePrefix(types), min_precision,
+                                          max_scale);
+            }
 
             if (have_decimal128 || min_precision > DataTypeDecimal<Decimal64>::maxPrecision())
                 return std::make_shared<DataTypeDecimal<Decimal128>>(
@@ -250,11 +247,10 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
 
         if (max_bits_of_signed_integer || max_bits_of_unsigned_integer ||
             max_mantissa_bits_of_floating) {
-            if (!all_numbers)
-                throw Exception(
-                        getExceptionMessagePrefix(types) +
-                                " because some of them are numbers and some of them are not",
-                        ErrorCodes::NO_COMMON_TYPE);
+            if (!all_numbers) {
+                LOG(FATAL) << getExceptionMessagePrefix(types)
+                           << " because some of them are numbers and some of them are not";
+            }
 
             /// If there are signed and unsigned types of same bit-width, the result must be signed number with at least one more bit.
             /// Example, common of Int32, UInt32 = Int64.
@@ -275,13 +271,12 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
                     return std::make_shared<DataTypeFloat32>();
                 else if (min_mantissa_bits <= 53)
                     return std::make_shared<DataTypeFloat64>();
-                else
-                    throw Exception(getExceptionMessagePrefix(types) +
-                                            " because some of them are integers and some are "
-                                            "floating point,"
-                                            " but there is no floating point type, that can "
-                                            "exactly represent all required integers",
-                                    ErrorCodes::NO_COMMON_TYPE);
+                else {
+                    LOG(FATAL) << getExceptionMessagePrefix(types)
+                               << " because some of them are integers and some are floating point "
+                                  "but there is no floating point type, that can exactly represent "
+                                  "all required integers";
+                }
             }
 
             /// If the result must be signed integer.
@@ -294,14 +289,12 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
                     return std::make_shared<DataTypeInt32>();
                 else if (min_bit_width_of_integer <= 64)
                     return std::make_shared<DataTypeInt64>();
-                else
-                    throw Exception(
-                            getExceptionMessagePrefix(types) +
-                                    " because some of them are signed integers and some are "
-                                    "unsigned integers,"
-                                    " but there is no signed integer type, that can exactly "
-                                    "represent all required unsigned integer values",
-                            ErrorCodes::NO_COMMON_TYPE);
+                else {
+                    LOG(FATAL) << getExceptionMessagePrefix(types)
+                               << " because some of them are signed integers and some are unsigned "
+                                  "integers, but there is no signed integer type, that can exactly "
+                                  "represent all required unsigned integer values";
+                }
             }
 
             /// All unsigned.
@@ -314,17 +307,18 @@ DataTypePtr getLeastSupertype(const DataTypes& types) {
                     return std::make_shared<DataTypeUInt32>();
                 else if (min_bit_width_of_integer <= 64)
                     return std::make_shared<DataTypeUInt64>();
-                else
-                    throw Exception("Logical error: " + getExceptionMessagePrefix(types) +
-                                            " but as all data types are unsigned integers, we must "
-                                            "have found maximum unsigned integer type",
-                                    ErrorCodes::NO_COMMON_TYPE);
+                else {
+                    LOG(FATAL) << "Logical error: " << getExceptionMessagePrefix(types)
+                               << "but as all data types are unsigned integers, we must have found "
+                                  "maximum unsigned integer type";
+                }
             }
         }
     }
 
     /// All other data types (UUID, AggregateFunction, Enum...) are compatible only if they are the same (checked in trivial cases).
-    throw Exception(getExceptionMessagePrefix(types), ErrorCodes::NO_COMMON_TYPE);
+    LOG(FATAL) << getExceptionMessagePrefix(types);
+    return nullptr;
 }
 
 } // namespace doris::vectorized

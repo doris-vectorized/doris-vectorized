@@ -72,13 +72,15 @@ typename std::decay_t<Visitor>::ResultType apply_visitor(Visitor&& visitor, F&& 
         return visitor(field.template get<AggregateFunctionStateData>());
 
     default:
-        throw Exception("Bad type of Field", ErrorCodes::BAD_TYPE_OF_FIELD);
+        LOG(FATAL) << "Bad type of Field";
+        return {};
     }
 }
 
 template <typename Visitor, typename F1, typename F2>
 static typename std::decay_t<Visitor>::ResultType apply_binary_visitor_impl(Visitor&& visitor,
-                                                                         F1&& field1, F2&& field2) {
+                                                                            F1&& field1,
+                                                                            F2&& field2) {
     switch (field2.getType()) {
     case Field::Types::Null:
         return visitor(field1, field2.template get<Null>());
@@ -106,57 +108,59 @@ static typename std::decay_t<Visitor>::ResultType apply_binary_visitor_impl(Visi
         return visitor(field1, field2.template get<AggregateFunctionStateData>());
 
     default:
-        throw Exception("Bad type of Field", ErrorCodes::BAD_TYPE_OF_FIELD);
+        LOG(FATAL) << "Bad type of Field";
+        return {};
     }
 }
 
 template <typename Visitor, typename F1, typename F2>
 typename std::decay_t<Visitor>::ResultType apply_visitor(Visitor&& visitor, F1&& field1,
-                                                        F2&& field2) {
+                                                         F2&& field2) {
     switch (field1.getType()) {
     case Field::Types::Null:
-        return apply_binary_visitor_impl(std::forward<Visitor>(visitor), field1.template get<Null>(),
-                                      std::forward<F2>(field2));
+        return apply_binary_visitor_impl(std::forward<Visitor>(visitor),
+                                         field1.template get<Null>(), std::forward<F2>(field2));
     case Field::Types::UInt64:
-        return apply_binary_visitor_impl(std::forward<Visitor>(visitor), field1.template get<UInt64>(),
-                                      std::forward<F2>(field2));
+        return apply_binary_visitor_impl(std::forward<Visitor>(visitor),
+                                         field1.template get<UInt64>(), std::forward<F2>(field2));
     case Field::Types::UInt128:
         return apply_binary_visitor_impl(std::forward<Visitor>(visitor),
-                                      field1.template get<UInt128>(), std::forward<F2>(field2));
+                                         field1.template get<UInt128>(), std::forward<F2>(field2));
     case Field::Types::Int64:
-        return apply_binary_visitor_impl(std::forward<Visitor>(visitor), field1.template get<Int64>(),
-                                      std::forward<F2>(field2));
+        return apply_binary_visitor_impl(std::forward<Visitor>(visitor),
+                                         field1.template get<Int64>(), std::forward<F2>(field2));
     case Field::Types::Float64:
         return apply_binary_visitor_impl(std::forward<Visitor>(visitor),
-                                      field1.template get<Float64>(), std::forward<F2>(field2));
+                                         field1.template get<Float64>(), std::forward<F2>(field2));
     case Field::Types::String:
-        return apply_binary_visitor_impl(std::forward<Visitor>(visitor), field1.template get<String>(),
-                                      std::forward<F2>(field2));
+        return apply_binary_visitor_impl(std::forward<Visitor>(visitor),
+                                         field1.template get<String>(), std::forward<F2>(field2));
     case Field::Types::Array:
-        return apply_binary_visitor_impl(std::forward<Visitor>(visitor), field1.template get<Array>(),
-                                      std::forward<F2>(field2));
+        return apply_binary_visitor_impl(std::forward<Visitor>(visitor),
+                                         field1.template get<Array>(), std::forward<F2>(field2));
     case Field::Types::Tuple:
-        return apply_binary_visitor_impl(std::forward<Visitor>(visitor), field1.template get<Tuple>(),
-                                      std::forward<F2>(field2));
+        return apply_binary_visitor_impl(std::forward<Visitor>(visitor),
+                                         field1.template get<Tuple>(), std::forward<F2>(field2));
     case Field::Types::Decimal32:
         return apply_binary_visitor_impl(std::forward<Visitor>(visitor),
-                                      field1.template get<DecimalField<Decimal32>>(),
-                                      std::forward<F2>(field2));
+                                         field1.template get<DecimalField<Decimal32>>(),
+                                         std::forward<F2>(field2));
     case Field::Types::Decimal64:
         return apply_binary_visitor_impl(std::forward<Visitor>(visitor),
-                                      field1.template get<DecimalField<Decimal64>>(),
-                                      std::forward<F2>(field2));
+                                         field1.template get<DecimalField<Decimal64>>(),
+                                         std::forward<F2>(field2));
     case Field::Types::Decimal128:
         return apply_binary_visitor_impl(std::forward<Visitor>(visitor),
-                                      field1.template get<DecimalField<Decimal128>>(),
-                                      std::forward<F2>(field2));
+                                         field1.template get<DecimalField<Decimal128>>(),
+                                         std::forward<F2>(field2));
     case Field::Types::AggregateFunctionState:
         return apply_binary_visitor_impl(std::forward<Visitor>(visitor),
-                                      field1.template get<AggregateFunctionStateData>(),
-                                      std::forward<F2>(field2));
+                                         field1.template get<AggregateFunctionStateData>(),
+                                         std::forward<F2>(field2));
 
     default:
-        throw Exception("Bad type of Field", ErrorCodes::BAD_TYPE_OF_FIELD);
+        LOG(FATAL) << "Bad type of Field";
+        return {};
     }
 }
 
@@ -199,23 +203,23 @@ template <typename T>
 class FieldVisitorConvertToNumber : public StaticVisitor<T> {
 public:
     T operator()(const Null&) const {
-        throw Exception("Cannot convert NULL to " + demangle(typeid(T).name()),
-                        ErrorCodes::CANNOT_CONVERT_TYPE);
+        LOG(FATAL) << "Cannot convert NULL to " << demangle(typeid(T).name());
+        return {};
     }
 
     T operator()(const String&) const {
-        throw Exception("Cannot convert String to " + demangle(typeid(T).name()),
-                        ErrorCodes::CANNOT_CONVERT_TYPE);
+        LOG(FATAL) << "Cannot convert String to " << demangle(typeid(T).name());
+        return {};
     }
 
     T operator()(const Array&) const {
-        throw Exception("Cannot convert Array to " + demangle(typeid(T).name()),
-                        ErrorCodes::CANNOT_CONVERT_TYPE);
+        LOG(FATAL) << "Cannot convert Array to " << demangle(typeid(T).name());
+        return {};
     }
 
     T operator()(const Tuple&) const {
-        throw Exception("Cannot convert Tuple to " + demangle(typeid(T).name()),
-                        ErrorCodes::CANNOT_CONVERT_TYPE);
+        LOG(FATAL) << "Cannot convert Tuple to " << demangle(typeid(T).name());
+        return {};
     }
 
     T operator()(const UInt64& x) const { return x; }
@@ -223,8 +227,8 @@ public:
     T operator()(const Float64& x) const { return x; }
 
     T operator()(const UInt128&) const {
-        throw Exception("Cannot convert UInt128 to " + demangle(typeid(T).name()),
-                        ErrorCodes::CANNOT_CONVERT_TYPE);
+        LOG(FATAL) << "Cannot convert UInt128 to " << demangle(typeid(T).name());
+        return {};
     }
 
     template <typename U>
@@ -236,9 +240,8 @@ public:
     }
 
     T operator()(const AggregateFunctionStateData&) const {
-        throw Exception(
-                "Cannot convert AggregateFunctionStateData to " + demangle(typeid(T).name()),
-                ErrorCodes::CANNOT_CONVERT_TYPE);
+        LOG(FATAL) << "Cannot convert AggregateFunctionStateData to " << demangle(typeid(T).name());
+        return {};
     }
 };
 
@@ -385,9 +388,8 @@ private:
     template <typename T, typename U>
     bool cant_compare(const T&, const U&) const {
         if constexpr (std::is_same_v<U, Null>) return false;
-        throw Exception("Cannot compare " + demangle(typeid(T).name()) + " with " +
-                                demangle(typeid(U).name()),
-                        ErrorCodes::BAD_TYPE_OF_FIELD);
+        LOG(FATAL) << fmt::format("Cannot compare {} with {}", demangle(typeid(T).name()),
+                                  demangle(typeid(U).name()));
     }
 };
 
@@ -490,9 +492,9 @@ public:
 private:
     template <typename T, typename U>
     bool cant_compare(const T&, const U&) const {
-        throw Exception("Cannot compare " + demangle(typeid(T).name()) + " with " +
-                                demangle(typeid(U).name()),
-                        ErrorCodes::BAD_TYPE_OF_FIELD);
+        LOG(FATAL) << fmt::format("Cannot compare {} with {}", demangle(typeid(T).name()),
+                                  demangle(typeid(U).name()));
+        return false;
     }
 };
 
@@ -519,21 +521,30 @@ public:
         return x != 0;
     }
 
-    bool operator()(Null&) const { throw Exception("Cannot sum Nulls", ErrorCodes::LOGICAL_ERROR); }
+    bool operator()(Null&) const {
+        LOG(FATAL) << "Cannot sum Nulls";
+        return false;
+    }
+
     bool operator()(String&) const {
-        throw Exception("Cannot sum Strings", ErrorCodes::LOGICAL_ERROR);
+        LOG(FATAL) << "Cannot sum Strings";
+        return false;
     }
     bool operator()(Array&) const {
-        throw Exception("Cannot sum Arrays", ErrorCodes::LOGICAL_ERROR);
+        LOG(FATAL) << "Cannot sum Arrays";
+        return false;
     }
     bool operator()(Tuple&) const {
-        throw Exception("Cannot sum Tuples", ErrorCodes::LOGICAL_ERROR);
+        LOG(FATAL) << "Cannot sum Tuples";
+        return false;
     }
     bool operator()(UInt128&) const {
-        throw Exception("Cannot sum UUIDs", ErrorCodes::LOGICAL_ERROR);
+        LOG(FATAL) << "Cannot sum UUIDs";
+        return false;
     }
     bool operator()(AggregateFunctionStateData&) const {
-        throw Exception("Cannot sum AggregateFunctionStates", ErrorCodes::LOGICAL_ERROR);
+        LOG(FATAL) << "Cannot sum AggregateFunctionStates";
+        return false;
     }
 
     template <typename T>
