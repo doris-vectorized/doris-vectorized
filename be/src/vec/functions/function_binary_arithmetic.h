@@ -266,8 +266,9 @@ private:
     static NativeResultType apply(NativeResultType a, NativeResultType b) {
         if constexpr (can_overflow && _check_overflow) {
             NativeResultType res;
-            if (Op::template apply<NativeResultType>(a, b, res))
-                throw Exception("Decimal math overflow", ErrorCodes::DECIMAL_OVERFLOW);
+            if (Op::template apply<NativeResultType>(a, b, res)) {
+                LOG(FATAL) << "Decimal math overflow";
+            }
             return res;
         } else
             return Op::template apply<NativeResultType>(a, b);
@@ -291,8 +292,9 @@ private:
                 else
                     res = Op::template apply<NativeResultType>(a, b);
 
-                if (overflow)
-                    throw Exception("Decimal math overflow", ErrorCodes::DECIMAL_OVERFLOW);
+                if (overflow) {
+                    LOG(FATAL) << "Decimal math overflow";
+                }
             } else {
                 if constexpr (scale_left)
                     a *= scale;
@@ -313,8 +315,9 @@ private:
                 if constexpr (!IsDecimalNumber<A>)
                     overflow |= common::mul_overflow(scale, scale, scale);
                 overflow |= common::mul_overflow(a, scale, a);
-                if (overflow)
-                    throw Exception("Decimal math overflow", ErrorCodes::DECIMAL_OVERFLOW);
+                if (overflow) {
+                    LOG(FATAL) << "Decimal math overflow";
+                }
             } else {
                 if constexpr (!IsDecimalNumber<A>) scale *= scale;
                 a *= scale;
@@ -752,11 +755,12 @@ public:
                     }
                     return false;
                 });
-        if (!valid)
-            throw Exception("Illegal types " + arguments[0]->get_name() + " and " +
-                                    arguments[1]->get_name() + " of arguments of function " +
-                                    get_name(),
-                            ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        if (!valid) {
+            LOG(FATAL) << fmt::format("Illegal types {} and {} of arguments of function {}",
+                                      arguments[0]->get_name(), arguments[1]->get_name(),
+                                      get_name());
+        }
+
         return type_res;
     }
 

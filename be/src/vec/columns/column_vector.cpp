@@ -230,9 +230,9 @@ void ColumnVector<T>::insert_range_from(const IColumn& src, size_t start, size_t
 template <typename T>
 ColumnPtr ColumnVector<T>::filter(const IColumn::Filter& filt, ssize_t result_size_hint) const {
     size_t size = data.size();
-    if (size != filt.size())
-        throw Exception("Size of filter doesn't match size of column.",
-                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+    if (size != filt.size()) {
+        LOG(FATAL) << "Size of filter doesn't match size of column.";
+    }
 
     auto res = this->create();
     Container& res_data = res->get_data();
@@ -291,9 +291,9 @@ ColumnPtr ColumnVector<T>::permute(const IColumn::Permutation& perm, size_t limi
     else
         limit = std::min(size, limit);
 
-    if (perm.size() < limit)
-        throw Exception("Size of permutation is less than required.",
-                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+    if (perm.size() < limit) {
+        LOG(FATAL) << "Size of permutation is less than required.";
+    }
 
     auto res = this->create(limit);
     typename Self::Container& res_data = res->get_data();
@@ -311,9 +311,9 @@ ColumnPtr ColumnVector<T>::permute(const IColumn::Permutation& perm, size_t limi
 template <typename T>
 ColumnPtr ColumnVector<T>::replicate(const IColumn::Offsets& offsets) const {
     size_t size = data.size();
-    if (size != offsets.size())
-        throw Exception("Size of offsets doesn't match size of column.",
-                        ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
+    if (size != offsets.size()) {
+        LOG(FATAL) << "Size of offsets doesn't match size of column.";
+    }
 
     if (0 == size) return this->create();
 

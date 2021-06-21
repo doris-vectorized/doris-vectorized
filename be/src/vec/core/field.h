@@ -68,30 +68,27 @@ struct AggregateFunctionStateData {
     String data;
 
     bool operator<(const AggregateFunctionStateData&) const {
-        throw Exception("Operator < is not implemented for AggregateFunctionStateData.",
-                        ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        LOG(FATAL) << "Operator < is not implemented for AggregateFunctionStateData.";
     }
 
     bool operator<=(const AggregateFunctionStateData&) const {
-        throw Exception("Operator <= is not implemented for AggregateFunctionStateData.",
-                        ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        LOG(FATAL) << "Operator <= is not implemented for AggregateFunctionStateData.";
     }
 
     bool operator>(const AggregateFunctionStateData&) const {
-        throw Exception("Operator > is not implemented for AggregateFunctionStateData.",
-                        ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        LOG(FATAL) << "Operator <= is not implemented for AggregateFunctionStateData.";
     }
 
     bool operator>=(const AggregateFunctionStateData&) const {
-        throw Exception("Operator >= is not implemented for AggregateFunctionStateData.",
-                        ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        LOG(FATAL) << "Operator >= is not implemented for AggregateFunctionStateData.";
     }
 
     bool operator==(const AggregateFunctionStateData& rhs) const {
-        if (name != rhs.name)
-            throw Exception("Comparing aggregate functions with different types: " + name +
-                                    " and " + rhs.name,
-                            ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+        if (name != rhs.name) {
+            LOG(FATAL) << fmt::format(
+                    "Comparing aggregate functions with different types: {} and {}", name,
+                    rhs.name);
+        }
 
         return data == rhs.data;
     }
@@ -146,15 +143,17 @@ public:
     }
 
     const DecimalField<T>& operator+=(const DecimalField<T>& r) {
-        if (scale != r.get_scale())
-            throw Exception("Add different decimal fields", ErrorCodes::LOGICAL_ERROR);
+        if (scale != r.get_scale()) {
+            LOG(FATAL) << "Add different decimal fields";
+        }
         dec += r.get_value();
         return *this;
     }
 
     const DecimalField<T>& operator-=(const DecimalField<T>& r) {
-        if (scale != r.get_scale())
-            throw Exception("Sub different decimal fields", ErrorCodes::LOGICAL_ERROR);
+        if (scale != r.get_scale()) {
+            LOG(FATAL) << "Sub different decimal fields";
+        }
         dec -= r.get_value();
         return *this;
     }
@@ -232,7 +231,8 @@ public:
                 return "AggregateFunctionState";
             }
 
-            throw Exception("Bad type of Field", ErrorCodes::BAD_TYPE_OF_FIELD);
+            LOG(FATAL) << "Bad type of Field";
+            return nullptr;
         }
     };
 
@@ -339,14 +339,16 @@ public:
     template <typename T>
     T& safe_get() {
         const Types::Which requested = TypeToEnum<std::decay_t<T>>::value;
-        CHECK_EQ(which, requested) << fmt::format("Bad get: has {}, requested {}", get_type_name(), Types::to_string(requested));
+        CHECK_EQ(which, requested) << fmt::format("Bad get: has {}, requested {}", get_type_name(),
+                                                  Types::to_string(requested));
         return get<T>();
     }
 
     template <typename T>
     const T& safe_get() const {
         const Types::Which requested = TypeToEnum<std::decay_t<T>>::value;
-        CHECK_EQ(which, requested) << fmt::format("Bad get: has {}, requested {}", get_type_name(), Types::to_string(requested));
+        CHECK_EQ(which, requested) << fmt::format("Bad get: has {}, requested {}", get_type_name(),
+                                                  Types::to_string(requested));
         return get<T>();
     }
 
@@ -383,7 +385,8 @@ public:
             return get<AggregateFunctionStateData>() < rhs.get<AggregateFunctionStateData>();
         }
 
-        throw Exception("Bad type of Field", ErrorCodes::BAD_TYPE_OF_FIELD);
+        LOG(FATAL) << "Bad type of Field";
+        return {};
     }
 
     bool operator>(const Field& rhs) const { return rhs < *this; }
@@ -420,8 +423,8 @@ public:
         case Types::AggregateFunctionState:
             return get<AggregateFunctionStateData>() <= rhs.get<AggregateFunctionStateData>();
         }
-
-        throw Exception("Bad type of Field", ErrorCodes::BAD_TYPE_OF_FIELD);
+        LOG(FATAL) << "Bad type of Field";
+        return {};
     }
 
     bool operator>=(const Field& rhs) const { return rhs <= *this; }
@@ -889,7 +892,7 @@ decltype(auto) cast_to_nearest_field_type(T&& x) {
 template <typename T>
 Field::Field(T&& rhs, std::enable_if_t<!std::is_same_v<std::decay_t<T>, Field>, void*>) {
     auto&& val = cast_to_nearest_field_type(std::forward<T>(rhs));
-        create_concrete(std::forward<decltype(val)>(val));
+    create_concrete(std::forward<decltype(val)>(val));
 }
 
 template <typename T>

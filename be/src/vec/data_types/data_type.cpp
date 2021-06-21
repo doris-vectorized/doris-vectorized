@@ -17,8 +17,8 @@
 
 #include "vec/data_types/data_type.h"
 
-#include "fmt/format.h"
 #include "common/logging.h"
+#include "fmt/format.h"
 #include "vec/columns/column.h"
 #include "vec/columns/column_const.h"
 #include "vec/common/exception.h"
@@ -69,13 +69,13 @@ ColumnPtr IDataType::createColumnConstWithDefaultValue(size_t size) const {
 }
 
 DataTypePtr IDataType::promoteNumericType() const {
-    throw Exception("Data type " + get_name() + " can't be promoted.",
-                    ErrorCodes::DATA_TYPE_CANNOT_BE_PROMOTED);
+    LOG(FATAL) << fmt::format("Data type {} can't be promoted.", get_name());
+    return nullptr;
 }
 
 size_t IDataType::getSizeOfValueInMemory() const {
-    throw Exception("Value of type " + get_name() + " in memory is not of fixed size.",
-                    ErrorCodes::LOGICAL_ERROR);
+    LOG(FATAL) << fmt::format("Value of type {} in memory is not of fixed size.", get_name());
+    return 0;
 }
 
 void IDataType::to_string(const IColumn& column, size_t row_num, BufferWritable& ostr) const {
