@@ -46,7 +46,7 @@ inline int cmp(T a, T b) {
 /** Variant when memory regions may have different sizes.
   */
 template <typename Char>
-inline int memcmpSmallAllowOverflow15(const Char* a, size_t a_size, const Char* b, size_t b_size) {
+inline int memcmp_small_allow_overflow15(const Char* a, size_t a_size, const Char* b, size_t b_size) {
     size_t min_size = std::min(a_size, b_size);
 
     for (size_t offset = 0; offset < min_size; offset += 16) {
@@ -71,7 +71,7 @@ inline int memcmpSmallAllowOverflow15(const Char* a, size_t a_size, const Char* 
   * TODO Check if the compiler can optimize previous function when the caller pass identical sizes.
   */
 template <typename Char>
-inline int memcmpSmallAllowOverflow15(const Char* a, const Char* b, size_t size) {
+inline int memcmp_small_allow_overflow15(const Char* a, const Char* b, size_t size) {
     for (size_t offset = 0; offset < size; offset += 16) {
         uint16_t mask = _mm_movemask_epi8(
                 _mm_cmpeq_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(a + offset)),
@@ -93,7 +93,7 @@ inline int memcmpSmallAllowOverflow15(const Char* a, const Char* b, size_t size)
 /** Compare memory regions for equality.
   */
 template <typename Char>
-inline bool memequalSmallAllowOverflow15(const Char* a, size_t a_size, const Char* b,
+inline bool memequal_small_allow_overflow15(const Char* a, size_t a_size, const Char* b,
                                          size_t b_size) {
     if (a_size != b_size) return false;
 
@@ -115,7 +115,7 @@ inline bool memequalSmallAllowOverflow15(const Char* a, size_t a_size, const Cha
 /** Variant when the caller know in advance that the size is a multiple of 16.
   */
 template <typename Char>
-inline int memcmpSmallMultipleOf16(const Char* a, const Char* b, size_t size) {
+inline int memcmp_small_multiple_of16(const Char* a, const Char* b, size_t size) {
     for (size_t offset = 0; offset < size; offset += 16) {
         uint16_t mask = _mm_movemask_epi8(
                 _mm_cmpeq_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(a + offset)),
@@ -157,7 +157,7 @@ inline bool memequal16(const void* a, const void* b) {
 }
 
 /** Compare memory region to zero */
-inline bool memoryIsZeroSmallAllowOverflow15(const void* data, size_t size) {
+inline bool memory_is_zero_small_allow_overflow15(const void* data, size_t size) {
     const __m128i zero16 = _mm_setzero_si128();
 
     for (size_t offset = 0; offset < size; offset += 16) {
@@ -180,7 +180,7 @@ inline bool memoryIsZeroSmallAllowOverflow15(const void* data, size_t size) {
 #include <cstring>
 
 template <typename Char>
-inline int memcmpSmallAllowOverflow15(const Char* a, size_t a_size, const Char* b, size_t b_size) {
+inline int memcmp_small_allow_overflow15(const Char* a, size_t a_size, const Char* b, size_t b_size) {
     if (auto res = memcmp(a, b, std::min(a_size, b_size)))
         return res;
     else
@@ -188,18 +188,18 @@ inline int memcmpSmallAllowOverflow15(const Char* a, size_t a_size, const Char* 
 }
 
 template <typename Char>
-inline int memcmpSmallAllowOverflow15(const Char* a, const Char* b, size_t size) {
+inline int memcmp_small_allow_overflow15(const Char* a, const Char* b, size_t size) {
     return memcmp(a, b, size);
 }
 
 template <typename Char>
-inline bool memequalSmallAllowOverflow15(const Char* a, size_t a_size, const Char* b,
+inline bool memequal_small_allow_overflow15(const Char* a, size_t a_size, const Char* b,
                                          size_t b_size) {
     return a_size == b_size && 0 == memcmp(a, b, a_size);
 }
 
 template <typename Char>
-inline int memcmpSmallMultipleOf16(const Char* a, const Char* b, size_t size) {
+inline int memcmp_small_multiple_of16(const Char* a, const Char* b, size_t size) {
     return memcmp(a, b, size);
 }
 
@@ -212,7 +212,7 @@ inline bool memequal16(const void* a, const void* b) {
     return 0 == memcmp(a, b, 16);
 }
 
-inline bool memoryIsZeroSmallAllowOverflow15(const void* data, size_t size) {
+inline bool memory_is_zero_small_allow_overflow15(const void* data, size_t size) {
     const char* pos = reinterpret_cast<const char*>(data);
     const char* end = pos + size;
 

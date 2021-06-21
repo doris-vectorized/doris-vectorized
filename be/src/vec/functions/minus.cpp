@@ -17,7 +17,7 @@ struct MinusImpl {
     /// Apply operation and check overflow. It's used for Deciamal operations. @returns true if overflowed, false otherwise.
     template <typename Result = ResultType>
     static inline bool apply(A a, B b, Result& c) {
-        return common::subOverflow(static_cast<Result>(a), b, c);
+        return common::sub_overflow(static_cast<Result>(a), b, c);
     }
 
 #if USE_EMBEDDED_COMPILER

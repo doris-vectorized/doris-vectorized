@@ -49,7 +49,7 @@ struct UInt128 {
 
     auto tuple() const { return std::tie(high, low); }
 
-    String toHexString() const {
+    String to_hex_string() const {
         std::ostringstream os;
         os << std::setw(16) << std::setfill('0') << std::hex << high << low;
         return String(os.str());

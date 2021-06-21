@@ -56,10 +56,10 @@ public:
     EmplaceResultImpl(Mapped& value_, Mapped& cached_value_, bool inserted_)
             : value(value_), cached_value(cached_value_), inserted(inserted_) {}
 
-    bool isInserted() const { return inserted; }
-    auto& getMapped() const { return value; }
+    bool is_inserted() const { return inserted; }
+    auto& get_mapped() const { return value; }
 
-    void setMapped(const Mapped& mapped) {
+    void set_mapped(const Mapped& mapped) {
         cached_value = mapped;
         value = mapped;
     }
@@ -71,7 +71,7 @@ class EmplaceResultImpl<void> {
 
 public:
     explicit EmplaceResultImpl(bool inserted_) : inserted(inserted_) {}
-    bool isInserted() const { return inserted; }
+    bool is_inserted() const { return inserted; }
 };
 
 template <typename Mapped>
@@ -81,8 +81,8 @@ class FindResultImpl {
 
 public:
     FindResultImpl(Mapped* value_, bool found_) : value(value_), found(found_) {}
-    bool isFound() const { return found; }
-    Mapped& getMapped() const { return *value; }
+    bool is_found() const { return found; }
+    Mapped& get_mapped() const { return *value; }
 };
 
 template <>
@@ -91,7 +91,7 @@ class FindResultImpl<void> {
 
 public:
     explicit FindResultImpl(bool found_) : found(found_) {}
-    bool isFound() const { return found; }
+    bool is_found() const { return found; }
 };
 
 template <typename Derived, typename Value, typename Mapped, bool consecutive_keys_optimization>
@@ -107,21 +107,21 @@ public:
     }
 
     template <typename Data>
-    ALWAYS_INLINE EmplaceResult emplaceKey(Data& data, size_t row, Arena& pool) {
-        auto key_holder = static_cast<Derived&>(*this).getKeyHolder(row, pool);
+    ALWAYS_INLINE EmplaceResult emplace_key(Data& data, size_t row, Arena& pool) {
+        auto key_holder = static_cast<Derived&>(*this).get_key_holder(row, pool);
         return emplaceImpl(key_holder, data);
     }
 
     template <typename Data>
-    ALWAYS_INLINE FindResult findKey(Data& data, size_t row, Arena& pool) {
-        auto key_holder = static_cast<Derived&>(*this).getKeyHolder(row, pool);
-        return findKeyImpl(keyHolderGetKey(key_holder), data);
+    ALWAYS_INLINE FindResult find_key(Data& data, size_t row, Arena& pool) {
+        auto key_holder = static_cast<Derived&>(*this).get_key_holder(row, pool);
+        return find_key_impl(key_holder_get_key(key_holder), data);
     }
 
     template <typename Data>
-    ALWAYS_INLINE size_t getHash(const Data& data, size_t row, Arena& pool) {
-        auto key_holder = static_cast<Derived&>(*this).getKeyHolder(row, pool);
-        return data.hash(keyHolderGetKey(key_holder));
+    ALWAYS_INLINE size_t get_hash(const Data& data, size_t row, Arena& pool) {
+        auto key_holder = static_cast<Derived&>(*this).get_key_holder(row, pool);
+        return data.hash(key_holder_get_key(key_holder));
     }
 
 protected:
@@ -141,7 +141,7 @@ protected:
     template <typename Data, typename KeyHolder>
     ALWAYS_INLINE EmplaceResult emplaceImpl(KeyHolder& key_holder, Data& data) {
         if constexpr (Cache::consecutive_keys_optimization) {
-            if (cache.found && cache.check(keyHolderGetKey(key_holder))) {
+            if (cache.found && cache.check(key_holder_get_key(key_holder))) {
                 if constexpr (has_mapped)
                     return EmplaceResult(cache.value.second, cache.value.second, false);
                 else
@@ -154,11 +154,11 @@ protected:
         data.emplace(key_holder, it, inserted);
 
         [[maybe_unused]] Mapped* cached = nullptr;
-        if constexpr (has_mapped) cached = lookupResultGetMapped(it);
+        if constexpr (has_mapped) cached = lookup_result_get_mapped(it);
 
         if (inserted) {
             if constexpr (has_mapped) {
-                new (lookupResultGetMapped(it)) Mapped();
+                new (lookup_result_get_mapped(it)) Mapped();
             }
         }
 
@@ -167,22 +167,22 @@ protected:
             cache.empty = false;
 
             if constexpr (has_mapped) {
-                cache.value.first = *lookupResultGetKey(it);
-                cache.value.second = *lookupResultGetMapped(it);
+                cache.value.first = *lookup_result_get_key(it);
+                cache.value.second = *lookup_result_get_mapped(it);
                 cached = &cache.value.second;
             } else {
-                cache.value = *lookupResultGetKey(it);
+                cache.value = *lookup_result_get_key(it);
             }
         }
 
         if constexpr (has_mapped)
-            return EmplaceResult(*lookupResultGetMapped(it), *cached, inserted);
+            return EmplaceResult(*lookup_result_get_mapped(it), *cached, inserted);
         else
             return EmplaceResult(inserted);
     }
 
     template <typename Data, typename Key>
-    ALWAYS_INLINE FindResult findKeyImpl(Key key, Data& data) {
+    ALWAYS_INLINE FindResult find_key_impl(Key key, Data& data) {
         if constexpr (Cache::consecutive_keys_optimization) {
             if (cache.check(key)) {
                 if constexpr (has_mapped)
@@ -201,7 +201,7 @@ protected:
             if constexpr (has_mapped) {
                 cache.value.first = key;
                 if (it) {
-                    cache.value.second = *lookupResultGetMapped(it);
+                    cache.value.second = *lookup_result_get_mapped(it);
                 }
             } else {
                 cache.value = key;
@@ -209,7 +209,7 @@ protected:
         }
 
         if constexpr (has_mapped)
-            return FindResult(it ? lookupResultGetMapped(it) : nullptr, it != nullptr);
+            return FindResult(it ? lookup_result_get_mapped(it) : nullptr, it != nullptr);
         else
             return FindResult(it != nullptr);
     }
@@ -249,11 +249,11 @@ protected:
     /// Return the columns which actually contain the values of the keys.
     /// For a given key column, if it is nullable, we return its nested
     /// column. Otherwise we return the key column itself.
-    inline const ColumnRawPtrs& getActualColumns() const { return actual_columns; }
+    inline const ColumnRawPtrs& get_actual_columns() const { return actual_columns; }
 
     /// Create a bitmap that indicates whether, for a particular row,
     /// a key column bears a null value or not.
-    KeysNullMap<Key> createBitmap(size_t row) const {
+    KeysNullMap<Key> create_bitmap(size_t row) const {
         KeysNullMap<Key> bitmap {};
 
         for (size_t k = 0; k < null_maps.size(); ++k) {
@@ -281,11 +281,11 @@ class BaseStateKeysFixed<Key, false> {
 protected:
     BaseStateKeysFixed(const ColumnRawPtrs& columns) : actual_columns(columns) {}
 
-    const ColumnRawPtrs& getActualColumns() const { return actual_columns; }
+    const ColumnRawPtrs& get_actual_columns() const { return actual_columns; }
 
-    KeysNullMap<Key> createBitmap(size_t) const {
+    KeysNullMap<Key> create_bitmap(size_t) const {
         throw Exception {
-                "Internal error: calling createBitmap() for non-nullable keys"
+                "Internal error: calling create_bitmap() for non-nullable keys"
                 " is forbidden",
                 ErrorCodes::LOGICAL_ERROR};
     }

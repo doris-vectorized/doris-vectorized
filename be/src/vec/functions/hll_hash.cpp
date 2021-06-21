@@ -39,7 +39,7 @@ struct HLLHashImpl {
                     offsets[i] - prev_offset - 1));
 
             res_data.resize(res_data.size() + hash_string.length() + 1);
-            memcpySmallAllowReadWriteOverflow15(&res_data[res_offset], hash_string.c_str(), hash_string.length());
+            memcpy_small_allow_read_write_overflow15(&res_data[res_offset], hash_string.c_str(), hash_string.length());
             res_offset += hash_string.length() + 1;
             res_data[res_offset - 1] = 0;
 

@@ -101,7 +101,7 @@ public:
 
     String get_name() const override { return Data::get_name(); }
 
-    DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
+    DataTypePtr get_return_type() const override { return std::make_shared<DataTypeInt64>(); }
 
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
@@ -120,11 +120,11 @@ public:
         this->data(place).set.read(buf);
     }
 
-    void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
+    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
         assert_cast<ColumnInt64&>(to).get_data().push_back(this->data(place).set.size());
     }
 
-    const char* getHeaderFilePath() const override { return __FILE__; }
+    const char* get_header_file_path() const override { return __FILE__; }
 };
 
 } // namespace doris::vectorized

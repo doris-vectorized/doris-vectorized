@@ -47,25 +47,25 @@
 
 /**
   * Returns the key. Can return the temporary key initially.
-  * After the call to keyHolderPersistKey(), must return the persistent key.
+  * After the call to key_holder_persist_key(), must return the persistent key.
   */
 template <typename Key>
-inline Key& ALWAYS_INLINE keyHolderGetKey(Key&& key) {
+inline Key& ALWAYS_INLINE key_holder_get_key(Key&& key) {
     return key;
 }
 
 /**
-  * Make the key persistent. keyHolderGetKey() must return the persistent key
+  * Make the key persistent. key_holder_get_key() must return the persistent key
   * after this call.
   */
 template <typename Key>
-inline void ALWAYS_INLINE keyHolderPersistKey(Key&&) {}
+inline void ALWAYS_INLINE key_holder_persist_key(Key&&) {}
 
 /**
-  * Discard the key. Calling keyHolderGetKey() is ill-defined after this.
+  * Discard the key. Calling key_holder_get_key() is ill-defined after this.
   */
 template <typename Key>
-inline void ALWAYS_INLINE keyHolderDiscardKey(Key&&) {}
+inline void ALWAYS_INLINE key_holder_discard_key(Key&&) {}
 
 namespace doris::vectorized {
 
@@ -80,17 +80,17 @@ struct ArenaKeyHolder {
 
 } // namespace doris::vectorized
 
-inline StringRef& ALWAYS_INLINE keyHolderGetKey(doris::vectorized::ArenaKeyHolder& holder) {
+inline StringRef& ALWAYS_INLINE key_holder_get_key(doris::vectorized::ArenaKeyHolder& holder) {
     return holder.key;
 }
 
-inline void ALWAYS_INLINE keyHolderPersistKey(doris::vectorized::ArenaKeyHolder& holder) {
+inline void ALWAYS_INLINE key_holder_persist_key(doris::vectorized::ArenaKeyHolder& holder) {
     // Hash table shouldn't ask us to persist a zero key
     assert(holder.key.size > 0);
     holder.key.data = holder.pool.insert(holder.key.data, holder.key.size);
 }
 
-inline void ALWAYS_INLINE keyHolderDiscardKey(doris::vectorized::ArenaKeyHolder&) {}
+inline void ALWAYS_INLINE key_holder_discard_key(doris::vectorized::ArenaKeyHolder&) {}
 
 namespace doris::vectorized {
 
@@ -106,13 +106,13 @@ struct SerializedKeyHolder {
 
 } // namespace doris::vectorized
 
-inline StringRef& ALWAYS_INLINE keyHolderGetKey(doris::vectorized::SerializedKeyHolder& holder) {
+inline StringRef& ALWAYS_INLINE key_holder_get_key(doris::vectorized::SerializedKeyHolder& holder) {
     return holder.key;
 }
 
-inline void ALWAYS_INLINE keyHolderPersistKey(doris::vectorized::SerializedKeyHolder&) {}
+inline void ALWAYS_INLINE key_holder_persist_key(doris::vectorized::SerializedKeyHolder&) {}
 
-inline void ALWAYS_INLINE keyHolderDiscardKey(doris::vectorized::SerializedKeyHolder& holder) {
+inline void ALWAYS_INLINE key_holder_discard_key(doris::vectorized::SerializedKeyHolder& holder) {
     [[maybe_unused]] void* new_head = holder.pool.rollback(holder.key.size);
     assert(new_head == holder.key.data);
     holder.key.data = nullptr;

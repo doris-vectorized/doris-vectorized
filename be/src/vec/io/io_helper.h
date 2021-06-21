@@ -69,7 +69,7 @@ inline std::string int128_to_string(__int128_t value) {
 }
 
 inline std::string int128_to_string(UInt128 value) {
-    return value.toHexString();
+    return value.to_hex_string();
 }
 
 template <typename T>

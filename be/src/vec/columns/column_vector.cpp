@@ -50,14 +50,14 @@ extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
 template <typename T>
 StringRef ColumnVector<T>::serialize_value_into_arena(size_t n, Arena& arena,
                                                       char const*& begin) const {
-    auto pos = arena.allocContinue(sizeof(T), begin);
-    unalignedStore<T>(pos, data[n]);
+    auto pos = arena.alloc_continue(sizeof(T), begin);
+    unaligned_store<T>(pos, data[n]);
     return StringRef(pos, sizeof(T));
 }
 
 template <typename T>
 const char* ColumnVector<T>::deserialize_and_insert_from_arena(const char* pos) {
-    data.push_back(unalignedLoad<T>(pos));
+    data.push_back(unaligned_load<T>(pos));
     return pos + sizeof(T);
 }
 
@@ -98,7 +98,7 @@ struct ValueWithIndex {
 template <typename T>
 struct RadixSortTraits : RadixSortNumTraits<T> {
     using Element = ValueWithIndex<T>;
-    static T& extractKey(Element& elem) { return elem.value; }
+    static T& extract_key(Element& elem) { return elem.value; }
 };
 } // namespace
 
@@ -129,14 +129,14 @@ void ColumnVector<T>::get_permutation(bool reverse, size_t limit, int nan_direct
                 PaddedPODArray<ValueWithIndex<T>> pairs(s);
                 for (UInt32 i = 0; i < s; ++i) pairs[i] = {data[i], i};
 
-                RadixSort<RadixSortTraits<T>>::executeLSD(pairs.data(), s);
+                RadixSort<RadixSortTraits<T>>::execute_lsd(pairs.data(), s);
 
                 /// Radix sort treats all NaNs to be greater than all numbers.
                 /// If the user needs the opposite, we must move them accordingly.
                 size_t nans_to_move = 0;
                 if (std::is_floating_point_v<T> && nan_direction_hint < 0) {
                     for (ssize_t i = s - 1; i >= 0; --i) {
-                        if (isNaN(pairs[i].value))
+                        if (is_nan(pairs[i].value))
                             ++nans_to_move;
                         else
                             break;
@@ -356,11 +356,11 @@ void ColumnVector<T>::get_extremes(Field& min, Field& max) const {
         * Different NaN could be returned: not bit-exact value as one of NaNs from column.
         */
 
-    T cur_min = NaNOrZero<T>();
-    T cur_max = NaNOrZero<T>();
+    T cur_min = nan_or_zero<T>();
+    T cur_max = nan_or_zero<T>();
 
     for (const T x : data) {
-        if (isNaN(x)) continue;
+        if (is_nan(x)) continue;
 
         if (!has_value) {
             cur_min = x;

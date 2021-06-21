@@ -96,7 +96,7 @@ public:
 
     bool useDefaultImplementationForConstants() const override { return true; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         DataTypePtr result;
         bool valid = castType(arguments[0].get(), [&](const auto& type) {
             using DataType = std::decay_t<decltype(type)>;

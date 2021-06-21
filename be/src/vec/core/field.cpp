@@ -159,7 +159,7 @@ namespace doris::vectorized {
 //
 //    void write_text(const Array & x, WriteBuffer & buf)
 //    {
-//        doris::vectorized::String res = applyVisitor(doris::vectorized::FieldVisitorToString(), doris::vectorized::Field(x));
+//        doris::vectorized::String res = apply_visitor(doris::vectorized::FieldVisitorToString(), doris::vectorized::Field(x));
 //        buf.write(res.data(), res.size());
 //    }
 //
@@ -306,7 +306,7 @@ namespace doris::vectorized {
 //
 //    void write_field_text(const Field & x, WriteBuffer & buf)
 //    {
-//        doris::vectorized::String res = applyVisitor(doris::vectorized::FieldVisitorToString(), x);
+//        doris::vectorized::String res = apply_visitor(doris::vectorized::FieldVisitorToString(), x);
 //        buf.write(res.data(), res.size());
 //    }
 void read_binary(Array& x, std::istream& buf) {

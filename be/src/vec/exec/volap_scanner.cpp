@@ -84,7 +84,7 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
         }
         auto n_columns = 0;
         for (const auto slot_desc : _tuple_desc->slots()) {
-            block->insert(ColumnWithTypeAndName(columns[n_columns++]->getPtr(),
+            block->insert(ColumnWithTypeAndName(columns[n_columns++]->get_ptr(),
                                                 slot_desc->get_data_type_ptr(),
                                                 slot_desc->col_name()));
         }

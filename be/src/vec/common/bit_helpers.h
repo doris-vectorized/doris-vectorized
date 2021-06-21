@@ -24,7 +24,7 @@
   * Compiles to single 'bsr' instruction on x86.
   * For zero argument, result is unspecified.
   */
-inline unsigned int bitScanReverse(unsigned int x) {
+inline unsigned int bit_scan_reverse(unsigned int x) {
     return sizeof(unsigned int) * 8 - 1 - __builtin_clz(x);
 }
 
@@ -32,7 +32,7 @@ inline unsigned int bitScanReverse(unsigned int x) {
   * For arguments with most significand bit set, result is zero.
   * For other arguments, returns value, rounded up to power of two.
   */
-inline size_t roundUpToPowerOfTwoOrZero(size_t n) {
+inline size_t round_up_to_power_of_two_or_zero(size_t n) {
     --n;
     n |= n >> 1;
     n |= n >> 2;
@@ -46,7 +46,7 @@ inline size_t roundUpToPowerOfTwoOrZero(size_t n) {
 }
 
 template <typename T>
-inline size_t getLeadingZeroBits(T x) {
+inline size_t get_leading_zero_bits(T x) {
     if (!x) return sizeof(x) * 8;
 
     if constexpr (sizeof(T) <= sizeof(unsigned int)) {
@@ -59,7 +59,7 @@ inline size_t getLeadingZeroBits(T x) {
 }
 
 template <typename T>
-inline size_t getTrailingZeroBits(T x) {
+inline size_t get_trailing_zero_bits(T x) {
     if (!x) return sizeof(x) * 8;
 
     if constexpr (sizeof(T) <= sizeof(unsigned int)) {
@@ -72,10 +72,10 @@ inline size_t getTrailingZeroBits(T x) {
 }
 
 /** Returns a mask that has '1' for `bits` LSB set:
- * maskLowBits<UInt8>(3) => 00000111
+ * mask_low_bits<UInt8>(3) => 00000111
  */
 template <typename T>
-inline T maskLowBits(unsigned char bits) {
+inline T mask_low_bits(unsigned char bits) {
     if (bits == 0) {
         return 0;
     }

@@ -130,7 +130,7 @@ public:
     }
 
     void insert_data(const char* pos, size_t /*length*/) override {
-        data.push_back(unalignedLoad<T>(pos));
+        data.push_back(unaligned_load<T>(pos));
     }
 
     void insert_default() override { data.push_back(T()); }

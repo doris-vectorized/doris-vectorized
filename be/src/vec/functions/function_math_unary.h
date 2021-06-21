@@ -36,7 +36,7 @@ private:
     String get_name() const override { return name; }
     size_t getNumberOfArguments() const override { return 1; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         const auto& arg = arguments.front();
         if (!isNumber(arg)) {
             return nullptr;

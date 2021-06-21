@@ -38,12 +38,12 @@ public:
 
     size_t getNumberOfArguments() const override { return 1; }
 
-    DataTypePtr getReturnTypeImpl(const ColumnsWithTypeAndName& arguments) const override {
+    DataTypePtr get_return_typeImpl(const ColumnsWithTypeAndName& arguments) const override {
         return std::make_shared<DataTypeString>();
     }
 
     bool useDefaultImplementationForConstants() const override { return true; }
-    ColumnNumbers getArgumentsThatAreAlwaysConstant() const override { return {1}; }
+    ColumnNumbers get_argumentsThatAreAlwaysConstant() const override { return {1}; }
 
     Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {

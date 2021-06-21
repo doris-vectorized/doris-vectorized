@@ -105,9 +105,9 @@ public:
 
     size_t getNumberOfArguments() const override { return 3; }
     bool useDefaultImplementationForNulls() const override { return false; }
-    ColumnNumbers getArgumentsThatDontImplyNullableReturnType(size_t /*number_of_arguments*/) const override { return {0}; }
+    ColumnNumbers get_argumentsThatDontImplyNullableReturnType(size_t /*number_of_arguments*/) const override { return {0}; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes & arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes & arguments) const override {
         return getLeastSupertype({arguments[1], arguments[2]});
     }
 

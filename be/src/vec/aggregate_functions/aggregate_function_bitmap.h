@@ -81,7 +81,7 @@ public:
             : IAggregateFunctionDataHelper<AggregateFunctionBitmapData<Op>,
                                            AggregateFunctionBitmapOp<Op>>(argument_types_, {}) {}
 
-    DataTypePtr getReturnType() const override { return std::make_shared<DataTypeBitMap>(); }
+    DataTypePtr get_return_type() const override { return std::make_shared<DataTypeBitMap>(); }
 
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
@@ -102,13 +102,13 @@ public:
         this->data(place).read(buf);
     }
 
-    void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
+    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
         auto& column = static_cast<ColVecResult&>(to);
         column.get_data().push_back(
                 const_cast<AggregateFunctionBitmapData<Op>&>(this->data(place)).get());
     }
 
-    const char* getHeaderFilePath() const override { return __FILE__; }
+    const char* get_header_file_path() const override { return __FILE__; }
 };
 
 template <bool nullable, typename ColVecType>
@@ -125,7 +125,7 @@ public:
                                            AggregateFunctionBitmapCount<nullable, ColVecType>>(argument_types_, {}) {}
 
     String get_name() const override { return "count"; }
-    DataTypePtr getReturnType() const override { return std::make_shared<DataTypeInt64>(); }
+    DataTypePtr get_return_type() const override { return std::make_shared<DataTypeInt64>(); }
     
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
@@ -154,13 +154,13 @@ public:
         this->data(place).read(buf);
     }
 
-    void insertResultInto(ConstAggregateDataPtr place, IColumn& to) const override {
+    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
         auto & value_data = const_cast<AggFunctionData&>(this->data(place)).get();
         auto& column = static_cast<ColVecResult&>(to);
         column.get_data().push_back(value_data.cardinality());
     }
 
-    const char* getHeaderFilePath() const override { return __FILE__; }
+    const char* get_header_file_path() const override { return __FILE__; }
 };
 
 } // namespace doris::vectorized

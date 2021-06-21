@@ -44,7 +44,7 @@ public:
 
     bool isInjective(const Block&) override { return is_injective; }
 
-    DataTypePtr getReturnTypeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
         if (!isStringOrFixedString(arguments[0])) {
             LOG(FATAL) << fmt::format("Illegal type {} of argument of function {}",
                                       arguments[0]->get_name(), get_name());

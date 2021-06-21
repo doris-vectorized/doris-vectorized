@@ -106,12 +106,12 @@ public:
     /// Allocate memory range.
     void* alloc(size_t size, size_t alignment = 0) {
         // CurrentMemoryTracker::alloc(size);
-        return allocNoTrack(size, alignment);
+        return alloc_no_track(size, alignment);
     }
 
     /// Free memory range.
     void free(void* buf, size_t size) {
-        freeNoTrack(buf, size);
+        free_no_track(buf, size);
         // CurrentMemoryTracker::free(size);
     }
 
@@ -157,9 +157,9 @@ public:
             /// Small allocs that requires a copy. Assume there's enough memory in system. Call CurrentMemoryTracker once.
             // CurrentMemoryTracker::realloc(old_size, new_size);
 
-            void* new_buf = allocNoTrack(new_size, alignment);
+            void* new_buf = alloc_no_track(new_size, alignment);
             memcpy(new_buf, buf, std::min(old_size, new_size));
-            freeNoTrack(buf, old_size);
+            free_no_track(buf, old_size);
             buf = new_buf;
         } else {
             /// Big allocs that requires a copy. MemoryTracker is called inside 'alloc', 'free' methods.
@@ -174,7 +174,7 @@ public:
     }
 
 protected:
-    static constexpr size_t getStackThreshold() { return 0; }
+    static constexpr size_t get_stack_threshold() { return 0; }
 
     static constexpr bool clear_memory = clear_memory_;
 
@@ -192,7 +192,7 @@ protected:
             ;
 
 private:
-    void* allocNoTrack(size_t size, size_t alignment) {
+    void* alloc_no_track(size_t size, size_t alignment) {
         void* buf;
 
         if (size >= MMAP_THRESHOLD) {
@@ -203,7 +203,7 @@ private:
                                 alignment, size),
                         doris::vectorized::ErrorCodes::BAD_ARGUMENTS);
 
-            buf = mmap(getMmapHint(), size, PROT_READ | PROT_WRITE, mmap_flags, -1, 0);
+            buf = mmap(get_mmap_hint(), size, PROT_READ | PROT_WRITE, mmap_flags, -1, 0);
             if (MAP_FAILED == buf)
                 doris::vectorized::throwFromErrno(
                         fmt::format("Allocator: Cannot mmap {}.", size),
@@ -236,7 +236,7 @@ private:
         return buf;
     }
 
-    void freeNoTrack(void* buf, size_t size) {
+    void free_no_track(void* buf, size_t size) {
         if (size >= MMAP_THRESHOLD) {
             if (0 != munmap(buf, size))
                 doris::vectorized::throwFromErrno(fmt::format("Allocator: Cannot munmap {}.", size),
@@ -250,7 +250,7 @@ private:
     /// In debug builds, request mmap() at random addresses (a kind of ASLR), to
     /// reproduce more memory stomping bugs. Note that Linux doesn't do it by
     /// default. This may lead to worse TLB performance.
-    void* getMmapHint() {
+    void* get_mmap_hint() {
         // return reinterpret_cast<void *>(std::uniform_int_distribution<intptr_t>(0x100000000000UL, 0x700000000000UL)(thread_local_rng));
         return nullptr;
     }
@@ -311,7 +311,7 @@ public:
     }
 
 protected:
-    static constexpr size_t getStackThreshold() { return N; }
+    static constexpr size_t get_stack_threshold() { return N; }
 };
 
 #if !__clang__
