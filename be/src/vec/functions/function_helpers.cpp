@@ -47,20 +47,6 @@ extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
 //    return {};
 //}
 
-//Columns convertConstTupleToConstantElements(const ColumnConst & column)
-//{
-//    const ColumnTuple & src_tuple = assert_cast<const ColumnTuple &>(column.get_data_column());
-//    const auto & src_tuple_columns = src_tuple.get_columns();
-//    size_t tuple_size = src_tuple_columns.size();
-//    size_t rows = column.size();
-//
-//    Columns res(tuple_size);
-//    for (size_t i = 0; i < tuple_size; ++i)
-//        res[i] = ColumnConst::create(src_tuple_columns[i], rows);
-//
-//    return res;
-//}
-
 static Block createBlockWithNestedColumnsImpl(const Block& block,
                                               const std::unordered_set<size_t>& args) {
     Block res;
@@ -84,8 +70,9 @@ static Block createBlockWithNestedColumnsImpl(const Block& block,
                                 ->get_nested_column_ptr();
                 res.insert({ColumnConst::create(nested_col, col.column->size()), nested_type,
                             col.name});
-            } else
-                throw Exception("Illegal column for DataTypeNullable", ErrorCodes::ILLEGAL_COLUMN);
+            } else {
+                LOG(FATAL) << "Illegal column for DataTypeNullable";
+            }
         } else
             res.insert(col);
     }
@@ -107,16 +94,16 @@ Block createBlockWithNestedColumns(const Block& block, const ColumnNumbers& args
 void validateArgumentType(const IFunction& func, const DataTypes& arguments, size_t argument_index,
                           bool (*validator_func)(const IDataType&),
                           const char* expected_type_description) {
-    if (arguments.size() <= argument_index)
-        throw Exception("Incorrect number of arguments of function " + func.get_name(),
-                        ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
+    if (arguments.size() <= argument_index) {
+        LOG(FATAL) << "Incorrect number of arguments of function " << func.get_name();
+    }
 
     const auto& argument = arguments[argument_index];
-    if (validator_func(*argument) == false)
-        throw Exception("Illegal type " + argument->get_name() + " of " +
-                                std::to_string(argument_index) + " argument of function " +
-                                func.get_name() + " expected " + expected_type_description,
-                        ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
+    if (validator_func(*argument) == false) {
+        LOG(FATAL) << fmt::format("Illegal type {} of {} argument of function {} expected {}",
+                                  argument->get_name(), argument_index, func.get_name(),
+                                  expected_type_description);
+    }
 }
 
 } // namespace doris::vectorized

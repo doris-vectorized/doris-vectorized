@@ -102,7 +102,7 @@ public:
 //        if (which.isDate())
 //            DateTimeTransformImpl<DataTypeDate::FieldType, typename ToDataType::FieldType, Transform>::execute(block, arguments, result, input_rows_count);
 //        else if (which.isDateTime())
-        DateTimeTransformImpl<Int128, typename ToDataType::FieldType, Transform>::execute(block, arguments, result, input_rows_count);
+        return DateTimeTransformImpl<Int128, typename ToDataType::FieldType, Transform>::execute(block, arguments, result, input_rows_count);
 //        else
 //            throw Exception("Illegal type " + block.get_by_position(arguments[0]).type->get_name() + " of argument of function " + get_name(),
 //                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
