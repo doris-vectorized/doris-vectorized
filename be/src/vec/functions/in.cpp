@@ -83,19 +83,19 @@ public:
         return name;
     }
 
-    size_t getNumberOfArguments() const override
+    size_t get_number_of_arguments() const override
     {
         return 2;
     }
 
-    DataTypePtr get_return_typeImpl(const DataTypes & /*arguments*/) const override
+    DataTypePtr get_return_type_impl(const DataTypes & /*arguments*/) const override
     {
         return make_nullable(std::make_shared<DataTypeUInt8>());
     }
 
-    bool useDefaultImplementationForNulls() const override { return false; }
+    bool use_default_implementation_for_nulls() const override { return false; }
 
-    Status executeImpl(Block & block, const ColumnNumbers & arguments, size_t result, size_t /*input_rows_count*/) override
+    Status execute_impl(Block & block, const ColumnNumbers & arguments, size_t result, size_t /*input_rows_count*/) override
     {
         /// NOTE: after updating this code, check that FunctionIgnoreExceptNull returns the same type of column.
 
@@ -159,12 +159,12 @@ public:
     }
 };
 
-void registerFunctionIn(SimpleFunctionFactory & factory)
+void register_function_in(SimpleFunctionFactory & factory)
 {
-    factory.registerFunction<FunctionIn<false, false>>();
-    factory.registerFunction<FunctionIn<true, false>>();
-    factory.registerFunction<FunctionIn<true, true>>();
-    factory.registerFunction<FunctionIn<false, true>>();
+    factory.register_function<FunctionIn<false, false>>();
+    factory.register_function<FunctionIn<true, false>>();
+    factory.register_function<FunctionIn<true, true>>();
+    factory.register_function<FunctionIn<false, true>>();
 }
 
 }

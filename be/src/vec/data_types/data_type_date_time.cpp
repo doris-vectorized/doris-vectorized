@@ -25,7 +25,7 @@ namespace doris::vectorized {
 
 DataTypeDateTime::DataTypeDateTime() {}
 
-std::string DataTypeDateTime::doGetName() const {
+std::string DataTypeDateTime::do_get_name() const {
     return "DateTime";
 }
 

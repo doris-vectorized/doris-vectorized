@@ -264,7 +264,7 @@ bool call_on_index_and_data_type(TypeIndex number, F&& f) {
 }
 
 template <typename T, typename F>
-bool callOnIndexAndNumberDataType(TypeIndex number, F&& f) {
+bool call_on_index_and_number_data_type(TypeIndex number, F&& f) {
     switch (number) {
     case TypeIndex::UInt8:
         return f(TypePair<DataTypeNumber<UInt8>, T>());

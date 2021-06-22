@@ -36,8 +36,8 @@ struct HLLEmptyImpl {
 
 using FunctionHLLEmpty = FunctionConst<HLLEmptyImpl>;
 
-void registerFunctionHLLEmpty(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionHLLEmpty>();
+void register_function_hll_empty(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionHLLEmpty>();
 }
 
 }

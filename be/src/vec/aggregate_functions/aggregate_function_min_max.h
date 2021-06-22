@@ -480,7 +480,7 @@ public:
               type(this->argument_types[0]) {
         if (StringRef(Data::name()) == StringRef("min") ||
             StringRef(Data::name()) == StringRef("max")) {
-            if (!type->isComparable()) {
+            if (!type->is_comparable()) {
                 LOG(FATAL) << fmt::format(
                         "Illegal type {} of argument of aggregate function {} because the values "
                         "of that data type are not comparable",

@@ -18,7 +18,6 @@
 #include "vec/data_types/data_type_date.h"
 #include "vec/data_types/data_type_date_time.h"
 #include "vec/functions/function.h"
-//#include "vec/functions/extract_time_zone_from_function_arguments.h"
 #include "vec/functions/date_time_transforms.h"
 
 namespace doris::vectorized {
@@ -37,32 +36,32 @@ public:
 
     String get_name() const override { return name; }
 
-    bool isVariadic() const override { return true; }
-    size_t getNumberOfArguments() const override { return 0; }
+    bool is_variadic() const override { return true; }
+    size_t get_number_of_arguments() const override { return 0; }
 
-    DataTypePtr get_return_typeImpl(const ColumnsWithTypeAndName& arguments) const override {
+    DataTypePtr get_return_type_impl(const ColumnsWithTypeAndName & arguments) const override {
         if (arguments.size() == 1) {
-            if (!isDateOrDateTime(arguments[0].type)) {
+            if (!is_date_or_datetime(arguments[0].type)) {
                 LOG(FATAL) << fmt::format(
                         "Illegal type {} of argument of function {}. Should be a date or a date "
                         "with time",
                         arguments[0].type->get_name(), get_name());
             }
         } else if (arguments.size() == 2) {
-            if (!isDateOrDateTime(arguments[0].type)) {
+            if (!is_date_or_datetime(arguments[0].type)) {
                 LOG(FATAL) << fmt::format(
                         "Illegal type {} of argument of function {}. Should be a date or a date "
                         "with time",
                         arguments[0].type->get_name(), get_name());
             }
-            if (!isString(arguments[1].type)) {
+            if (!is_string(arguments[1].type)) {
                 LOG(FATAL) << fmt::format(
                         "Function {} supports 1 or 2 arguments. The 1st argument must be of type "
                         "Date or DateTime. The 2nd argument (optional) must be a constant string "
                         "with timezone name",
                         get_name());
             }
-            if (isDate(arguments[0].type) && std::is_same_v<ToDataType, DataTypeDate>) {
+            if (is_date(arguments[0].type) && std::is_same_v<ToDataType, DataTypeDate>) {
                 LOG(FATAL) << fmt::format(
                         "The timezone argument of function {} is allowed only when the 1st "
                         "argument has the type DateTime",
@@ -82,11 +81,10 @@ public:
         return std::make_shared<ToDataType>();
     }
 
-    bool useDefaultImplementationForConstants() const override { return true; }
-    ColumnNumbers get_argumentsThatAreAlwaysConstant() const override { return {1}; }
+    bool use_default_implementation_for_constants() const override { return true; }
+    ColumnNumbers get_arguments_that_are_always_constant() const override { return {1}; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+    Status execute_impl(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) override {
         const IDataType* from_type = block.get_by_position(arguments[0]).type.get();
         WhichDataType which(from_type);
 
@@ -101,8 +99,11 @@ public:
         return Status::OK();
     }
 
-    bool hasInformationAboutMonotonicity() const override { return true; }
 
+    bool has_information_about_monotonicity() const override
+    {
+        return true;
+    }
     //    Monotonicity getMonotonicityForRange(const IDataType & type, const Field & left, const Field & right) const override
     //    {
     //        IFunction::Monotonicity is_monotonic { true };

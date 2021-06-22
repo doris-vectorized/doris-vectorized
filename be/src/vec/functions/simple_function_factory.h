@@ -25,49 +25,49 @@ namespace doris::vectorized {
 
 class SimpleFunctionFactory;
 
-void registerFunctionComparison(SimpleFunctionFactory& factory);
-void registerFunctionHLLCardinality(SimpleFunctionFactory& factory);
-void registerFunctionHLLEmpty(SimpleFunctionFactory& factory);
-void registerFunctionHLLHash(SimpleFunctionFactory& factory);
-void registerFunctionLogical(SimpleFunctionFactory& factory);
-void registerFunctionCast(SimpleFunctionFactory& factory);
-void registerFunctionPlus(SimpleFunctionFactory& factory);
-void registerFunctionMinus(SimpleFunctionFactory& factory);
-void registerFunctionMultiply(SimpleFunctionFactory& factory);
-void registerFunctionDivide(SimpleFunctionFactory& factory);
-void registerFunctionIntDiv(SimpleFunctionFactory& factory);
-void registerFunctionMath(SimpleFunctionFactory& factory);
-void registerFunctionModulo(SimpleFunctionFactory& factory);
-void registerFunctionBitmap(SimpleFunctionFactory& factory);
-void registerFunctionIsNull(SimpleFunctionFactory& factory);
-void registerFunctionIsNotNull(SimpleFunctionFactory& factory);
-void registerFunctionToTimeFuction(SimpleFunctionFactory& factory);
-void registerFunctionTimeOfFuction(SimpleFunctionFactory& factory);
-void registerFunctionString(SimpleFunctionFactory& factory);
-void registerFunctionDateTimeToString(SimpleFunctionFactory& factory);
-void registerFunctionDateTimeStringToString(SimpleFunctionFactory& factory);
-void registerFunctionIn(SimpleFunctionFactory& factory);
-void registerFunctionIf(SimpleFunctionFactory& factory);
-void registerFunctionDateTimeComputation(SimpleFunctionFactory& factory);
-void registerFunctionStrToDate(SimpleFunctionFactory& factory);
-void registerFunctionJson(SimpleFunctionFactory& factory);
+void register_function_comparison(SimpleFunctionFactory& factory);
+void register_function_hll_cardinality(SimpleFunctionFactory& factory);
+void register_function_hll_empty(SimpleFunctionFactory& factory);
+void register_function_hll_hash(SimpleFunctionFactory& factory);
+void register_function_logical(SimpleFunctionFactory& factory);
+void register_function_cast(SimpleFunctionFactory& factory);
+void register_function_plus(SimpleFunctionFactory& factory);
+void register_function_minus(SimpleFunctionFactory& factory);
+void register_function_multiply(SimpleFunctionFactory& factory);
+void register_function_divide(SimpleFunctionFactory& factory);
+void register_function_int_div(SimpleFunctionFactory& factory);
+void register_function_math(SimpleFunctionFactory& factory);
+void register_function_modulo(SimpleFunctionFactory& factory);
+void register_function_bitmap(SimpleFunctionFactory& factory);
+void register_function_is_null(SimpleFunctionFactory& factory);
+void register_function_is_not_null(SimpleFunctionFactory& factory);
+void register_function_to_time_fuction(SimpleFunctionFactory& factory);
+void register_function_time_of_fuction(SimpleFunctionFactory& factory);
+void register_function_string(SimpleFunctionFactory& factory);
+void register_function_date_time_to_string(SimpleFunctionFactory& factory);
+void register_function_date_time_string_to_string(SimpleFunctionFactory& factory);
+void register_function_in(SimpleFunctionFactory& factory);
+void register_function_if(SimpleFunctionFactory& factory);
+void register_function_date_time_computation(SimpleFunctionFactory& factory);
+void register_function_str_to_date(SimpleFunctionFactory& factory);
+void register_function_json(SimpleFunctionFactory& factory);
 
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
     using FunctionCreators = std::unordered_map<std::string, Creator>;
 
 public:
-    void registerFunction(const std::string& name, Creator ptr) { function_creators[name] = ptr; }
+    void register_function(const std::string& name, Creator ptr) { function_creators[name] = ptr; }
 
     template <class Function>
-    void registerFunction() {
+    void register_function() {
         if constexpr (std::is_base_of<IFunction, Function>::value)
-            registerFunction(Function::name, &createDefaultFunction<Function>);
+            register_function(Function::name, &createDefaultFunction<Function>);
         else
-            registerFunction(Function::name, &Function::create);
+            register_function(Function::name, &Function::create);
     }
 
-    void registerAlias(const std::string& name, const std::string& alias) {
+    void register_alias(const std::string& name, const std::string& alias) {
         function_creators[alias] = function_creators[name];
     }
 
@@ -92,32 +92,32 @@ public:
         static std::once_flag oc;
         static SimpleFunctionFactory instance;
         std::call_once(oc, [&]() {
-            registerFunctionBitmap(instance);
-            registerFunctionHLLCardinality(instance);
-            registerFunctionHLLEmpty(instance);
-            registerFunctionHLLHash(instance);
-            registerFunctionComparison(instance);
-            registerFunctionLogical(instance);
-            registerFunctionCast(instance);
-            registerFunctionPlus(instance);
-            registerFunctionMinus(instance);
-            registerFunctionMath(instance);
-            registerFunctionMultiply(instance);
-            registerFunctionDivide(instance);
-            registerFunctionIntDiv(instance);
-            registerFunctionModulo(instance);
-            registerFunctionIsNull(instance);
-            registerFunctionIsNotNull(instance);
-            registerFunctionToTimeFuction(instance);
-            registerFunctionTimeOfFuction(instance);
-            registerFunctionString(instance);
-            registerFunctionIn(instance);
-            registerFunctionIf(instance);
-            registerFunctionDateTimeComputation(instance);
-            registerFunctionStrToDate(instance);
-            registerFunctionDateTimeToString(instance);
-            registerFunctionDateTimeStringToString(instance);
-            registerFunctionJson(instance);
+            register_function_bitmap(instance);
+            register_function_hll_cardinality(instance);
+            register_function_hll_empty(instance);
+            register_function_hll_hash(instance);
+            register_function_comparison(instance);
+            register_function_logical(instance);
+            register_function_cast(instance);
+            register_function_plus(instance);
+            register_function_minus(instance);
+            register_function_math(instance);
+            register_function_multiply(instance);
+            register_function_divide(instance);
+            register_function_int_div(instance);
+            register_function_modulo(instance);
+            register_function_is_null(instance);
+            register_function_is_not_null(instance);
+            register_function_to_time_fuction(instance);
+            register_function_time_of_fuction(instance);
+            register_function_string(instance);
+            register_function_in(instance);
+            register_function_if(instance);
+            register_function_date_time_computation(instance);
+            register_function_str_to_date(instance);
+            register_function_date_time_to_string(instance);
+            register_function_date_time_string_to_string(instance);
+            register_function_json(instance);
         });
         return instance;
     }

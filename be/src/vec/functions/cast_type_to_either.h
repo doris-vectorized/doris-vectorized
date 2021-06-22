@@ -24,7 +24,7 @@ namespace doris::vectorized {
 class IDataType;
 
 template <typename... Ts, typename F>
-static bool castTypeToEither(const IDataType* type, F&& f) {
+static bool cast_type_to_either(const IDataType* type, F&& f) {
     /// XXX can't use && here because gcc-7 complains about parentheses around && within ||
     return ((typeid_cast<const Ts*>(type) ? f(*typeid_cast<const Ts*>(type)) : false) || ...);
 }

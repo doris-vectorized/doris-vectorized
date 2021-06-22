@@ -35,7 +35,7 @@ struct DivideFloatingImpl {
 
     static inline llvm::Value* compile(llvm::IRBuilder<>& b, llvm::Value* left, llvm::Value* right,
                                        bool) {
-        if (left->getType()->isIntegerTy()) {
+        if (left->getType()->is_integer_ty())
             LOG(FATAL) << "DivideFloatingImpl expected a floating-point type";
         }
 
@@ -49,8 +49,8 @@ struct NameDivide {
 };
 using FunctionDivide = FunctionBinaryArithmetic<DivideFloatingImpl, NameDivide>;
 
-void registerFunctionDivide(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionDivide>();
+void register_function_divide(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionDivide>();
 }
 
 } // namespace doris::vectorized

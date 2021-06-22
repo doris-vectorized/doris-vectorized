@@ -29,11 +29,11 @@ using FunctionDayOfYear = FunctionDateOrDateTimeToSomething<DataTypeInt32, DayOf
 using FunctionDayOfWeek = FunctionDateOrDateTimeToSomething<DataTypeInt32, DayOfWeekImpl>;
 using FunctionDayOfMonth = FunctionDateOrDateTimeToSomething<DataTypeInt32, DayOfMonthImpl>;
 
-void registerFunctionTimeOfFuction(SimpleFunctionFactory & factory)
+void register_function_time_of_fuction(SimpleFunctionFactory & factory)
 {
-    factory.registerFunction<FunctionDayOfWeek>();
-    factory.registerFunction<FunctionDayOfMonth>();
-    factory.registerFunction<FunctionDayOfYear>();
-    factory.registerFunction<FunctionWeekOfYear>();
+    factory.register_function<FunctionDayOfWeek>();
+    factory.register_function<FunctionDayOfMonth>();
+    factory.register_function<FunctionDayOfYear>();
+    factory.register_function<FunctionWeekOfYear>();
 }
 }

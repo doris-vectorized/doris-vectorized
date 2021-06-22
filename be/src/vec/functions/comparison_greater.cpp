@@ -22,8 +22,8 @@ namespace doris::vectorized {
 using FunctionGreater = FunctionComparison<GreaterOp, NameGreater>;
 using FunctionGreaterOrEquals = FunctionComparison<GreaterOrEqualsOp, NameGreaterOrEquals>;
 
-void registerFunctionComparisonGreater(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionGreater>();
-    factory.registerFunction<FunctionGreaterOrEquals>();
+void register_function_comparison_greater(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionGreater>();
+    factory.register_function<FunctionGreaterOrEquals>();
 }
 } // namespace doris::vectorized

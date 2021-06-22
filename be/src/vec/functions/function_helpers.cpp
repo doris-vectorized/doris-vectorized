@@ -18,9 +18,6 @@
 #include "vec/functions/function_helpers.h"
 
 #include "vec/functions/function.h"
-//#include <vec/Columns/ColumnTuple.h>
-//#include <vec/Columns/ColumnString.h>
-//#include <vec/Columns/ColumnFixedString.h>
 #include "vec/columns/column_nullable.h"
 //#include <vec/Common/assert_cast.h>
 #include "vec/data_types/data_type_nullable.h"
@@ -33,7 +30,7 @@ extern const int ILLEGAL_COLUMN;
 extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
 } // namespace ErrorCodes
 
-//const ColumnConst * checkAndGetColumnConstStringOrFixedString(const IColumn * column)
+//const ColumnConst * check_and_get_column_constStringOrFixedString(const IColumn * column)
 //{
 //    if (!is_column_const(*column))
 //        return {};
@@ -47,8 +44,8 @@ extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
 //    return {};
 //}
 
-static Block createBlockWithNestedColumnsImpl(const Block& block,
-                                              const std::unordered_set<size_t>& args) {
+static Block create_block_with_nested_columns_impl(const Block& block,
+                                                   const std::unordered_set<size_t>& args) {
     Block res;
     size_t columns = block.columns();
 
@@ -57,7 +54,7 @@ static Block createBlockWithNestedColumnsImpl(const Block& block,
 
         if (args.count(i) && col.type->is_nullable()) {
             const DataTypePtr& nested_type =
-                    static_cast<const DataTypeNullable&>(*col.type).getNestedType();
+                    static_cast<const DataTypeNullable&>(*col.type).get_nested_type();
 
             if (!col.column) {
                 res.insert({nullptr, nested_type, col.name});
@@ -80,20 +77,20 @@ static Block createBlockWithNestedColumnsImpl(const Block& block,
     return res;
 }
 
-Block createBlockWithNestedColumns(const Block& block, const ColumnNumbers& args) {
+Block create_block_with_nested_columns(const Block& block, const ColumnNumbers& args) {
     std::unordered_set<size_t> args_set(args.begin(), args.end());
-    return createBlockWithNestedColumnsImpl(block, args_set);
+    return create_block_with_nested_columns_impl(block, args_set);
 }
 
-Block createBlockWithNestedColumns(const Block& block, const ColumnNumbers& args, size_t result) {
+Block create_block_with_nested_columns(const Block& block, const ColumnNumbers& args, size_t result) {
     std::unordered_set<size_t> args_set(args.begin(), args.end());
     args_set.insert(result);
-    return createBlockWithNestedColumnsImpl(block, args_set);
+    return create_block_with_nested_columns_impl(block, args_set);
 }
 
-void validateArgumentType(const IFunction& func, const DataTypes& arguments, size_t argument_index,
-                          bool (*validator_func)(const IDataType&),
-                          const char* expected_type_description) {
+void validate_argument_type(const IFunction& func, const DataTypes& arguments, size_t argument_index,
+                            bool (*validator_func)(const IDataType&),
+                            const char* expected_type_description) {
     if (arguments.size() <= argument_index) {
         LOG(FATAL) << "Incorrect number of arguments of function " << func.get_name();
     }

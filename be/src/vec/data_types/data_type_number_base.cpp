@@ -45,7 +45,7 @@ void DataTypeNumberBase<T>::to_string(const IColumn& column, size_t row_num,
 }
 
 template <typename T>
-Field DataTypeNumberBase<T>::getDefault() const {
+Field DataTypeNumberBase<T>::get_default() const {
     return NearestFieldType<FieldType>();
 }
 
@@ -86,17 +86,17 @@ void DataTypeNumberBase<T>::deserialize(const PColumn& pcolumn, IColumn* column)
     }
 }
 template <typename T>
-MutableColumnPtr DataTypeNumberBase<T>::createColumn() const {
+MutableColumnPtr DataTypeNumberBase<T>::create_column() const {
     return ColumnVector<T>::create();
 }
 
 template <typename T>
-bool DataTypeNumberBase<T>::isValueRepresentedByInteger() const {
+bool DataTypeNumberBase<T>::is_value_represented_by_integer() const {
     return std::is_integral_v<T>;
 }
 
 template <typename T>
-bool DataTypeNumberBase<T>::isValueRepresentedByUnsignedInteger() const {
+bool DataTypeNumberBase<T>::is_value_represented_by_unsigned_integer() const {
     return std::is_integral_v<T> && std::is_unsigned_v<T>;
 }
 

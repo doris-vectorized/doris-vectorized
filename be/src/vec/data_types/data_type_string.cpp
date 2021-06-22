@@ -57,11 +57,11 @@ std::string DataTypeString::to_string(const IColumn& column, size_t row_num) con
     return s.to_string();
 }
 
-Field DataTypeString::getDefault() const {
+Field DataTypeString::get_default() const {
     return String();
 }
 
-MutableColumnPtr DataTypeString::createColumn() const {
+MutableColumnPtr DataTypeString::create_column() const {
     return ColumnString::create();
 }
 

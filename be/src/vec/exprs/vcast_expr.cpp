@@ -32,13 +32,13 @@ doris::Status VCastExpr::prepare(doris::RuntimeState* state, const doris::RowDes
     DCHECK_EQ(_children.size(), 1);
     auto child = _children[0];
     const auto& child_name = child->expr_name();
-    auto child_column = child->data_type()->createColumn();
+    auto child_column = child->data_type()->create_column();
 
     // create a const string column
     _target_data_type = _type.get_data_type_ptr();
     _target_data_type_name = DataTypeFactory::instance().get(_target_data_type);
     _cast_param_data_type = std::make_shared<DataTypeString>();
-    _cast_param = _cast_param_data_type->createColumnConst(1, _target_data_type_name);
+    _cast_param = _cast_param_data_type->create_column_const(1, _target_data_type_name);
 
     ColumnsWithTypeAndName argument_template;
     argument_template.reserve(2);
