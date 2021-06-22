@@ -17,15 +17,15 @@ public:
 public:
     String get_name() const override { return name; }
 
-    size_t getNumberOfArguments() const override { return 0; }
+    size_t get_number_of_arguments() const override { return 0; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& /*arguments*/) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& /*arguments*/) const override {
         return Impl::get_return_type();
     }
 
-    Status executeImpl(Block& block, const ColumnNumbers&, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers&, size_t result,
                        size_t input_rows_count) override {
-        block.get_by_position(result).column = block.get_by_position(result).type->createColumnConst(
+        block.get_by_position(result).column = block.get_by_position(result).type->create_column_const(
                 input_rows_count, Impl::init_value());
         return Status::OK();
     }
@@ -38,13 +38,13 @@ public:
     static FunctionPtr create() { return std::make_shared<FunctionConst>(); }
     String get_name() const override { return name; }
 
-    size_t getNumberOfArguments() const override { return 0; }
+    size_t get_number_of_arguments() const override { return 0; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& /*arguments*/) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& /*arguments*/) const override {
         return Impl::get_return_type();
     }
 
-    Status executeImpl(Block& block, const ColumnNumbers&, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers&, size_t result,
                        size_t input_rows_count) override {
         auto column = Impl::ReturnColVec::create();
         column->get_data().emplace_back(Impl::init_value());
@@ -62,15 +62,15 @@ public:
 private:
     String get_name() const override { return name; }
 
-    size_t getNumberOfArguments() const override { return 0; }
+    size_t get_number_of_arguments() const override { return 0; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& /*arguments*/) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& /*arguments*/) const override {
         return std::make_shared<DataTypeFloat64>();
     }
 
-    Status executeImpl(Block& block, const ColumnNumbers&, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers&, size_t result,
                        size_t input_rows_count) override {
-        block.get_by_position(result).column = block.get_by_position(result).type->createColumnConst(
+        block.get_by_position(result).column = block.get_by_position(result).type->create_column_const(
                 input_rows_count == 0 ? 1 : input_rows_count, Impl::value);
         return Status::OK();
     }

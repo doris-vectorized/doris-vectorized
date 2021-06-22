@@ -33,8 +33,8 @@ extern const int SIZES_OF_ARRAYS_DOESNT_MATCH;
 
 namespace Nested {
 
-std::string concatenateName(const std::string& nested_table_name,
-                            const std::string& nested_field_name) {
+std::string concatenate_name(const std::string& nested_table_name,
+                             const std::string& nested_field_name) {
     return nested_table_name + "." + nested_field_name;
 }
 
@@ -68,7 +68,7 @@ std::pair<std::string, std::string> splitName(const std::string& name) {
     return {{begin, first_end}, {second_begin, end}};
 }
 
-std::string extractTableName(const std::string& nested_name) {
+std::string extract_table_name(const std::string& nested_name) {
     auto splitted = splitName(nested_name);
     return splitted.first;
 }

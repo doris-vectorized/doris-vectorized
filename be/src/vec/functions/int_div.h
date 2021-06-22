@@ -21,7 +21,7 @@ namespace ErrorCodes
 #pragma GCC diagnostic ignored "-Wsign-compare"
 
 template <typename A, typename B>
-inline void throwIfDivisionLeadsToFPE(A a, B b)
+inline void throw_if_division_leads_to_fpe(A a, B b)
 {
     /// Is it better to use siglongjmp instead of checks?
 
@@ -34,7 +34,7 @@ inline void throwIfDivisionLeadsToFPE(A a, B b)
 }
 
 template <typename A, typename B>
-inline bool divisionLeadsToFPE(A a, B b)
+inline bool division_leads_to_fpe(A a, B b)
 {
     if (UNLIKELY(b == 0))
         return true;
@@ -56,7 +56,7 @@ struct DivideIntegralImpl
     template <typename Result = ResultType>
     static inline Result apply(A a, B b)
     {
-        throwIfDivisionLeadsToFPE(a, b);
+        throw_if_division_leads_to_fpe(a, b);
 
         /// Otherwise overflow may occur due to integer promotion. Example: int8_t(-1) / uint64_t(2).
         /// NOTE: overflow is still possible when dividing large signed number to large unsigned number or vice-versa. But it's less harmful.

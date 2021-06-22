@@ -54,7 +54,7 @@ public:
 
             if (res) return res;
 
-            if (arguments[0]->isValueUnambiguouslyRepresentedInContiguousMemoryRegion())
+            if (arguments[0]->is_value_unambiguously_represented_in_contiguous_memory_region())
                 return std::make_shared<AggregateFunctionDistinct<
                         AggregateFunctionDistinctSingleGenericData<true>>>(nested_function,
                                                                            arguments);
@@ -78,7 +78,7 @@ void registerAggregateFunctionCombinatorDistinct(AggregateFunctionSimpleFactory&
         // 1. we should get not nullable types;
         DataTypes nested_types(types.size());
         std::transform(types.begin(), types.end(), nested_types.begin(),
-                       [](const auto& e) { return removeNullable(e); });
+                       [](const auto& e) { return remove_nullable(e); });
         auto function_combinator = std::make_shared<AggregateFunctionCombinatorDistinct>();
         auto transform_arguments = function_combinator->transform_arguments(nested_types);
         if (!boost::algorithm::starts_with(name, DISTINCT_FUNCTION_PREFIX)) {

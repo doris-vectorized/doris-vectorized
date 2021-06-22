@@ -225,7 +225,7 @@ public:
                                     block.get_by_position(i).column->convert_to_full_column_if_const()))
                                     .mutate();
                 } else {
-                    _columns[i] = _data_types[i]->createColumn();
+                    _columns[i] = _data_types[i]->create_column();
                 }
             }
         } else {
@@ -247,7 +247,7 @@ public:
                                     block.get_by_position(i).column->convert_to_full_column_if_const()))
                                     .mutate();
                 } else {
-                    _columns[i] = _data_types[i]->createColumn();
+                    _columns[i] = _data_types[i]->create_column();
                 }
             }
         } else {

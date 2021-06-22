@@ -40,7 +40,7 @@ constexpr size_t min(size_t x, size_t y) {
     return x < y ? x : y;
 }
 
-constexpr size_t nextSize(size_t size) {
+constexpr size_t next_size(size_t size) {
     return min(size * 2, 8);
 }
 
@@ -132,14 +132,14 @@ template <typename A, typename B>
 struct ResultOfAdditionMultiplication {
     using Type = typename Construct<std::is_signed_v<A> || std::is_signed_v<B>,
                                     std::is_floating_point_v<A> || std::is_floating_point_v<B>,
-                                    nextSize(max(sizeof(A), sizeof(B)))>::Type;
+            next_size(max(sizeof(A), sizeof(B)))>::Type;
 };
 
 template <typename A, typename B>
 struct ResultOfSubtraction {
     using Type =
             typename Construct<true, std::is_floating_point_v<A> || std::is_floating_point_v<B>,
-                               nextSize(max(sizeof(A), sizeof(B)))>::Type;
+                    next_size(max(sizeof(A), sizeof(B)))>::Type;
 };
 
 /** When dividing, you always get a floating-point number.
@@ -168,7 +168,7 @@ struct ResultOfModulo {
 template <typename A>
 struct ResultOfNegate {
     using Type = typename Construct<true, std::is_floating_point_v<A>,
-                                    std::is_signed_v<A> ? sizeof(A) : nextSize(sizeof(A))>::Type;
+            std::is_signed_v<A> ? sizeof(A) : next_size(sizeof(A))>::Type;
 };
 
 template <typename A>

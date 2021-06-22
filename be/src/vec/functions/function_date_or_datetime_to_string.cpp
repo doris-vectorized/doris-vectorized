@@ -24,9 +24,9 @@ namespace doris::vectorized {
 using FunctionDayName = FunctionDateOrDateTimeToString<DayNameImpl>;
 using FunctionMonthName = FunctionDateOrDateTimeToString<MonthNameImpl>;
 
-void registerFunctionDateTimeToString(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionDayName>();
-    factory.registerFunction<FunctionMonthName>();
+void register_function_date_time_to_string(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionDayName>();
+    factory.register_function<FunctionMonthName>();
 }
 
 } // namespace doris::vectorized

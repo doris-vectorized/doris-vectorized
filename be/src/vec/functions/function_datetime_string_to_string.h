@@ -40,18 +40,18 @@ public:
 
     String get_name() const override { return name; }
 
-    size_t getNumberOfArguments() const override { return 0; }
-    bool isVariadic() const override { return true; }
+    size_t get_number_of_arguments() const override { return 0; }
+    bool is_variadic() const override { return true; }
 
-    DataTypePtr get_return_typeImpl(const ColumnsWithTypeAndName& arguments) const override {
+    DataTypePtr get_return_type_impl(const ColumnsWithTypeAndName& arguments) const override {
         return make_nullable(std::make_shared<DataTypeString>());
     }
 
-    bool useDefaultImplementationForNulls() const override { return false; }
-    bool useDefaultImplementationForConstants() const override { return true; }
-    ColumnNumbers get_argumentsThatAreAlwaysConstant() const override { return {1}; }
+    bool use_default_implementation_for_nulls() const override { return false; }
+    bool use_default_implementation_for_constants() const override { return true; }
+    ColumnNumbers get_arguments_that_are_always_constant() const override { return {1}; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
         const ColumnPtr source_col = block.get_by_position(arguments[0]).column;
 

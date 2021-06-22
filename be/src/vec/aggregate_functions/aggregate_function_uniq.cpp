@@ -50,7 +50,7 @@ AggregateFunctionPtr createAggregateFunctionUniq(const std::string& name,
         // TODO: DateType
         if (res)
             return res;
-        else if (which.isStringOrFixedString())
+        else if (which.is_string_or_fixed_string())
             return std::make_shared<AggregateFunctionUniq<String, Data<String>>>(argument_types);
     }
 
@@ -61,7 +61,7 @@ void registerAggregateFunctionsUniq(AggregateFunctionSimpleFactory& factory) {
     AggregateFunctionCreator creator =
             createAggregateFunctionUniq<AggregateFunctionUniqExactData,
                                         AggregateFunctionUniqExactData<String>>;
-    factory.registerFunction("multi_distinct_count", creator);
+    factory.register_function("multi_distinct_count", creator);
 }
 
 } // namespace doris::vectorized

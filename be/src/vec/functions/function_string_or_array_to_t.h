@@ -40,10 +40,10 @@ public:
 
     String get_name() const override { return name; }
 
-    size_t getNumberOfArguments() const override { return 1; }
+    size_t get_number_of_arguments() const override { return 1; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
-        if (!isStringOrFixedString(arguments[0]) && !isArray(arguments[0])) {
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
+        if (!is_string_or_fixed_string(arguments[0]) && !is_array(arguments[0])) {
             LOG(FATAL) << fmt::format("Illegal type {} of argument of function {}",
                                       arguments[0]->get_name(), get_name());
         }
@@ -51,9 +51,9 @@ public:
         return std::make_shared<DataTypeNumber<ResultType>>();
     }
 
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
         const ColumnPtr column = block.get_by_position(arguments[0]).column;
         if (const ColumnString* col = check_and_get_column<ColumnString>(column.get())) {
@@ -72,7 +72,7 @@ public:
         //                ResultType res = 0;
         //                Impl::vector_fixed_to_constant(col_fixed->get_chars(), col_fixed->getN(), res);
         //
-        //                block.get_by_position(result).column = block.get_by_position(result).type->createColumnConst(col_fixed->size(), toField(res));
+        //                block.get_by_position(result).column = block.get_by_position(result).type->create_column_const(col_fixed->size(), to_field(res));
         //            }
         //            else
         //            {

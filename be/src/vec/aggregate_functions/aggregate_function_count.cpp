@@ -40,8 +40,8 @@ AggregateFunctionPtr createAggregateFunctionCountNotNullUnary(const std::string&
 }
 
 void registerAggregateFunctionCount(AggregateFunctionSimpleFactory& factory) {
-    factory.registerFunction("count", createAggregateFunctionCount);
-    factory.registerFunction("count", createAggregateFunctionCountNotNullUnary, true);
+    factory.register_function("count", createAggregateFunctionCount);
+    factory.register_function("count", createAggregateFunctionCountNotNullUnary, true);
 }
 
 } // namespace doris::vectorized

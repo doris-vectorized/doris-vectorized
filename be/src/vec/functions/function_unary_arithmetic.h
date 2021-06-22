@@ -75,8 +75,8 @@ class FunctionUnaryArithmetic : public IFunction {
             std::is_same_v<Op<Int8>, NegateImpl<Int8>> || std::is_same_v<Op<Int8>, AbsImpl<Int8>>;
 
     template <typename F>
-    static bool castType(const IDataType* type, F&& f) {
-        return castTypeToEither<
+    static bool cast_type(const IDataType* type, F&& f) {
+        return cast_type_to_either<
                 DataTypeUInt8, DataTypeUInt16, DataTypeUInt32, DataTypeUInt64, DataTypeInt8,
                 DataTypeInt16, DataTypeInt32, DataTypeInt64, DataTypeFloat32, DataTypeFloat64,
                 //                                            DataTypeDecimal<Decimal32>,
@@ -91,20 +91,20 @@ public:
 
     String get_name() const override { return name; }
 
-    size_t getNumberOfArguments() const override { return 1; }
-    bool isInjective(const Block&) override { return is_injective; }
+    size_t get_number_of_arguments() const override { return 1; }
+    bool get_is_injective(const Block&) override { return is_injective; }
 
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         DataTypePtr result;
-        bool valid = castType(arguments[0].get(), [&](const auto& type) {
+        bool valid = cast_type(arguments[0].get(), [&](const auto& type) {
             using DataType = std::decay_t<decltype(type)>;
             using T0 = typename DataType::FieldType;
 
             if constexpr (IsDataTypeDecimal<DataType>) {
                 if constexpr (!allow_decimal) return false;
-                result = std::make_shared<DataType>(type.getPrecision(), type.get_scale());
+                result = std::make_shared<DataType>(type.get_precision(), type.get_scale());
             } else {
                 result = std::make_shared<DataTypeNumber<typename Op<T0>::ResultType>>();
             }
@@ -117,9 +117,9 @@ public:
         return result;
     }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
-        bool valid = castType(block.get_by_position(arguments[0]).type.get(), [&](const auto& type) {
+        bool valid = cast_type(block.get_by_position(arguments[0]).type.get(), [&](const auto& type) {
             using DataType = std::decay_t<decltype(type)>;
             using T0 = typename DataType::FieldType;
 
@@ -159,7 +159,7 @@ public:
 
 #if USE_EMBEDDED_COMPILER
     bool isCompilableImpl(const DataTypes& arguments) const override {
-        return castType(arguments[0].get(), [&](const auto& type) {
+        return cast_type(arguments[0].get(), [&](const auto& type) {
             using DataType = std::decay_t<decltype(type)>;
             return !IsDataTypeDecimal<DataType> && Op<typename DataType::FieldType>::compilable;
         });
@@ -168,7 +168,7 @@ public:
     llvm::Value* compileImpl(llvm::IRBuilderBase& builder, const DataTypes& types,
                              ValuePlaceholders values) const override {
         llvm::Value* result = nullptr;
-        castType(types[0].get(), [&](const auto& type) {
+        cast_type(types[0].get(), [&](const auto& type) {
             using DataType = std::decay_t<decltype(type)>;
             using T0 = typename DataType::FieldType;
             using T1 = typename Op<T0>::ResultType;
@@ -186,12 +186,12 @@ public:
     }
 #endif
 
-    bool hasInformationAboutMonotonicity() const override {
+    bool has_information_about_monotonicity() const override {
         //        return FunctionUnaryArithmeticMonotonicity<Name>::has();
         return false;
     }
 
-    //    Monotonicity getMonotonicityForRange(const IDataType &, const Field & left, const Field & right) const override
+    //    Monotonicity get_monotonicity_for_range(const IDataType &, const Field & left, const Field & right) const override
     //    {
     //        return FunctionUnaryArithmeticMonotonicity<Name>::get(left, right);
     //    }

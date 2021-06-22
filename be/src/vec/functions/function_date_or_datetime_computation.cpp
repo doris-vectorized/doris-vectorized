@@ -49,34 +49,34 @@ using FunctionHoursDiff = FunctionDateOrDateTimeComputation<HoursDiffImpl>;
 using FunctionMinutesDiff = FunctionDateOrDateTimeComputation<MintueSDiffImpl>;
 using FunctionSecondsDiff = FunctionDateOrDateTimeComputation<SecondsDiffImpl>;
 
-void registerFunctionDateTimeComputation(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionAddSeconds>();
-    factory.registerFunction<FunctionAddMinutes>();
-    factory.registerFunction<FunctionAddHours>();
-    factory.registerFunction<FunctionAddDays>();
-    factory.registerFunction<FunctionAddWeeks>();
-    factory.registerFunction<FunctionAddMonths>();
-    factory.registerFunction<FunctionAddYears>();
-    factory.registerFunction<FunctionAddQuarters>();
+void register_function_date_time_computation(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionAddSeconds>();
+    factory.register_function<FunctionAddMinutes>();
+    factory.register_function<FunctionAddHours>();
+    factory.register_function<FunctionAddDays>();
+    factory.register_function<FunctionAddWeeks>();
+    factory.register_function<FunctionAddMonths>();
+    factory.register_function<FunctionAddYears>();
+    factory.register_function<FunctionAddQuarters>();
 
-    factory.registerFunction<FunctionSubSeconds>();
-    factory.registerFunction<FunctionSubMinutes>();
-    factory.registerFunction<FunctionSubHours>();
-    factory.registerFunction<FunctionSubDays>();
-    factory.registerFunction<FunctionSubMonths>();
-    factory.registerFunction<FunctionSubYears>();
-    factory.registerFunction<FunctionSubQuarters>();
-    factory.registerFunction<FunctionSubWeeks>();
+    factory.register_function<FunctionSubSeconds>();
+    factory.register_function<FunctionSubMinutes>();
+    factory.register_function<FunctionSubHours>();
+    factory.register_function<FunctionSubDays>();
+    factory.register_function<FunctionSubMonths>();
+    factory.register_function<FunctionSubYears>();
+    factory.register_function<FunctionSubQuarters>();
+    factory.register_function<FunctionSubWeeks>();
 
-    factory.registerFunction<FunctionDateDiff>();
-    factory.registerFunction<FunctionTimeDiff>();
-    factory.registerFunction<FunctionYearsDiff>();
-    factory.registerFunction<FunctionMonthsDiff>();
-    factory.registerFunction<FunctionWeeksDiff>();
-    factory.registerFunction<FunctionDaysDiff>();
-    factory.registerFunction<FunctionHoursDiff>();
-    factory.registerFunction<FunctionMinutesDiff>();
-    factory.registerFunction<FunctionSecondsDiff>();
+    factory.register_function<FunctionDateDiff>();
+    factory.register_function<FunctionTimeDiff>();
+    factory.register_function<FunctionYearsDiff>();
+    factory.register_function<FunctionMonthsDiff>();
+    factory.register_function<FunctionWeeksDiff>();
+    factory.register_function<FunctionDaysDiff>();
+    factory.register_function<FunctionHoursDiff>();
+    factory.register_function<FunctionMinutesDiff>();
+    factory.register_function<FunctionSecondsDiff>();
 }
 
 } // namespace doris::vectorized

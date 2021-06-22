@@ -33,30 +33,30 @@ public:
     static constexpr bool is_parametric = false;
 
     const char* get_family_name() const override { return "Nothing"; }
-    TypeIndex getTypeId() const override { return TypeIndex::Nothing; }
+    TypeIndex get_type_id() const override { return TypeIndex::Nothing; }
 
-    MutableColumnPtr createColumn() const override;
+    MutableColumnPtr create_column() const override;
 
     bool equals(const IDataType& rhs) const override;
 
-    bool isParametric() const override { return false; }
-    bool textCanContainOnlyValidUTF8() const override { return true; }
-    bool haveMaximumSizeOfValue() const override { return true; }
-    size_t getSizeOfValueInMemory() const override { return 0; }
+    bool get_is_parametric() const override { return false; }
+    bool text_can_contain_only_valid_utf8() const override { return true; }
+    bool have_maximum_size_of_value() const override { return true; }
+    size_t get_size_of_value_in_memory() const override { return 0; }
     bool can_be_inside_nullable() const override { return true; }
 
     void serialize(const IColumn& column, PColumn* pcolumn) const override;
     void deserialize(const PColumn& pcolumn, IColumn* column) const override;
-    [[noreturn]] Field getDefault() const override {
-        LOG(FATAL) << "Method getDefault() is not implemented for data type " << get_name();
+    [[noreturn]] Field get_default() const override {
+        LOG(FATAL) << "Method get_default() is not implemented for data type " << get_name();
     }
 
-    void insertDefaultInto(IColumn&) const override {
-        LOG(FATAL) << "Method insertDefaultInto() is not implemented for data type " << get_name();
+    void insert_default_into(IColumn&) const override {
+        LOG(FATAL) << "Method insert_default_into() is not implemented for data type " << get_name();
     }
 
-    bool haveSubtypes() const override { return false; }
-    bool cannotBeStoredInTables() const override { return true; }
+    bool have_subtypes() const override { return false; }
+    bool cannot_be_stored_in_tables() const override { return true; }
 };
 
 } // namespace doris::vectorized

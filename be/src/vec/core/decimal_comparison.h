@@ -35,9 +35,9 @@ extern const int DECIMAL_OVERFLOW;
 
 ///
 inline bool allowDecimalComparison(const DataTypePtr& left_type, const DataTypePtr& right_type) {
-    if (isDecimal(left_type)) {
-        if (isDecimal(right_type) || isNotDecimalButComparableToDecimal(right_type)) return true;
-    } else if (isNotDecimalButComparableToDecimal(left_type) && isDecimal(right_type))
+    if (is_decimal(left_type)) {
+        if (is_decimal(right_type) || is_not_decimal_but_comparable_to_decimal(right_type)) return true;
+    } else if (is_not_decimal_but_comparable_to_decimal(left_type) && is_decimal(right_type))
         return true;
     return false;
 }
@@ -98,18 +98,18 @@ public:
     }
 
     static bool compare(A a, B b, UInt32 scale_a, UInt32 scale_b) {
-        static const UInt32 max_scale = maxDecimalPrecision<Decimal128>();
+        static const UInt32 max_scale = max_decimal_precision<Decimal128>();
         if (scale_a > max_scale || scale_b > max_scale) {
             LOG(FATAL) << "Bad scale of decimal field";
         }
 
         Shift shift;
         if (scale_a < scale_b)
-            shift.a = DataTypeDecimal<B>(maxDecimalPrecision<B>(), scale_b)
-                              .getScaleMultiplier(scale_b - scale_a);
+            shift.a = DataTypeDecimal<B>(max_decimal_precision<B>(), scale_b)
+                              .get_scale_multiplier(scale_b - scale_a);
         if (scale_a > scale_b)
-            shift.b = DataTypeDecimal<A>(maxDecimalPrecision<A>(), scale_a)
-                              .getScaleMultiplier(scale_a - scale_b);
+            shift.b = DataTypeDecimal<A>(max_decimal_precision<A>(), scale_a)
+                              .get_scale_multiplier(scale_a - scale_b);
 
         return applyWithScale(a, b, shift);
     }
@@ -136,18 +136,18 @@ private:
     template <typename T, typename U>
     static std::enable_if_t<IsDecimalNumber<T> && IsDecimalNumber<U>, Shift> getScales(
             const DataTypePtr& left_type, const DataTypePtr& right_type) {
-        const DataTypeDecimal<T>* decimal0 = checkDecimal<T>(*left_type);
-        const DataTypeDecimal<U>* decimal1 = checkDecimal<U>(*right_type);
+        const DataTypeDecimal<T>* decimal0 = check_decimal<T>(*left_type);
+        const DataTypeDecimal<U>* decimal1 = check_decimal<U>(*right_type);
 
         Shift shift;
         if (decimal0 && decimal1) {
-            auto result_type = decimalResultType(*decimal0, *decimal1, false, false);
-            shift.a = result_type.scaleFactorFor(*decimal0, false);
-            shift.b = result_type.scaleFactorFor(*decimal1, false);
+            auto result_type = decimal_result_type(*decimal0, *decimal1, false, false);
+            shift.a = result_type.scale_factor_for(*decimal0, false);
+            shift.b = result_type.scale_factor_for(*decimal1, false);
         } else if (decimal0)
-            shift.b = decimal0->getScaleMultiplier();
+            shift.b = decimal0->get_scale_multiplier();
         else if (decimal1)
-            shift.a = decimal1->getScaleMultiplier();
+            shift.a = decimal1->get_scale_multiplier();
 
         return shift;
     }
@@ -156,8 +156,8 @@ private:
     static std::enable_if_t<IsDecimalNumber<T> && !IsDecimalNumber<U>, Shift> getScales(
             const DataTypePtr& left_type, const DataTypePtr&) {
         Shift shift;
-        const DataTypeDecimal<T>* decimal0 = checkDecimal<T>(*left_type);
-        if (decimal0) shift.b = decimal0->getScaleMultiplier();
+        const DataTypeDecimal<T>* decimal0 = check_decimal<T>(*left_type);
+        if (decimal0) shift.b = decimal0->get_scale_multiplier();
         return shift;
     }
 
@@ -165,8 +165,8 @@ private:
     static std::enable_if_t<!IsDecimalNumber<T> && IsDecimalNumber<U>, Shift> getScales(
             const DataTypePtr&, const DataTypePtr& right_type) {
         Shift shift;
-        const DataTypeDecimal<U>* decimal1 = checkDecimal<U>(*right_type);
-        if (decimal1) shift.a = decimal1->getScaleMultiplier();
+        const DataTypeDecimal<U>* decimal1 = check_decimal<U>(*right_type);
+        if (decimal1) shift.a = decimal1->get_scale_multiplier();
         return shift;
     }
 
@@ -179,20 +179,20 @@ private:
             bool c1_is_const = is_column_const(*c1);
 
             if (c0_is_const && c1_is_const) {
-                const ColumnConst* c0_const = checkAndGetColumnConst<ColVecA>(c0.get());
-                const ColumnConst* c1_const = checkAndGetColumnConst<ColVecB>(c1.get());
+                const ColumnConst* c0_const = check_and_get_column_const<ColVecA>(c0.get());
+                const ColumnConst* c1_const = check_and_get_column_const<ColVecB>(c1.get());
 
                 A a = c0_const->template get_value<A>();
                 B b = c1_const->template get_value<B>();
                 UInt8 res = apply<scale_left, scale_right>(a, b, scale);
-                return DataTypeUInt8().createColumnConst(c0->size(), toField(res));
+                return DataTypeUInt8().create_column_const(c0->size(), to_field(res));
             }
 
             ColumnUInt8::Container& vec_res = c_res->get_data();
             vec_res.resize(c0->size());
 
             if (c0_is_const) {
-                const ColumnConst* c0_const = checkAndGetColumnConst<ColVecA>(c0.get());
+                const ColumnConst* c0_const = check_and_get_column_const<ColVecA>(c0.get());
                 A a = c0_const->template get_value<A>();
                 if (const ColVecB* c1_vec = check_and_get_column<ColVecB>(c1.get()))
                     constant_vector<scale_left, scale_right>(a, c1_vec->get_data(), vec_res, scale);
@@ -200,7 +200,7 @@ private:
                     LOG(FATAL) << "Wrong column in Decimal comparison";
                 }
             } else if (c1_is_const) {
-                const ColumnConst* c1_const = checkAndGetColumnConst<ColVecB>(c1.get());
+                const ColumnConst* c1_const = check_and_get_column_const<ColVecB>(c1.get());
                 B b = c1_const->template get_value<B>();
                 if (const ColVecA* c0_vec = check_and_get_column<ColVecA>(c0.get()))
                     vector_constant<scale_left, scale_right>(c0_vec->get_data(), b, vec_res, scale);

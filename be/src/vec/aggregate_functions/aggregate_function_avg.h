@@ -78,13 +78,13 @@ public:
     AggregateFunctionAvg(const IDataType& data_type, const DataTypes& argument_types_)
             : IAggregateFunctionDataHelper<Data, AggregateFunctionAvg<T, Data>>(argument_types_,
                                                                                 {}),
-              scale(getDecimalScale(data_type)) {}
+              scale(get_decimal_scale(data_type)) {}
 
     String get_name() const override { return "avg"; }
 
     DataTypePtr get_return_type() const override {
         if constexpr (IsDecimalNumber<T>)
-            return std::make_shared<ResultDataType>(ResultDataType::maxPrecision(), scale);
+            return std::make_shared<ResultDataType>(ResultDataType::max_precision(), scale);
         else
             return std::make_shared<ResultDataType>();
     }

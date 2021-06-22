@@ -106,11 +106,11 @@ public:
     AggregateFunctionSum(const IDataType& data_type, const DataTypes& argument_types_)
             : IAggregateFunctionDataHelper<Data, AggregateFunctionSum<T, TResult, Data>>(
                       argument_types_, {}),
-              scale(getDecimalScale(data_type)) {}
+              scale(get_decimal_scale(data_type)) {}
 
     DataTypePtr get_return_type() const override {
         if constexpr (IsDecimalNumber<T>)
-            return std::make_shared<ResultDataType>(ResultDataType::maxPrecision(), scale);
+            return std::make_shared<ResultDataType>(ResultDataType::max_precision(), scale);
         else
             return std::make_shared<ResultDataType>();
     }

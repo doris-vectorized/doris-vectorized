@@ -44,7 +44,7 @@ AggregateFunctionPtr createAggregateFunctionAvg(const std::string & name, const 
 
     AggregateFunctionPtr res;
     DataTypePtr data_type = argument_types[0];
-    if (isDecimal(data_type))
+    if (is_decimal(data_type))
         res.reset(create_with_decimal_type<AggregateFuncAvg>(*data_type, *data_type, argument_types));
     else
         res.reset(create_with_numeric_type<AggregateFuncAvg>(*data_type, argument_types));
@@ -59,10 +59,10 @@ AggregateFunctionPtr createAggregateFunctionAvg(const std::string & name, const 
 
 //void registerAggregateFunctionAvg(AggregateFunctionFactory & factory)
 //{
-//    factory.registerFunction("avg", createAggregateFunctionAvg, AggregateFunctionFactory::CaseInsensitive);
+//    factory.register_function("avg", createAggregateFunctionAvg, AggregateFunctionFactory::CaseInsensitive);
 //}
 
 void registerAggregateFunctionAvg(AggregateFunctionSimpleFactory& factory) {
-    factory.registerFunction("avg", createAggregateFunctionAvg);
+    factory.register_function("avg", createAggregateFunctionAvg);
 }
 }

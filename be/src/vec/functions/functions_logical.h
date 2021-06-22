@@ -43,40 +43,40 @@ static constexpr UInt8 True = -1;
 static constexpr UInt8 Null = 1;
 
 template <typename T>
-inline ResultType makeValue(T value) {
+inline ResultType make_value(T value) {
     return value != 0 ? Ternary::True : Ternary::False;
 }
 
 template <typename T>
-inline ResultType makeValue(T value, bool is_null) {
+inline ResultType make_value(T value, bool is_null) {
     if (is_null) return Ternary::Null;
-    return makeValue<T>(value);
+    return make_value<T>(value);
 }
 } // namespace Ternary
 
 struct AndImpl {
     using ResultType = UInt8;
 
-    static inline constexpr bool isSaturable() { return true; }
-    static inline constexpr bool isSaturatedValue(UInt8 a) { return a == Ternary::False; }
+    static inline constexpr bool is_saturable() { return true; }
+    static inline constexpr bool is_saturated_value(UInt8 a) { return a == Ternary::False; }
     static inline constexpr ResultType apply(UInt8 a, UInt8 b) { return a & b; }
-    static inline constexpr bool specialImplementationForNulls() { return true; }
+    static inline constexpr bool special_implementation_for_nulls() { return true; }
 };
 
 struct OrImpl {
     using ResultType = UInt8;
 
-    static inline constexpr bool isSaturable() { return true; }
-    static inline constexpr bool isSaturatedValue(UInt8 a) { return a == Ternary::True; }
+    static inline constexpr bool is_saturable() { return true; }
+    static inline constexpr bool is_saturated_value(UInt8 a) { return a == Ternary::True; }
     static inline constexpr ResultType apply(UInt8 a, UInt8 b) { return a | b; }
-    static inline constexpr bool specialImplementationForNulls() { return true; }
+    static inline constexpr bool special_implementation_for_nulls() { return true; }
 };
 
 struct XorImpl {
     using ResultType = UInt8;
 
-    static inline constexpr bool isSaturable() { return false; }
-    static inline constexpr bool isSaturatedValue(bool) { return false; }
+    static inline constexpr bool is_saturable() { return false; }
+    static inline constexpr bool is_saturated_value(bool) { return false; }
     /** Considering that CH uses UInt8 for representation of boolean values this function
       * returns 255 as "true" but the current implementation of logical functions suggests that
       * any nonzero value is "true" as well. Also the current code provides no guarantee
@@ -85,7 +85,7 @@ struct XorImpl {
     static inline constexpr ResultType apply(UInt8 a, UInt8 b) {
         return (a != b) ? Ternary::True : Ternary::False;
     }
-    static inline constexpr bool specialImplementationForNulls() { return false; }
+    static inline constexpr bool special_implementation_for_nulls() { return false; }
 
 #if USE_EMBEDDED_COMPILER
     static inline llvm::Value* apply(llvm::IRBuilder<>& builder, llvm::Value* a, llvm::Value* b) {
@@ -117,34 +117,34 @@ public:
 public:
     String get_name() const override { return name; }
 
-    bool isVariadic() const override { return true; }
-    size_t getNumberOfArguments() const override { return 0; }
+    bool is_variadic() const override { return true; }
+    size_t get_number_of_arguments() const override { return 0; }
 
-    bool useDefaultImplementationForNulls() const override {
-        return !Impl::specialImplementationForNulls();
+    bool use_default_implementation_for_nulls() const override {
+        return !Impl::special_implementation_for_nulls();
     }
 
     /// Get result types by argument types. If the function does not apply to these arguments, throw an exception.
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override;
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override;
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result_index,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result_index,
                        size_t input_rows_count) override;
 
 #if USE_EMBEDDED_COMPILER
     bool isCompilableImpl(const DataTypes&) const override {
-        return useDefaultImplementationForNulls();
+        return use_default_implementation_for_nulls();
     }
 
     llvm::Value* compileImpl(llvm::IRBuilderBase& builder, const DataTypes& types,
                              ValuePlaceholders values) const override {
         auto& b = static_cast<llvm::IRBuilder<>&>(builder);
-        if constexpr (!Impl::isSaturable()) {
+        if constexpr (!Impl::is_saturable()) {
             auto* result = nativeBoolCast(b, types[0], values[0]());
             for (size_t i = 1; i < types.size(); i++)
                 result = Impl::apply(b, result, nativeBoolCast(b, types[i], values[i]()));
             return b.CreateSelect(result, b.getInt8(1), b.getInt8(0));
         }
-        constexpr bool breakOnTrue = Impl::isSaturatedValue(true);
+        constexpr bool breakOnTrue = Impl::is_saturated_value(true);
         auto* next = b.GetInsertBlock();
         auto* stop = llvm::BasicBlock::Create(next->getContext(), "", next->getParent());
         b.SetInsertPoint(stop);
@@ -178,13 +178,13 @@ public:
 public:
     String get_name() const override { return name; }
 
-    size_t getNumberOfArguments() const override { return 1; }
+    size_t get_number_of_arguments() const override { return 1; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override;
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override;
 
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override;
 
 #if USE_EMBEDDED_COMPILER

@@ -63,8 +63,8 @@ AggregateFunctionPtr createAggregateFunctionMin(const std::string & name, const 
 } // namespace
 
 void registerAggregateFunctionMinMax(AggregateFunctionSimpleFactory& factory) {
-    factory.registerFunction("max", createAggregateFunctionMax);
-    factory.registerFunction("min", createAggregateFunctionMin);
+    factory.register_function("max", createAggregateFunctionMax);
+    factory.register_function("min", createAggregateFunctionMin);
 }
 
 } // namespace doris::vectorized

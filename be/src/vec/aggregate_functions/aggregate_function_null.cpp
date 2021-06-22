@@ -39,7 +39,7 @@ public:
     DataTypes transform_arguments(const DataTypes& arguments) const override {
         size_t size = arguments.size();
         DataTypes res(size);
-        for (size_t i = 0; i < size; ++i) res[i] = removeNullable(arguments[i]);
+        for (size_t i = 0; i < size; ++i) res[i] = remove_nullable(arguments[i]);
         return res;
     }
 
