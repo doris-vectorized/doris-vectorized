@@ -33,6 +33,8 @@
 #include "util/runtime_profile.h"
 #include "util/uid_util.h" // for print_id
 
+#include "vec/exprs/vexpr_context.h"
+
 namespace doris {
 class Expr;
 class ExprContext;
@@ -48,7 +50,6 @@ class MemTracker;
 namespace vectorized {
 class Block;
 class VExpr;
-class VExprContext;
 }
 
 using std::string;
