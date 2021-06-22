@@ -22,8 +22,8 @@ namespace doris::vectorized {
 using FunctionEquals = FunctionComparison<EqualsOp, NameEquals>;
 using FunctionNotEquals = FunctionComparison<NotEqualsOp, NameNotEquals>;
 
-void registerFunctionComparisonEquals(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionEquals>();
-    factory.registerFunction<FunctionNotEquals>();
+void register_function_comparison_equals(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionEquals>();
+    factory.register_function<FunctionNotEquals>();
 }
 } // namespace doris::vectorized

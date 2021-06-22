@@ -26,7 +26,7 @@ struct MultiplyImpl {
 
     static inline llvm::Value* compile(llvm::IRBuilder<>& b, llvm::Value* left, llvm::Value* right,
                                        bool) {
-        return left->getType()->isIntegerTy() ? b.CreateMul(left, right)
+        return left->getType()->is_integer_ty() ? b.CreateMul(left, right)
                                               : b.CreateFMul(left, right);
     }
 #endif
@@ -37,13 +37,13 @@ struct NameMultiply {
 };
 using FunctionMultiply = FunctionBinaryArithmetic<MultiplyImpl, NameMultiply>;
 
-//void registerFunctionMultiply(FunctionFactory & factory)
+//void register_function_multiply(FunctionFactory & factory)
 //{
-//    factory.registerFunction<FunctionMultiply>();
+//    factory.register_function<FunctionMultiply>();
 //}
 
-void registerFunctionMultiply(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionMultiply>();
+void register_function_multiply(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionMultiply>();
 }
 
 } // namespace doris::vectorized

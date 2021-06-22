@@ -42,8 +42,8 @@ struct NameHLLCardinality {
 
 using FunctionHLLCardinality = FunctionStringOrArrayToT<HLLCardinalityImpl, NameHLLCardinality, Int64>;
 
-void registerFunctionHLLCardinality(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionHLLCardinality>();
+void register_function_hll_cardinality(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionHLLCardinality>();
 }
 
 }

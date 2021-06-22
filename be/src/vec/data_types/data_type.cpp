@@ -37,14 +37,14 @@ IDataType::IDataType() {}
 IDataType::~IDataType() {}
 
 String IDataType::get_name() const {
-    return doGetName();
+    return do_get_name();
 }
 
-String IDataType::doGetName() const {
+String IDataType::do_get_name() const {
     return get_family_name();
 }
 
-void IDataType::updateAvgValueSizeHint(const IColumn& column, double& avg_value_size_hint) {
+void IDataType::update_avg_value_size_hint(const IColumn& column, double& avg_value_size_hint) {
     /// Update the average value size hint if amount of read rows isn't too small
     size_t column_size = column.size();
     if (column_size > 10) {
@@ -58,22 +58,22 @@ void IDataType::updateAvgValueSizeHint(const IColumn& column, double& avg_value_
     }
 }
 
-ColumnPtr IDataType::createColumnConst(size_t size, const Field& field) const {
-    auto column = createColumn();
+ColumnPtr IDataType::create_column_const(size_t size, const Field& field) const {
+    auto column = create_column();
     column->insert(field);
     return ColumnConst::create(std::move(column), size);
 }
 
-ColumnPtr IDataType::createColumnConstWithDefaultValue(size_t size) const {
-    return createColumnConst(size, getDefault());
+ColumnPtr IDataType::create_column_const_with_default_value(size_t size) const {
+    return create_column_const(size, get_default());
 }
 
-DataTypePtr IDataType::promoteNumericType() const {
+DataTypePtr IDataType::promote_numeric_type() const {
     LOG(FATAL) << fmt::format("Data type {} can't be promoted.", get_name());
     return nullptr;
 }
 
-size_t IDataType::getSizeOfValueInMemory() const {
+size_t IDataType::get_size_of_value_in_memory() const {
     LOG(FATAL) << fmt::format("Value of type {} in memory is not of fixed size.", get_name());
     return 0;
 }
@@ -86,7 +86,7 @@ std::string IDataType::to_string(const IColumn& column, size_t row_num) const {
     LOG(FATAL) << fmt::format("Data type {} to_string not implement.", get_name());
 }
 
-void IDataType::insertDefaultInto(IColumn& column) const {
+void IDataType::insert_default_into(IColumn& column) const {
     column.insert_default();
 }
 

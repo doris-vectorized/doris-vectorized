@@ -34,18 +34,18 @@ public:
 
 private:
     String get_name() const override { return name; }
-    size_t getNumberOfArguments() const override { return 1; }
+    size_t get_number_of_arguments() const override { return 1; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         const auto& arg = arguments.front();
-        if (!isNumber(arg)) {
+        if (!is_number(arg)) {
             return nullptr;
         }
         return std::make_shared<DataTypeFloat64>();
     }
 
     template <typename T, typename ReturnType>
-    static void executeInIterations(const T* src_data, ReturnType* dst_data, size_t size) {
+    static void execute_in_iterations(const T* src_data, ReturnType* dst_data, size_t size) {
         if constexpr (Impl::rows_per_iteration == 0) {
             /// Process all data as a whole and use FastOps implementation
 
@@ -88,7 +88,7 @@ private:
         auto& dst_data = dst->get_data();
         dst_data.resize(size);
 
-        executeInIterations(src_data.data(), dst_data.data(), size);
+        execute_in_iterations(src_data.data(), dst_data.data(), size);
 
         block.get_by_position(result).column = std::move(dst);
         return true;
@@ -105,18 +105,18 @@ private:
         dst_data.resize(size);
 
         for (size_t i = 0; i < size; ++i)
-            dst_data[i] = convertFromDecimal<DataTypeDecimal<T>, DataTypeNumber<ReturnType>>(
+            dst_data[i] = convert_from_decimal<DataTypeDecimal<T>, DataTypeNumber<ReturnType>>(
                     src_data[i], scale);
 
-        executeInIterations(dst_data.data(), dst_data.data(), size);
+        execute_in_iterations(dst_data.data(), dst_data.data(), size);
 
         block.get_by_position(result).column = std::move(dst);
         return true;
     }
 
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
         const ColumnWithTypeAndName& col = block.get_by_position(arguments[0]);
 
@@ -132,7 +132,7 @@ private:
             return execute<Type, ReturnType>(block, col_vec, result);
         };
 
-        if (!call_on_basic_type<void, true, true, true, false>(col.type->getTypeId(), call)) {
+        if (!call_on_basic_type<void, true, true, true, false>(col.type->get_type_id(), call)) {
             return Status::InvalidArgument("Illegal column " + col.column->get_name() +
                                            " of argument of function " + get_name());
         }

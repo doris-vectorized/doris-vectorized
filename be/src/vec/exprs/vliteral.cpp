@@ -122,7 +122,7 @@ VLiteral::VLiteral(const TExprNode& node) : VExpr(node) {
         _data_type = std::make_shared<DataTypeNullable>(_data_type);
     }
 
-    this->_column_ptr = _data_type->createColumnConst(1, field);
+    this->_column_ptr = _data_type->create_column_const(1, field);
     _expr_name = _data_type->get_name();
 }
 

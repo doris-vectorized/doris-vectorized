@@ -30,24 +30,24 @@ public:
 
     const char* get_family_name() const override { return "String"; }
 
-    TypeIndex getTypeId() const override { return TypeIndex::String; }
+    TypeIndex get_type_id() const override { return TypeIndex::String; }
     void serialize(const IColumn& column, PColumn* pcolumn) const override;
     void deserialize(const PColumn& pcolumn, IColumn* column) const override;
 
-    MutableColumnPtr createColumn() const override;
+    MutableColumnPtr create_column() const override;
 
-    Field getDefault() const override;
+    Field get_default() const override;
 
     bool equals(const IDataType& rhs) const override;
 
-    bool isParametric() const override { return false; }
-    bool haveSubtypes() const override { return false; }
-    bool isComparable() const override { return true; }
-    bool canBeComparedWithCollation() const override { return true; }
-    bool isValueUnambiguouslyRepresentedInContiguousMemoryRegion() const override { return true; }
-    bool isCategorial() const override { return true; }
+    bool get_is_parametric() const override { return false; }
+    bool have_subtypes() const override { return false; }
+    bool is_comparable() const override { return true; }
+    bool can_be_compared_with_collation() const override { return true; }
+    bool is_value_unambiguously_represented_in_contiguous_memory_region() const override { return true; }
+    bool is_categorial() const override { return true; }
     bool can_be_inside_nullable() const override { return true; }
-    bool canBeInsideLowCardinality() const override { return true; }
+    bool can_be_inside_low_cardinality() const override { return true; }
     std::string to_string(const IColumn& column, size_t row_num) const;
 };
 

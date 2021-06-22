@@ -35,26 +35,26 @@ public:
     using FieldType = T;
 
     const char* get_family_name() const override { return TypeName<T>::get(); }
-    TypeIndex getTypeId() const override { return TypeId<T>::value; }
-    Field getDefault() const override;
+    TypeIndex get_type_id() const override { return TypeId<T>::value; }
+    Field get_default() const override;
 
     void serialize(const IColumn& column, PColumn* pcolumn) const override;
     void deserialize(const PColumn& pcolumn, IColumn* column) const override;
-    MutableColumnPtr createColumn() const override;
+    MutableColumnPtr create_column() const override;
 
-    bool isParametric() const override { return false; }
-    bool haveSubtypes() const override { return false; }
-    bool shouldAlignRightInPrettyFormats() const override { return true; }
-    bool textCanContainOnlyValidUTF8() const override { return true; }
-    bool isComparable() const override { return true; }
-    bool isValueRepresentedByNumber() const override { return true; }
-    bool isValueRepresentedByInteger() const override;
-    bool isValueRepresentedByUnsignedInteger() const override;
-    bool isValueUnambiguouslyRepresentedInContiguousMemoryRegion() const override { return true; }
-    bool haveMaximumSizeOfValue() const override { return true; }
-    size_t getSizeOfValueInMemory() const override { return sizeof(T); }
-    bool isCategorial() const override { return isValueRepresentedByInteger(); }
-    bool canBeInsideLowCardinality() const override { return true; }
+    bool get_is_parametric() const override { return false; }
+    bool have_subtypes() const override { return false; }
+    bool should_align_right_in_pretty_formats() const override { return true; }
+    bool text_can_contain_only_valid_utf8() const override { return true; }
+    bool is_comparable() const override { return true; }
+    bool is_value_represented_by_number() const override { return true; }
+    bool is_value_represented_by_integer() const override;
+    bool is_value_represented_by_unsigned_integer() const override;
+    bool is_value_unambiguously_represented_in_contiguous_memory_region() const override { return true; }
+    bool have_maximum_size_of_value() const override { return true; }
+    size_t get_size_of_value_in_memory() const override { return sizeof(T); }
+    bool is_categorial() const override { return is_value_represented_by_integer(); }
+    bool can_be_inside_low_cardinality() const override { return true; }
 
     void to_string(const IColumn& column, size_t row_num, BufferWritable& ostr) const;
     std::string to_string(const IColumn& column, size_t row_num) const;

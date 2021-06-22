@@ -59,7 +59,7 @@ void DataTypeBitMap::deserialize(const PColumn& pcolumn, IColumn* column) const 
     }
 }
 
-MutableColumnPtr DataTypeBitMap::createColumn() const {
+MutableColumnPtr DataTypeBitMap::create_column() const {
     return ColumnBitmap::create();
 }
 } // namespace doris::vectorized

@@ -55,8 +55,8 @@ struct NameHLLHash {
 
 using FunctionHLLHash = FunctionStringToString<HLLHashImpl, NameHLLHash, false>;
 
-void registerFunctionHLLHash(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionHLLHash>();
+void register_function_hll_hash(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionHLLHash>();
 }
 
 }

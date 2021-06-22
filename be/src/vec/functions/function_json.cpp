@@ -361,10 +361,10 @@ using FunctionGetJsonDouble = FunctionBinaryStringOperateToNullType<GetJsonDoubl
 using FunctionGetJsonInt = FunctionBinaryStringOperateToNullType<GetJsonInt>;
 using FunctionGetJsonString = FunctionBinaryStringOperateToNullType<GetJsonString>;
 
-void registerFunctionJson(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionGetJsonInt>();
-    factory.registerFunction<FunctionGetJsonDouble>();
-    factory.registerFunction<FunctionGetJsonString>();
+void register_function_json(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionGetJsonInt>();
+    factory.register_function<FunctionGetJsonDouble>();
+    factory.register_function<FunctionGetJsonString>();
 }
 
 } // namespace doris::vectorized

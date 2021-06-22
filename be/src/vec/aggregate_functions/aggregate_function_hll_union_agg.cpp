@@ -41,9 +41,9 @@ AggregateFunctionPtr createAggregateFunctionHLLUnion(const std::string& name,
 }
 
 void registerAggregateFunctionHLLUnionAgg(AggregateFunctionSimpleFactory& factory) {
-    factory.registerFunction("hll_union_agg", createAggregateFunctionHLLUnionAgg);
-    factory.registerFunction("hll_union", createAggregateFunctionHLLUnion);
-    factory.registerFunction("hll_raw_agg", createAggregateFunctionHLLUnion);
+    factory.register_function("hll_union_agg", createAggregateFunctionHLLUnionAgg);
+    factory.register_function("hll_union", createAggregateFunctionHLLUnion);
+    factory.register_function("hll_raw_agg", createAggregateFunctionHLLUnion);
 }
 
 } // namespace doris::vectorized
