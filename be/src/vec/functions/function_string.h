@@ -89,16 +89,16 @@ public:
     static constexpr auto name = "substring";
     static FunctionPtr create() { return std::make_shared<FunctionSubstring>(); }
     String get_name() const override { return name; }
-    size_t getNumberOfArguments() const override { return 3; }
+    size_t get_number_of_arguments() const override { return 3; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         return make_nullable(std::make_shared<DataTypeString>());
     }
 
-    bool useDefaultImplementationForNulls() const override { return false; }
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_nulls() const override { return false; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
         substring_execute(block, arguments, result, input_rows_count);
         return Status::OK();
@@ -199,13 +199,13 @@ public:
     static constexpr auto name = "left";
     static FunctionPtr create() { return std::make_shared<FunctionLeft>(); }
     String get_name() const override { return name; }
-    size_t getNumberOfArguments() const override { return 2; }
+    size_t get_number_of_arguments() const override { return 2; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
         auto int_type = std::make_shared<DataTypeInt32>();
         size_t num_columns_without_result = block.columns();
-        block.insert({int_type->createColumnConst(input_rows_count, toField(1))
+        block.insert({int_type->create_column_const(input_rows_count, to_field(1))
                               ->convert_to_full_column_if_const(),
                       int_type, "const 1"});
         ColumnNumbers temp_arguments(3);
@@ -222,9 +222,9 @@ public:
     static constexpr auto name = "right";
     static FunctionPtr create() { return std::make_shared<FunctionRight>(); }
     String get_name() const override { return name; }
-    size_t getNumberOfArguments() const override { return 2; }
+    size_t get_number_of_arguments() const override { return 2; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
         auto int_type = std::make_shared<DataTypeInt32>();
         auto params1 = ColumnInt32::create(input_rows_count);
@@ -276,16 +276,16 @@ public:
     static constexpr auto name = "null_or_empty";
     static FunctionPtr create() { return std::make_shared<FunctionNullOrEmpty>(); }
     String get_name() const override { return name; }
-    size_t getNumberOfArguments() const override { return 1; }
+    size_t get_number_of_arguments() const override { return 1; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         return std::make_shared<DataTypeUInt8>();
     }
 
-    bool useDefaultImplementationForNulls() const override { return false; }
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_nulls() const override { return false; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
         auto res_map = ColumnUInt8::create(input_rows_count, 0);
 
@@ -313,16 +313,16 @@ public:
     static constexpr auto name = "concat";
     static FunctionPtr create() { return std::make_shared<FunctionStringConcat>(); }
     String get_name() const override { return name; }
-    size_t getNumberOfArguments() const override { return 0; }
-    bool isVariadic() const override { return true; }
+    size_t get_number_of_arguments() const override { return 0; }
+    bool is_variadic() const override { return true; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         return make_nullable(std::make_shared<DataTypeString>());
     }
-    bool useDefaultImplementationForNulls() const override { return false; }
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_nulls() const override { return false; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
         DCHECK_GE(arguments.size(), 1);
 
@@ -404,16 +404,16 @@ public:
     static constexpr auto name = "concat_ws";
     static FunctionPtr create() { return std::make_shared<FunctionStringConcatWs>(); }
     String get_name() const override { return name; }
-    size_t getNumberOfArguments() const override { return 0; }
-    bool isVariadic() const override { return true; }
+    size_t get_number_of_arguments() const override { return 0; }
+    bool is_variadic() const override { return true; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         return make_nullable(std::make_shared<DataTypeString>());
     }
-    bool useDefaultImplementationForNulls() const override { return false; }
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_nulls() const override { return false; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
         DCHECK_GE(arguments.size(), 2);
         auto null_map = ColumnUInt8::create(input_rows_count, 0);
@@ -493,13 +493,13 @@ public:
     static constexpr auto name = "repeat";
     static FunctionPtr create() { return std::make_shared<FunctionStringRepeat>(); }
     String get_name() const override { return name; }
-    size_t getNumberOfArguments() const override { return 2; }
+    size_t get_number_of_arguments() const override { return 2; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         return std::make_shared<DataTypeString>();
     }
-    bool useDefaultImplementationForConstants() const override { return true; }
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    bool use_default_implementation_for_constants() const override { return true; }
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
         DCHECK_EQ(arguments.size(), 2);
         auto res = ColumnString::create();
@@ -549,15 +549,15 @@ public:
     static constexpr auto name = Impl::name;
     static FunctionPtr create() { return std::make_shared<FunctionStringPad>(); }
     String get_name() const override { return name; }
-    size_t getNumberOfArguments() const override { return 3; }
+    size_t get_number_of_arguments() const override { return 3; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         return make_nullable(std::make_shared<DataTypeString>());
     }
-    bool useDefaultImplementationForNulls() const override { return false; }
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_nulls() const override { return false; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override {
         DCHECK_GE(arguments.size(), 3);
         auto null_map = ColumnUInt8::create(input_rows_count, 0);

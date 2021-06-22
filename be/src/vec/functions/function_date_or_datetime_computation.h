@@ -224,7 +224,7 @@ struct DateTimeAddIntervalImpl {
             }
             block.get_by_position(result).column = std::move(col_to);
         } else if (const auto* sources_const =
-                           checkAndGetColumnConst<ColumnVector<FromType>>(source_col.get())) {
+                           check_and_get_column_const<ColumnVector<FromType>>(source_col.get())) {
             auto col_to = ColumnVector<ToType>::create();
             if (const auto* delta_vec_column = check_and_get_column<ColumnVector<FromType>>(
                     *block.get_by_position(arguments[1]).column)) {
@@ -252,10 +252,10 @@ public:
 
     String get_name() const override { return name; }
 
-    bool isVariadic() const override { return true; }
-    size_t getNumberOfArguments() const override { return 0; }
+    bool is_variadic() const override { return true; }
+    size_t get_number_of_arguments() const override { return 0; }
 
-    DataTypePtr get_return_typeImpl(const ColumnsWithTypeAndName& arguments) const override {
+    DataTypePtr get_return_type_impl(const ColumnsWithTypeAndName& arguments) const override {
         if (arguments.size() != 2 && arguments.size() != 3) {
             LOG(FATAL) << fmt::format(
                     "Number of arguments for function {} doesn't match: passed {} , should be 2 or "
@@ -264,15 +264,15 @@ public:
         }
 
         if (arguments.size() == 2) {
-            if (!isDateOrDateTime(arguments[0].type)) {
+            if (!is_date_or_datetime(arguments[0].type)) {
                 LOG(FATAL) << fmt::format(
                         "Illegal type {} of argument of function {}. Should be a date or a date "
                         "with time",
                         arguments[0].type->get_name(), get_name());
             }
         } else {
-            if (!WhichDataType(arguments[0].type).isDateTime() ||
-                !WhichDataType(arguments[2].type).isString()) {
+            if (!WhichDataType(arguments[0].type).is_date_time() ||
+                !WhichDataType(arguments[2].type).is_string()) {
                 LOG(FATAL) << fmt::format(
                         "Function {} supports 2 or 3 arguments. The 1st argument must be of type "
                         "Date or DateTime. The 2nd argument must be number. The 3rd argument "
@@ -284,17 +284,17 @@ public:
         return std::make_shared<typename Transform::ReturnType>();
     }
 
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
         const IDataType* from_type = block.get_by_position(arguments[0]).type.get();
         WhichDataType which(from_type);
 
-        if (which.isDate()) {
+        if (which.is_date()) {
             return DateTimeAddIntervalImpl<DataTypeDate::FieldType, Transform>::execute(
                     block, arguments, result);
-        } else if (which.isDateTime()) {
+        } else if (which.is_date_time()) {
             return DateTimeAddIntervalImpl<DataTypeDateTime::FieldType, Transform>::execute(
                     block, arguments, result);
         } else {

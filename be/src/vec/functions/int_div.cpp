@@ -97,8 +97,8 @@ template <> struct BinaryOperationImpl<Int32, Int64, DivideIntegralImpl<Int32, I
 struct NameIntDiv { static constexpr auto name = "int_divide"; };
 using FunctionIntDiv = FunctionBinaryArithmetic<DivideIntegralImpl, NameIntDiv, false>;
 
-void registerFunctionIntDiv(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionIntDiv>();
+void register_function_int_div(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionIntDiv>();
 }
 
 }

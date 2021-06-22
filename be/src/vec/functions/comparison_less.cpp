@@ -22,8 +22,8 @@ namespace doris::vectorized {
 using FunctionLess = FunctionComparison<LessOp, NameLess>;
 using FunctionLessOrEquals = FunctionComparison<LessOrEqualsOp, NameLessOrEquals>;
 
-void registerFunctionComparisonLess(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionLess>();
-    factory.registerFunction<FunctionLessOrEquals>();
+void register_function_comparison_less(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionLess>();
+    factory.register_function<FunctionLessOrEquals>();
 }
 } // namespace doris::vectorized

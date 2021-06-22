@@ -424,17 +424,17 @@ void write_binary(const Array& x, std::ostream& buf) {
 
 template <>
 Decimal32 DecimalField<Decimal32>::get_scale_multiplier() const {
-    return DataTypeDecimal<Decimal32>::getScaleMultiplier(scale);
+    return DataTypeDecimal<Decimal32>::get_scale_multiplier(scale);
 }
 
 template <>
 Decimal64 DecimalField<Decimal64>::get_scale_multiplier() const {
-    return DataTypeDecimal<Decimal64>::getScaleMultiplier(scale);
+    return DataTypeDecimal<Decimal64>::get_scale_multiplier(scale);
 }
 
 template <>
 Decimal128 DecimalField<Decimal128>::get_scale_multiplier() const {
-    return DataTypeDecimal<Decimal128>::getScaleMultiplier(scale);
+    return DataTypeDecimal<Decimal128>::get_scale_multiplier(scale);
 }
 
 template <typename T>

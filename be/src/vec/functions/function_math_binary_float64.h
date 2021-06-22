@@ -35,16 +35,16 @@ public:
     static FunctionPtr create() { return std::make_shared<FunctionMathBinaryFloat64>(); }
     static_assert(Impl::rows_per_iteration > 0, "Impl must process at least one row per iteration");
 
-    bool useDefaultImplementationForConstants() const override { return true; }
+    bool use_default_implementation_for_constants() const override { return true; }
 
 private:
     String get_name() const override { return name; }
 
-    size_t getNumberOfArguments() const override { return 2; }
+    size_t get_number_of_arguments() const override { return 2; }
 
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         const auto check_argument_type = [this](const IDataType* arg) -> bool {
-            if (!isNativeNumber(arg)) {
+            if (!is_native_number(arg)) {
                 LOG(ERROR) << "Illegal type " << arg->get_name() << " of argument of function "
                            << get_name();
                 return false;
@@ -61,7 +61,7 @@ private:
     }
 
     template <typename LeftType, typename RightType>
-    bool executeTyped(Block& block, const size_t result, const ColumnConst* left_arg,
+    bool execute_typed(Block& block, const size_t result, const ColumnConst* left_arg,
                       const IColumn* right_arg) {
         if (const auto right_arg_typed = check_and_get_column<ColumnVector<RightType>>(right_arg)) {
             auto dst = ColumnVector<Float64>::create();
@@ -101,7 +101,7 @@ private:
     }
 
     template <typename LeftType, typename RightType>
-    bool executeTyped(Block& block, const size_t result, const ColumnVector<LeftType>* left_arg,
+    bool execute_typed(Block& block, const size_t result, const ColumnVector<LeftType>* left_arg,
                       const IColumn* right_arg) {
         if (const auto right_arg_typed = check_and_get_column<ColumnVector<RightType>>(right_arg)) {
             auto dst = ColumnVector<Float64>::create();
@@ -140,7 +140,7 @@ private:
             return true;
         }
         if (const auto right_arg_typed =
-                    checkAndGetColumnConst<ColumnVector<RightType>>(right_arg)) {
+                    check_and_get_column_const<ColumnVector<RightType>>(right_arg)) {
             auto dst = ColumnVector<Float64>::create();
 
             const auto& left_src_data = left_arg->get_data();
@@ -177,7 +177,7 @@ private:
         return false;
     }
 
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t /*input_rows_count*/) override {
         const ColumnWithTypeAndName& col_left = block.get_by_position(arguments[0]);
         const ColumnWithTypeAndName& col_right = block.get_by_position(arguments[1]);
@@ -192,14 +192,14 @@ private:
             const IColumn* right_arg = col_right.column.get();
 
             if (const auto left_arg_typed = check_and_get_column<ColVecLeft>(left_arg)) {
-                if (executeTyped<LeftType, RightType>(block, result, left_arg_typed, right_arg)) {
+                if (execute_typed<LeftType, RightType>(block, result, left_arg_typed, right_arg)) {
                     return true;
                 }
                 DCHECK(false) << "Illegal column " << right_arg->get_name()
                               << " of second argument of function " << get_name();
             }
-            if (const auto left_arg_typed = checkAndGetColumnConst<ColVecLeft>(left_arg)) {
-                if (executeTyped<LeftType, RightType>(block, result, left_arg_typed, right_arg)) {
+            if (const auto left_arg_typed = check_and_get_column_const<ColVecLeft>(left_arg)) {
+                if (execute_typed<LeftType, RightType>(block, result, left_arg_typed, right_arg)) {
                     return true;
                 }
 
@@ -210,8 +210,8 @@ private:
             return false;
         };
 
-        TypeIndex left_index = col_left.type->getTypeId();
-        TypeIndex right_index = col_right.type->getTypeId();
+        TypeIndex left_index = col_left.type->get_type_id();
+        TypeIndex right_index = col_right.type->get_type_id();
 
         if (!call_on_basic_types<true, true, false, false>(left_index, right_index, call)) {
             return Status::InvalidArgument("Illegal column " + col_left.column->get_name() +

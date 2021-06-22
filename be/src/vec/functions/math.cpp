@@ -315,40 +315,40 @@ struct NameDegrees {
 using FunctionDegrees = FunctionUnaryArithmetic<DegreesImpl, NameDegrees, false>;
 
 } // namespace
-void registerFunctionMath(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionAcos>();
-    factory.registerFunction<FunctionAsin>();
-    factory.registerFunction<FunctionAtan>();
-    factory.registerFunction<FunctionCos>();
-    factory.registerFunction<FunctionCeil>();
-    factory.registerAlias("ceil", "dceil");
-    factory.registerAlias("ceil", "ceiling");
-    factory.registerFunction<FunctionE>();
-    factory.registerFunction<FunctionLn>();
-    factory.registerAlias("ln", "dlog1");
-    factory.registerFunction<FunctionLog>();
-    factory.registerFunction<FunctionLog2>();
-    factory.registerFunction<FunctionLog10>();
-    factory.registerAlias("log10", "dlog10");
-    factory.registerFunction<FunctionPi>();
-    factory.registerFunction<FunctionSign>();
-    factory.registerFunction<FunctionAbs>();
-    factory.registerFunction<FunctionNegative>();
-    factory.registerFunction<FunctionPositive>();
-    factory.registerFunction<FunctionSin>();
-    factory.registerFunction<FunctionSqrt>();
-    factory.registerFunction<FunctionTan>();
-    factory.registerFunction<FunctionFloor>();
-    factory.registerAlias("floor", "dfloor");
-    factory.registerFunction<FunctionRound>();
-    factory.registerFunction<FunctionPow>();
-    factory.registerAlias("pow", "power");
-    factory.registerAlias("pow", "dpow");
-    factory.registerAlias("pow", "fpow");
-    factory.registerFunction<FunctionExp>();
-    factory.registerAlias("exp", "dexp");
-    factory.registerFunction<FunctionTruncate>();
-    factory.registerFunction<FunctionRadians>();
-    factory.registerFunction<FunctionDegrees>();
+void register_function_math(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionAcos>();
+    factory.register_function<FunctionAsin>();
+    factory.register_function<FunctionAtan>();
+    factory.register_function<FunctionCos>();
+    factory.register_function<FunctionCeil>();
+    factory.register_alias("ceil", "dceil");
+    factory.register_alias("ceil", "ceiling");
+    factory.register_function<FunctionE>();
+    factory.register_function<FunctionLn>();
+    factory.register_alias("ln", "dlog1");
+    factory.register_function<FunctionLog>();
+    factory.register_function<FunctionLog2>();
+    factory.register_function<FunctionLog10>();
+    factory.register_alias("log10", "dlog10");
+    factory.register_function<FunctionPi>();
+    factory.register_function<FunctionSign>();
+    factory.register_function<FunctionAbs>();
+    factory.register_function<FunctionNegative>();
+    factory.register_function<FunctionPositive>();
+    factory.register_function<FunctionSin>();
+    factory.register_function<FunctionSqrt>();
+    factory.register_function<FunctionTan>();
+    factory.register_function<FunctionFloor>();
+    factory.register_alias("floor", "dfloor");
+    factory.register_function<FunctionRound>();
+    factory.register_function<FunctionPow>();
+    factory.register_alias("pow", "power");
+    factory.register_alias("pow", "dpow");
+    factory.register_alias("pow", "fpow");
+    factory.register_function<FunctionExp>();
+    factory.register_alias("exp", "dexp");
+    factory.register_function<FunctionTruncate>();
+    factory.register_function<FunctionRadians>();
+    factory.register_function<FunctionDegrees>();
 }
 } // namespace doris::vectorized

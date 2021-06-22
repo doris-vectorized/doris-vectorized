@@ -79,15 +79,15 @@ void DataTypeNullable::deserialize(const PColumn& pcolumn, IColumn* column) cons
     nested_data_type->deserialize(pcolumn, &nested);
 }
 
-MutableColumnPtr DataTypeNullable::createColumn() const {
-    return ColumnNullable::create(nested_data_type->createColumn(), ColumnUInt8::create());
+MutableColumnPtr DataTypeNullable::create_column() const {
+    return ColumnNullable::create(nested_data_type->create_column(), ColumnUInt8::create());
 }
 
-Field DataTypeNullable::getDefault() const {
+Field DataTypeNullable::get_default() const {
     return Null();
 }
 
-size_t DataTypeNullable::getSizeOfValueInMemory() const {
+size_t DataTypeNullable::get_size_of_value_in_memory() const {
     LOG(FATAL) << fmt::format("Value of type {} in memory is not of fixed size.", get_name());
     return 0;
 }
@@ -102,8 +102,8 @@ DataTypePtr make_nullable(const DataTypePtr& type) {
     return std::make_shared<DataTypeNullable>(type);
 }
 
-DataTypePtr removeNullable(const DataTypePtr& type) {
-    if (type->is_nullable()) return static_cast<const DataTypeNullable&>(*type).getNestedType();
+DataTypePtr remove_nullable(const DataTypePtr& type) {
+    if (type->is_nullable()) return static_cast<const DataTypeNullable&>(*type).get_nested_type();
     return type;
 }
 

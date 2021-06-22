@@ -29,61 +29,61 @@ public:
     static constexpr bool is_parametric = true;
 
     explicit DataTypeNullable(const DataTypePtr& nested_data_type_);
-    std::string doGetName() const override {
+    std::string do_get_name() const override {
         return "Nullable(" + nested_data_type->get_name() + ")";
     }
     const char* get_family_name() const override { return "Nullable"; }
-    TypeIndex getTypeId() const override { return TypeIndex::Nullable; }
+    TypeIndex get_type_id() const override { return TypeIndex::Nullable; }
 
     void serialize(const IColumn& column, PColumn* pcolumn) const override;
     void deserialize(const PColumn& pcolumn, IColumn* column) const override;
-    MutableColumnPtr createColumn() const override;
+    MutableColumnPtr create_column() const override;
 
-    Field getDefault() const override;
+    Field get_default() const override;
 
     bool equals(const IDataType& rhs) const override;
 
-    bool isParametric() const override { return true; }
-    bool haveSubtypes() const override { return true; }
-    bool cannotBeStoredInTables() const override {
-        return nested_data_type->cannotBeStoredInTables();
+    bool get_is_parametric() const override { return true; }
+    bool have_subtypes() const override { return true; }
+    bool cannot_be_stored_in_tables() const override {
+        return nested_data_type->cannot_be_stored_in_tables();
     }
-    bool shouldAlignRightInPrettyFormats() const override {
-        return nested_data_type->shouldAlignRightInPrettyFormats();
+    bool should_align_right_in_pretty_formats() const override {
+        return nested_data_type->should_align_right_in_pretty_formats();
     }
-    bool textCanContainOnlyValidUTF8() const override {
-        return nested_data_type->textCanContainOnlyValidUTF8();
+    bool text_can_contain_only_valid_utf8() const override {
+        return nested_data_type->text_can_contain_only_valid_utf8();
     }
-    bool isComparable() const override { return nested_data_type->isComparable(); }
-    bool canBeComparedWithCollation() const override {
-        return nested_data_type->canBeComparedWithCollation();
+    bool is_comparable() const override { return nested_data_type->is_comparable(); }
+    bool can_be_compared_with_collation() const override {
+        return nested_data_type->can_be_compared_with_collation();
     }
-    bool canBeUsedAsVersion() const override { return false; }
-    bool isSummable() const override { return nested_data_type->isSummable(); }
-    bool canBeUsedInBooleanContext() const override {
-        return nested_data_type->canBeUsedInBooleanContext();
+    bool can_be_used_as_version() const override { return false; }
+    bool is_summable() const override { return nested_data_type->is_summable(); }
+    bool can_be_used_in_boolean_context() const override {
+        return nested_data_type->can_be_used_in_boolean_context();
     }
-    bool haveMaximumSizeOfValue() const override {
-        return nested_data_type->haveMaximumSizeOfValue();
+    bool have_maximum_size_of_value() const override {
+        return nested_data_type->have_maximum_size_of_value();
     }
-    size_t getMaximumSizeOfValueInMemory() const override {
-        return 1 + nested_data_type->getMaximumSizeOfValueInMemory();
+    size_t get_maximum_size_of_value_in_memory() const override {
+        return 1 + nested_data_type->get_maximum_size_of_value_in_memory();
     }
     bool is_nullable() const override { return true; }
-    size_t getSizeOfValueInMemory() const override;
+    size_t get_size_of_value_in_memory() const override;
     bool only_null() const override;
-    bool canBeInsideLowCardinality() const override {
-        return nested_data_type->canBeInsideLowCardinality();
+    bool can_be_inside_low_cardinality() const override {
+        return nested_data_type->can_be_inside_low_cardinality();
     }
     std::string to_string(const IColumn& column, size_t row_num) const;
 
-    const DataTypePtr& getNestedType() const { return nested_data_type; }
+    const DataTypePtr& get_nested_type() const { return nested_data_type; }
 
 private:
     DataTypePtr nested_data_type;
 };
 
 DataTypePtr make_nullable(const DataTypePtr& type);
-DataTypePtr removeNullable(const DataTypePtr& type);
+DataTypePtr remove_nullable(const DataTypePtr& type);
 
 } // namespace doris::vectorized

@@ -279,7 +279,7 @@ bool read_float_text_fast_impl(T & x, ReadBuffer & in) {
         return false;
     }
 
-    // only to match the isAllRead() check to prevent return null
+    // only to match the is_all_read() check to prevent return null
     in.position() = in.end();
     return true;
 }
@@ -336,7 +336,7 @@ bool read_datetime_text_impl(T& x, ReadBuffer & buf) {
     auto dv = binary_cast<Int128, DateTimeValue>(x);
     auto ans = dv.from_date_str(buf.position(), buf.count());
 
-    // only to match the isAllRead() check to prevent return null
+    // only to match the is_all_read() check to prevent return null
     buf.position() = buf.end();
     x = binary_cast<DateTimeValue, Int128>(x);
     return ans;
@@ -350,7 +350,7 @@ bool read_decimal_text_impl(T& x, ReadBuffer & buf) {
     auto dv = binary_cast<Int128, DecimalV2Value>(x.value);
     auto ans = dv.parse_from_str((const char *) buf.position(), buf.count()) == 0;
 
-    // only to match the isAllRead() check to prevent return null
+    // only to match the is_all_read() check to prevent return null
     buf.position() = buf.end();
 
     x.value = binary_cast<DecimalV2Value, Int128>(dv);

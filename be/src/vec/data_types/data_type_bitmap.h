@@ -29,42 +29,42 @@ public:
 
     using FieldType = BitmapValue;
 
-    std::string doGetName() const override { return get_family_name(); }
+    std::string do_get_name() const override { return get_family_name(); }
     const char* get_family_name() const override { return "BitMap"; }
 
-    TypeIndex getTypeId() const override { return TypeIndex::BitMap; }
+    TypeIndex get_type_id() const override { return TypeIndex::BitMap; }
 
     void serialize(const IColumn& column, PColumn* pcolumn) const override;
     void deserialize(const PColumn& pcolumn, IColumn* column) const override;
-    MutableColumnPtr createColumn() const override;
+    MutableColumnPtr create_column() const override;
 
-    bool isParametric() const override { return false; }
-    bool haveSubtypes() const override { return false; }
-    bool shouldAlignRightInPrettyFormats() const override { return false; }
-    bool textCanContainOnlyValidUTF8() const override { return true; }
-    bool isComparable() const override { return false; }
-    bool isValueRepresentedByNumber() const override { return false; }
-    bool isValueRepresentedByInteger() const override { return false; }
-    bool isValueRepresentedByUnsignedInteger() const override { return false; }
+    bool get_is_parametric() const override { return false; }
+    bool have_subtypes() const override { return false; }
+    bool should_align_right_in_pretty_formats() const override { return false; }
+    bool text_can_contain_only_valid_utf8() const override { return true; }
+    bool is_comparable() const override { return false; }
+    bool is_value_represented_by_number() const override { return false; }
+    bool is_value_represented_by_integer() const override { return false; }
+    bool is_value_represented_by_unsigned_integer() const override { return false; }
     // TODO:
-    bool isValueUnambiguouslyRepresentedInContiguousMemoryRegion() const override { return true; }
-    bool haveMaximumSizeOfValue() const override { return true; }
-    size_t getSizeOfValueInMemory() const override { return sizeof(BitmapValue); }
+    bool is_value_unambiguously_represented_in_contiguous_memory_region() const override { return true; }
+    bool have_maximum_size_of_value() const override { return true; }
+    size_t get_size_of_value_in_memory() const override { return sizeof(BitmapValue); }
 
-    bool canBeUsedAsVersion() const override { return false; }
+    bool can_be_used_as_version() const override { return false; }
 
     bool can_be_inside_nullable() const override { return true; }
 
     bool equals(const IDataType& rhs) const override { return typeid(rhs) == typeid(*this); }
 
-    bool isCategorial() const override { return isValueRepresentedByInteger(); }
+    bool is_categorial() const override { return is_value_represented_by_integer(); }
 
-    bool canBeInsideLowCardinality() const override { return false; }
+    bool can_be_inside_low_cardinality() const override { return false; }
 
     std::string to_string(const IColumn& column, size_t row_num) const { return "BitMap()"; }
 
-    [[noreturn]] virtual Field getDefault() const {
-        LOG(FATAL) << "Method getDefault() is not implemented for data type " << get_name();
+    [[noreturn]] virtual Field get_default() const {
+        LOG(FATAL) << "Method get_default() is not implemented for data type " << get_name();
     }
 };
 
