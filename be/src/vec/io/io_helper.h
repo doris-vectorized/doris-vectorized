@@ -136,34 +136,19 @@ void write_vector_binary(const std::vector<Type>& v, std::ostream& buf) {
         write_binary(*it, buf);
 }
 
-template <typename Type>
-inline std::enable_if_t<std::is_arithmetic_v<Type>, void> write_binary(const Type& x,
-                                                                       std::ostream& buf) {
-    write_pod_binary(x, buf);
-}
-
 inline void write_binary(const String& x, std::ostream& buf) {
     write_string_binary(x, buf);
 }
+
 inline void write_binary(const StringRef& x, std::ostream& buf) {
     write_string_binary(x, buf);
 }
-inline void write_binary(const Int128& x, std::ostream& buf) {
-    write_pod_binary(x, buf);
-}
-inline void write_binary(const UInt128& x, std::ostream& buf) {
+
+template <typename Type>
+inline void write_binary(const Type& x, std::ostream& buf) {
     write_pod_binary(x, buf);
 }
 
-inline void write_binary(const Decimal32& x, std::ostream& buf) {
-    write_pod_binary(x, buf);
-}
-inline void write_binary(const Decimal64& x, std::ostream& buf) {
-    write_pod_binary(x, buf);
-}
-inline void write_binary(const Decimal128& x, std::ostream& buf) {
-    write_pod_binary(x, buf);
-}
 inline void write_binary(const std::ostringstream& buf, PColumn* pcolumn) {
     std::string uncompressed = buf.str();
     std::string compressed;
@@ -234,31 +219,15 @@ void read_vector_binary(std::vector<Type>& v, std::istream& buf,
     for (size_t i = 0; i < size; ++i) read_binary(v[i], buf);
 }
 
-/// Generic methods to read value in native binary format.
-template <typename Type>
-inline std::enable_if_t<std::is_arithmetic_v<Type>, void> read_binary(Type& x, std::istream& buf) {
-    read_pod_binary(x, buf);
-}
-
 inline void read_binary(String& x, std::istream& buf) {
     read_string_binary(x, buf);
 }
-inline void read_binary(Int128& x, std::istream& buf) {
-    read_pod_binary(x, buf);
-}
-inline void read_binary(UInt128& x, std::istream& buf) {
+
+template <typename Type>
+inline void read_binary(Type& x, std::istream& buf) {
     read_pod_binary(x, buf);
 }
 
-inline void read_binary(Decimal32& x, std::istream& buf) {
-    read_pod_binary(x, buf);
-}
-inline void read_binary(Decimal64& x, std::istream& buf) {
-    read_pod_binary(x, buf);
-}
-inline void read_binary(Decimal128& x, std::istream& buf) {
-    read_pod_binary(x, buf);
-}
 inline void read_binary(const PColumn& pcolumn, std::string* data) {
     if (pcolumn.compressed()) {
         snappy::Uncompress(pcolumn.binary().data(), pcolumn.binary().size(), data);
