@@ -336,7 +336,7 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
     std::vector<DataTypePtr> data_types(agg_size);
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         data_types[i] = _aggregate_evaluators[i]->function()->get_return_type();
-        columns[i] = data_types[i]->createColumn();
+        columns[i] = data_types[i]->create_column();
     }
 
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
@@ -351,7 +351,7 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
         const auto column_type = block_schema[i].type;
         if (!column_type->equals(*data_types[i])) {
             DCHECK(column_type->is_nullable());
-            DCHECK(((DataTypeNullable*)column_type.get())->getNestedType()->equals(*data_types[i]));
+            DCHECK(((DataTypeNullable*)column_type.get())->get_nested_type()->equals(*data_types[i]));
             DCHECK(!data_types[i]->is_nullable());
             ColumnPtr ptr = std::move(columns[i]);
             ptr = make_nullable(ptr);
@@ -374,7 +374,7 @@ Status AggregationNode::_serialize_without_key(RuntimeState* state, Block* block
     // will serialize data to string column
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         data_types[i] = make_nullable(std::make_shared<DataTypeString>());
-        value_columns[i] = data_types[i]->createColumn();
+        value_columns[i] = data_types[i]->create_column();
     }
 
     // TODO: we could use pod char as buffer instead of ostream ?
@@ -551,7 +551,7 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
 
             MutableColumns value_columns;
             for (int i = key_size; i < column_withschema.size(); ++i) {
-                value_columns.emplace_back(column_withschema[i].type->createColumn());
+                value_columns.emplace_back(column_withschema[i].type->create_column());
             }
             aggregate_data = _streaming_pre_agg_buffer;
             for (size_t j = 0; j < rows; ++j) {
@@ -688,11 +688,11 @@ Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Blo
 
     MutableColumns key_columns;
     for (int i = 0; i < key_size; ++i) {
-        key_columns.emplace_back(column_withschema[i].type->createColumn());
+        key_columns.emplace_back(column_withschema[i].type->create_column());
     }
     MutableColumns value_columns;
     for (int i = key_size; i < column_withschema.size(); ++i) {
-        value_columns.emplace_back(column_withschema[i].type->createColumn());
+        value_columns.emplace_back(column_withschema[i].type->create_column());
     }
 
     while (iter != data.end() && key_columns[0]->size() < state->batch_size()) {
@@ -741,13 +741,13 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
 
     MutableColumns key_columns;
     for (int i = 0; i < key_size; ++i) {
-        key_columns.emplace_back(_probe_expr_ctxs[i]->root()->data_type()->createColumn());
+        key_columns.emplace_back(_probe_expr_ctxs[i]->root()->data_type()->create_column());
     }
 
     // will serialize data to string column
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         value_data_types[i] = make_nullable(std::make_shared<DataTypeString>());
-        value_columns[i] = value_data_types[i]->createColumn();
+        value_columns[i] = value_data_types[i]->create_column();
     }
 
     while (iter != data.end() && key_columns[0]->size() < state->batch_size()) {

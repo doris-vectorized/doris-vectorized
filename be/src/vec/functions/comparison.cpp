@@ -18,13 +18,13 @@
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
-void registerFunctionComparisonEquals(SimpleFunctionFactory& factory);
-void registerFunctionComparisonGreater(SimpleFunctionFactory& factory);
-void registerFunctionComparisonLess(SimpleFunctionFactory& factory);
+void register_function_comparison_equals(SimpleFunctionFactory& factory);
+void register_function_comparison_greater(SimpleFunctionFactory& factory);
+void register_function_comparison_less(SimpleFunctionFactory& factory);
 
-void registerFunctionComparison(SimpleFunctionFactory& factory) {
-    registerFunctionComparisonEquals(factory);
-    registerFunctionComparisonGreater(factory);
-    registerFunctionComparisonLess(factory);
+void register_function_comparison(SimpleFunctionFactory& factory) {
+    register_function_comparison_equals(factory);
+    register_function_comparison_greater(factory);
+    register_function_comparison_less(factory);
 }
 } // namespace doris::vectorized

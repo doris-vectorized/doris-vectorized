@@ -26,7 +26,7 @@ struct PlusImpl {
 
     static inline llvm::Value* compile(llvm::IRBuilder<>& b, llvm::Value* left, llvm::Value* right,
                                        bool) {
-        return left->getType()->isIntegerTy() ? b.CreateAdd(left, right)
+        return left->getType()->is_integer_ty() ? b.CreateAdd(left, right)
                                               : b.CreateFAdd(left, right);
     }
 #endif
@@ -37,11 +37,11 @@ struct NamePlus {
 };
 using FunctionPlus = FunctionBinaryArithmetic<PlusImpl, NamePlus>;
 
-//void registerFunctionPlus(FunctionFactory & factory)
+//void register_function_plus(FunctionFactory & factory)
 //{
-//    factory.registerFunction<FunctionPlus>();
+//    factory.register_function<FunctionPlus>();
 //}
-void registerFunctionPlus(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionPlus>();
+void register_function_plus(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionPlus>();
 }
 } // namespace doris::vectorized

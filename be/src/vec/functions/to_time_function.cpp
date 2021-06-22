@@ -36,19 +36,19 @@ using FunctionDate = FunctionDateOrDateTimeToSomething<DataTypeDateTime, DateImp
 using FunctionTimeStamp = FunctionDateOrDateTimeToSomething<DataTypeDateTime, TimeStampImpl>;
 using FunctionUnixTimeStamp = FunctionDateOrDateTimeToSomething<DataTypeInt32, UnixTimeStampImpl>;
 
-void registerFunctionToTimeFuction(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionSecond>();
-    factory.registerFunction<FunctionMinute>();
-    factory.registerFunction<FunctionHour>();
-    factory.registerFunction<FunctionDay>();
-    factory.registerFunction<FunctionMonth>();
-    factory.registerFunction<FunctionYear>();
-    factory.registerFunction<FunctionQuarter>();
-    factory.registerFunction<FunctionToDays>();
-    factory.registerFunction<FunctionToDate>();
-    factory.registerFunction<FunctionDate>();
-    factory.registerFunction<FunctionTimeStamp>();
-    factory.registerFunction<FunctionUnixTimeStamp>();
+void register_function_to_time_fuction(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionSecond>();
+    factory.register_function<FunctionMinute>();
+    factory.register_function<FunctionHour>();
+    factory.register_function<FunctionDay>();
+    factory.register_function<FunctionMonth>();
+    factory.register_function<FunctionYear>();
+    factory.register_function<FunctionQuarter>();
+    factory.register_function<FunctionToDays>();
+    factory.register_function<FunctionToDate>();
+    factory.register_function<FunctionDate>();
+    factory.register_function<FunctionTimeStamp>();
+    factory.register_function<FunctionUnixTimeStamp>();
 }
 
 } // namespace doris::vectorized

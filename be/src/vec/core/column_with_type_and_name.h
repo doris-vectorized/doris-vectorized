@@ -38,9 +38,9 @@ struct ColumnWithTypeAndName {
     ColumnWithTypeAndName(const ColumnPtr& column_, const DataTypePtr& type_, const String& name_)
             : column(column_), type(type_), name(name_) {}
 
-    /// Uses type->createColumn() to create column
+    /// Uses type->create_column() to create column
     ColumnWithTypeAndName(const DataTypePtr& type_, const String& name_)
-            : column(type_->createColumn()), type(type_), name(name_) {}
+            : column(type_->create_column()), type(type_), name(name_) {}
 
     ColumnWithTypeAndName clone_empty() const;
     bool operator==(const ColumnWithTypeAndName& other) const;

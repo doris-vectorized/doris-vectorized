@@ -76,7 +76,7 @@ public:
         }
     }
 
-    void registerFunction(const std::string& name, Creator creator, bool nullable = false) {
+    void register_function(const std::string& name, Creator creator, bool nullable = false) {
         if (nullable) {
             nullable_aggregate_functions[name] = creator;
         } else {

@@ -87,7 +87,7 @@ void SlotDescriptor::to_protobuf(PSlotDescriptor* pslot) const {
 }
 
 vectorized::MutableColumnPtr SlotDescriptor::get_empty_mutable_column() const {
-    auto data_column = type().get_data_type_ptr()->createColumn();
+    auto data_column = type().get_data_type_ptr()->create_column();
     if (is_nullable()) {
         return doris::vectorized::ColumnNullable::create(std::move(data_column), doris::vectorized::ColumnUInt8::create());
     }

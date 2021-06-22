@@ -72,14 +72,14 @@ public:
     /// Create cache which will be used to store result of function executed on LowCardinality column.
     /// Only for default LowCardinality implementation.
     /// Cannot be called concurrently for the same object.
-    void createLowCardinalityResultCache(size_t cache_size);
+    void create_low_cardinality_result_cache(size_t cache_size);
 
 protected:
-    virtual Status executeImplDryRun(Block& block, const ColumnNumbers& arguments, size_t result,
+    virtual Status execute_impl_dry_run(Block& block, const ColumnNumbers& arguments, size_t result,
                                      size_t input_rows_count) {
-        return executeImpl(block, arguments, result, input_rows_count);
+        return execute_impl(block, arguments, result, input_rows_count);
     }
-    virtual Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    virtual Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                                size_t input_rows_count) = 0;
 
     /** Default implementation in presence of Nullable arguments or NULL constants as arguments is the following:
@@ -88,41 +88,41 @@ protected:
       *   where Nullable columns are substituted with nested columns (they have arbitrary values in rows corresponding to NULL value)
       *   and wrap result in Nullable column where NULLs are in all rows where any of arguments are NULL.
       */
-    virtual bool useDefaultImplementationForNulls() const { return true; }
+    virtual bool use_default_implementation_for_nulls() const { return true; }
 
     /** If the function have non-zero number of arguments,
       *  and if all arguments are constant, that we could automatically provide default implementation:
       *  arguments are converted to ordinary columns with single value, then function is executed as usual,
       *  and then the result is converted to constant column.
       */
-    virtual bool useDefaultImplementationForConstants() const { return false; }
+    virtual bool use_default_implementation_for_constants() const { return false; }
 
     /** If function arguments has single low cardinality column and all other arguments are constants, call function on nested column.
       * Otherwise, convert all low cardinality columns to ordinary columns.
       * Returns ColumnLowCardinality if at least one argument is ColumnLowCardinality.
       */
-    virtual bool useDefaultImplementationForLowCardinalityColumns() const { return true; }
+    virtual bool use_default_implementation_for_low_cardinality_columns() const { return true; }
 
     /** Some arguments could remain constant during this implementation.
       */
-    virtual ColumnNumbers get_argumentsThatAreAlwaysConstant() const { return {}; }
+    virtual ColumnNumbers get_arguments_that_are_always_constant() const { return {}; }
 
     /** True if function can be called on default arguments (include Nullable's) and won't throw.
       * Counterexample: modulo(0, 0)
       */
-    virtual bool canBeExecutedOnDefaultArguments() const { return true; }
+    virtual bool can_be_executed_on_default_arguments() const { return true; }
 
 private:
-    Status defaultImplementationForNulls(Block& block, const ColumnNumbers& args, size_t result,
+    Status default_implementation_for_nulls(Block& block, const ColumnNumbers& args, size_t result,
                                          size_t input_rows_count, bool dry_run, bool* executed);
-    Status defaultImplementationForConstantArguments(Block& block, const ColumnNumbers& args,
+    Status default_implementation_for_constant_arguments(Block& block, const ColumnNumbers& args,
                                                      size_t result, size_t input_rows_count,
                                                      bool dry_run, bool* executed);
-    Status executeWithoutLowCardinalityColumns(Block& block, const ColumnNumbers& arguments,
+    Status execute_without_low_cardinality_columns(Block& block, const ColumnNumbers& arguments,
                                                size_t result, size_t input_rows_count,
                                                bool dry_run);
 
-    /// Cache is created by function createLowCardinalityResultCache()
+    /// Cache is created by function create_low_cardinality_result_cache()
     PreparedFunctionLowCardinalityResultCachePtr low_cardinality_result_cache;
 };
 
@@ -176,14 +176,14 @@ public:
       * Usually this is true. Notable counterexample is function 'sleep'.
       * If we will call it during query analysis, we will sleep extra amount of time.
       */
-    virtual bool isSuitableForConstantFolding() const { return true; }
+    virtual bool is_suitable_for_constant_folding() const { return true; }
 
     /** Some functions like ignore(...) or toTypeName(...) always return constant result which doesn't depend on arguments.
       * In this case we can calculate result and assume that it's constant in stream header.
       * There is no need to implement function if it has zero arguments.
       * Must return ColumnConst with single row or nullptr.
       */
-    virtual ColumnPtr getResultIfAlwaysReturnsConstantAndHasArguments(
+    virtual ColumnPtr get_result_if_always_returns_constant_and_has_arguments(
             const Block& /*block*/, const ColumnNumbers& /*arguments*/) const {
         return nullptr;
     }
@@ -210,7 +210,7 @@ public:
       *
       * sample_block should contain data types of arguments and values of constants, if relevant.
       */
-    virtual bool isInjective(const Block& /*sample_block*/) { return false; }
+    virtual bool get_is_injective(const Block& /*sample_block*/) { return false; }
 
     /** Function is called "deterministic", if it returns same result for same values of arguments.
       * Most of functions are deterministic. Notable counterexample is rand().
@@ -219,16 +219,16 @@ public:
       * Example: now(). Another example: functions that work with periodically updated dictionaries.
       */
 
-    virtual bool isDeterministic() const = 0;
+    virtual bool is_deterministic() const = 0;
 
-    virtual bool isDeterministicInScopeOfQuery() const = 0;
+    virtual bool is_deterministic_in_scope_of_query() const = 0;
 
     /** Lets you know if the function is monotonic in a range of values.
       * This is used to work with the index in a sorted chunk of data.
       * And allows to use the index not only when it is written, for example `date >= const`, but also, for example, `toMonth(date) >= 11`.
       * All this is considered only for functions of one argument.
       */
-    virtual bool hasInformationAboutMonotonicity() const { return false; }
+    virtual bool has_information_about_monotonicity() const { return false; }
 
     /// The property of monotonicity for a certain range.
     struct Monotonicity {
@@ -248,7 +248,7 @@ public:
     /** Get information about monotonicity on a range of values. Call only if hasInformationAboutMonotonicity.
       * NULL can be passed as one of the arguments. This means that the corresponding range is unlimited on the left or on the right.
       */
-    virtual Monotonicity getMonotonicityForRange(const IDataType& /*type*/, const Field& /*left*/,
+    virtual Monotonicity get_monotonicity_for_range(const IDataType& /*type*/, const Field& /*left*/,
                                                  const Field& /*right*/) const {
         LOG(FATAL) << fmt::format("Function {} has no information about its monotonicity.",
                                   get_name());
@@ -267,21 +267,21 @@ public:
     virtual String get_name() const = 0;
 
     /// See the comment for the same method in IFunctionBase
-    virtual bool isDeterministic() const = 0;
+    virtual bool is_deterministic() const = 0;
 
-    virtual bool isDeterministicInScopeOfQuery() const = 0;
+    virtual bool is_deterministic_in_scope_of_query() const = 0;
 
     /// Override and return true if function needs to depend on the state of the data.
     virtual bool is_stateful() const = 0;
 
     /// Override and return true if function could take different number of arguments.
-    virtual bool isVariadic() const = 0;
+    virtual bool is_variadic() const = 0;
 
     /// For non-variadic functions, return number of arguments; otherwise return zero (that should be ignored).
-    virtual size_t getNumberOfArguments() const = 0;
+    virtual size_t get_number_of_arguments() const = 0;
 
     /// Throw if number of arguments is incorrect. Default implementation will check only in non-variadic case.
-    virtual void checkNumberOfArguments(size_t number_of_arguments) const = 0;
+    virtual void check_number_of_arguments(size_t number_of_arguments) const = 0;
 
     /// Check arguments and return IFunctionBase.
     virtual FunctionBasePtr build(const ColumnsWithTypeAndName& arguments) const = 0;
@@ -289,13 +289,13 @@ public:
     /// For higher-order functions (functions, that have lambda expression as at least one argument).
     /// You pass data types with empty DataTypeFunction for lambda arguments.
     /// This function will replace it with DataTypeFunction containing actual types.
-    virtual void getLambdaArgumentTypes(DataTypes& arguments) const = 0;
+    virtual void get_lambda_argument_types(DataTypes& arguments) const = 0;
 
     /// Returns indexes of arguments, that must be ColumnConst
-    virtual ColumnNumbers get_argumentsThatAreAlwaysConstant() const = 0;
+    virtual ColumnNumbers get_arguments_that_are_always_constant() const = 0;
     /// Returns indexes if arguments, that can be Nullable without making result of function Nullable
     /// (for functions like is_null(x))
-    virtual ColumnNumbers get_argumentsThatDontImplyNullableReturnType(
+    virtual ColumnNumbers get_arguments_that_dont_imply_nullable_return_type(
             size_t number_of_arguments) const = 0;
 };
 
@@ -304,73 +304,73 @@ using FunctionBuilderPtr = std::shared_ptr<IFunctionBuilder>;
 class FunctionBuilderImpl : public IFunctionBuilder {
 public:
     FunctionBasePtr build(const ColumnsWithTypeAndName& arguments) const final {
-        return buildImpl(arguments, get_return_type(arguments));
+        return build_impl(arguments, get_return_type(arguments));
     }
 
-    bool isDeterministic() const override { return true; }
-    bool isDeterministicInScopeOfQuery() const override { return true; }
+    bool is_deterministic() const override { return true; }
+    bool is_deterministic_in_scope_of_query() const override { return true; }
     bool is_stateful() const override { return false; }
-    bool isVariadic() const override { return false; }
+    bool is_variadic() const override { return false; }
 
     /// Default implementation. Will check only in non-variadic case.
-    void checkNumberOfArguments(size_t number_of_arguments) const override;
+    void check_number_of_arguments(size_t number_of_arguments) const override;
 
     DataTypePtr get_return_type(const ColumnsWithTypeAndName& arguments) const;
 
-    void getLambdaArgumentTypes(DataTypes& arguments) const override {
-        checkNumberOfArguments(arguments.size());
-        getLambdaArgumentTypesImpl(arguments);
+    void get_lambda_argument_types(DataTypes& arguments) const override {
+        check_number_of_arguments(arguments.size());
+        get_lambda_argument_types_impl(arguments);
     }
 
-    ColumnNumbers get_argumentsThatAreAlwaysConstant() const override { return {}; }
-    ColumnNumbers get_argumentsThatDontImplyNullableReturnType(
+    ColumnNumbers get_arguments_that_are_always_constant() const override { return {}; }
+    ColumnNumbers get_arguments_that_dont_imply_nullable_return_type(
             size_t /*number_of_arguments*/) const override {
         return {};
     }
 
 protected:
     /// Get the result type by argument type. If the function does not apply to these arguments, throw an exception.
-    virtual DataTypePtr get_return_typeImpl(const ColumnsWithTypeAndName& arguments) const {
+    virtual DataTypePtr get_return_type_impl(const ColumnsWithTypeAndName& arguments) const {
         DataTypes data_types(arguments.size());
         for (size_t i = 0; i < arguments.size(); ++i) data_types[i] = arguments[i].type;
 
-        return get_return_typeImpl(data_types);
+        return get_return_type_impl(data_types);
     }
 
-    virtual DataTypePtr get_return_typeImpl(const DataTypes& /*arguments*/) const {
+    virtual DataTypePtr get_return_type_impl(const DataTypes& /*arguments*/) const {
         LOG(FATAL) << fmt::format("get_return_type is not implemented for {}", get_name());
         return nullptr;
     }
 
-    /** If useDefaultImplementationForNulls() is true, than change arguments for get_return_type() and buildImpl():
-      *  if some of arguments are Nullable(Nothing) then don't call get_return_type(), call buildImpl() with return_type = Nullable(Nothing),
+    /** If use_default_implementation_for_nulls() is true, than change arguments for get_return_type() and build_impl():
+      *  if some of arguments are Nullable(Nothing) then don't call get_return_type(), call build_impl() with return_type = Nullable(Nothing),
       *  if some of arguments are Nullable, then:
       *   - Nullable types are substituted with nested types for get_return_type() function
-      *   - wrap get_return_type() result in Nullable type and pass to buildImpl
+      *   - wrap get_return_type() result in Nullable type and pass to build_impl
       *
-      * Otherwise build returns buildImpl(arguments, get_return_type(arguments));
+      * Otherwise build returns build_impl(arguments, get_return_type(arguments));
       */
-    virtual bool useDefaultImplementationForNulls() const { return true; }
+    virtual bool use_default_implementation_for_nulls() const { return true; }
 
-    /** If useDefaultImplementationForNulls() is true, than change arguments for get_return_type() and buildImpl().
+    /** If use_default_implementation_for_nulls() is true, than change arguments for get_return_type() and build_impl().
       * If function arguments has low cardinality types, convert them to ordinary types.
       * get_return_type returns ColumnLowCardinality if at least one argument type is ColumnLowCardinality.
       */
-    virtual bool useDefaultImplementationForLowCardinalityColumns() const { return true; }
+    virtual bool use_default_implementation_for_low_cardinality_columns() const { return true; }
 
     /// If it isn't, will convert all ColumnLowCardinality arguments to full columns.
-    virtual bool canBeExecutedOnLowCardinalityDictionary() const { return true; }
+    virtual bool can_be_executed_on_low_cardinality_dictionary() const { return true; }
 
-    virtual FunctionBasePtr buildImpl(const ColumnsWithTypeAndName& arguments,
+    virtual FunctionBasePtr build_impl(const ColumnsWithTypeAndName& arguments,
                                       const DataTypePtr& return_type) const = 0;
 
-    virtual void getLambdaArgumentTypesImpl(DataTypes& /*arguments*/) const {
+    virtual void get_lambda_argument_types_impl(DataTypes& /*arguments*/) const {
         LOG(FATAL) << fmt::format("Function {} can't have lambda-expressions as arguments",
                                   get_name());
     }
 
 private:
-    DataTypePtr get_return_typeWithoutLowCardinality(const ColumnsWithTypeAndName& arguments) const;
+    DataTypePtr get_return_type_without_low_cardinality(const ColumnsWithTypeAndName& arguments) const;
 };
 
 /// Previous function interface.
@@ -384,25 +384,25 @@ public:
     bool is_stateful() const override { return false; }
 
     /// TODO: make const
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) override = 0;
 
     /// Override this functions to change default implementation behavior. See details in IMyFunction.
-    bool useDefaultImplementationForNulls() const override { return true; }
-    bool useDefaultImplementationForConstants() const override { return false; }
-    bool useDefaultImplementationForLowCardinalityColumns() const override { return true; }
-    ColumnNumbers get_argumentsThatAreAlwaysConstant() const override { return {}; }
-    bool canBeExecutedOnDefaultArguments() const override { return true; }
-    bool canBeExecutedOnLowCardinalityDictionary() const override {
-        return isDeterministicInScopeOfQuery();
+    bool use_default_implementation_for_nulls() const override { return true; }
+    bool use_default_implementation_for_constants() const override { return false; }
+    bool use_default_implementation_for_low_cardinality_columns() const override { return true; }
+    ColumnNumbers get_arguments_that_are_always_constant() const override { return {}; }
+    bool can_be_executed_on_default_arguments() const override { return true; }
+    bool can_be_executed_on_low_cardinality_dictionary() const override {
+        return is_deterministic_in_scope_of_query();
     }
-    bool isDeterministic() const override { return true; }
-    bool isDeterministicInScopeOfQuery() const override { return true; }
+    bool is_deterministic() const override { return true; }
+    bool is_deterministic_in_scope_of_query() const override { return true; }
 
     using PreparedFunctionImpl::execute;
-    using PreparedFunctionImpl::executeImplDryRun;
-    using FunctionBuilderImpl::get_return_typeImpl;
-    using FunctionBuilderImpl::getLambdaArgumentTypesImpl;
+    using PreparedFunctionImpl::execute_impl_dry_run;
+    using FunctionBuilderImpl::get_return_type_impl;
+    using FunctionBuilderImpl::get_lambda_argument_types_impl;
     using FunctionBuilderImpl::get_return_type;
 
     [[noreturn]] PreparedFunctionPtr prepare(const Block& /*sample_block*/,
@@ -453,9 +453,9 @@ protected:
 
 #endif
 
-    FunctionBasePtr buildImpl(const ColumnsWithTypeAndName& /*arguments*/,
+    FunctionBasePtr build_impl(const ColumnsWithTypeAndName& /*arguments*/,
                               const DataTypePtr& /*return_type*/) const final {
-        LOG(FATAL) << "buildImpl is not implemented for IFunction";
+        LOG(FATAL) << "build_impl is not implemented for IFunction";
         return {};
     }
 };
@@ -470,28 +470,28 @@ public:
     String get_name() const override { return function->get_name(); }
 
 protected:
-    Status executeImpl(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                        size_t input_rows_count) final {
-        return function->executeImpl(block, arguments, result, input_rows_count);
+        return function->execute_impl(block, arguments, result, input_rows_count);
     }
-    Status executeImplDryRun(Block& block, const ColumnNumbers& arguments, size_t result,
+    Status execute_impl_dry_run(Block& block, const ColumnNumbers& arguments, size_t result,
                              size_t input_rows_count) final {
-        return function->executeImplDryRun(block, arguments, result, input_rows_count);
+        return function->execute_impl_dry_run(block, arguments, result, input_rows_count);
     }
-    bool useDefaultImplementationForNulls() const final {
-        return function->useDefaultImplementationForNulls();
+    bool use_default_implementation_for_nulls() const final {
+        return function->use_default_implementation_for_nulls();
     }
-    bool useDefaultImplementationForConstants() const final {
-        return function->useDefaultImplementationForConstants();
+    bool use_default_implementation_for_constants() const final {
+        return function->use_default_implementation_for_constants();
     }
-    bool useDefaultImplementationForLowCardinalityColumns() const final {
-        return function->useDefaultImplementationForLowCardinalityColumns();
+    bool use_default_implementation_for_low_cardinality_columns() const final {
+        return function->use_default_implementation_for_low_cardinality_columns();
     }
-    ColumnNumbers get_argumentsThatAreAlwaysConstant() const final {
-        return function->get_argumentsThatAreAlwaysConstant();
+    ColumnNumbers get_arguments_that_are_always_constant() const final {
+        return function->get_arguments_that_are_always_constant();
     }
-    bool canBeExecutedOnDefaultArguments() const override {
-        return function->canBeExecutedOnDefaultArguments();
+    bool can_be_executed_on_default_arguments() const override {
+        return function->can_be_executed_on_default_arguments();
     }
 
 private:
@@ -526,31 +526,31 @@ public:
         return std::make_shared<DefaultExecutable>(function);
     }
 
-    bool isSuitableForConstantFolding() const override {
-        return function->isSuitableForConstantFolding();
+    bool is_suitable_for_constant_folding() const override {
+        return function->is_suitable_for_constant_folding();
     }
-    ColumnPtr getResultIfAlwaysReturnsConstantAndHasArguments(
+    ColumnPtr get_result_if_always_returns_constant_and_has_arguments(
             const Block& block, const ColumnNumbers& arguments_) const override {
-        return function->getResultIfAlwaysReturnsConstantAndHasArguments(block, arguments_);
+        return function->get_result_if_always_returns_constant_and_has_arguments(block, arguments_);
     }
 
-    bool isInjective(const Block& sample_block) override {
-        return function->isInjective(sample_block);
+    bool get_is_injective(const Block& sample_block) override {
+        return function->get_is_injective(sample_block);
     }
 
-    bool isDeterministic() const override { return function->isDeterministic(); }
+    bool is_deterministic() const override { return function->is_deterministic(); }
 
-    bool isDeterministicInScopeOfQuery() const override {
-        return function->isDeterministicInScopeOfQuery();
+    bool is_deterministic_in_scope_of_query() const override {
+        return function->is_deterministic_in_scope_of_query();
     }
 
-    bool hasInformationAboutMonotonicity() const override {
-        return function->hasInformationAboutMonotonicity();
+    bool has_information_about_monotonicity() const override {
+        return function->has_information_about_monotonicity();
     }
 
-    IFunctionBase::Monotonicity getMonotonicityForRange(const IDataType& type, const Field& left,
+    IFunctionBase::Monotonicity get_monotonicity_for_range(const IDataType& type, const Field& left,
                                                         const Field& right) const override {
-        return function->getMonotonicityForRange(type, left, right);
+        return function->get_monotonicity_for_range(type, left, right);
     }
 
 private:
@@ -564,55 +564,55 @@ public:
     explicit DefaultFunctionBuilder(std::shared_ptr<IFunction> function_)
             : function(std::move(function_)) {}
 
-    void checkNumberOfArguments(size_t number_of_arguments) const override {
-        return function->checkNumberOfArguments(number_of_arguments);
+    void check_number_of_arguments(size_t number_of_arguments) const override {
+        return function->check_number_of_arguments(number_of_arguments);
     }
 
-    bool isDeterministic() const override { return function->isDeterministic(); }
-    bool isDeterministicInScopeOfQuery() const override {
-        return function->isDeterministicInScopeOfQuery();
+    bool is_deterministic() const override { return function->is_deterministic(); }
+    bool is_deterministic_in_scope_of_query() const override {
+        return function->is_deterministic_in_scope_of_query();
     }
 
     String get_name() const override { return function->get_name(); }
     bool is_stateful() const override { return function->is_stateful(); }
-    bool isVariadic() const override { return function->isVariadic(); }
-    size_t getNumberOfArguments() const override { return function->getNumberOfArguments(); }
+    bool is_variadic() const override { return function->is_variadic(); }
+    size_t get_number_of_arguments() const override { return function->get_number_of_arguments(); }
 
-    ColumnNumbers get_argumentsThatAreAlwaysConstant() const override {
-        return function->get_argumentsThatAreAlwaysConstant();
+    ColumnNumbers get_arguments_that_are_always_constant() const override {
+        return function->get_arguments_that_are_always_constant();
     }
-    ColumnNumbers get_argumentsThatDontImplyNullableReturnType(
+    ColumnNumbers get_arguments_that_dont_imply_nullable_return_type(
             size_t number_of_arguments) const override {
-        return function->get_argumentsThatDontImplyNullableReturnType(number_of_arguments);
+        return function->get_arguments_that_dont_imply_nullable_return_type(number_of_arguments);
     }
 
 protected:
-    DataTypePtr get_return_typeImpl(const DataTypes& arguments) const override {
-        return function->get_return_typeImpl(arguments);
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
+        return function->get_return_type_impl(arguments);
     }
-    DataTypePtr get_return_typeImpl(const ColumnsWithTypeAndName& arguments) const override {
-        return function->get_return_typeImpl(arguments);
-    }
-
-    bool useDefaultImplementationForNulls() const override {
-        return function->useDefaultImplementationForNulls();
-    }
-    bool useDefaultImplementationForLowCardinalityColumns() const override {
-        return function->useDefaultImplementationForLowCardinalityColumns();
-    }
-    bool canBeExecutedOnLowCardinalityDictionary() const override {
-        return function->canBeExecutedOnLowCardinalityDictionary();
+    DataTypePtr get_return_type_impl(const ColumnsWithTypeAndName& arguments) const override {
+        return function->get_return_type_impl(arguments);
     }
 
-    FunctionBasePtr buildImpl(const ColumnsWithTypeAndName& arguments,
+    bool use_default_implementation_for_nulls() const override {
+        return function->use_default_implementation_for_nulls();
+    }
+    bool use_default_implementation_for_low_cardinality_columns() const override {
+        return function->use_default_implementation_for_low_cardinality_columns();
+    }
+    bool can_be_executed_on_low_cardinality_dictionary() const override {
+        return function->can_be_executed_on_low_cardinality_dictionary();
+    }
+
+    FunctionBasePtr build_impl(const ColumnsWithTypeAndName& arguments,
                               const DataTypePtr& return_type) const override {
         DataTypes data_types(arguments.size());
         for (size_t i = 0; i < arguments.size(); ++i) data_types[i] = arguments[i].type;
         return std::make_shared<DefaultFunction>(function, data_types, return_type);
     }
 
-    void getLambdaArgumentTypesImpl(DataTypes& arguments) const override {
-        return function->getLambdaArgumentTypesImpl(arguments);
+    void get_lambda_argument_types_impl(DataTypes& arguments) const override {
+        return function->get_lambda_argument_types_impl(arguments);
     }
 
 private:
@@ -624,7 +624,7 @@ using FunctionPtr = std::shared_ptr<IFunction>;
 /** Return ColumnNullable of src, with null map as OR-ed null maps of args columns in blocks.
   * Or ColumnConst(ColumnNullable) if the result is always NULL or if the result is constant and always not NULL.
   */
-ColumnPtr wrapInNullable(const ColumnPtr& src, const Block& block, const ColumnNumbers& args,
-                         size_t result, size_t input_rows_count);
+ColumnPtr wrap_in_nullable(const ColumnPtr& src, const Block& block, const ColumnNumbers& args,
+                           size_t result, size_t input_rows_count);
 
 } // namespace doris::vectorized

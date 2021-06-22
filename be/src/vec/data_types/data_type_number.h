@@ -28,14 +28,14 @@ template <typename T>
 class DataTypeNumber final : public DataTypeNumberBase<T> {
     bool equals(const IDataType& rhs) const override { return typeid(rhs) == typeid(*this); }
 
-    bool canBeUsedAsVersion() const override { return true; }
-    bool isSummable() const override { return true; }
-    bool canBeUsedInBitOperations() const override { return true; }
-    bool canBeUsedInBooleanContext() const override { return true; }
+    bool can_be_used_as_version() const override { return true; }
+    bool is_summable() const override { return true; }
+    bool can_be_used_in_bit_operations() const override { return true; }
+    bool can_be_used_in_boolean_context() const override { return true; }
     bool can_be_inside_nullable() const override { return true; }
 
-    bool canBePromoted() const override { return true; }
-    DataTypePtr promoteNumericType() const override {
+    bool can_be_promoted() const override { return true; }
+    DataTypePtr promote_numeric_type() const override {
         using PromotedType = DataTypeNumber<NearestFieldType<T>>;
         return std::make_shared<PromotedType>();
     }

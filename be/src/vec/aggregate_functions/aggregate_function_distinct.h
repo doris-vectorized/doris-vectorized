@@ -52,7 +52,7 @@ struct AggregateFunctionDistinctSingleNumericData {
 
     MutableColumns get_arguments(const DataTypes& argument_types) const {
         MutableColumns argument_columns;
-        argument_columns.emplace_back(argument_types[0]->createColumn());
+        argument_columns.emplace_back(argument_types[0]->create_column());
         for (const auto& elem : set) argument_columns[0]->insert(elem.get_value());
 
         return argument_columns;
@@ -95,7 +95,7 @@ struct AggregateFunctionDistinctSingleGenericData : public AggregateFunctionDist
 
     MutableColumns get_arguments(const DataTypes& argument_types) const {
         MutableColumns argument_columns;
-        argument_columns.emplace_back(argument_types[0]->createColumn());
+        argument_columns.emplace_back(argument_types[0]->create_column());
         for (const auto& elem : set)
             deserialize_and_insert<is_plain_column>(elem.get_value(), *argument_columns[0]);
 
@@ -122,7 +122,7 @@ struct AggregateFunctionDistinctMultipleGenericData : public AggregateFunctionDi
     MutableColumns get_arguments(const DataTypes& argument_types) const {
         MutableColumns argument_columns(argument_types.size());
         for (size_t i = 0; i < argument_types.size(); ++i)
-            argument_columns[i] = argument_types[i]->createColumn();
+            argument_columns[i] = argument_types[i]->create_column();
 
         for (const auto& elem : set) {
             const char* begin = elem.get_value().data;

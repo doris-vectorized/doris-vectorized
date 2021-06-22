@@ -25,7 +25,7 @@ struct MinusImpl {
 
     static inline llvm::Value* compile(llvm::IRBuilder<>& b, llvm::Value* left, llvm::Value* right,
                                        bool) {
-        return left->getType()->isIntegerTy() ? b.CreateSub(left, right)
+        return left->getType()->is_integer_ty() ? b.CreateSub(left, right)
                                               : b.CreateFSub(left, right);
     }
 #endif
@@ -36,11 +36,11 @@ struct NameMinus {
 };
 using FunctionMinus = FunctionBinaryArithmetic<MinusImpl, NameMinus>;
 
-//void registerFunctionMinus(FunctionFactory & factory)
+//void register_function_minus(FunctionFactory & factory)
 //{
-//    factory.registerFunction<FunctionMinus>();
+//    factory.register_function<FunctionMinus>();
 //}
-void registerFunctionMinus(SimpleFunctionFactory& factory) {
-    factory.registerFunction<FunctionMinus>();
+void register_function_minus(SimpleFunctionFactory& factory) {
+    factory.register_function<FunctionMinus>();
 }
 } // namespace doris::vectorized

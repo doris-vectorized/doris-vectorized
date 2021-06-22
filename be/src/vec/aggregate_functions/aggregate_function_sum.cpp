@@ -67,7 +67,7 @@ AggregateFunctionPtr createAggregateFunctionSum(const std::string& name,
 
     AggregateFunctionPtr res;
     DataTypePtr data_type = argument_types[0];
-    if (isDecimal(data_type))
+    if (is_decimal(data_type))
         res.reset(create_with_decimal_type<Function>(*data_type, *data_type, argument_types));
     else
         res.reset(create_with_numeric_type<Function>(*data_type, argument_types));
@@ -81,7 +81,7 @@ AggregateFunctionPtr createAggregateFunctionSum(const std::string& name,
 } // namespace
 
 void registerAggregateFunctionSum(AggregateFunctionSimpleFactory& factory) {
-    factory.registerFunction("sum", createAggregateFunctionSum<AggregateFunctionSumSimple>);
+    factory.register_function("sum", createAggregateFunctionSum<AggregateFunctionSumSimple>);
 }
 
 } // namespace doris::vectorized
