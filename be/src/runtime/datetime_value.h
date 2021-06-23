@@ -175,7 +175,7 @@ public:
               _day(0),
               _microsecond(0) {}
 
-    DateTimeValue(int64_t t) { from_date_int64(t); }
+    explicit DateTimeValue(int64_t t) { from_date_int64(t); }
 
     // Converted from Olap Date or Datetime
     bool from_olap_datetime(uint64_t datetime) {
