@@ -193,18 +193,34 @@ public:
             *n = 0;
             return Status::OK();
         }
-        size_t max_fetch = std::min(*n, static_cast<size_t>(_num_elems - _cur_idx));
+        const size_t max_fetch = std::min(*n, static_cast<size_t>(_num_elems - _cur_idx));
 
         Slice* out = reinterpret_cast<Slice*>(dst->data());
+        std::vector<size_t> mem_len(max_fetch);
 
         for (size_t i = 0; i < max_fetch; i++, out++, _cur_idx++) {
-            Slice elem(string_at_index(_cur_idx));
-            out->size = elem.size;
-            if (elem.size != 0) {
-                out->data =
-                        reinterpret_cast<char*>(dst->pool()->allocate(elem.size * sizeof(uint8_t)));
-                memcpy(out->data, elem.data, elem.size);
-            }
+            *out = string_at_index(_cur_idx);
+            mem_len[i] = out->size;
+//            out->size = elem.size;
+//            if (elem.size != 0) {
+//                out->data =
+//                        reinterpret_cast<char*>(dst->pool()->allocate(elem.size * sizeof(uint8_t)));
+//                memcpy(out->data, elem.data, elem.size);
+//            }
+        }
+
+        auto mem_size = 0;
+        for (int i = 0; i < max_fetch; ++i) {
+            mem_len[i] = BitUtil::RoundUpToPowerOfTwo(mem_len[i], 8);
+            mem_size += mem_len[i];
+        }
+
+        out = reinterpret_cast<Slice*>(dst->data());
+        char* destination = (char*)dst->column_block()->pool()->allocate(mem_size);
+        for (int i = 0; i < max_fetch; ++i) {
+            out->relocate(destination);
+            destination += mem_len[i];
+            ++out;
         }
 
         *n = max_fetch;

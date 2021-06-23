@@ -238,31 +238,51 @@ Status BinaryDictPageDecoder::next_batch(size_t* n, ColumnBlockView* dst) {
     // dictionary encoding
     DCHECK(_parsed);
     DCHECK(_dict_decoder != nullptr) << "dict decoder pointer is nullptr";
-    if (PREDICT_FALSE(*n == 0)) {
-        *n = 0;
+
+    const auto len = *n;
+    if (PREDICT_FALSE(len == 0)) {
+//        len = 0;
         return Status::OK();
     }
     Slice* out = reinterpret_cast<Slice*>(dst->data());
-    _batch->resize(*n);
+    _batch->resize(len);
 
     ColumnBlock column_block(_batch.get(), dst->column_block()->pool());
     ColumnBlockView tmp_block_view(&column_block);
     RETURN_IF_ERROR(_data_page_decoder->next_batch(n, &tmp_block_view));
-    for (int i = 0; i < *n; ++i) {
+
+    std::vector<size_t> mem_len(len);
+    for (int i = 0; i < len; ++i) {
         int32_t codeword = *reinterpret_cast<const int32_t*>(column_block.cell_ptr(i));
         // get the string from the dict decoder
-        Slice element = _dict_decoder->string_at_index(codeword);
-        if (element.size > 0) {
-            char* destination = (char*)dst->column_block()->pool()->allocate(element.size);
-            if (destination == nullptr) {
-                return Status::MemoryAllocFailed(
-                        strings::Substitute("memory allocate failed, size:$0", element.size));
-            }
-            element.relocate(destination);
-        }
-        *out = element;
+        *out = _dict_decoder->string_at_index(codeword);
+//        Slice& element = elements.emplace_back();
+//        if (element.size > 0) {
+        mem_len[i] = out->size;
+//            char* destination = (char*)dst->column_block()->pool()->allocate(element.size);
+//            if (destination == nullptr) {
+//                return Status::MemoryAllocFailed(
+//                        strings::Substitute("memory allocate failed, size:$0", element.size));
+//            }
+//            element.relocate(destination);
+//        }
+        out++;
+    }
+
+    auto mem_size = 0;
+    for (int i = 0; i < len; ++i) {
+        mem_len[i] = BitUtil::RoundUpToPowerOfTwo(mem_len[i], 8);
+        mem_size += mem_len[i];
+    }
+
+    out = reinterpret_cast<Slice*>(dst->data());
+    char* destination = (char*)dst->column_block()->pool()->allocate(mem_size);
+    for (int i = 0; i < len; ++i) {
+        out->relocate(destination);
+        destination += mem_len[i];
         ++out;
     }
+
     return Status::OK();
 }
 

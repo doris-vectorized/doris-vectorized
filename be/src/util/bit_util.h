@@ -300,6 +300,12 @@ public:
         return (value + (factor - 1)) & ~(factor - 1);
     }
 
+    /// Returns 'value' rounded up to the nearest multiple of 'factor' when factor is
+    /// a power of two
+    static inline size_t RoundUpToPowerOfTwo(size_t value, size_t factor) {
+        return (value + (factor - 1)) & ~(factor - 1);
+    }
+
     // Returns the ceil of value/divisor
     static inline int Ceil(int value, int divisor) {
         return value / divisor + (value % divisor != 0);
