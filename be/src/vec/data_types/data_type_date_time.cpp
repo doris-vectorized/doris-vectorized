@@ -18,8 +18,8 @@
 #include "vec/data_types/data_type_date_time.h"
 
 #include "runtime/datetime_value.h"
-#include "vec/columns/columns_number.h"
 #include "util/binary_cast.hpp"
+#include "vec/columns/columns_number.h"
 
 namespace doris::vectorized {
 
@@ -33,8 +33,9 @@ bool DataTypeDateTime::equals(const IDataType& rhs) const {
     return typeid(rhs) == typeid(*this);
 }
 std::string DataTypeDateTime::to_string(const IColumn& column, size_t row_num) const {
-    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convert_to_full_column_if_const().get())
-                             .get_data()[row_num];
+    Int128 int_val =
+            assert_cast<const ColumnInt128&>(*column.convert_to_full_column_if_const().get())
+                    .get_data()[row_num];
     // TODO: Rethink we really need to do copy replace const reference here?
     doris::DateTimeValue value = binary_cast<Int128, doris::DateTimeValue>(int_val);
 
@@ -74,9 +75,11 @@ std::string DataTypeDateTime::to_string(const IColumn& column, size_t row_num) c
     return ss.str();
 }
 
-void DataTypeDateTime::to_string(const IColumn & column, size_t row_num, BufferWritable & ostr) const {
-    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convert_to_full_column_if_const().get())
-                             .get_data()[row_num];
+void DataTypeDateTime::to_string(const IColumn& column, size_t row_num,
+                                 BufferWritable& ostr) const {
+    Int128 int_val =
+            assert_cast<const ColumnInt128&>(*column.convert_to_full_column_if_const().get())
+                    .get_data()[row_num];
     // TODO: Rethink we really need to do copy replace const reference here?
     doris::DateTimeValue value = binary_cast<Int128, doris::DateTimeValue>(int_val);
 
@@ -85,10 +88,10 @@ void DataTypeDateTime::to_string(const IColumn & column, size_t row_num, BufferW
     ostr.write(buf, pos - buf);
 }
 
-void DataTypeDateTime::cast_to_date_time(Int128 &x) {
+void DataTypeDateTime::cast_to_date_time(Int128& x) {
     auto value = binary_cast<Int128, doris::DateTimeValue>(x);
     value.to_datetime();
-    x = binary_cast<doris::DateTimeValue, Int128>(x);
+    x = binary_cast<doris::DateTimeValue, Int128>(value);
 }
 
 } // namespace doris::vectorized

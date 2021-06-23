@@ -22,6 +22,7 @@
 #include <iostream>
 
 #include "gen_cpp/data.pb.h"
+#include "util/binary_cast.hpp"
 #include "util/string_parser.hpp"
 #include "vec/common/arena.h"
 #include "vec/common/exception.h"
@@ -30,7 +31,6 @@
 #include "vec/core/types.h"
 #include "vec/io/reader_buffer.h"
 #include "vec/io/var_int.h"
-#include "util/binary_cast.hpp"
 
 #define DEFAULT_MAX_STRING_SIZE (1ULL << 30)
 #define WRITE_HELPERS_MAX_INT_WIDTH 40U
@@ -138,7 +138,7 @@ void write_vector_binary(const std::vector<Type>& v, std::ostream& buf) {
 
 template <typename Type>
 inline std::enable_if_t<std::is_arithmetic_v<Type>, void> write_binary(const Type& x,
-                                                                      std::ostream& buf) {
+                                                                       std::ostream& buf) {
     write_pod_binary(x, buf);
 }
 
@@ -237,7 +237,7 @@ void read_vector_binary(std::vector<Type>& v, std::istream& buf,
 /// Generic methods to read value in native binary format.
 template <typename Type>
 inline std::enable_if_t<std::is_arithmetic_v<Type>, void> read_binary(Type& x, std::istream& buf) {
-        read_pod_binary(x, buf);
+    read_pod_binary(x, buf);
 }
 
 inline void read_binary(String& x, std::istream& buf) {
@@ -268,14 +268,16 @@ inline void read_binary(const PColumn& pcolumn, std::string* data) {
 }
 
 template <typename T>
-bool read_float_text_fast_impl(T & x, ReadBuffer & in) {
-    static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>, "Argument for readFloatTextImpl must be float or double");
-    static_assert('a' > '.' && 'A' > '.' && '\n' < '.' && '\t' < '.' && '\'' < '.' && '"' < '.', "Layout of char is not like ASCII"); //-V590
+bool read_float_text_fast_impl(T& x, ReadBuffer& in) {
+    static_assert(std::is_same_v<T, double> || std::is_same_v<T, float>,
+                  "Argument for readFloatTextImpl must be float or double");
+    static_assert('a' > '.' && 'A' > '.' && '\n' < '.' && '\t' < '.' && '\'' < '.' && '"' < '.',
+                  "Layout of char is not like ASCII"); //-V590
 
     StringParser::ParseResult result;
     x = StringParser::string_to_float<T>(in.position(), in.count(), &result);
 
-    if (UNLIKELY(result != StringParser::PARSE_SUCCESS || std::isnan(x) || std::isinf(x))) {                                                    \
+    if (UNLIKELY(result != StringParser::PARSE_SUCCESS || std::isnan(x) || std::isinf(x))) {
         return false;
     }
 
@@ -285,43 +287,49 @@ bool read_float_text_fast_impl(T & x, ReadBuffer & in) {
 }
 
 template <typename T>
-bool read_int_text_impl(T & x, ReadBuffer & buf) {
+bool read_int_text_impl(T& x, ReadBuffer& buf) {
     bool negative = false;
     std::make_unsigned_t<T> res = 0;
     if (buf.eof()) {
         return false;
     }
 
-    while (!buf.eof())
-    {
-        switch (*buf.position())
-        {
-            case '+':
-                break;
-            case '-':
-                if (std::is_signed_v<T>)
-                    negative = true;
-                else
-                {
-                    return false;
-                }
-                break;
-            case '0': [[fallthrough]];
-            case '1': [[fallthrough]];
-            case '2': [[fallthrough]];
-            case '3': [[fallthrough]];
-            case '4': [[fallthrough]];
-            case '5': [[fallthrough]];
-            case '6': [[fallthrough]];
-            case '7': [[fallthrough]];
-            case '8': [[fallthrough]];
-            case '9':
-                res *= 10;
-                res += *buf.position() - '0';
-                break;
-            default:
-                x = negative ? -res : res;
-                return true;
+    while (!buf.eof()) {
+        switch (*buf.position()) {
+        case '+':
+            break;
+        case '-':
+            if (std::is_signed_v<T>)
+                negative = true;
+            else {
+                return false;
+            }
+            break;
+        case '0':
+            [[fallthrough]];
+        case '1':
+            [[fallthrough]];
+        case '2':
+            [[fallthrough]];
+        case '3':
+            [[fallthrough]];
+        case '4':
+            [[fallthrough]];
+        case '5':
+            [[fallthrough]];
+        case '6':
+            [[fallthrough]];
+        case '7':
+            [[fallthrough]];
+        case '8':
+            [[fallthrough]];
+        case '9':
+            res *= 10;
+            res += *buf.position() - '0';
+            break;
+        default:
+            x = negative ? -res : res;
+            return true;
         }
         ++buf.position();
     }
@@ -331,24 +339,24 @@ bool read_int_text_impl(T & x, ReadBuffer & buf) {
 }
 
 template <typename T>
-bool read_datetime_text_impl(T& x, ReadBuffer & buf) {
+bool read_datetime_text_impl(T& x, ReadBuffer& buf) {
     static_assert(std::is_same_v<Int128, T>);
     auto dv = binary_cast<Int128, DateTimeValue>(x);
     auto ans = dv.from_date_str(buf.position(), buf.count());
 
     // only to match the is_all_read() check to prevent return null
     buf.position() = buf.end();
-    x = binary_cast<DateTimeValue, Int128>(x);
+    x = binary_cast<DateTimeValue, Int128>(dv);
     return ans;
 }
 
 template <typename T>
-bool read_decimal_text_impl(T& x, ReadBuffer & buf) {
+bool read_decimal_text_impl(T& x, ReadBuffer& buf) {
     static_assert(IsDecimalNumber<T>);
     // TODO: open this static_assert
     // static_assert(std::is_same_v<Decimal128, T>);
     auto dv = binary_cast<Int128, DecimalV2Value>(x.value);
-    auto ans = dv.parse_from_str((const char *) buf.position(), buf.count()) == 0;
+    auto ans = dv.parse_from_str((const char*)buf.position(), buf.count()) == 0;
 
     // only to match the is_all_read() check to prevent return null
     buf.position() = buf.end();
@@ -358,22 +366,22 @@ bool read_decimal_text_impl(T& x, ReadBuffer & buf) {
 }
 
 template <typename T>
-bool try_read_int_text(T & x, ReadBuffer & buf) {
+bool try_read_int_text(T& x, ReadBuffer& buf) {
     return read_int_text_impl<T>(x, buf);
 }
 
 template <typename T>
-bool try_read_float_text(T & x, ReadBuffer & in) {
+bool try_read_float_text(T& x, ReadBuffer& in) {
     return read_float_text_fast_impl<T>(x, in);
 }
 
 template <typename T>
-bool try_read_decimal_text(T & x, ReadBuffer & in) {
+bool try_read_decimal_text(T& x, ReadBuffer& in) {
     return read_decimal_text_impl<T>(x, in);
 }
 
 template <typename T>
-bool try_read_datetime_text(T & x, ReadBuffer & in) {
+bool try_read_datetime_text(T& x, ReadBuffer& in) {
     return read_datetime_text_impl<T>(x, in);
 }
 } // namespace doris::vectorized
