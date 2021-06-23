@@ -88,7 +88,7 @@ void DataTypeDateTime::to_string(const IColumn & column, size_t row_num, BufferW
 void DataTypeDateTime::cast_to_date_time(Int128 &x) {
     auto value = binary_cast<Int128, doris::DateTimeValue>(x);
     value.to_datetime();
-    x = binary_cast<doris::DateTimeValue, Int128>(x);
+    x = binary_cast<doris::DateTimeValue, Int128>(value);
 }
 
 } // namespace doris::vectorized
