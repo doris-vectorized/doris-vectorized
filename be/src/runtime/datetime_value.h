@@ -175,7 +175,7 @@ public:
               _day(0),
               _microsecond(0) {}
 
-    DateTimeValue(int64_t t) { from_date_int64(t); }
+    explicit DateTimeValue(int64_t t) { from_date_int64(t); }
 
     void set_time(uint32_t year, uint32_t month, uint32_t day, uint32_t hour,
         uint32_t minute, uint32_t second, uint32_t microsecond);
