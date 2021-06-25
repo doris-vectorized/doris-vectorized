@@ -1054,7 +1054,8 @@ private:
             /// In case when converting to Nullable type, we apply different parsing rule,
             /// that will not throw an exception but return NULL in case of malformed input.
             function = FunctionConvertFromString<DataType, NameCast>::create();
-        } else if (requested_result_is_nullable && IsTimeType<DataType>) {
+        } else if (requested_result_is_nullable && IsTimeType<DataType> &&
+                !(check_and_get_data_type<DataTypeDateTime>(from_type.get()) || check_and_get_data_type<DataTypeDate>(from_type.get()))){
             function = FunctionConvertToTimeType<DataType, NameCast>::create();
         } else
             function = FunctionTo<DataType>::Type::create();
