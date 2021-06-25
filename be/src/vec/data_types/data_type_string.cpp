@@ -69,14 +69,14 @@ bool DataTypeString::equals(const IDataType& rhs) const {
     return typeid(rhs) == typeid(*this);
 }
 
-void DataTypeString::serialize(const IColumn& column, PColumn* pcolumn) const {
+size_t DataTypeString::serialize(const IColumn& column, PColumn* pcolumn) const {
     std::ostringstream buf;
     for (size_t i = 0; i < column.size(); ++i) {
         const auto& s = assert_cast<const ColumnString&>(*column.convert_to_full_column_if_const().get())
                                 .get_data_at(i);
         write_string_binary(s, buf);
     }
-    write_binary(buf, pcolumn);
+    return write_binary(buf, pcolumn);
 }
 
 void DataTypeString::deserialize(const PColumn& pcolumn, IColumn* column) const {

@@ -34,7 +34,7 @@ public:
 
     TypeIndex get_type_id() const override { return TypeIndex::BitMap; }
 
-    void serialize(const IColumn& column, PColumn* pcolumn) const override;
+    size_t serialize(const IColumn& column, PColumn* pcolumn) const override;
     void deserialize(const PColumn& pcolumn, IColumn* column) const override;
     MutableColumnPtr create_column() const override;
 

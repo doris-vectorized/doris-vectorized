@@ -68,7 +68,7 @@ void DataTypeDecimal<T>::to_string(const IColumn& column, size_t row_num,
 }
 
 template <typename T>
-void DataTypeDecimal<T>::serialize(const IColumn& column, PColumn* pcolumn) const {
+size_t DataTypeDecimal<T>::serialize(const IColumn& column, PColumn* pcolumn) const {
     std::ostringstream buf;
     for (size_t i = 0; i < column.size(); ++i) {
         const FieldType& x =
@@ -77,9 +77,9 @@ void DataTypeDecimal<T>::serialize(const IColumn& column, PColumn* pcolumn) cons
         write_binary(x, buf);
     }
 
-    write_binary(buf, pcolumn);
     pcolumn->mutable_decimal_param()->set_precision(precision);
     pcolumn->mutable_decimal_param()->set_scale(scale);
+    return write_binary(buf, pcolumn);
 }
 
 template <typename T>
