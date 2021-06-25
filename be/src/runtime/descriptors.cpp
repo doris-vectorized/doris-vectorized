@@ -298,10 +298,12 @@ RowDescriptor::RowDescriptor(const DescriptorTbl& desc_tbl, const std::vector<TT
         : _tuple_idx_nullable_map(nullable_tuples) {
     DCHECK(nullable_tuples.size() == row_tuples.size());
     DCHECK_GT(row_tuples.size(), 0);
+    _num_materialized_slots = 0;
     _num_null_slots = 0;
 
     for (int i = 0; i < row_tuples.size(); ++i) {
         TupleDescriptor* tupleDesc = desc_tbl.get_tuple_descriptor(row_tuples[i]);
+        _num_materialized_slots += tupleDesc->num_materialized_slots();
         _num_null_slots += tupleDesc->num_null_slots();
         _tuple_desc_map.push_back(tupleDesc);
         DCHECK(_tuple_desc_map.back() != NULL);
