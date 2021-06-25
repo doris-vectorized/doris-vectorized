@@ -30,7 +30,7 @@ set(VEC_FILES
   aggregate_functions/aggregate_function_hll_union_agg.cpp
   columns/collator.cpp
   columns/column.cpp
-        columns/column_const.cpp
+  columns/column_const.cpp
   columns/column_decimal.cpp
   columns/column_nullable.cpp
   columns/column_string.cpp
@@ -68,6 +68,8 @@ set(VEC_FILES
   exec/vexchange_node.cpp
   exec/vset_operation_node.cpp
   exec/vunion_node.cpp
+  exec/vblocking_join_node.cpp
+  exec/vcross_join_node.cpp
   exprs/vectorized_agg_fn.cpp
   exprs/vectorized_fn_call.cpp
   exprs/vexpr.cpp
