@@ -89,6 +89,7 @@ void VDataStreamRecvr::SenderQueue::add_batch(const PBlock& pblock, int be_numbe
         _packet_seq_map.emplace(be_number, packet_seq);
     }
     int block_byte_size = pblock.ByteSize();
+    COUNTER_UPDATE(_recvr->_bytes_received_counter, block_byte_size);
 
     if (_num_remaining_senders <= 0) {
         DCHECK(_sender_eos_set.end() != _sender_eos_set.find(be_number));

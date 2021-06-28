@@ -116,7 +116,7 @@ public:
     std::string do_get_name() const override;
     TypeIndex get_type_id() const override { return TypeId<T>::value; }
 
-    void serialize(const IColumn& column, PColumn* pcolumn) const override;
+    size_t serialize(const IColumn& column, PColumn* pcolumn) const override;
     void deserialize(const PColumn& pcolumn, IColumn* column) const override;
     Field get_default() const override;
     bool can_be_promoted() const override { return true; }

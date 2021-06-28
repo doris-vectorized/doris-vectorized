@@ -63,7 +63,7 @@ std::string DataTypeNumberBase<T>::to_string(const IColumn& column, size_t row_n
 }
 
 template <typename T>
-void DataTypeNumberBase<T>::serialize(const IColumn& column, PColumn* pcolumn) const {
+size_t DataTypeNumberBase<T>::serialize(const IColumn& column, PColumn* pcolumn) const {
     std::ostringstream buf;
     for (size_t i = 0; i < column.size(); ++i) {
         const FieldType& x =
@@ -71,7 +71,7 @@ void DataTypeNumberBase<T>::serialize(const IColumn& column, PColumn* pcolumn) c
                         .get_data()[i];
         write_binary(x, buf);
     }
-    write_binary(buf, pcolumn);
+    return write_binary(buf, pcolumn);
 }
 
 template <typename T>

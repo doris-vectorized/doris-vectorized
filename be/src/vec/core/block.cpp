@@ -784,18 +784,28 @@ Status Block::filter_block(Block* block, int filter_column_id, int column_to_kee
     }
     return Status::OK();
 }
-void Block::serialize(PBlock* pblock) const {
-    for (auto c = cbegin(); c != cend(); ++c) {
+
+size_t Block::serialize(PBlock* pblock) const {
+    size_t block_size_before_compress = 0;
+
+    for (const auto & c : *this) {
+        // name serialize
         PColumn* pc = pblock->add_columns();
-        pc->set_name(c->name);
-        if (c->type->is_nullable()) {
+        pc->set_name(c.name);
+        block_size_before_compress += c.name.size();
+
+        // type serialize
+        if (c.type->is_nullable()) {
             pc->set_type(get_pdata_type(
-                    std::dynamic_pointer_cast<const DataTypeNullable>(c->type)->get_nested_type()));
+                    std::dynamic_pointer_cast<const DataTypeNullable>(c.type)->get_nested_type()));
         } else {
-            pc->set_type(get_pdata_type(c->type));
+            pc->set_type(get_pdata_type(c.type));
         }
-        c->type->serialize(*(c->column), pc);
+        // content serialize
+        block_size_before_compress += c.type->serialize(*(c.column), pc);
     }
+
+    return block_size_before_compress;
 }
 
 size_t MutableBlock::rows() const {
