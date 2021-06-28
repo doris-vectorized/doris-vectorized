@@ -395,7 +395,6 @@ size_t Block::allocated_bytes() const {
 }
 
 std::string Block::dump_names() const {
-    // WriteBufferFromOwnString out;
     std::stringstream out;
     for (auto it = data.begin(); it != data.end(); ++it) {
         if (it != data.begin()) out << ", ";

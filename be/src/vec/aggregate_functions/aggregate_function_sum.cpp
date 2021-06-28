@@ -59,9 +59,9 @@ using AggregateFunctionSumKahan =
                            typename SumKahan<T>::Function>;
 
 template <template <typename> class Function>
-AggregateFunctionPtr createAggregateFunctionSum(const std::string& name,
-                                                const DataTypes& argument_types,
-                                                const Array& parameters) {
+AggregateFunctionPtr create_aggregate_function_sum(const std::string& name,
+                                                   const DataTypes& argument_types,
+                                                   const Array& parameters) {
     // assert_no_parameters(name, parameters);
     // assert_unary(name, argument_types);
 
@@ -73,15 +73,16 @@ AggregateFunctionPtr createAggregateFunctionSum(const std::string& name,
         res.reset(create_with_numeric_type<Function>(*data_type, argument_types));
 
     if (!res) {
-        LOG(WARNING) << fmt::format("Illegal type {} of argument for aggregate function {}", argument_types[0]->get_name(), name);
+        LOG(WARNING) << fmt::format("Illegal type {} of argument for aggregate function {}",
+                                    argument_types[0]->get_name(), name);
     }
     return res;
 }
 
 } // namespace
 
-void registerAggregateFunctionSum(AggregateFunctionSimpleFactory& factory) {
-    factory.register_function("sum", createAggregateFunctionSum<AggregateFunctionSumSimple>);
+void register_aggregate_function_sum(AggregateFunctionSimpleFactory& factory) {
+    factory.register_function("sum", create_aggregate_function_sum<AggregateFunctionSumSimple>);
 }
 
 } // namespace doris::vectorized

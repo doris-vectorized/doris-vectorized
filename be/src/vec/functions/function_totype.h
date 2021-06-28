@@ -48,7 +48,7 @@ public:
     bool use_default_implementation_for_constants() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         return execute_impl<typename Impl::ReturnType>(block, arguments, result, input_rows_count);
     }
 
@@ -61,16 +61,16 @@ private:
         if constexpr (std::is_integer(Impl::TYPE_INDEX)) {
             if (auto* col = check_and_get_column<ColumnVector<typename Impl::Type>>(column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
-                RETURN_IF_ERROR(
-                        Impl::vector(col->get_data(), col_res->get_chars(), col_res->get_offsets()));
-                block.get_by_position(result).column = std::move(col_res);
+                RETURN_IF_ERROR(Impl::vector(col->get_data(), col_res->get_chars(),
+                                             col_res->get_offsets()));
+                block.replace_by_position(result, std::move(col_res));
                 return Status::OK();
             }
         }
 
-        return Status::RuntimeError(fmt::format("Illegal column {} of argument of function {}",
-                                                block.get_by_position(arguments[0]).column->get_name(),
-                                                get_name()));
+        return Status::RuntimeError(
+                fmt::format("Illegal column {} of argument of function {}",
+                            block.get_by_position(arguments[0]).column->get_name(), get_name()));
     }
     template <typename T, std::enable_if_t<!std::is_same_v<T, DataTypeString>, T>* = nullptr>
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
@@ -86,24 +86,24 @@ private:
             }
         } else if constexpr (std::is_integer(Impl::TYPE_INDEX)) {
             if (const auto* col =
-                    check_and_get_column<ColumnVector<typename Impl::Type>>(column.get())) {
+                        check_and_get_column<ColumnVector<typename Impl::Type>>(column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
                 RETURN_IF_ERROR(Impl::vector(col->get_data(), col_res->get_data()));
                 block.get_by_position(result).column = std::move(col_res);
                 return Status::OK();
             }
         } else if constexpr (is_complex_v<typename Impl::Type>) {
-            if (const auto* col =
-                    check_and_get_column<ColumnComplexType<typename Impl::Type>>(column.get())) {
+            if (const auto* col = check_and_get_column<ColumnComplexType<typename Impl::Type>>(
+                        column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
                 RETURN_IF_ERROR(Impl::vector(col->get_data(), col_res->get_data()));
                 block.get_by_position(result).column = std::move(col_res);
                 return Status::OK();
             }
         }
-        return Status::RuntimeError(fmt::format("Illegal column {} of argument of function {}",
-                                                block.get_by_position(arguments[0]).column->get_name(),
-                                                get_name()));
+        return Status::RuntimeError(
+                fmt::format("Illegal column {} of argument of function {}",
+                            block.get_by_position(arguments[0]).column->get_name(), get_name()));
     }
 };
 
@@ -123,7 +123,7 @@ public:
     bool use_default_implementation_for_constants() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t /*input_rows_count*/) override {
+                        size_t /*input_rows_count*/) override {
         DCHECK_EQ(arguments.size(), 2);
         const auto& left = block.get_by_position(arguments[0]);
         auto lcol = left.column->convert_to_full_column_if_const();
@@ -183,7 +183,7 @@ public:
     bool use_default_implementation_for_constants() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t /*input_rows_count*/) override {
+                        size_t /*input_rows_count*/) override {
         const auto& left = block.get_by_position(arguments[0]);
         const auto& right = block.get_by_position(arguments[1]);
         return execute_inner_impl<ResultDataType>(left, right, block, arguments, result);
@@ -255,7 +255,7 @@ public:
     }
     bool use_default_implementation_for_constants() const override { return true; }
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         auto null_map = ColumnUInt8::create(input_rows_count, 0);
         ColumnPtr argument_columns[2];
 
@@ -266,7 +266,8 @@ public:
                     block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
             if (auto* nullable = check_and_get_column<ColumnNullable>(*argument_columns[i])) {
                 argument_columns[i] = nullable->get_nested_column_ptr();
-                VectorizedUtils::update_null_map(null_map->get_data(), nullable->get_null_map_data());
+                VectorizedUtils::update_null_map(null_map->get_data(),
+                                                 nullable->get_null_map_data());
             }
         }
 
