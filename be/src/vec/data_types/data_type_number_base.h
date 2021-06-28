@@ -38,7 +38,7 @@ public:
     TypeIndex get_type_id() const override { return TypeId<T>::value; }
     Field get_default() const override;
 
-    void serialize(const IColumn& column, PColumn* pcolumn) const override;
+    size_t serialize(const IColumn& column, PColumn* pcolumn) const override;
     void deserialize(const PColumn& pcolumn, IColumn* column) const override;
     MutableColumnPtr create_column() const override;
 

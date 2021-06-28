@@ -169,8 +169,9 @@ public:
     std::string dump_data(size_t row_limit = 100) const;
 
     static Status filter_block(Block* block, int filter_conlumn_id, int column_to_keep);
-    // serialize block to PRowBatch
-    void serialize(PBlock* pblock) const;
+
+    // serialize block to PBlock
+    size_t serialize(PBlock* pblock) const;
 
 private:
     void erase_impl(size_t position);
