@@ -22,7 +22,8 @@
 #include "vec/io/io_helper.h"
 
 namespace doris::vectorized {
-void DataTypeBitMap::serialize(const IColumn& column, PColumn* pcolumn) const {
+
+size_t DataTypeBitMap::serialize(const IColumn& column, PColumn* pcolumn) const {
     std::ostringstream buf;
     auto& data_column = assert_cast<const ColumnBitmap&>(*column.convert_to_full_column_if_const());
     // TODO: remove std::string as memory buffer to avoid memory copy
@@ -36,7 +37,8 @@ void DataTypeBitMap::serialize(const IColumn& column, PColumn* pcolumn) const {
         write_binary(memory_buffer, buf);
         memory_buffer.clear();
     }
-    write_binary(buf, pcolumn);
+
+    return write_binary(buf, pcolumn);
 }
 
 void DataTypeBitMap::deserialize(const PColumn& pcolumn, IColumn* column) const {

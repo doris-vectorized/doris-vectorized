@@ -56,14 +56,15 @@ std::string DataTypeNullable::to_string(const IColumn& column, size_t row_num) c
     }
 }
 
-void DataTypeNullable::serialize(const IColumn& column, PColumn* pcolumn) const {
+size_t DataTypeNullable::serialize(const IColumn& column, PColumn* pcolumn) const {
     const ColumnNullable& col =
             assert_cast<const ColumnNullable&>(*column.convert_to_full_column_if_const().get());
     for (size_t i = 0; i < column.size(); ++i) {
         bool is_null = col.is_null_at(i);
         pcolumn->add_is_null(is_null);
     }
-    nested_data_type->serialize(col.get_nested_column(), pcolumn);
+
+    return nested_data_type->serialize(col.get_nested_column(), pcolumn) + sizeof(bool) * column.size();
 }
 
 void DataTypeNullable::deserialize(const PColumn& pcolumn, IColumn* column) const {

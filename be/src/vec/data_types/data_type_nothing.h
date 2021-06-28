@@ -45,7 +45,7 @@ public:
     size_t get_size_of_value_in_memory() const override { return 0; }
     bool can_be_inside_nullable() const override { return true; }
 
-    void serialize(const IColumn& column, PColumn* pcolumn) const override;
+    size_t serialize(const IColumn& column, PColumn* pcolumn) const override;
     void deserialize(const PColumn& pcolumn, IColumn* column) const override;
     [[noreturn]] Field get_default() const override {
         LOG(FATAL) << "Method get_default() is not implemented for data type " << get_name();

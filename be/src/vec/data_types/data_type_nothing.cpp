@@ -27,7 +27,9 @@ MutableColumnPtr DataTypeNothing::create_column() const {
     return ColumnNothing::create(0);
 }
 
-void DataTypeNothing::serialize(const IColumn& column, PColumn* pcolumn) const {}
+size_t DataTypeNothing::serialize(const IColumn&, PColumn* pcolumn) const {
+    return 0;
+}
 
 void DataTypeNothing::deserialize(const PColumn& pcolumn, IColumn* column) const {}
 bool DataTypeNothing::equals(const IDataType& rhs) const {

@@ -48,10 +48,10 @@ Status VDataStreamSender::Channel::send_current_block(bool eos) {
     {
         SCOPED_TIMER(_parent->_serialize_batch_timer);
         _pb_block.Clear();
-        _mutable_block->to_block().serialize(&_pb_block);
+        auto uncompressed_bytes = _mutable_block->to_block().serialize(&_pb_block);
         _mutable_block->clear();
-        int uncompressed_bytes = _pb_block.ByteSize();
-        int bytes = uncompressed_bytes;
+
+        auto bytes = _pb_block.ByteSize();
         COUNTER_UPDATE(_parent->_bytes_sent_counter, bytes);
         COUNTER_UPDATE(_parent->_uncompressed_bytes_counter, uncompressed_bytes);
     }
@@ -377,10 +377,8 @@ Status VDataStreamSender::serialize_block(Block* src, PBlock* dest, int num_rece
     {
         SCOPED_TIMER(_serialize_batch_timer);
         dest->Clear();
-        src->serialize(dest);
-        // TODO: compress
-        int uncompressed_bytes = dest->ByteSize();
-        int bytes = uncompressed_bytes;
+        auto uncompressed_bytes = src->serialize(dest);
+        auto bytes = dest->ByteSize();
 
         COUNTER_UPDATE(_bytes_sent_counter, bytes * num_receivers);
         COUNTER_UPDATE(_uncompressed_bytes_counter, uncompressed_bytes * num_receivers);

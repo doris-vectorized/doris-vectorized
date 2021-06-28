@@ -27,7 +27,6 @@ Status VExchangeNode::init(const TPlanNode& tnode, RuntimeState* state) {
 
 Status VExchangeNode::prepare(RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::prepare(state));
-    _convert_row_batch_timer = ADD_TIMER(runtime_profile(), "ConvertRowBatchTime");
     DCHECK_GT(_num_senders, 0);
     _sub_plan_query_statistics_recvr.reset(new QueryStatisticsRecvr());
     _stream_recvr = state->exec_env()->vstream_mgr()->create_recvr(
