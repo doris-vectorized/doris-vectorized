@@ -230,7 +230,7 @@ public:
     /// Updates avg_value_size_hint for newly read column. Uses to optimize deserialization. Zero expected for first column.
     static void update_avg_value_size_hint(const IColumn& column, double& avg_value_size_hint);
 
-    virtual void serialize(const IColumn& column, PColumn* pcolumn) const = 0;
+    virtual size_t serialize(const IColumn& column, PColumn* pcolumn) const = 0;
     virtual void deserialize(const PColumn& pcolumn, IColumn* column) const = 0;
 
     // static String getFileNameForStream(const String & column_name, const SubstreamPath & path);
