@@ -91,6 +91,15 @@ public:
         this->get_by_position(position).column = std::move(res);
     }
 
+    void replace_by_position(size_t position, const ColumnPtr& res) {
+        this->get_by_position(position).column = res;
+    }
+
+    void replace_by_position_if_const(size_t position) {
+        auto& element = this->get_by_position(position);
+        element.column = element.column->convert_to_full_column_if_const();
+    }
+
     ColumnWithTypeAndName& safe_get_by_position(size_t position);
     const ColumnWithTypeAndName& safe_get_by_position(size_t position) const;
 
@@ -272,7 +281,7 @@ public:
     }
 
     // TODO: use add_rows instead of this
-    // add_rows(Block* block,PODArray<Int32>& group, int group_num);
+    // add_rows(Block* block,PODArray<Int32>& group,int group_num);
 };
 
 } // namespace vectorized

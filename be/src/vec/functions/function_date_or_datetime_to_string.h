@@ -46,17 +46,17 @@ public:
     ColumnNumbers get_arguments_that_are_always_constant() const override { return {1}; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         const ColumnPtr source_col = block.get_by_position(arguments[0]).column;
         const auto* sources = check_and_get_column<ColumnVector<Int128>>(source_col.get());
         auto col_res = ColumnString::create();
         if (sources) {
             TransformerToStringOneArgument<Transform>::vector(
                     sources->get_data(), col_res->get_chars(), col_res->get_offsets());
-            block.get_by_position(result).column = std::move(col_res);
+            block.replace_by_position(result, std::move(col_res));
         } else {
             return Status::InternalError("Illegal column " +
-                                                 block.get_by_position(arguments[0]).column->get_name() +
+                                         block.get_by_position(arguments[0]).column->get_name() +
                                          " of first argument of function " + name);
         }
         return Status::OK();

@@ -54,7 +54,7 @@ public:
     bool use_default_implementation_for_constants() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t /*input_rows_count*/) override {
+                        size_t /*input_rows_count*/) override {
         const ColumnPtr column = block.get_by_position(arguments[0]).column;
         if (const ColumnString* col = check_and_get_column<ColumnString>(column.get())) {
             auto col_res = ColumnVector<ResultType>::create();
@@ -63,7 +63,7 @@ public:
             vec_res.resize(col->size());
             Impl::vector(col->get_chars(), col->get_offsets(), vec_res);
 
-            block.get_by_position(result).column = std::move(col_res);
+            block.replace_by_position(result, std::move(col_res));
         }
         //        else if (const ColumnFixedString * col_fixed = check_and_get_column<ColumnFixedString>(column.get()))
         //        {
@@ -96,9 +96,9 @@ public:
         //            block.get_by_position(result).column = std::move(col_res);
         //        }
         else {
-            return Status::RuntimeError(
-                    fmt::format("Illegal column {} of argument of function {}",
-                                block.get_by_position(arguments[0]).column->get_name(), get_name()));
+            return Status::RuntimeError(fmt::format(
+                    "Illegal column {} of argument of function {}",
+                    block.get_by_position(arguments[0]).column->get_name(), get_name()));
         }
 
         return Status::OK();

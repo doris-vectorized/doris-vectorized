@@ -53,11 +53,6 @@ bool call_on_basic_type(TypeIndex number, F&& f) {
         case TypeIndex::Int128:
             return f(TypePair<T, Int128>());
 
-            // case TypeIndex::Enum8:
-            //     return f(TypePair<T, Int8>());
-            // case TypeIndex::Enum16:
-            //     return f(TypePair<T, Int16>());
-
         default:
             break;
         }
@@ -87,17 +82,6 @@ bool call_on_basic_type(TypeIndex number, F&& f) {
         }
     }
 
-    // if constexpr (_datetime) {
-    //     switch (number) {
-    //     case TypeIndex::Date:
-    //         return f(TypePair<T, UInt16>());
-    //     case TypeIndex::DateTime:
-    //         return f(TypePair<T, UInt32>());
-    //     default:
-    //         break;
-    //     }
-    // }
-
     return false;
 }
 
@@ -110,14 +94,14 @@ inline bool call_on_basic_types(TypeIndex type_num1, TypeIndex type_num2, F&& f)
             return call_on_basic_type<UInt8, _int, _float, _decimal, _datetime>(type_num2,
                                                                                 std::forward<F>(f));
         case TypeIndex::UInt16:
-            return call_on_basic_type<UInt16, _int, _float, _decimal, _datetime>(type_num2,
-                                                                                 std::forward<F>(f));
+            return call_on_basic_type<UInt16, _int, _float, _decimal, _datetime>(
+                    type_num2, std::forward<F>(f));
         case TypeIndex::UInt32:
-            return call_on_basic_type<UInt32, _int, _float, _decimal, _datetime>(type_num2,
-                                                                                 std::forward<F>(f));
+            return call_on_basic_type<UInt32, _int, _float, _decimal, _datetime>(
+                    type_num2, std::forward<F>(f));
         case TypeIndex::UInt64:
-            return call_on_basic_type<UInt64, _int, _float, _decimal, _datetime>(type_num2,
-                                                                                 std::forward<F>(f));
+            return call_on_basic_type<UInt64, _int, _float, _decimal, _datetime>(
+                    type_num2, std::forward<F>(f));
 
         case TypeIndex::Int8:
             return call_on_basic_type<Int8, _int, _float, _decimal, _datetime>(type_num2,
@@ -132,16 +116,8 @@ inline bool call_on_basic_types(TypeIndex type_num1, TypeIndex type_num2, F&& f)
             return call_on_basic_type<Int64, _int, _float, _decimal, _datetime>(type_num2,
                                                                                 std::forward<F>(f));
         case TypeIndex::Int128:
-            return call_on_basic_type<Int128, _int, _float, _decimal, _datetime>(type_num2,
-                                                                                 std::forward<F>(f));
-
-            // case TypeIndex::Enum8:
-            //     return call_on_basic_type<Int8, _int, _float, _decimal, _datetime>(type_num2,
-            //                                                                     std::forward<F>(f));
-            // case TypeIndex::Enum16:
-            //     return call_on_basic_type<Int16, _int, _float, _decimal, _datetime>(type_num2,
-            //                                                                      std::forward<F>(f));
-
+            return call_on_basic_type<Int128, _int, _float, _decimal, _datetime>(
+                    type_num2, std::forward<F>(f));
         default:
             break;
         }
@@ -166,28 +142,15 @@ inline bool call_on_basic_types(TypeIndex type_num1, TypeIndex type_num2, F&& f)
     if constexpr (_float) {
         switch (type_num1) {
         case TypeIndex::Float32:
-            return call_on_basic_type<Float32, _int, _float, _decimal, _datetime>(type_num2,
-                                                                                  std::forward<F>(f));
+            return call_on_basic_type<Float32, _int, _float, _decimal, _datetime>(
+                    type_num2, std::forward<F>(f));
         case TypeIndex::Float64:
-            return call_on_basic_type<Float64, _int, _float, _decimal, _datetime>(type_num2,
-                                                                                  std::forward<F>(f));
+            return call_on_basic_type<Float64, _int, _float, _decimal, _datetime>(
+                    type_num2, std::forward<F>(f));
         default:
             break;
         }
     }
-
-    // if constexpr (_datetime) {
-    //     switch (type_num1) {
-    //     case TypeIndex::Date:
-    //         return call_on_basic_type<UInt16, _int, _float, _decimal, _datetime>(type_num2,
-    //                                                                           std::forward<F>(f));
-    //     case TypeIndex::DateTime:
-    //         return call_on_basic_type<UInt32, _int, _float, _decimal, _datetime>(type_num2,
-    //                                                                           std::forward<F>(f));
-    //     default:
-    //         break;
-    //     }
-    // }
 
     return false;
 }
@@ -195,8 +158,6 @@ inline bool call_on_basic_types(TypeIndex type_num1, TypeIndex type_num2, F&& f)
 class DataTypeDate;
 class DataTypeDateTime;
 class DataTypeString;
-class DataTypeFixedString;
-class DataTypeUUID;
 template <typename T>
 class DataTypeEnum;
 template <typename T>
@@ -225,7 +186,7 @@ bool call_on_index_and_data_type(TypeIndex number, F&& f) {
     case TypeIndex::Int64:
         return f(TypePair<DataTypeNumber<Int64>, T>());
     case TypeIndex::Int128:
-         return f(TypePair<DataTypeNumber<Int128>, T>());
+        return f(TypePair<DataTypeNumber<Int128>, T>());
 
     case TypeIndex::Float32:
         return f(TypePair<DataTypeNumber<Float32>, T>());
@@ -246,16 +207,6 @@ bool call_on_index_and_data_type(TypeIndex number, F&& f) {
 
     case TypeIndex::String:
         return f(TypePair<DataTypeString, T>());
-        // case TypeIndex::FixedString:
-        //     return f(TypePair<DataTypeFixedString, T>());
-
-        // case TypeIndex::Enum8:
-        //     return f(TypePair<DataTypeEnum<Int8>, T>());
-        // case TypeIndex::Enum16:
-        //     return f(TypePair<DataTypeEnum<Int16>, T>());
-
-        // case TypeIndex::UUID:
-        //     return f(TypePair<DataTypeUUID, T>());
 
     default:
         break;
@@ -284,7 +235,7 @@ bool call_on_index_and_number_data_type(TypeIndex number, F&& f) {
     case TypeIndex::Int64:
         return f(TypePair<DataTypeNumber<Int64>, T>());
     case TypeIndex::Int128:
-         return f(TypePair<DataTypeNumber<Int128>, T>());
+        return f(TypePair<DataTypeNumber<Int128>, T>());
 
     case TypeIndex::Float32:
         return f(TypePair<DataTypeNumber<Float32>, T>());

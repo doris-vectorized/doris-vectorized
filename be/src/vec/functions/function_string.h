@@ -99,7 +99,7 @@ public:
     bool use_default_implementation_for_constants() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         substring_execute(block, arguments, result, input_rows_count);
         return Status::OK();
     }
@@ -115,7 +115,8 @@ public:
                     block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
             if (auto* nullable = check_and_get_column<ColumnNullable>(*argument_columns[i])) {
                 argument_columns[i] = nullable->get_nested_column_ptr();
-                VectorizedUtils::update_null_map(null_map->get_data(), nullable->get_null_map_data());
+                VectorizedUtils::update_null_map(null_map->get_data(),
+                                                 nullable->get_null_map_data());
             }
         }
 
@@ -202,7 +203,7 @@ public:
     size_t get_number_of_arguments() const override { return 2; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         auto int_type = std::make_shared<DataTypeInt32>();
         size_t num_columns_without_result = block.columns();
         block.insert({int_type->create_column_const(input_rows_count, to_field(1))
@@ -225,7 +226,7 @@ public:
     size_t get_number_of_arguments() const override { return 2; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         auto int_type = std::make_shared<DataTypeInt32>();
         auto params1 = ColumnInt32::create(input_rows_count);
         auto params2 = ColumnInt32::create(input_rows_count);
@@ -238,14 +239,16 @@ public:
         // we don't have to update null_map because FunctionSubstring will
         // update it
         // getNestedColumnIfNull arg[0]
-        auto str_col = block.get_by_position(arguments[0]).column->convert_to_full_column_if_const();
+        auto str_col =
+                block.get_by_position(arguments[0]).column->convert_to_full_column_if_const();
         if (auto* nullable = check_and_get_column<const ColumnNullable>(*str_col)) {
             str_col = nullable->get_nested_column_ptr();
         }
         auto& str_offset = assert_cast<const ColumnString*>(str_col.get())->get_offsets();
 
         // getNestedColumnIfNull arg[1]
-        auto pos_col = block.get_by_position(arguments[1]).column->convert_to_full_column_if_const();
+        auto pos_col =
+                block.get_by_position(arguments[1]).column->convert_to_full_column_if_const();
         if (auto* nullable = check_and_get_column<const ColumnNullable>(*pos_col)) {
             pos_col = nullable->get_nested_column_ptr();
         }
@@ -286,7 +289,7 @@ public:
     bool use_default_implementation_for_constants() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         auto res_map = ColumnUInt8::create(input_rows_count, 0);
 
         auto column = block.get_by_position(arguments[0]).column;
@@ -303,7 +306,7 @@ public:
             res_map_data[i] |= (size == 0);
         }
 
-        block.get_by_position(result).column = std::move(res_map);
+        block.replace_by_position(result, std::move(res_map));
         return Status::OK();
     }
 };
@@ -323,7 +326,7 @@ public:
     bool use_default_implementation_for_constants() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         DCHECK_GE(arguments.size(), 1);
 
         if (arguments.size() == 1) {
@@ -348,7 +351,8 @@ public:
                     block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
             if (auto* nullable = check_and_get_column<const ColumnNullable>(*argument_columns[i])) {
                 argument_columns[i] = nullable->get_nested_column_ptr();
-                VectorizedUtils::update_null_map(null_map->get_data(), nullable->get_null_map_data());
+                VectorizedUtils::update_null_map(null_map->get_data(),
+                                                 nullable->get_null_map_data());
             }
             auto col_str = assert_cast<const ColumnString*>(argument_columns[i].get());
             offsets_list[i] = &col_str->get_offsets();
@@ -414,7 +418,7 @@ public:
     bool use_default_implementation_for_constants() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         DCHECK_GE(arguments.size(), 2);
         auto null_map = ColumnUInt8::create(input_rows_count, 0);
         // we create a zero column to simply implement
@@ -500,19 +504,21 @@ public:
     }
     bool use_default_implementation_for_constants() const override { return true; }
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         DCHECK_EQ(arguments.size(), 2);
         auto res = ColumnString::create();
 
         ColumnPtr argument_ptr[2];
-        argument_ptr[0] = block.get_by_position(arguments[0]).column->convert_to_full_column_if_const();
-        argument_ptr[1] = block.get_by_position(arguments[1]).column->convert_to_full_column_if_const();
+        argument_ptr[0] =
+                block.get_by_position(arguments[0]).column->convert_to_full_column_if_const();
+        argument_ptr[1] =
+                block.get_by_position(arguments[1]).column->convert_to_full_column_if_const();
 
         if (auto* col1 = check_and_get_column<ColumnString>(*argument_ptr[0])) {
             if (auto* col2 = check_and_get_column<ColumnInt32>(*argument_ptr[1])) {
                 vector_vector(col1->get_chars(), col1->get_offsets(), col2->get_data(),
                               res->get_chars(), res->get_offsets());
-                block.get_by_position(result).column = std::move(res);
+                block.replace_by_position(result, std::move(res));
                 return Status::OK();
             }
         }
@@ -558,7 +564,7 @@ public:
     bool use_default_implementation_for_constants() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         DCHECK_GE(arguments.size(), 3);
         auto null_map = ColumnUInt8::create(input_rows_count, 0);
         // we create a zero column to simply implement
@@ -572,7 +578,8 @@ public:
                     block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
             if (auto* nullable = check_and_get_column<const ColumnNullable>(*argument_columns[i])) {
                 argument_columns[i] = nullable->get_nested_column_ptr();
-                VectorizedUtils::update_null_map(null_map->get_data(), nullable->get_null_map_data());
+                VectorizedUtils::update_null_map(null_map->get_data(),
+                                                 nullable->get_null_map_data());
             }
         }
 

@@ -81,7 +81,7 @@ private:
                 auto col_res = Impl::ReturnColumnType::create();
                 RETURN_IF_ERROR(
                         Impl::vector(col->get_chars(), col->get_offsets(), col_res->get_data()));
-                block.get_by_position(result).column = std::move(col_res);
+                block.replace_by_position(result, std::move(col_res));
                 return Status::OK();
             }
         } else if constexpr (std::is_integer(Impl::TYPE_INDEX)) {
@@ -89,7 +89,7 @@ private:
                         check_and_get_column<ColumnVector<typename Impl::Type>>(column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
                 RETURN_IF_ERROR(Impl::vector(col->get_data(), col_res->get_data()));
-                block.get_by_position(result).column = std::move(col_res);
+                block.replace_by_position(result, std::move(col_res));
                 return Status::OK();
             }
         } else if constexpr (is_complex_v<typename Impl::Type>) {
@@ -97,7 +97,7 @@ private:
                         column.get())) {
                 auto col_res = Impl::ReturnColumnType::create();
                 RETURN_IF_ERROR(Impl::vector(col->get_data(), col_res->get_data()));
-                block.get_by_position(result).column = std::move(col_res);
+                block.replace_by_position(result, std::move(col_res));
                 return Status::OK();
             }
         }
@@ -155,7 +155,7 @@ public:
             if (auto col_right = check_and_get_column<ColVecRight>(rcol.get())) {
                 Impl<LeftDataType, RightDataType>::vector_vector(col_left->get_data(),
                                                                  col_right->get_data(), vec_res);
-                block.get_by_position(result).column = std::move(col_res);
+                block.replace_by_position(result, std::move(col_res));
                 return Status::OK();
             }
         }
@@ -210,7 +210,7 @@ private:
                 Impl<LeftDataType, RightDataType>::vector_vector(
                         col_left->get_chars(), col_left->get_offsets(), col_right->get_chars(),
                         col_right->get_offsets(), vec_res);
-                block.get_by_position(result).column = std::move(col_res);
+                block.replace_by_position(result, std::move(col_res));
                 return Status::OK();
             }
         }
@@ -232,7 +232,7 @@ private:
                 Impl<LeftDataType, RightDataType>::vector_vector(
                         col_left->get_chars(), col_left->get_offsets(), col_right->get_chars(),
                         col_right->get_offsets(), col_res->get_chars(), col_res->get_offsets());
-                block.get_by_position(result).column = std::move(col_res);
+                block.replace_by_position(result, std::move(col_res));
                 return Status::OK();
             }
         }

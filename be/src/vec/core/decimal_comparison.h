@@ -36,7 +36,8 @@ extern const int DECIMAL_OVERFLOW;
 ///
 inline bool allowDecimalComparison(const DataTypePtr& left_type, const DataTypePtr& right_type) {
     if (is_decimal(left_type)) {
-        if (is_decimal(right_type) || is_not_decimal_but_comparable_to_decimal(right_type)) return true;
+        if (is_decimal(right_type) || is_not_decimal_but_comparable_to_decimal(right_type))
+            return true;
     } else if (is_not_decimal_but_comparable_to_decimal(left_type) && is_decimal(right_type))
         return true;
     return false;
@@ -91,7 +92,9 @@ public:
             Shift shift = getScales<A, B>(col_left.type, col_right.type);
 
             c_res = applyWithScale(col_left.column, col_right.column, shift);
-            if (c_res) block.get_by_position(result).column = std::move(c_res);
+            if (c_res) {
+                block.replace_by_position(result, std::move(c_res));
+            }
             return true;
         }
         return false;
