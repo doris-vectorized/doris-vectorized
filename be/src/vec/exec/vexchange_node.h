@@ -30,7 +30,6 @@ private:
     bool _is_merging;
     std::shared_ptr<VDataStreamRecvr> _stream_recvr;
     RowDescriptor _input_row_desc;
-    RuntimeProfile::Counter* _convert_row_batch_timer;
     std::shared_ptr<QueryStatisticsRecvr> _sub_plan_query_statistics_recvr;
 
     // use in merge sort

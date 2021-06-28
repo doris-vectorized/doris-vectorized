@@ -20,7 +20,6 @@
 #include "exec/sort_exec_exprs.h"
 #include "runtime/row_batch.h"
 #include "runtime/runtime_state.h"
-//#include "runtime/sorted_run_merger.h"
 #include "util/debug_util.h"
 
 #include "vec/core/sort_block.h"
@@ -47,7 +46,6 @@ Status VSortNode::prepare(RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::prepare(state));
     RETURN_IF_ERROR(_vsort_exec_exprs.prepare(state, child(0)->row_desc(), _row_descriptor,
                                               expr_mem_tracker()));
-    // AddExprCtxsToFree(_sort_exec_exprs);
     return Status::OK();
 }
 
@@ -72,24 +70,27 @@ Status VSortNode::open(RuntimeState* state) {
 }
 
 Status VSortNode::get_next(RuntimeState* state, RowBatch* row_batch, bool* eos) {
-    row_batch = nullptr;
     *eos = true;
     return Status::NotSupported("Not Implemented VSortNode::get_next scalar");
 }
 
 Status VSortNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     SCOPED_TIMER(_runtime_profile->total_time_counter());
+
+    auto status = Status::OK();
     if (_sorted_blocks.empty()) {
         *eos = true;
-        return Status::OK();
     } else if (_sorted_blocks.size() == 1) {
         block->swap(_sorted_blocks[0]);
         _sorted_blocks.clear();
-        return Status::OK();
+        _num_rows_returned += block->rows();
+    } else {
+        status = merge_sort_read(state, block, eos);
     }
 
-    auto status = merge_sort_read(state, block, eos);
-    if (*eos) COUNTER_SET(_rows_returned_counter, _num_rows_returned);
+    if (*eos) {
+        COUNTER_SET(_rows_returned_counter, _num_rows_returned);
+    }
 
     return status;
 }
@@ -213,8 +214,8 @@ Status VSortNode::merge_sort_read(doris::RuntimeState *state, doris::vectorized:
         return Status::OK();
     }
 
+    _num_rows_returned += merged_columns[0]->size();
     Block merge_block = _sorted_blocks[0].clone_with_columns(std::move(merged_columns));
-    _num_rows_returned += merge_block.rows();
     if (reached_limit()) {
         merge_block.set_num_rows(merge_block.rows() - (_num_rows_returned - _limit));
         *eos = true;
