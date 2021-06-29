@@ -30,14 +30,15 @@
 namespace doris::vectorized {
 
 class AggregateFunctionSimpleFactory;
-void registerAggregateFunctionSum(AggregateFunctionSimpleFactory& factory);
-void registerAggregateFunctionCombinatorNull(AggregateFunctionSimpleFactory& factory);
-void registerAggregateFunctionMinMax(AggregateFunctionSimpleFactory& factory);
-void registerAggregateFunctionAvg(AggregateFunctionSimpleFactory& factory);
-void registerAggregateFunctionCount(AggregateFunctionSimpleFactory& factory);
-void registerAggregateFunctionHLLUnionAgg(AggregateFunctionSimpleFactory& factory);
-void registerAggregateFunctionsUniq(AggregateFunctionSimpleFactory& factory);
-void registerAggregateFunctionCombinatorDistinct(AggregateFunctionSimpleFactory& factory);
+void register_aggregate_function_sum(AggregateFunctionSimpleFactory& factory);
+void register_aggregate_function_combinator_null(AggregateFunctionSimpleFactory& factory);
+void register_aggregate_function_minmax(AggregateFunctionSimpleFactory& factory);
+void register_aggregate_function_avg(AggregateFunctionSimpleFactory& factory);
+void register_aggregate_function_count(AggregateFunctionSimpleFactory& factory);
+void register_aggregate_function_HLL_union_agg(AggregateFunctionSimpleFactory& factory);
+void register_aggregate_function_uniq(AggregateFunctionSimpleFactory& factory);
+void register_aggregate_function_combinator_distinct(AggregateFunctionSimpleFactory& factory);
+void register_aggregate_function_bitmap(AggregateFunctionSimpleFactory& factory);
 
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
@@ -108,14 +109,15 @@ public:
         static std::once_flag oc;
         static AggregateFunctionSimpleFactory instance;
         std::call_once(oc, [&]() {
-            registerAggregateFunctionSum(instance);
-            registerAggregateFunctionMinMax(instance);
-            registerAggregateFunctionAvg(instance);
-            registerAggregateFunctionCount(instance);
-            registerAggregateFunctionsUniq(instance);
-            registerAggregateFunctionCombinatorDistinct(instance);
-            registerAggregateFunctionHLLUnionAgg(instance);
-            registerAggregateFunctionCombinatorNull(instance);
+            register_aggregate_function_sum(instance);
+            register_aggregate_function_minmax(instance);
+            register_aggregate_function_avg(instance);
+            register_aggregate_function_count(instance);
+            register_aggregate_function_uniq(instance);
+            register_aggregate_function_bitmap(instance);
+            register_aggregate_function_combinator_distinct(instance);
+            register_aggregate_function_HLL_union_agg(instance);
+            register_aggregate_function_combinator_null(instance);
         });
         return instance;
     }

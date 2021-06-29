@@ -36,7 +36,8 @@ public:
                    const SlotDescriptor* output_slot_desc,
                    const std::shared_ptr<MemTracker>& mem_tracker);
 
-    void set_timer(RuntimeProfile::Counter* exec_timer, RuntimeProfile::Counter* merge_timer, RuntimeProfile::Counter* expr_timer) {
+    void set_timer(RuntimeProfile::Counter* exec_timer, RuntimeProfile::Counter* merge_timer,
+                   RuntimeProfile::Counter* expr_timer) {
         _exec_timer = exec_timer;
         _merge_timer = merge_timer;
         _expr_timer = expr_timer;
@@ -72,7 +73,7 @@ private:
 
     AggFnEvaluator(const TExprNode& desc);
 
-    std::vector<ColumnPtr> _get_argment_columns(Block* block) const;
+    std::vector<const IColumn*> _get_argment_columns(Block* block) const;
 
     const TypeDescriptor _return_type;
     const TypeDescriptor _intermediate_type;

@@ -204,6 +204,8 @@ Status AggregationNode::prepare(RuntimeState* state) {
                                                      std::placeholders::_3);
         }
 
+        _executor.update_memusage =
+                std::bind<void>(&AggregationNode::_update_memusage_without_key, this);
         _executor.close = std::bind<void>(&AggregationNode::_close_without_key, this);
     } else {
         _agg_data.init(AggregatedDataVariants::Type::serialized);
@@ -231,6 +233,8 @@ Status AggregationNode::prepare(RuntimeState* state) {
                     &AggregationNode::_serialize_with_serialized_key_result, this,
                     std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
         }
+        _executor.update_memusage =
+                std::bind<void>(&AggregationNode::_update_memusage_with_serialized_key, this);
         _executor.close = std::bind<void>(&AggregationNode::_close_with_serialized_key, this);
     }
 
@@ -261,6 +265,8 @@ Status AggregationNode::open(RuntimeState* state) {
             continue;
         }
         RETURN_IF_ERROR(_executor.execute(&block));
+        _executor.update_memusage();
+        RETURN_IF_LIMIT_EXCEEDED(state, "aggregator, while execute open.");
     }
 
     return Status::OK();
@@ -299,6 +305,8 @@ Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         }
     }
 
+    _executor.update_memusage();
+    RETURN_IF_LIMIT_EXCEEDED(state, "aggregator, while execute get_next.");
     _num_rows_returned += block->rows();
     COUNTER_SET(_rows_returned_counter, _num_rows_returned);
     return Status::OK();
@@ -351,7 +359,9 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
         const auto column_type = block_schema[i].type;
         if (!column_type->equals(*data_types[i])) {
             DCHECK(column_type->is_nullable());
-            DCHECK(((DataTypeNullable*)column_type.get())->get_nested_type()->equals(*data_types[i]));
+            DCHECK(((DataTypeNullable*)column_type.get())
+                           ->get_nested_type()
+                           ->equals(*data_types[i]));
             DCHECK(!data_types[i]->is_nullable());
             ColumnPtr ptr = std::move(columns[i]);
             ptr = make_nullable(ptr);
@@ -441,8 +451,14 @@ Status AggregationNode::_merge_without_key(Block* block) {
     return Status::OK();
 }
 
+void AggregationNode::_update_memusage_without_key() {
+    mem_tracker()->Consume(_agg_arena_pool.size() - _mem_usage_record.used_in_arena);
+    _mem_usage_record.used_in_arena = _agg_arena_pool.size();
+}
+
 void AggregationNode::_close_without_key() {
     _destory_agg_status(_agg_data.without_key);
+    release_tracker();
 }
 
 bool AggregationNode::_should_expand_preagg_hash_tables() {
@@ -515,7 +531,6 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
             key_columns[i] = in_block->get_by_position(result_column_id).column.get();
         }
     }
-
 
     int rows = in_block->rows();
     PODArray<AggregateDataPtr> places(rows);
@@ -631,7 +646,6 @@ Status AggregationNode::_execute_with_serialized_key(Block* block) {
             key_columns[i] = block->get_by_position(result_column_id).column.get();
         }
     }
-
 
     int rows = block->rows();
     PODArray<AggregateDataPtr> places(rows);
@@ -862,6 +876,17 @@ Status AggregationNode::_merge_with_serialized_key(Block* block) {
     return Status::OK();
 }
 
+void AggregationNode::_update_memusage_with_serialized_key() {
+    using Method = AggregationMethodSerialized<AggregatedDataWithStringKey>;
+    using AggState = Method::State;
+
+    auto& data = _agg_data.serialized->data;
+    mem_tracker()->Consume(_agg_arena_pool.size() - _mem_usage_record.used_in_arena);
+    mem_tracker()->Consume(data.get_buffer_size_in_bytes() - _mem_usage_record.used_in_state);
+    _mem_usage_record.used_in_state = data.get_buffer_size_in_bytes();
+    _mem_usage_record.used_in_arena = _agg_arena_pool.size();
+}
+
 void AggregationNode::_close_with_serialized_key() {
     DCHECK(_agg_data.serialized != nullptr);
 
@@ -871,6 +896,11 @@ void AggregationNode::_close_with_serialized_key() {
     auto& data = _agg_data.serialized->data;
 
     data.for_each_value([&](const auto& key, auto& mapped) { _destory_agg_status(mapped); });
+    release_tracker();
+}
+
+void AggregationNode::release_tracker() {
+    mem_tracker()->Release(_mem_usage_record.used_in_state + _mem_usage_record.used_in_arena);
 }
 
 } // namespace doris::vectorized

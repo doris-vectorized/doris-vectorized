@@ -133,7 +133,8 @@ ColumnPtr wrap_in_nullable(const ColumnPtr& src, const Block& block, const Colum
 
         /// Const Nullable that are NULL.
         if (elem.column->only_null())
-            return block.get_by_position(result).type->create_column_const(input_rows_count, Null());
+            return block.get_by_position(result).type->create_column_const(input_rows_count,
+                                                                           Null());
 
         if (is_column_const(*elem.column)) continue;
 
@@ -210,7 +211,8 @@ Status PreparedFunctionImpl::default_implementation_for_constant_arguments(
 
     /// Check that these arguments are really constant.
     for (auto arg_num : arguments_to_remain_constants)
-        if (arg_num < args.size() && !is_column_const(*block.get_by_position(args[arg_num]).column)) {
+        if (arg_num < args.size() &&
+            !is_column_const(*block.get_by_position(args[arg_num]).column)) {
             return Status::RuntimeError(fmt::format(
                     "Argument at index {} for function {}  must be constant", arg_num, get_name()));
         }
@@ -253,9 +255,9 @@ Status PreparedFunctionImpl::default_implementation_for_constant_arguments(
     ColumnNumbers temporary_argument_numbers(arguments_size);
     for (size_t i = 0; i < arguments_size; ++i) temporary_argument_numbers[i] = i;
 
-    RETURN_IF_ERROR(execute_without_low_cardinality_columns(temporary_block, temporary_argument_numbers,
-                                                        arguments_size, temporary_block.rows(),
-                                                        dry_run));
+    RETURN_IF_ERROR(execute_without_low_cardinality_columns(
+            temporary_block, temporary_argument_numbers, arguments_size, temporary_block.rows(),
+            dry_run));
 
     ColumnPtr result_column;
     /// extremely rare case, when we have function with completely const arguments
@@ -270,9 +272,11 @@ Status PreparedFunctionImpl::default_implementation_for_constant_arguments(
     return Status::OK();
 }
 
-Status PreparedFunctionImpl::default_implementation_for_nulls(Block& block, const ColumnNumbers& args,
-                                                           size_t result, size_t input_rows_count,
-                                                           bool dry_run, bool* executed) {
+Status PreparedFunctionImpl::default_implementation_for_nulls(Block& block,
+                                                              const ColumnNumbers& args,
+                                                              size_t result,
+                                                              size_t input_rows_count, bool dry_run,
+                                                              bool* executed) {
     *executed = false;
     if (args.empty() || !use_default_implementation_for_nulls()) return Status::OK();
 
@@ -288,10 +292,10 @@ Status PreparedFunctionImpl::default_implementation_for_nulls(Block& block, cons
     if (null_presence.has_nullable) {
         Block temporary_block = create_block_with_nested_columns(block, args, result);
         RETURN_IF_ERROR(execute_without_low_cardinality_columns(temporary_block, args, result,
-                                                            temporary_block.rows(), dry_run));
+                                                                temporary_block.rows(), dry_run));
         block.get_by_position(result).column =
-                wrap_in_nullable(temporary_block.get_by_position(result).column, block, args, result,
-                                 input_rows_count);
+                wrap_in_nullable(temporary_block.get_by_position(result).column, block, args,
+                                 result, input_rows_count);
         *executed = true;
         return Status::OK();
     }
@@ -300,18 +304,18 @@ Status PreparedFunctionImpl::default_implementation_for_nulls(Block& block, cons
 }
 
 Status PreparedFunctionImpl::execute_without_low_cardinality_columns(Block& block,
-                                                                 const ColumnNumbers& args,
-                                                                 size_t result,
-                                                                 size_t input_rows_count,
-                                                                 bool dry_run) {
+                                                                     const ColumnNumbers& args,
+                                                                     size_t result,
+                                                                     size_t input_rows_count,
+                                                                     bool dry_run) {
     bool executed = false;
-    RETURN_IF_ERROR(default_implementation_for_constant_arguments(block, args, result, input_rows_count,
-                                                              dry_run, &executed));
+    RETURN_IF_ERROR(default_implementation_for_constant_arguments(
+            block, args, result, input_rows_count, dry_run, &executed));
     if (executed) {
         return Status::OK();
     }
     RETURN_IF_ERROR(default_implementation_for_nulls(block, args, result, input_rows_count, dry_run,
-                                                  &executed));
+                                                     &executed));
     if (executed) {
         return Status::OK();
     }
@@ -384,66 +388,9 @@ Status PreparedFunctionImpl::execute(Block& block, const ColumnNumbers& args, si
             block_without_low_cardinality.safe_get_by_position(arg).column =
                     block.safe_get_by_position(arg).column;
 
-        //        if (auto * res_low_cardinality_type = typeid_cast<const DataTypeLowCardinality *>(res.type.get()))
-        //        {
-        //            const auto * low_cardinality_column = findLowCardinalityArgument(block, args);
-        //            bool can_be_executed_on_default_arguments = can_be_executed_on_default_arguments();
-        //            bool use_cache = low_cardinality_result_cache && can_be_executed_on_default_arguments
-        //                             && low_cardinality_column && low_cardinality_column->isSharedDictionary();
-        //            PreparedFunctionLowCardinalityResultCache::DictionaryKey key;
-        //
-        //            if (use_cache)
-        //            {
-        //                const auto & dictionary = low_cardinality_column->getDictionary();
-        //                key = {dictionary.get_hash(), dictionary.size()};
-        //
-        //                auto cached_values = low_cardinality_result_cache->get(key);
-        //                if (cached_values)
-        //                {
-        //                    auto indexes = cached_values->index_mapping->index(low_cardinality_column->getIndexes(), 0);
-        //                    res.column = ColumnLowCardinality::create(cached_values->function_result, indexes, true);
-        //                    return;
-        //                }
-        //            }
-        //
-        //            block_without_low_cardinality.safe_get_by_position(result).type = res_low_cardinality_type->getDictionaryType();
-        //            ColumnPtr indexes = replaceLowCardinalityColumnsByNestedAndGetDictionaryIndexes(
-        //                    block_without_low_cardinality, args, can_be_executed_on_default_arguments, input_rows_count);
-        //
-        //            execute_without_low_cardinality_columns(block_without_low_cardinality, args, result, block_without_low_cardinality.rows(), dry_run);
-        //
-        //            auto keys = block_without_low_cardinality.safe_get_by_position(result).column->convert_to_full_column_if_const();
-        //
-        //            auto res_mut_dictionary = DataTypeLowCardinality::create_columnUnique(*res_low_cardinality_type->getDictionaryType());
-        //            ColumnPtr res_indexes = res_mut_dictionary->uniqueInsertRangeFrom(*keys, 0, keys->size());
-        //            ColumnUniquePtr res_dictionary = std::move(res_mut_dictionary);
-        //
-        //            if (indexes)
-        //            {
-        //                if (use_cache)
-        //                {
-        //                    auto cache_values = std::make_shared<PreparedFunctionLowCardinalityResultCache::CachedValues>();
-        //                    cache_values->dictionary_holder = low_cardinality_column->getDictionaryPtr();
-        //                    cache_values->function_result = res_dictionary;
-        //                    cache_values->index_mapping = res_indexes;
-        //
-        //                    cache_values = low_cardinality_result_cache->getOrSet(key, cache_values);
-        //                    res_dictionary = cache_values->function_result;
-        //                    res_indexes = cache_values->index_mapping;
-        //                }
-        //
-        //                res.column = ColumnLowCardinality::create(res_dictionary, res_indexes->index(*indexes, 0), use_cache);
-        //            }
-        //            else
-        //            {
-        //                res.column = ColumnLowCardinality::create(res_dictionary, res_indexes);
-        //            }
-        //        }
-        //        else
         {
-            //            convertLowCardinalityColumnsToFull(block_without_low_cardinality, args);
-            RETURN_IF_ERROR(execute_without_low_cardinality_columns(block_without_low_cardinality, args,
-                                                                result, input_rows_count, dry_run));
+            RETURN_IF_ERROR(execute_without_low_cardinality_columns(
+                    block_without_low_cardinality, args, result, input_rows_count, dry_run));
             res.column = block_without_low_cardinality.safe_get_by_position(result).column;
         }
     } else
