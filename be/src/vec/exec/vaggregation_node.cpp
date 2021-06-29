@@ -895,7 +895,12 @@ void AggregationNode::_close_with_serialized_key() {
 
     auto& data = _agg_data.serialized->data;
 
-    data.for_each_value([&](const auto& key, auto& mapped) { _destory_agg_status(mapped); });
+    data.for_each_mapped([&](auto& mapped) {
+        if (mapped) {
+            _destory_agg_status(mapped);
+            mapped = nullptr;
+        }
+    });
     release_tracker();
 }
 
