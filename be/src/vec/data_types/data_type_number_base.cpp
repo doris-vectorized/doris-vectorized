@@ -64,27 +64,30 @@ std::string DataTypeNumberBase<T>::to_string(const IColumn& column, size_t row_n
 
 template <typename T>
 size_t DataTypeNumberBase<T>::serialize(const IColumn& column, PColumn* pcolumn) const {
-    std::ostringstream buf;
-    for (size_t i = 0; i < column.size(); ++i) {
-        const FieldType& x =
-                assert_cast<const ColumnVector<T>&>(*column.convert_to_full_column_if_const().get())
-                        .get_data()[i];
-        write_binary(x, buf);
-    }
-    return write_binary(buf, pcolumn);
+    const auto column_len = column.size();
+    pcolumn->mutable_binary()->resize(column_len * sizeof(FieldType));
+    auto* data = pcolumn->mutable_binary()->data();
+
+    // copy the data
+    auto ptr = column.convert_to_full_column_if_const();
+    const auto* origin_data =
+            assert_cast<const ColumnVector<T>&>(*ptr.get()).get_data().data();
+    memcpy(data, origin_data, column_len * sizeof(FieldType));
+
+    return compress_binary(pcolumn);
 }
 
 template <typename T>
 void DataTypeNumberBase<T>::deserialize(const PColumn& pcolumn, IColumn* column) const {
     std::string uncompressed;
     read_binary(pcolumn, &uncompressed);
-    std::istringstream istr(uncompressed);
-    while (istr.peek() != EOF) {
-        typename ColumnVector<T>::value_type x;
-        read_binary(x, istr);
-        assert_cast<ColumnVector<T>*>(column)->get_data().push_back(x);
-    }
+
+    // read column_size
+    auto& container = assert_cast<ColumnVector<T>*>(column)->get_data();
+    container.resize(uncompressed.size() / sizeof(T));
+    memcpy(container.data(), uncompressed.data(), uncompressed.size());
 }
+
 template <typename T>
 MutableColumnPtr DataTypeNumberBase<T>::create_column() const {
     return ColumnVector<T>::create();

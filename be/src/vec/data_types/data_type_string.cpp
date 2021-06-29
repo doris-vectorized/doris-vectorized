@@ -70,32 +70,45 @@ bool DataTypeString::equals(const IDataType& rhs) const {
 }
 
 size_t DataTypeString::serialize(const IColumn& column, PColumn* pcolumn) const {
-    std::ostringstream buf;
-    for (size_t i = 0; i < column.size(); ++i) {
-        const auto& s = assert_cast<const ColumnString&>(*column.convert_to_full_column_if_const().get())
-                                .get_data_at(i);
-        write_string_binary(s, buf);
-    }
-    return write_binary(buf, pcolumn);
+    auto ptr = column.convert_to_full_column_if_const();
+    const auto& data_column = assert_cast<const ColumnString&>(*ptr.get());
+
+    // compute the mem need to be allocate
+    auto allocate_len_size = sizeof(uint32_t) * (column.size() + 1);
+    auto allocate_content_size = data_column.get_chars().size();
+    pcolumn->mutable_binary()->resize(allocate_len_size + allocate_content_size);
+    auto* data = pcolumn->mutable_binary()->data();
+
+    // serialize the string size array
+    *reinterpret_cast<uint32_t*>(data) = column.size();
+    data += sizeof(uint32_t);
+    memcpy(data, data_column.get_offsets().data(), column.size() * sizeof(uint32_t));
+    data += column.size() * sizeof(uint32_t);
+
+    // serialize the string content array
+    memcpy(data, data_column.get_chars().data(), data_column.get_chars().size());
+
+    return compress_binary(pcolumn);
 }
 
 void DataTypeString::deserialize(const PColumn& pcolumn, IColumn* column) const {
     ColumnString* column_string = assert_cast<ColumnString*>(column);
     ColumnString::Chars& data = column_string->get_chars();
     ColumnString::Offsets& offsets = column_string->get_offsets();
-    size_t offset = 0;
     std::string uncompressed;
     read_binary(pcolumn, &uncompressed);
-    std::istringstream istr(uncompressed);
-    while (istr.peek() != EOF) {
-        std::string s;
-        read_binary(s, istr);
-        size_t size = s.size();
-        offset = offset + size + 1;
-        offsets.push_back(offset);
-        data.resize(offset);
-        s.copy(reinterpret_cast<char*>(&data[offset - size - 1]), size);
-        data.back() = 0;
-    }
+
+    // deserialize the string size array
+    auto* origin_data = uncompressed.data();
+    uint32_t column_len = *reinterpret_cast<uint32_t*>(origin_data);
+    origin_data += sizeof(uint32_t);
+    offsets.resize(column_len);
+    memcpy(offsets.data(), origin_data, sizeof(uint32_t) * column_len);
+    origin_data += sizeof(uint32_t) * column_len;
+
+    // deserialize the string content array
+    uint32_t content_len = uncompressed.size() - sizeof(uint32_t) * (column_len + 1);
+    data.resize(content_len);
+    memcpy(data.data(), origin_data, content_len);
 }
 } // namespace doris::vectorized
