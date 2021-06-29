@@ -69,29 +69,30 @@ void DataTypeDecimal<T>::to_string(const IColumn& column, size_t row_num,
 
 template <typename T>
 size_t DataTypeDecimal<T>::serialize(const IColumn& column, PColumn* pcolumn) const {
-    std::ostringstream buf;
-    for (size_t i = 0; i < column.size(); ++i) {
-        const FieldType& x =
-                assert_cast<const ColumnType&>(*column.convert_to_full_column_if_const().get())
-                        .get_element(i);
-        write_binary(x, buf);
-    }
+    const auto column_len = column.size();
+    pcolumn->mutable_binary()->resize(column_len * sizeof(FieldType));
+    auto* data = pcolumn->mutable_binary()->data();
 
+    // copy the data
+    auto ptr = column.convert_to_full_column_if_const();
+    const auto* origin_data = assert_cast<const ColumnType&>(*ptr.get()).get_data().data();
+    memcpy(data, origin_data, column_len * sizeof(FieldType));
+
+    // set precision and scale
     pcolumn->mutable_decimal_param()->set_precision(precision);
     pcolumn->mutable_decimal_param()->set_scale(scale);
-    return write_binary(buf, pcolumn);
+
+    return compress_binary(pcolumn);
 }
 
 template <typename T>
 void DataTypeDecimal<T>::deserialize(const PColumn& pcolumn, IColumn* column) const {
     std::string uncompressed;
     read_binary(pcolumn, &uncompressed);
-    std::istringstream istr(uncompressed);
-    while (istr.peek() != EOF) {
-        typename FieldType::NativeType x;
-        read_binary(x, istr);
-        assert_cast<ColumnType*>(column)->get_data().push_back(FieldType(x));
-    }
+
+    auto& container = assert_cast<ColumnType*>(column)->get_data();
+    container.resize(uncompressed.size() / sizeof(T));
+    memcpy(container.data(), uncompressed.data(), uncompressed.size());
 }
 
 template <typename T>
