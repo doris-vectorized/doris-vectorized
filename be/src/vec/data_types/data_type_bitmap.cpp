@@ -63,7 +63,7 @@ MutableColumnPtr DataTypeBitMap::create_column() const {
     return ColumnBitmap::create();
 }
 
-void DataTypeBitMap::serializeAsStream(const BitmapValue& cvalue, std::ostream& buf) {
+void DataTypeBitMap::serialize_as_stream(const BitmapValue& cvalue, std::ostream& buf) {
     auto& value = const_cast<BitmapValue&>(cvalue);
     std::string memory_buffer;
     int bytesize = value.getSizeInBytes();
@@ -72,7 +72,7 @@ void DataTypeBitMap::serializeAsStream(const BitmapValue& cvalue, std::ostream& 
     write_binary(memory_buffer, buf);
 }
 
-void DataTypeBitMap::deserializeAsStream(BitmapValue& value, std::istream& buf) {
+void DataTypeBitMap::deserialize_as_stream(BitmapValue& value, std::istream& buf) {
     std::string memory_buffer;
     read_binary(memory_buffer, buf);
     value.deserialize(memory_buffer.data());

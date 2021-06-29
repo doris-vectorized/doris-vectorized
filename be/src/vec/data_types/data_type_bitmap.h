@@ -69,9 +69,9 @@ public:
         LOG(FATAL) << "Method get_default() is not implemented for data type " << get_name();
     }
 
-    static void serializeAsStream(const BitmapValue& value, std::ostream& buf);
+    static void serialize_as_stream(const BitmapValue& value, std::ostream& buf);
 
-    static void deserializeAsStream(BitmapValue& value, std::istream& buf);
+    static void deserialize_as_stream(BitmapValue& value, std::istream& buf);
 };
 
 template <typename T>
