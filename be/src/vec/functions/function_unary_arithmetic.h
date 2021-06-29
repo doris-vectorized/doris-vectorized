@@ -118,38 +118,39 @@ public:
     }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t /*input_rows_count*/) override {
-        bool valid = cast_type(block.get_by_position(arguments[0]).type.get(), [&](const auto& type) {
-            using DataType = std::decay_t<decltype(type)>;
-            using T0 = typename DataType::FieldType;
+                        size_t /*input_rows_count*/) override {
+        bool valid =
+                cast_type(block.get_by_position(arguments[0]).type.get(), [&](const auto& type) {
+                    using DataType = std::decay_t<decltype(type)>;
+                    using T0 = typename DataType::FieldType;
 
-            if constexpr (IsDataTypeDecimal<DataType>) {
-                if constexpr (allow_decimal) {
-                    if (auto col = check_and_get_column<ColumnDecimal<T0>>(
-                                block.get_by_position(arguments[0]).column.get())) {
-                        auto col_res = ColumnDecimal<typename Op<T0>::ResultType>::create(
-                                0, type.get_scale());
-                        auto& vec_res = col_res->get_data();
-                        vec_res.resize(col->get_data().size());
-                        UnaryOperationImpl<T0, Op<T0>>::vector(col->get_data(), vec_res);
-                        block.get_by_position(result).column = std::move(col_res);
-                        return true;
+                    if constexpr (IsDataTypeDecimal<DataType>) {
+                        if constexpr (allow_decimal) {
+                            if (auto col = check_and_get_column<ColumnDecimal<T0>>(
+                                        block.get_by_position(arguments[0]).column.get())) {
+                                auto col_res = ColumnDecimal<typename Op<T0>::ResultType>::create(
+                                        0, type.get_scale());
+                                auto& vec_res = col_res->get_data();
+                                vec_res.resize(col->get_data().size());
+                                UnaryOperationImpl<T0, Op<T0>>::vector(col->get_data(), vec_res);
+                                block.replace_by_position(result, std::move(col_res));
+                                return true;
+                            }
+                        }
+                    } else {
+                        if (auto col = check_and_get_column<ColumnVector<T0>>(
+                                    block.get_by_position(arguments[0]).column.get())) {
+                            auto col_res = ColumnVector<typename Op<T0>::ResultType>::create();
+                            auto& vec_res = col_res->get_data();
+                            vec_res.resize(col->get_data().size());
+                            UnaryOperationImpl<T0, Op<T0>>::vector(col->get_data(), vec_res);
+                            block.replace_by_position(result, std::move(col_res));
+                            return true;
+                        }
                     }
-                }
-            } else {
-                if (auto col = check_and_get_column<ColumnVector<T0>>(
-                            block.get_by_position(arguments[0]).column.get())) {
-                    auto col_res = ColumnVector<typename Op<T0>::ResultType>::create();
-                    auto& vec_res = col_res->get_data();
-                    vec_res.resize(col->get_data().size());
-                    UnaryOperationImpl<T0, Op<T0>>::vector(col->get_data(), vec_res);
-                    block.get_by_position(result).column = std::move(col_res);
-                    return true;
-                }
-            }
 
-            return false;
-        });
+                    return false;
+                });
         if (!valid) {
             return Status::RuntimeError(
                     fmt::format("{}'s argument does not match the expected data type", get_name()));

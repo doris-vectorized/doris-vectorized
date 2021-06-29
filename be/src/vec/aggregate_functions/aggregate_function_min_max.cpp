@@ -16,9 +16,11 @@
 // under the License.
 
 #include "vec/aggregate_functions/aggregate_function_min_max.h"
+
 #include <vec/aggregate_functions/factory_helpers.h>
-#include "vec/aggregate_functions/aggregate_function_simple_factory.h"
 #include <vec/aggregate_functions/helpers.h>
+
+#include "vec/aggregate_functions/aggregate_function_simple_factory.h"
 
 namespace doris::vectorized {
 
@@ -26,45 +28,47 @@ namespace {
 
 /// min, max
 template <template <typename, bool> class AggregateFunctionTemplate, template <typename> class Data>
-static IAggregateFunction * createAggregateFunctionSingleValue(const String & name, const DataTypes & argument_types, const Array & parameters)
-{
+static IAggregateFunction* create_aggregate_function_single_value(const String& name,
+                                                                  const DataTypes& argument_types,
+                                                                  const Array& parameters) {
     assert_no_parameters(name, parameters);
     assert_unary(name, argument_types);
 
-    const DataTypePtr & argument_type = argument_types[0];
+    const DataTypePtr& argument_type = argument_types[0];
 
     WhichDataType which(argument_type);
-    #define DISPATCH(TYPE) \
-        if (which.idx == TypeIndex::TYPE) return new AggregateFunctionTemplate<Data<SingleValueDataFixed<TYPE>>, false>(argument_type);
-        FOR_NUMERIC_TYPES(DISPATCH)
-    #undef DISPATCH
-
-    // if (which.idx == TypeIndex::Date)
-    //     return new AggregateFunctionTemplate<Data<SingleValueDataFixed<DataTypeDate::FieldType>>, false>(argument_type);
-    // if (which.idx == TypeIndex::DateTime)
-    //     return new AggregateFunctionTemplate<Data<SingleValueDataFixed<DataTypeDateTime::FieldType>>, false>(argument_type);
-    // if (which.idx == TypeIndex::String)
-    //     return new AggregateFunctionTemplate<Data<SingleValueDataString>, true>(argument_type);
-
-    // return new AggregateFunctionTemplate<Data<SingleValueDataGeneric>, false>(argument_type);
+#define DISPATCH(TYPE)                                                                 \
+    if (which.idx == TypeIndex::TYPE)                                                  \
+        return new AggregateFunctionTemplate<Data<SingleValueDataFixed<TYPE>>, false>( \
+                argument_type);
+    FOR_NUMERIC_TYPES(DISPATCH)
+#undef DISPATCH
     return nullptr;
 }
 
-AggregateFunctionPtr createAggregateFunctionMax(const std::string & name, const DataTypes & argument_types, const Array & parameters)
-{
-    return AggregateFunctionPtr(createAggregateFunctionSingleValue<AggregateFunctionsSingleValue, AggregateFunctionMaxData>(name, argument_types, parameters));
+AggregateFunctionPtr create_aggregate_function_max(const std::string& name,
+                                                   const DataTypes& argument_types,
+                                                   const Array& parameters) {
+    return AggregateFunctionPtr(
+            create_aggregate_function_single_value<AggregateFunctionsSingleValue,
+                                                   AggregateFunctionMaxData>(name, argument_types,
+                                                                             parameters));
 }
 
-AggregateFunctionPtr createAggregateFunctionMin(const std::string & name, const DataTypes & argument_types, const Array & parameters)
-{
-    return AggregateFunctionPtr(createAggregateFunctionSingleValue<AggregateFunctionsSingleValue, AggregateFunctionMinData>(name, argument_types, parameters));
+AggregateFunctionPtr create_aggregate_function_min(const std::string& name,
+                                                   const DataTypes& argument_types,
+                                                   const Array& parameters) {
+    return AggregateFunctionPtr(
+            create_aggregate_function_single_value<AggregateFunctionsSingleValue,
+                                                   AggregateFunctionMinData>(name, argument_types,
+                                                                             parameters));
 }
 
 } // namespace
 
-void registerAggregateFunctionMinMax(AggregateFunctionSimpleFactory& factory) {
-    factory.register_function("max", createAggregateFunctionMax);
-    factory.register_function("min", createAggregateFunctionMin);
+void register_aggregate_function_minmax(AggregateFunctionSimpleFactory& factory) {
+    factory.register_function("max", create_aggregate_function_max);
+    factory.register_function("min", create_aggregate_function_min);
 }
 
 } // namespace doris::vectorized

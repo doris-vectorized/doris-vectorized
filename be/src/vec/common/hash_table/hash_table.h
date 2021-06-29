@@ -1,3 +1,20 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 
 #include <math.h>
@@ -438,7 +455,8 @@ protected:
 #ifdef DBMS_HASH_MAP_DEBUG_RESIZES
         watch.stop();
         std::cerr << std::fixed << std::setprecision(3) << "Resize from " << old_size << " to "
-                  << grower.buf_size() << " took " << watch.elapsedSeconds() << " sec." << std::endl;
+                  << grower.buf_size() << " took " << watch.elapsedSeconds() << " sec."
+                  << std::endl;
 #endif
     }
 
@@ -502,7 +520,7 @@ protected:
         }
 
         auto& operator*() const { return *ptr; }
-        auto* operator->() const { return ptr; }
+        auto* operator-> () const { return ptr; }
 
         auto get_ptr() const { return ptr; }
         size_t get_hash() const { return ptr->get_hash(*container); }
@@ -573,55 +591,6 @@ public:
 
         return *this;
     }
-
-    // class Reader final : private Cell::State
-    // {
-    // public:
-    //     Reader(doris::vectorized::ReadBuffer & in_)
-    //         : in(in_)
-    //     {
-    //     }
-
-    //     Reader(const Reader &) = delete;
-    //     Reader & operator=(const Reader &) = delete;
-
-    //     bool next()
-    //     {
-    //         if (!is_initialized)
-    //         {
-    //             Cell::State::read(in);
-    //             doris::vectorized::read_var_uint(size, in);
-    //             is_initialized = true;
-    //         }
-
-    //         if (read_count == size)
-    //         {
-    //             is_eof = true;
-    //             return false;
-    //         }
-
-    //         cell.read(in);
-    //         ++read_count;
-
-    //         return true;
-    //     }
-
-    //     inline const value_type & get() const
-    //     {
-    //         if (!is_initialized || is_eof)
-    //             throw doris::vectorized::Exception("No available data", doris::vectorized::ErrorCodes::NO_AVAILABLE_DATA);
-
-    //         return cell.get_value();
-    //     }
-
-    // private:
-    //     doris::vectorized::ReadBuffer & in;
-    //     Cell cell;
-    //     size_t read_count = 0;
-    //     size_t size = 0;
-    //     bool is_eof = false;
-    //     bool is_initialized = false;
-    // };
 
     class iterator : public iterator_base<iterator, false> {
     public:
@@ -695,7 +664,7 @@ protected:
 
     template <typename KeyHolder>
     void ALWAYS_INLINE emplace_non_zero_impl(size_t place_value, KeyHolder&& key_holder,
-                                          LookupResult& it, bool& inserted, size_t hash_value) {
+                                             LookupResult& it, bool& inserted, size_t hash_value) {
         it = &buf[place_value];
 
         if (!buf[place_value].is_zero(*this)) {
@@ -735,7 +704,7 @@ protected:
     /// Only for non-zero keys. Find the right place, insert the key there, if it does not already exist. Set iterator to the cell in output parameter.
     template <typename KeyHolder>
     void ALWAYS_INLINE emplace_non_zero(KeyHolder&& key_holder, LookupResult& it, bool& inserted,
-                                      size_t hash_value) {
+                                        size_t hash_value) {
         const auto& key = key_holder_get_key(key_holder);
         size_t place_value = find_cell(key, hash_value, grower.place(hash_value));
         emplace_non_zero_impl(place_value, key_holder, it, inserted, hash_value);
@@ -845,27 +814,6 @@ public:
             if (!ptr->is_zero(*this)) ptr->write(wb);
     }
 
-    // void write_text(doris::vectorized::WriteBuffer & wb) const
-    // {
-    //     Cell::State::write_text(wb);
-    //     doris::vectorized::write_text(m_size, wb);
-
-    //     if (this->get_has_zero())
-    //     {
-    //         doris::vectorized::writeChar(',', wb);
-    //         this->zero_value()->write_text(wb);
-    //     }
-
-    //     for (auto ptr = buf, buf_end = buf + grower.buf_size(); ptr < buf_end; ++ptr)
-    //     {
-    //         if (!ptr->is_zero(*this))
-    //         {
-    //             doris::vectorized::writeChar(',', wb);
-    //             ptr->write_text(wb);
-    //         }
-    //     }
-    // }
-
     void read(std::istream& rb) {
         Cell::State::read(rb);
 
@@ -887,31 +835,6 @@ public:
             insert(Cell::get_key(x.get_value()));
         }
     }
-
-    // void read_text(doris::vectorized::ReadBuffer & rb)
-    // {
-    //     Cell::State::read_text(rb);
-
-    //     destroy_elements();
-    //     this->clear_get_has_zero();
-    //     m_size = 0;
-
-    //     size_t new_size = 0;
-    //     doris::vectorized::read_text(new_size, rb);
-
-    //     free();
-    //     Grower new_grower = grower;
-    //     new_grower.set(new_size);
-    //     alloc(new_grower);
-
-    //     for (size_t i = 0; i < new_size; ++i)
-    //     {
-    //         Cell x;
-    //         doris::vectorized::assertChar(',', rb);
-    //         x.read_text(rb);
-    //         insert(Cell::get_key(x.get_value()));
-    //     }
-    // }
 
     size_t size() const { return m_size; }
 

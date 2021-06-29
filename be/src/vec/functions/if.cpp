@@ -40,7 +40,7 @@ struct NumIfImpl {
 
         for (size_t i = 0; i < size; ++i)
             res[i] = cond[i] ? static_cast<ResultType>(a[i]) : static_cast<ResultType>(b[i]);
-        block.get_by_position(result).column = std::move(col_res);
+        block.replace_by_position(result, std::move(col_res));
     }
 
     static void vector_constant(const ArrayCond& cond, const ArrayA& a, B b, Block& block,
@@ -51,7 +51,7 @@ struct NumIfImpl {
 
         for (size_t i = 0; i < size; ++i)
             res[i] = cond[i] ? static_cast<ResultType>(a[i]) : static_cast<ResultType>(b);
-        block.get_by_position(result).column = std::move(col_res);
+        block.replace_by_position(result, std::move(col_res));
     }
 
     static void constant_vector(const ArrayCond& cond, A a, const ArrayB& b, Block& block,
@@ -62,7 +62,7 @@ struct NumIfImpl {
 
         for (size_t i = 0; i < size; ++i)
             res[i] = cond[i] ? static_cast<ResultType>(a) : static_cast<ResultType>(b[i]);
-        block.get_by_position(result).column = std::move(col_res);
+        block.replace_by_position(result, std::move(col_res));
     }
 
     static void constant_constant(const ArrayCond& cond, A a, B b, Block& block, size_t result,
@@ -73,7 +73,7 @@ struct NumIfImpl {
 
         for (size_t i = 0; i < size; ++i)
             res[i] = cond[i] ? static_cast<ResultType>(a) : static_cast<ResultType>(b);
-        block.get_by_position(result).column = std::move(col_res);
+        block.replace_by_position(result, std::move(col_res));
     }
 };
 
@@ -113,9 +113,12 @@ public:
 
     size_t get_number_of_arguments() const override { return 3; }
     bool use_default_implementation_for_nulls() const override { return false; }
-    ColumnNumbers get_arguments_that_dont_imply_nullable_return_type(size_t /*number_of_arguments*/) const override { return {0}; }
+    ColumnNumbers get_arguments_that_dont_imply_nullable_return_type(
+            size_t /*number_of_arguments*/) const override {
+        return {0};
+    }
 
-    DataTypePtr get_return_type_impl(const DataTypes & arguments) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         return get_least_supertype({arguments[1], arguments[2]});
     }
 
@@ -138,9 +141,9 @@ public:
     }
 
     Status execute_generic(Block& block, const ColumnUInt8* cond_col,
-                          const ColumnWithTypeAndName& then_col_type_name,
-                          const ColumnWithTypeAndName& else_col_type_name, size_t result,
-                          size_t input_row_count) {
+                           const ColumnWithTypeAndName& then_col_type_name,
+                           const ColumnWithTypeAndName& else_col_type_name, size_t result,
+                           size_t input_row_count) {
         MutableColumnPtr result_column = block.get_by_position(result).type->create_column();
         result_column->reserve(input_row_count);
 
@@ -183,16 +186,17 @@ public:
                     result_column->insert_from(else_nested_column, 0);
             }
         } else {
-            for (size_t i = 0; i < input_row_count; i++)
+            for (size_t i = 0; i < input_row_count; i++) {
                 result_column->insert_from(cond_array[i] ? then_col : else_col, i);
+            }
         }
-        block.get_by_position(result).column = std::move(result_column);
+        block.replace_by_position(result, std::move(result_column));
         return Status::OK();
     }
 
     void execute_basic_type(Block& block, const ColumnUInt8* cond_col,
-                          const ColumnWithTypeAndName& then_col,
-                          const ColumnWithTypeAndName& else_col, size_t result, Status& status) {
+                            const ColumnWithTypeAndName& then_col,
+                            const ColumnWithTypeAndName& else_col, size_t result, Status& status) {
         auto call = [&](const auto& types) -> bool {
             using Types = std::decay_t<decltype(types)>;
             using T0 = typename Types::LeftType;
@@ -205,20 +209,26 @@ public:
 
             if (auto col_then = check_and_get_column<ColVecT0>(then_col.column.get())) {
                 if (auto col_else = check_and_get_column<ColVecT0>(else_col.column.get())) {
-                     NumIfImpl<T0, T0, result_type>::vector_vector(
-                        cond_col->get_data(), col_then->get_data(), col_else->get_data(), block, result, 0);
-                } else if (auto col_const_else = check_and_get_column_const<ColVecT0>(else_col.column.get())) {
+                    NumIfImpl<T0, T0, result_type>::vector_vector(
+                            cond_col->get_data(), col_then->get_data(), col_else->get_data(), block,
+                            result, 0);
+                } else if (auto col_const_else =
+                                   check_and_get_column_const<ColVecT0>(else_col.column.get())) {
                     NumIfImpl<T0, T0, result_type>::vector_constant(
                             cond_col->get_data(), col_then->get_data(),
                             col_const_else->template get_value<T0>(), block, result, 0);
                 }
-            } else if (auto col_const_then = check_and_get_column_const<ColVecT0>(then_col.column.get())) {
+            } else if (auto col_const_then =
+                               check_and_get_column_const<ColVecT0>(then_col.column.get())) {
                 if (auto col_else = check_and_get_column<ColVecT0>(else_col.column.get())) {
-                    NumIfImpl<T0, T0, result_type>::constant_vector(cond_col->get_data(),
-                        col_const_then->template get_value<T0>(), col_else->get_data(), block, result, 0);
-                } else if (auto col_const_else = check_and_get_column_const<ColVecT0>(else_col.column.get())) {
-                    NumIfImpl<T0, T0, result_type>::constant_constant(cond_col->get_data(),
-                        col_const_then->template get_value<T0>(), col_const_else->template get_value<T0>(), block, result, 0);
+                    NumIfImpl<T0, T0, result_type>::constant_vector(
+                            cond_col->get_data(), col_const_then->template get_value<T0>(),
+                            col_else->get_data(), block, result, 0);
+                } else if (auto col_const_else =
+                                   check_and_get_column_const<ColVecT0>(else_col.column.get())) {
+                    NumIfImpl<T0, T0, result_type>::constant_constant(
+                            cond_col->get_data(), col_const_then->template get_value<T0>(),
+                            col_const_else->template get_value<T0>(), block, result, 0);
                 }
             } else {
                 status = Status::InternalError("unexpected args column type");
@@ -228,27 +238,28 @@ public:
 
         // todo(wb): a better way to determine type
         call_on_basic_types<true, true, false, false>(then_col.type->get_type_id(),
-                                                      else_col.type->get_type_id(), call
-        );
-    }    
-    
-    bool execute_for_null_then_else(Block & block,
-                const ColumnWithTypeAndName & arg_cond,
-                const ColumnWithTypeAndName & arg_then,
-                const ColumnWithTypeAndName & arg_else, 
-                size_t result, size_t input_rows_count, Status& status) {
+                                                      else_col.type->get_type_id(), call);
+    }
+
+    bool execute_for_null_then_else(Block& block, const ColumnWithTypeAndName& arg_cond,
+                                    const ColumnWithTypeAndName& arg_then,
+                                    const ColumnWithTypeAndName& arg_else, size_t result,
+                                    size_t input_rows_count, Status& status) {
         bool then_is_null = arg_then.column->only_null();
         bool else_is_null = arg_else.column->only_null();
 
         if (!then_is_null && !else_is_null) return false;
 
         if (then_is_null && else_is_null) {
-            block.get_by_position(result).column = block.get_by_position(result).type->create_column_const_with_default_value(input_rows_count);
+            block.get_by_position(result).column =
+                    block.get_by_position(result).type->create_column_const_with_default_value(
+                            input_rows_count);
             return true;
         }
 
-        const ColumnUInt8 * cond_col = typeid_cast<const ColumnUInt8 *>(arg_cond.column.get());
-        const ColumnConst * cond_const_col = check_and_get_column_const<ColumnVector<UInt8>>(arg_cond.column.get());
+        const ColumnUInt8* cond_col = typeid_cast<const ColumnUInt8*>(arg_cond.column.get());
+        const ColumnConst* cond_const_col =
+                check_and_get_column_const<ColumnVector<UInt8>>(arg_cond.column.get());
 
         /// If then is NULL, we create Nullable column with null mask OR-ed with condition.
         if (then_is_null) {
@@ -258,17 +269,21 @@ public:
                     auto result_column = (*std::move(arg_else_column)).mutate();
                     assert_cast<ColumnNullable&>(*result_column)
                             .apply_null_map(assert_cast<const ColumnUInt8&>(*arg_cond.column));
-                    block.get_by_position(result).column = std::move(result_column);
+                    block.replace_by_position(result, std::move(result_column));
                 } else {
-                    block.get_by_position(result).column = ColumnNullable::create(
-                            materialize_column_if_const(arg_else.column), arg_cond.column);
+                    block.replace_by_position(
+                            result,
+                            ColumnNullable::create(materialize_column_if_const(arg_else.column),
+                                                   arg_cond.column));
                 }
             } else if (cond_const_col) {
                 if (cond_const_col->get_value<UInt8>()) {
-                    block.get_by_position(result).column = block.get_by_position(
-                            result).type->create_column()->clone_resized(input_rows_count);
+                    block.get_by_position(result).column =
+                            block.get_by_position(result).type->create_column()->clone_resized(
+                                    input_rows_count);
                 } else {
-                    block.get_by_position(result).column = make_nullable_column_if_not(arg_else.column);
+                    block.get_by_position(result).column =
+                            make_nullable_column_if_not(arg_else.column);
                 }
             } else {
                 status = Status::InternalError("Illegal column " + arg_cond.column->get_name() +
@@ -298,17 +313,21 @@ public:
                     assert_cast<ColumnNullable&>(*result_column)
                             .apply_negated_null_map(
                                     assert_cast<const ColumnUInt8&>(*arg_cond.column));
-                    block.get_by_position(result).column = std::move(result_column);
+                    block.replace_by_position(result, std::move(result_column));
                 } else {
-                    block.get_by_position(result).column = ColumnNullable::create(
-                            materialize_column_if_const(arg_then.column), std::move(negated_null_map));
+                    block.replace_by_position(
+                            result,
+                            ColumnNullable::create(materialize_column_if_const(arg_then.column),
+                                                   std::move(negated_null_map)));
                 }
             } else if (cond_const_col) {
                 if (cond_const_col->get_value<UInt8>()) {
-                    block.get_by_position(result).column = make_nullable_column_if_not(arg_then.column);
+                    block.get_by_position(result).column =
+                            make_nullable_column_if_not(arg_then.column);
                 } else {
-                    block.get_by_position(result).column = block.get_by_position(
-                            result).type->create_column()->clone_resized(input_rows_count);
+                    block.get_by_position(result).column =
+                            block.get_by_position(result).type->create_column()->clone_resized(
+                                    input_rows_count);
                 }
             } else {
                 status = Status::InternalError("Illegal column " + arg_cond.column->get_name() +
@@ -322,9 +341,9 @@ public:
     }
 
     bool execute_for_nullable_then_else(Block& block, const ColumnWithTypeAndName& arg_cond,
-                                    const ColumnWithTypeAndName& arg_then,
-                                    const ColumnWithTypeAndName& arg_else, size_t result,
-                                    size_t input_rows_count) {
+                                        const ColumnWithTypeAndName& arg_then,
+                                        const ColumnWithTypeAndName& arg_else, size_t result,
+                                        size_t input_rows_count) {
         auto* then_is_nullable = check_and_get_column<ColumnNullable>(*arg_then.column);
         auto* else_is_nullable = check_and_get_column<ColumnNullable>(*arg_else.column);
 
@@ -335,31 +354,19 @@ public:
         ColumnPtr result_null_mask;
         {
             Block temporary_block(
-            {
-                arg_cond,
-                {
-                    then_is_nullable
-                        ? then_is_nullable->get_null_map_column_ptr()
-                        : DataTypeUInt8().create_column_const_with_default_value(input_rows_count),
-                    std::make_shared<DataTypeUInt8>(),
-                    ""
-                },
-                {
-                    else_is_nullable
-                        ? else_is_nullable->get_null_map_column_ptr()
-                        : DataTypeUInt8().create_column_const_with_default_value(input_rows_count),
-                    std::make_shared<DataTypeUInt8>(),
-                    ""
-                },
-                {
-                    nullptr,
-                    std::make_shared<DataTypeUInt8>(),
-                    ""
-                }
-            });
+                    {arg_cond,
+                     {then_is_nullable ? then_is_nullable->get_null_map_column_ptr()
+                                       : DataTypeUInt8().create_column_const_with_default_value(
+                                                 input_rows_count),
+                      std::make_shared<DataTypeUInt8>(), ""},
+                     {else_is_nullable ? else_is_nullable->get_null_map_column_ptr()
+                                       : DataTypeUInt8().create_column_const_with_default_value(
+                                                 input_rows_count),
+                      std::make_shared<DataTypeUInt8>(), ""},
+                     {nullptr, std::make_shared<DataTypeUInt8>(), ""}});
 
             execute_impl(temporary_block, {0, 1, 2}, 3, temporary_block.rows());
-            
+
             result_null_mask = temporary_block.get_by_position(3).column;
         }
 
@@ -367,72 +374,60 @@ public:
 
         {
             Block temporary_block(
-            {
-                arg_cond,
-                {
-                        get_nested_column(arg_then.column),
-                        remove_nullable(arg_then.type),
-                        ""
-                },
-                {
-                        get_nested_column(arg_else.column),
-                        remove_nullable(arg_else.type),
-                        ""
-                },
-                {
-                        nullptr,
-                        remove_nullable(block.get_by_position(result).type),
-                        ""
-                }
-            });
+                    {arg_cond,
+                     {get_nested_column(arg_then.column), remove_nullable(arg_then.type), ""},
+                     {get_nested_column(arg_else.column), remove_nullable(arg_else.type), ""},
+                     {nullptr, remove_nullable(block.get_by_position(result).type), ""}});
 
             execute_impl(temporary_block, {0, 1, 2}, 3, temporary_block.rows());
 
             result_nested_column = temporary_block.get_by_position(3).column;
         }
 
-        block.get_by_position(result).column =
-                ColumnNullable::create(materialize_column_if_const(result_nested_column),
-                                       materialize_column_if_const(result_null_mask));
+        auto column = ColumnNullable::create(materialize_column_if_const(result_nested_column),
+                                             materialize_column_if_const(result_null_mask));
+        block.replace_by_position(result, std::move(column));
         return true;
     }
 
     bool execute_for_null_condition(Block& block, const ColumnWithTypeAndName& arg_cond,
-                                 const ColumnWithTypeAndName& arg_then,
-                                 const ColumnWithTypeAndName& arg_else, size_t result) {
+                                    const ColumnWithTypeAndName& arg_then,
+                                    const ColumnWithTypeAndName& arg_else, size_t result) {
         bool cond_is_null = arg_cond.column->only_null();
 
         if (cond_is_null) {
-            block.get_by_position(result).column = std::move(arg_else.column);
+            block.replace_by_position(result, arg_else.column);
             return true;
         }
 
         return false;
     }
 
-    Status execute_impl(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) override {
-        const ColumnWithTypeAndName & arg_cond = block.get_by_position(arguments[0]);
-        const ColumnWithTypeAndName & arg_then = block.get_by_position(arguments[1]);
-        const ColumnWithTypeAndName & arg_else = block.get_by_position(arguments[2]);
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
+                        size_t input_rows_count) override {
+        const ColumnWithTypeAndName& arg_cond = block.get_by_position(arguments[0]);
+        const ColumnWithTypeAndName& arg_then = block.get_by_position(arguments[1]);
+        const ColumnWithTypeAndName& arg_else = block.get_by_position(arguments[2]);
 
         /// A case for identical then and else (pointers are the same).
         if (arg_then.column.get() == arg_else.column.get()) {
             /// Just point result to them.
-            block.get_by_position(result).column = arg_then.column;
+            block.replace_by_position(result, arg_then.column);
             return Status::OK();
         }
 
         Status ret = Status::OK();
         if (execute_for_null_condition(block, arg_cond, arg_then, arg_else, result) ||
-            execute_for_null_then_else(block, arg_cond, arg_then, arg_else, result, input_rows_count,
-                                   ret) ||
+            execute_for_null_then_else(block, arg_cond, arg_then, arg_else, result,
+                                       input_rows_count, ret) ||
             execute_for_nullable_then_else(block, arg_cond, arg_then, arg_else, result,
-                                       input_rows_count)) {
+                                           input_rows_count)) {
             return ret;
         }
 
-        const ColumnUInt8 * cond_col = typeid_cast<const ColumnUInt8 *>(arg_cond.column.get());
-        const ColumnConst * cond_const_col = check_and_get_column_const<ColumnVector<UInt8>>(arg_cond.column.get());
+        const ColumnUInt8* cond_col = typeid_cast<const ColumnUInt8*>(arg_cond.column.get());
+        const ColumnConst* cond_const_col =
+                check_and_get_column_const<ColumnVector<UInt8>>(arg_cond.column.get());
 
         if (cond_const_col) {
             block.get_by_position(result).column =

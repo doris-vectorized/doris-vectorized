@@ -24,9 +24,10 @@ public:
     }
 
     Status execute_impl(Block& block, const ColumnNumbers&, size_t result,
-                       size_t input_rows_count) override {
-        block.get_by_position(result).column = block.get_by_position(result).type->create_column_const(
-                input_rows_count, Impl::init_value());
+                        size_t input_rows_count) override {
+        block.get_by_position(result).column =
+                block.get_by_position(result).type->create_column_const(input_rows_count,
+                                                                        Impl::init_value());
         return Status::OK();
     }
 };
@@ -45,10 +46,10 @@ public:
     }
 
     Status execute_impl(Block& block, const ColumnNumbers&, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         auto column = Impl::ReturnColVec::create();
         column->get_data().emplace_back(Impl::init_value());
-        block.get_by_position(result).column = ColumnConst::create(std::move(column), 1);
+        block.replace_by_position(result, ColumnConst::create(std::move(column), 1));
         return Status::OK();
     }
 };
@@ -69,9 +70,10 @@ private:
     }
 
     Status execute_impl(Block& block, const ColumnNumbers&, size_t result,
-                       size_t input_rows_count) override {
-        block.get_by_position(result).column = block.get_by_position(result).type->create_column_const(
-                input_rows_count == 0 ? 1 : input_rows_count, Impl::value);
+                        size_t input_rows_count) override {
+        block.get_by_position(result).column =
+                block.get_by_position(result).type->create_column_const(
+                        input_rows_count == 0 ? 1 : input_rows_count, Impl::value);
         return Status::OK();
     }
 };

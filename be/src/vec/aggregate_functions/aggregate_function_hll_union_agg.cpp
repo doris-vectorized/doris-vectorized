@@ -22,28 +22,28 @@
 
 namespace doris::vectorized {
 
-AggregateFunctionPtr createAggregateFunctionHLLUnionAgg(const std::string& name,
-                                                  const DataTypes& argument_types,
-                                                  const Array& parameters) {
+AggregateFunctionPtr create_aggregate_function_HLL_union_agg(const std::string& name,
+                                                             const DataTypes& argument_types,
+                                                             const Array& parameters) {
     assert_no_parameters(name, parameters);
     assert_arity_at_most<1>(name, argument_types);
 
     return std::make_shared<AggregateFunctionHLLUnionAgg>(argument_types);
 }
 
-AggregateFunctionPtr createAggregateFunctionHLLUnion(const std::string& name,
-                                                        const DataTypes& argument_types,
-                                                        const Array& parameters) {
+AggregateFunctionPtr create_aggregate_function_HLL_union(const std::string& name,
+                                                         const DataTypes& argument_types,
+                                                         const Array& parameters) {
     assert_no_parameters(name, parameters);
     assert_arity_at_most<1>(name, argument_types);
 
     return std::make_shared<AggregateFunctionHLLUnion>(argument_types);
 }
 
-void registerAggregateFunctionHLLUnionAgg(AggregateFunctionSimpleFactory& factory) {
-    factory.register_function("hll_union_agg", createAggregateFunctionHLLUnionAgg);
-    factory.register_function("hll_union", createAggregateFunctionHLLUnion);
-    factory.register_function("hll_raw_agg", createAggregateFunctionHLLUnion);
+void register_aggregate_function_HLL_union_agg(AggregateFunctionSimpleFactory& factory) {
+    factory.register_function("hll_union_agg", create_aggregate_function_HLL_union_agg);
+    factory.register_function("hll_union", create_aggregate_function_HLL_union);
+    factory.register_function("hll_raw_agg", create_aggregate_function_HLL_union);
 }
 
 } // namespace doris::vectorized

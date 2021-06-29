@@ -64,4 +64,19 @@ void DataTypeBitMap::deserialize(const PColumn& pcolumn, IColumn* column) const 
 MutableColumnPtr DataTypeBitMap::create_column() const {
     return ColumnBitmap::create();
 }
+
+void DataTypeBitMap::serialize_as_stream(const BitmapValue& cvalue, std::ostream& buf) {
+    auto& value = const_cast<BitmapValue&>(cvalue);
+    std::string memory_buffer;
+    int bytesize = value.getSizeInBytes();
+    memory_buffer.resize(bytesize);
+    value.write(const_cast<char*>(memory_buffer.data()));
+    write_binary(memory_buffer, buf);
+}
+
+void DataTypeBitMap::deserialize_as_stream(BitmapValue& value, std::istream& buf) {
+    std::string memory_buffer;
+    read_binary(memory_buffer, buf);
+    value.deserialize(memory_buffer.data());
+}
 } // namespace doris::vectorized

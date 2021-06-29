@@ -62,7 +62,7 @@ private:
 
     template <typename LeftType, typename RightType>
     bool execute_typed(Block& block, const size_t result, const ColumnConst* left_arg,
-                      const IColumn* right_arg) {
+                       const IColumn* right_arg) {
         if (const auto right_arg_typed = check_and_get_column<ColumnVector<RightType>>(right_arg)) {
             auto dst = ColumnVector<Float64>::create();
 
@@ -93,7 +93,7 @@ private:
                 memcpy(&dst_data[rows_size], dst_remaining, rows_remaining * sizeof(Float64));
             }
 
-            block.get_by_position(result).column = std::move(dst);
+            block.replace_by_position(result, std::move(dst));
             return true;
         }
 
@@ -102,7 +102,7 @@ private:
 
     template <typename LeftType, typename RightType>
     bool execute_typed(Block& block, const size_t result, const ColumnVector<LeftType>* left_arg,
-                      const IColumn* right_arg) {
+                       const IColumn* right_arg) {
         if (const auto right_arg_typed = check_and_get_column<ColumnVector<RightType>>(right_arg)) {
             auto dst = ColumnVector<Float64>::create();
 
@@ -136,7 +136,7 @@ private:
                 memcpy(&dst_data[rows_size], dst_remaining, rows_remaining * sizeof(Float64));
             }
 
-            block.get_by_position(result).column = std::move(dst);
+            block.replace_by_position(result, std::move(dst));
             return true;
         }
         if (const auto right_arg_typed =
@@ -170,7 +170,7 @@ private:
                 memcpy(&dst_data[rows_size], dst_remaining, rows_remaining * sizeof(Float64));
             }
 
-            block.get_by_position(result).column = std::move(dst);
+            block.replace_by_position(result, std::move(dst));
             return true;
         }
 
@@ -178,7 +178,7 @@ private:
     }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t /*input_rows_count*/) override {
+                        size_t /*input_rows_count*/) override {
         const ColumnWithTypeAndName& col_left = block.get_by_position(arguments[0]);
         const ColumnWithTypeAndName& col_right = block.get_by_position(arguments[1]);
 

@@ -90,7 +90,7 @@ private:
 
         execute_in_iterations(src_data.data(), dst_data.data(), size);
 
-        block.get_by_position(result).column = std::move(dst);
+        block.replace_by_position(result, std::move(dst));
         return true;
     }
 
@@ -110,14 +110,14 @@ private:
 
         execute_in_iterations(dst_data.data(), dst_data.data(), size);
 
-        block.get_by_position(result).column = std::move(dst);
+        block.replace_by_position(result, std::move(dst));
         return true;
     }
 
     bool use_default_implementation_for_constants() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t /*input_rows_count*/) override {
+                        size_t /*input_rows_count*/) override {
         const ColumnWithTypeAndName& col = block.get_by_position(arguments[0]);
 
         auto call = [&](const auto& types) -> bool {
