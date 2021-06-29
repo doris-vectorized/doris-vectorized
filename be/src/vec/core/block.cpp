@@ -192,7 +192,9 @@ Block::Block(const PBlock& pblock) {
 }
 
 void Block::initialize_index_by_name() {
-    for (size_t i = 0, size = data.size(); i < size; ++i) index_by_name[data[i].name] = i;
+    for (size_t i = 0, size = data.size(); i < size; ++i) {
+        index_by_name[data[i].name] = i;
+    }
 }
 
 void Block::insert(size_t position, const ColumnWithTypeAndName& elem) {
@@ -201,8 +203,11 @@ void Block::insert(size_t position, const ColumnWithTypeAndName& elem) {
                                   data.size());
     }
 
-    for (auto& name_pos : index_by_name)
-        if (name_pos.second >= position) ++name_pos.second;
+    for (auto& name_pos : index_by_name) {
+        if (name_pos.second >= position) {
+            ++name_pos.second;
+        }
+    }
 
     index_by_name.emplace(elem.name, position);
     data.emplace(data.begin() + position, elem);
@@ -214,8 +219,11 @@ void Block::insert(size_t position, ColumnWithTypeAndName&& elem) {
                                   data.size());
     }
 
-    for (auto& name_pos : index_by_name)
-        if (name_pos.second >= position) ++name_pos.second;
+    for (auto& name_pos : index_by_name) {
+        if (name_pos.second >= position) {
+            ++name_pos.second;
+        }
+    }
 
     index_by_name.emplace(elem.name, position);
     data.emplace(data.begin() + position, std::move(elem));
@@ -232,15 +240,21 @@ void Block::insert(ColumnWithTypeAndName&& elem) {
 }
 
 void Block::insert_unique(const ColumnWithTypeAndName& elem) {
-    if (index_by_name.end() == index_by_name.find(elem.name)) insert(elem);
+    if (index_by_name.end() == index_by_name.find(elem.name)) {
+        insert(elem);
+    }
 }
 
 void Block::insert_unique(ColumnWithTypeAndName&& elem) {
-    if (index_by_name.end() == index_by_name.find(elem.name)) insert(std::move(elem));
+    if (index_by_name.end() == index_by_name.find(elem.name)) {
+        insert(std::move(elem));
+    }
 }
 
 void Block::erase(const std::set<size_t>& positions) {
-    for (auto it = positions.rbegin(); it != positions.rend(); ++it) erase(*it);
+    for (auto it = positions.rbegin(); it != positions.rend(); ++it) {
+        erase(*it);
+    }
 }
 
 void Block::erase(size_t position) {
@@ -354,9 +368,9 @@ void Block::check_number_of_rows(bool allow_null_columns) const {
 
         ssize_t size = elem.column->size();
 
-        if (rows == -1)
+        if (rows == -1) {
             rows = size;
-        else if (rows != size) {
+        } else if (rows != size) {
             LOG(FATAL) << fmt::format("Sizes of columns doesn't match: {}:{},{}:{}",
                                       data.front().name, rows, elem.name, size);
         }
@@ -364,8 +378,11 @@ void Block::check_number_of_rows(bool allow_null_columns) const {
 }
 
 size_t Block::rows() const {
-    for (const auto& elem : data)
-        if (elem.column) return elem.column->size();
+    for (const auto& elem : data) {
+        if (elem.column) {
+            return elem.column->size();
+        }
+    }
 
     return 0;
 }
@@ -382,14 +399,18 @@ void Block::set_num_rows(size_t length) {
 
 size_t Block::bytes() const {
     size_t res = 0;
-    for (const auto& elem : data) res += elem.column->byte_size();
+    for (const auto& elem : data) {
+        res += elem.column->byte_size();
+    }
 
     return res;
 }
 
 size_t Block::allocated_bytes() const {
     size_t res = 0;
-    for (const auto& elem : data) res += elem.column->allocated_bytes();
+    for (const auto& elem : data) {
+        res += elem.column->allocated_bytes();
+    }
 
     return res;
 }
@@ -459,7 +480,9 @@ std::string Block::dump_structure() const {
     // WriteBufferFromOwnString out;
     std::stringstream out;
     for (auto it = data.begin(); it != data.end(); ++it) {
-        if (it != data.begin()) out << ", ";
+        if (it != data.begin()) {
+            out << ", ";
+        }
         out << it->dump_structure();
     }
     return out.str();
@@ -467,54 +490,63 @@ std::string Block::dump_structure() const {
 
 Block Block::clone_empty() const {
     Block res;
-
-    for (const auto& elem : data) res.insert(elem.clone_empty());
-
+    for (const auto& elem : data) {
+        res.insert(elem.clone_empty());
+    }
     return res;
 }
 
 MutableColumns Block::clone_empty_columns() const {
     size_t num_columns = data.size();
     MutableColumns columns(num_columns);
-    for (size_t i = 0; i < num_columns; ++i)
+    for (size_t i = 0; i < num_columns; ++i) {
         columns[i] = data[i].column ? data[i].column->clone_empty() : data[i].type->create_column();
+    }
     return columns;
 }
 
 Columns Block::get_columns() const {
     size_t num_columns = data.size();
     Columns columns(num_columns);
-    for (size_t i = 0; i < num_columns; ++i) columns[i] = data[i].column;
+    for (size_t i = 0; i < num_columns; ++i) {
+        columns[i] = data[i].column;
+    }
     return columns;
 }
 
 MutableColumns Block::mutate_columns() {
     size_t num_columns = data.size();
     MutableColumns columns(num_columns);
-    for (size_t i = 0; i < num_columns; ++i)
+    for (size_t i = 0; i < num_columns; ++i) {
         columns[i] = data[i].column ? (*std::move(data[i].column)).mutate()
                                     : data[i].type->create_column();
+    }
     return columns;
 }
 
 void Block::set_columns(MutableColumns&& columns) {
     /// TODO: assert if |columns| doesn't match |data|!
     size_t num_columns = data.size();
-    for (size_t i = 0; i < num_columns; ++i) data[i].column = std::move(columns[i]);
+    for (size_t i = 0; i < num_columns; ++i) {
+        data[i].column = std::move(columns[i]);
+    }
 }
 
 void Block::set_columns(const Columns& columns) {
     /// TODO: assert if |columns| doesn't match |data|!
     size_t num_columns = data.size();
-    for (size_t i = 0; i < num_columns; ++i) data[i].column = columns[i];
+    for (size_t i = 0; i < num_columns; ++i) {
+        data[i].column = columns[i];
+    }
 }
 
 Block Block::clone_with_columns(MutableColumns&& columns) const {
     Block res;
 
     size_t num_columns = data.size();
-    for (size_t i = 0; i < num_columns; ++i)
+    for (size_t i = 0; i < num_columns; ++i) {
         res.insert({std::move(columns[i]), data[i].type, data[i].name});
+    }
 
     return res;
 }
@@ -531,7 +563,9 @@ Block Block::clone_with_columns(const Columns& columns) const {
                 num_columns, columns.size());
     }
 
-    for (size_t i = 0; i < num_columns; ++i) res.insert({columns[i], data[i].type, data[i].name});
+    for (size_t i = 0; i < num_columns; ++i) {
+        res.insert({columns[i], data[i].type, data[i].name});
+    }
 
     return res;
 }
@@ -540,7 +574,9 @@ Block Block::clone_without_columns() const {
     Block res;
 
     size_t num_columns = data.size();
-    for (size_t i = 0; i < num_columns; ++i) res.insert({nullptr, data[i].type, data[i].name});
+    for (size_t i = 0; i < num_columns; ++i) {
+        res.insert({nullptr, data[i].type, data[i].name});
+    }
 
     return res;
 }
@@ -548,7 +584,9 @@ Block Block::clone_without_columns() const {
 Block Block::sort_columns() const {
     Block sorted_block;
 
-    for (const auto& name : index_by_name) sorted_block.insert(data[name.second]);
+    for (const auto& name : index_by_name) {
+        sorted_block.insert(data[name.second]);
+    }
 
     return sorted_block;
 }
@@ -561,7 +599,9 @@ Names Block::get_names() const {
     Names res;
     res.reserve(columns());
 
-    for (const auto& elem : data) res.push_back(elem.name);
+    for (const auto& elem : data) {
+        res.push_back(elem.name);
+    }
 
     return res;
 }
@@ -570,136 +610,12 @@ DataTypes Block::get_data_types() const {
     DataTypes res;
     res.reserve(columns());
 
-    for (const auto& elem : data) res.push_back(elem.type);
+    for (const auto& elem : data) {
+        res.push_back(elem.type);
+    }
 
     return res;
 }
-
-// template <typename ReturnType>
-// static ReturnType checkBlockStructure(const Block & lhs, const Block & rhs, const std::string & context_description)
-// {
-//     auto on_error = [](const std::string & message [[maybe_unused]], int code [[maybe_unused]])
-//     {
-//         if constexpr (std::is_same_v<ReturnType, void>)
-//             throw Exception(message, code);
-//         else
-//             return false;
-//     };
-
-//     size_t columns = rhs.columns();
-//     if (lhs.columns() != columns)
-//         return on_error("Block structure mismatch in " + context_description + " stream: different number of columns:\n"
-//             + lhs.dump_structure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
-
-//     for (size_t i = 0; i < columns; ++i)
-//     {
-//         const auto & expected = rhs.get_by_position(i);
-//         const auto & actual = lhs.get_by_position(i);
-
-//         if (actual.name != expected.name)
-//             return on_error("Block structure mismatch in " + context_description + " stream: different names of columns:\n"
-//                 + lhs.dump_structure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
-
-//         if (!actual.type->equals(*expected.type))
-//             return on_error("Block structure mismatch in " + context_description + " stream: different types:\n"
-//                 + lhs.dump_structure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
-
-//         if (!actual.column || !expected.column)
-//             continue;
-
-//         if (actual.column->get_name() != expected.column->get_name())
-//             return on_error("Block structure mismatch in " + context_description + " stream: different columns:\n"
-//                 + lhs.dump_structure() + "\n" + rhs.dump_structure(), ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
-
-// if (isColumnConst(*actual.column) && is_column_const(*expected.column))
-// {
-//     Field actual_value = assert_cast<const ColumnConst &>(*actual.column).get_field();
-//     Field expected_value = assert_cast<const ColumnConst &>(*expected.column).get_field();
-
-//     if (actual_value != expected_value)
-//         return on_error("Block structure mismatch in " + context_description + " stream: different values of constants, actual: "
-//             + apply_visitor(FieldVisitorToString(), actual_value) + ", expected: " + apply_visitor(FieldVisitorToString(), expected_value),
-//             ErrorCodes::BLOCKS_HAVE_DIFFERENT_STRUCTURE);
-// }
-//     }
-
-//     return ReturnType(true);
-// }
-
-// bool blocksHaveEqualStructure(const Block & lhs, const Block & rhs)
-// {
-//     return checkBlockStructure<bool>(lhs, rhs, {});
-// }
-
-// void assertBlocksHaveEqualStructure(const Block & lhs, const Block & rhs, const std::string & context_description)
-// {
-//     checkBlockStructure<void>(lhs, rhs, context_description);
-// }
-
-// void getBlocksDifference(const Block & lhs, const Block & rhs, std::string & out_lhs_diff, std::string & out_rhs_diff)
-// {
-//     /// The traditional task: the largest common subsequence (LCS).
-//     /// Assume that order is important. If this becomes wrong once, let's simplify it: for example, make 2 sets.
-
-//     std::vector<std::vector<int>> lcs(lhs.columns() + 1);
-//     for (auto & v : lcs)
-//         v.resize(rhs.columns() + 1);
-
-//     for (size_t i = 1; i <= lhs.columns(); ++i)
-//     {
-//         for (size_t j = 1; j <= rhs.columns(); ++j)
-//         {
-//             if (lhs.safe_get_by_position(i - 1) == rhs.safe_get_by_position(j - 1))
-//                 lcs[i][j] = lcs[i - 1][j - 1] + 1;
-//             else
-//                 lcs[i][j] = std::max(lcs[i - 1][j], lcs[i][j - 1]);
-//         }
-//     }
-
-//     /// Now go back and collect the answer.
-//     ColumnsWithTypeAndName left_columns;
-//     ColumnsWithTypeAndName right_columns;
-//     size_t l = lhs.columns();
-//     size_t r = rhs.columns();
-//     while (l > 0 && r > 0)
-//     {
-//         if (lhs.safe_get_by_position(l - 1) == rhs.safe_get_by_position(r - 1))
-//         {
-//             /// This element is in both sequences, so it does not get into `diff`.
-//             --l;
-//             --r;
-//         }
-//         else
-//         {
-//             /// Small heuristics: most often used when getting a difference for (expected_block, actual_block).
-//             /// Therefore, the preference will be given to the field, which is in the left block (expected_block), therefore
-//             /// in `diff` the column from `actual_block` will get.
-//             if (lcs[l][r - 1] >= lcs[l - 1][r])
-//                 right_columns.push_back(rhs.safe_get_by_position(--r));
-//             else
-//                 left_columns.push_back(lhs.safe_get_by_position(--l));
-//         }
-//     }
-
-//     while (l > 0)
-//         left_columns.push_back(lhs.safe_get_by_position(--l));
-//     while (r > 0)
-//         right_columns.push_back(rhs.safe_get_by_position(--r));
-
-//     WriteBufferFromString lhs_diff_writer(out_lhs_diff);
-//     WriteBufferFromString rhs_diff_writer(out_rhs_diff);
-
-//     for (auto it = left_columns.rbegin(); it != left_columns.rend(); ++it)
-//     {
-//         lhs_diff_writer << it->dump_structure();
-//         lhs_diff_writer << ", position: " << lhs.get_position_by_name(it->name) << '\n';
-//     }
-//     for (auto it = right_columns.rbegin(); it != right_columns.rend(); ++it)
-//     {
-//         rhs_diff_writer << it->dump_structure();
-//         rhs_diff_writer << ", position: " << rhs.get_position_by_name(it->name) << '\n';
-//     }
-// }
 
 void Block::clear() {
     info = BlockInfo();
@@ -720,8 +636,11 @@ void Block::swap(Block&& other) noexcept {
 }
 
 void Block::update_hash(SipHash& hash) const {
-    for (size_t row_no = 0, num_rows = rows(); row_no < num_rows; ++row_no)
-        for (const auto& col : data) col.column->update_hash_with_value(row_no, hash);
+    for (size_t row_no = 0, num_rows = rows(); row_no < num_rows; ++row_no) {
+        for (const auto& col : data) {
+            col.column->update_hash_with_value(row_no, hash);
+        }
+    }
 }
 
 void filter_block_internal(Block* block, const IColumn::Filter& filter, int column_to_keep) {
@@ -787,7 +706,7 @@ Status Block::filter_block(Block* block, int filter_column_id, int column_to_kee
 size_t Block::serialize(PBlock* pblock) const {
     size_t block_size_before_compress = 0;
 
-    for (const auto & c : *this) {
+    for (const auto& c : *this) {
         // name serialize
         PColumn* pc = pblock->add_columns();
         pc->set_name(c.name);
@@ -808,10 +727,11 @@ size_t Block::serialize(PBlock* pblock) const {
 }
 
 size_t MutableBlock::rows() const {
-    for (const auto& column : _columns)
+    for (const auto& column : _columns) {
         if (column) {
             return column->size();
         }
+    }
 
     return 0;
 }
