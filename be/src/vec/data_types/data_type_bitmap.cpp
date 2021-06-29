@@ -24,21 +24,33 @@
 namespace doris::vectorized {
 
 size_t DataTypeBitMap::serialize(const IColumn& column, PColumn* pcolumn) const {
-    std::ostringstream buf;
-    auto& data_column = assert_cast<const ColumnBitmap&>(*column.convert_to_full_column_if_const());
-    // TODO: remove std::string as memory buffer to avoid memory copy
-    std::string memory_buffer;
+    auto ptr = column.convert_to_full_column_if_const();
+    auto& data_column = assert_cast<const ColumnBitmap&>(*ptr);
+
+    auto allocate_len_size = sizeof(size_t) * (column.size() + 1);
+    auto allocate_content_size = 0;
+    size_t bitmap_size_array[column.size() + 1];
+    bitmap_size_array[0] = column.size();
+
+    // compute each bitmap size and save
     for (size_t i = 0; i < column.size(); ++i) {
         auto& bitmap = const_cast<BitmapValue&>(data_column.get_element(i));
-        int bytesize = bitmap.getSizeInBytes();
-        write_int_binary(bytesize, buf);
-        memory_buffer.resize(bytesize);
-        bitmap.write(const_cast<char*>(memory_buffer.data()));
-        write_binary(memory_buffer, buf);
-        memory_buffer.clear();
+        bitmap_size_array[i + 1] = bitmap.getSizeInBytes();
+        allocate_content_size += bitmap_size_array[i + 1];
+    }
+    // serialize the bitmap size array
+    pcolumn->mutable_binary()->resize(allocate_len_size + allocate_content_size);
+    auto* data = pcolumn->mutable_binary()->data();
+    memcpy(data, bitmap_size_array, allocate_len_size);
+    data += allocate_len_size;
+    // serialize each bitmap
+    for (size_t i = 0; i < column.size(); ++i) {
+        auto& bitmap = const_cast<BitmapValue&>(data_column.get_element(i));
+        bitmap.write(data);
+        data += bitmap_size_array[i + 1];
     }
 
-    return write_binary(buf, pcolumn);
+    return compress_binary(pcolumn);
 }
 
 void DataTypeBitMap::deserialize(const PColumn& pcolumn, IColumn* column) const {
@@ -48,16 +60,15 @@ void DataTypeBitMap::deserialize(const PColumn& pcolumn, IColumn* column) const 
     std::string uncompressed;
     read_binary(pcolumn, &uncompressed);
 
-    std::istringstream istr(uncompressed);
-    std::string memory_buffer;
-    while (istr.peek() != EOF) {
-        int bytesize = 0;
-        read_int_binary(bytesize, istr);
-        read_binary(memory_buffer, istr);
+    auto bitmap_size_array_size = *reinterpret_cast<size_t*>(uncompressed.data());
+    size_t bitmap_size_array[bitmap_size_array_size];
+    memcpy(bitmap_size_array, uncompressed.data() + sizeof(size_t), sizeof(size_t) * bitmap_size_array_size);
+    auto bitmap_content_ptr = uncompressed.data() + sizeof(size_t) * (bitmap_size_array_size + 1);
 
-        data.emplace_back();
-        data.back().deserialize(memory_buffer.data());
-        memory_buffer.clear();
+    data.resize(bitmap_size_array_size);
+    for (int i = 0; i < bitmap_size_array_size; ++i) {
+        data[i].deserialize(bitmap_content_ptr);
+        bitmap_content_ptr += bitmap_size_array[i];
     }
 }
 
