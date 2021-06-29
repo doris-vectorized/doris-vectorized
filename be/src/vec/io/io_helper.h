@@ -164,6 +164,22 @@ inline size_t write_binary(const std::ostringstream& buf, PColumn* pcolumn) {
     return uncompressed.size();
 }
 
+inline size_t compress_binary(PColumn* pcolumn) {
+    auto uncompressed = pcolumn->mutable_binary();
+    auto uncompressed_size = uncompressed->size();
+    std::string compressed;
+    snappy::Compress(uncompressed->data(), uncompressed_size, &compressed);
+
+    if (static_cast<double>(compressed.size()) / uncompressed_size > 0.7) {
+        pcolumn->set_compressed(false);
+    } else {
+        pcolumn->set_compressed(true);
+        pcolumn->mutable_binary()->swap(compressed);
+    }
+
+    return uncompressed_size;
+}
+
 /// Read POD-type in native format
 template <typename Type>
 inline void read_pod_binary(Type& x, std::istream& buf) {
