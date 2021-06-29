@@ -47,7 +47,9 @@ public:
     bool is_value_represented_by_integer() const override { return false; }
     bool is_value_represented_by_unsigned_integer() const override { return false; }
     // TODO:
-    bool is_value_unambiguously_represented_in_contiguous_memory_region() const override { return true; }
+    bool is_value_unambiguously_represented_in_contiguous_memory_region() const override {
+        return true;
+    }
     bool have_maximum_size_of_value() const override { return true; }
     size_t get_size_of_value_in_memory() const override { return sizeof(BitmapValue); }
 
@@ -66,6 +68,10 @@ public:
     [[noreturn]] virtual Field get_default() const {
         LOG(FATAL) << "Method get_default() is not implemented for data type " << get_name();
     }
+
+    static void serialize_as_stream(const BitmapValue& value, std::ostream& buf);
+
+    static void deserialize_as_stream(BitmapValue& value, std::istream& buf);
 };
 
 template <typename T>

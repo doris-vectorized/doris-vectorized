@@ -449,7 +449,7 @@ struct CompileOp<EqualsOp> {
     static llvm::Value* compile(llvm::IRBuilder<>& b, llvm::Value* x, llvm::Value* y,
                                 bool /*is_signed*/) {
         return x->getType()->is_integer_ty() ? b.CreateICmpEQ(x, y)
-                                           : b.CreateFCmpOEQ(x, y); /// qNaNs always compare false
+                                             : b.CreateFCmpOEQ(x, y); /// qNaNs always compare false
     }
 };
 
@@ -540,7 +540,7 @@ private:
 
     template <typename T0, typename T1>
     bool execute_num_right_type(Block& block, size_t result, const ColumnVector<T0>* col_left,
-                             const IColumn* col_right_untyped) {
+                                const IColumn* col_right_untyped) {
         if (const ColumnVector<T1>* col_right =
                     check_and_get_column<ColumnVector<T1>>(col_right_untyped)) {
             auto col_res = ColumnUInt8::create();
@@ -550,7 +550,7 @@ private:
             NumComparisonImpl<T0, T1, Op<T0, T1>>::vector_vector(col_left->get_data(),
                                                                  col_right->get_data(), vec_res);
 
-            block.get_by_position(result).column = std::move(col_res);
+            block.replace_by_position(result, std::move(col_res));
             return true;
         } else if (auto col_right_const =
                            check_and_get_column_const<ColumnVector<T1>>(col_right_untyped)) {
@@ -561,7 +561,7 @@ private:
             NumComparisonImpl<T0, T1, Op<T0, T1>>::vector_constant(
                     col_left->get_data(), col_right_const->template get_value<T1>(), vec_res);
 
-            block.get_by_position(result).column = std::move(col_res);
+            block.replace_by_position(result, std::move(col_res));
             return true;
         }
 
@@ -570,7 +570,7 @@ private:
 
     template <typename T0, typename T1>
     bool execute_num_const_right_type(Block& block, size_t result, const ColumnConst* col_left,
-                                  const IColumn* col_right_untyped) {
+                                      const IColumn* col_right_untyped) {
         if (const ColumnVector<T1>* col_right =
                     check_and_get_column<ColumnVector<T1>>(col_right_untyped)) {
             auto col_res = ColumnUInt8::create();
@@ -580,7 +580,7 @@ private:
             NumComparisonImpl<T0, T1, Op<T0, T1>>::constant_vector(
                     col_left->template get_value<T0>(), col_right->get_data(), vec_res);
 
-            block.get_by_position(result).column = std::move(col_res);
+            block.replace_by_position(result, std::move(col_res));
             return true;
         } else if (auto col_right_const =
                            check_and_get_column_const<ColumnVector<T1>>(col_right_untyped)) {
@@ -589,8 +589,8 @@ private:
                     col_left->template get_value<T0>(), col_right_const->template get_value<T1>(),
                     res);
 
-            block.get_by_position(result).column =
-                    DataTypeUInt8().create_column_const(col_left->size(), to_field(res));
+            block.replace_by_position(
+                    result, DataTypeUInt8().create_column_const(col_left->size(), to_field(res)));
             return true;
         }
 
@@ -601,7 +601,7 @@ private:
     bool executeNumLeftType(Block& block, size_t result, const IColumn* col_left_untyped,
                             const IColumn* col_right_untyped) {
         if (const ColumnVector<T0>* col_left =
-                check_and_get_column<ColumnVector<T0>>(col_left_untyped)) {
+                    check_and_get_column<ColumnVector<T0>>(col_left_untyped)) {
             if (execute_num_right_type<T0, UInt8>(block, result, col_left, col_right_untyped) ||
                 execute_num_right_type<T0, UInt16>(block, result, col_left, col_right_untyped) ||
                 execute_num_right_type<T0, UInt32>(block, result, col_left, col_right_untyped) ||
@@ -623,29 +623,29 @@ private:
         } else if (auto col_left_const =
                            check_and_get_column_const<ColumnVector<T0>>(col_left_untyped)) {
             if (execute_num_const_right_type<T0, UInt8>(block, result, col_left_const,
-                                                    col_right_untyped) ||
+                                                        col_right_untyped) ||
                 execute_num_const_right_type<T0, UInt16>(block, result, col_left_const,
-                                                     col_right_untyped) ||
+                                                         col_right_untyped) ||
                 execute_num_const_right_type<T0, UInt32>(block, result, col_left_const,
-                                                     col_right_untyped) ||
+                                                         col_right_untyped) ||
                 execute_num_const_right_type<T0, UInt64>(block, result, col_left_const,
-                                                     col_right_untyped) ||
+                                                         col_right_untyped) ||
                 execute_num_const_right_type<T0, UInt128>(block, result, col_left_const,
-                                                      col_right_untyped) ||
+                                                          col_right_untyped) ||
                 execute_num_const_right_type<T0, Int8>(block, result, col_left_const,
-                                                   col_right_untyped) ||
+                                                       col_right_untyped) ||
                 execute_num_const_right_type<T0, Int16>(block, result, col_left_const,
-                                                    col_right_untyped) ||
+                                                        col_right_untyped) ||
                 execute_num_const_right_type<T0, Int32>(block, result, col_left_const,
-                                                    col_right_untyped) ||
+                                                        col_right_untyped) ||
                 execute_num_const_right_type<T0, Int64>(block, result, col_left_const,
-                                                    col_right_untyped) ||
+                                                        col_right_untyped) ||
                 execute_num_const_right_type<T0, Int128>(block, result, col_left_const,
-                                                     col_right_untyped) ||
+                                                         col_right_untyped) ||
                 execute_num_const_right_type<T0, Float32>(block, result, col_left_const,
-                                                      col_right_untyped) ||
+                                                          col_right_untyped) ||
                 execute_num_const_right_type<T0, Float64>(block, result, col_left_const,
-                                                      col_right_untyped))
+                                                          col_right_untyped))
                 return true;
             else {
                 LOG(FATAL) << "Illegal column " << col_right_untyped->get_name()
@@ -657,7 +657,7 @@ private:
     }
 
     Status execute_decimal(Block& block, size_t result, const ColumnWithTypeAndName& col_left,
-                          const ColumnWithTypeAndName& col_right) {
+                           const ColumnWithTypeAndName& col_right) {
         TypeIndex left_number = col_left.type->get_type_id();
         TypeIndex right_number = col_right.type->get_type_id();
 
@@ -666,9 +666,6 @@ private:
             using LeftDataType = typename Types::LeftType;
             using RightDataType = typename Types::RightType;
 
-            //            if (check_decimal_overflow)
-            //                DecimalComparison<LeftDataType, RightDataType, Op, true>(block, result, col_left, col_right);
-            //            else
             DecimalComparison<LeftDataType, RightDataType, Op, false>(block, result, col_left,
                                                                       col_right);
             return true;
@@ -685,13 +682,10 @@ private:
     bool executeString(Block& block, size_t result, const IColumn* c0, const IColumn* c1) {
         const ColumnString* c0_string = check_and_get_column<ColumnString>(c0);
         const ColumnString* c1_string = check_and_get_column<ColumnString>(c1);
-        //        const ColumnFixedString * c0_fixed_string = check_and_get_column<ColumnFixedString>(c0);
-        //        const ColumnFixedString * c1_fixed_string = check_and_get_column<ColumnFixedString>(c1);
 
         const ColumnConst* c0_const = check_and_get_column_constStringOrFixedString(c0);
         const ColumnConst* c1_const = check_and_get_column_constStringOrFixedString(c1);
 
-        //        if (!((c0_string || c0_fixed_string || c0_const) && (c1_string || c1_fixed_string || c1_const)))
         if (!((c0_string || c0_const) && (c1_string || c1_const))) return false;
 
         const ColumnString::Chars* c0_const_chars = nullptr;
@@ -702,18 +696,10 @@ private:
         if (c0_const) {
             const ColumnString* c0_const_string =
                     check_and_get_column<ColumnString>(&c0_const->get_data_column());
-            //            const ColumnFixedString * c0_const_fixed_string = check_and_get_column<ColumnFixedString>(&c0_const->get_data_column());
-
             if (c0_const_string) {
                 c0_const_chars = &c0_const_string->get_chars();
                 c0_const_size = c0_const_string->get_data_at(0).size;
-            }
-            //            else if (c0_const_fixed_string)
-            //            {
-            //                c0_const_chars = &c0_const_fixed_string->get_chars();
-            //                c0_const_size = c0_const_fixed_string->getN();
-            //            }
-            else {
+            } else {
                 LOG(FATAL)
                         << "Logical error: ColumnConst contains not String nor FixedString column";
             }
@@ -722,18 +708,11 @@ private:
         if (c1_const) {
             const ColumnString* c1_const_string =
                     check_and_get_column<ColumnString>(&c1_const->get_data_column());
-            //            const ColumnFixedString * c1_const_fixed_string = check_and_get_column<ColumnFixedString>(&c1_const->get_data_column());
 
             if (c1_const_string) {
                 c1_const_chars = &c1_const_string->get_chars();
                 c1_const_size = c1_const_string->get_data_at(0).size;
-            }
-            //            else if (c1_const_fixed_string)
-            //            {
-            //                c1_const_chars = &c1_const_fixed_string->get_chars();
-            //                c1_const_size = c1_const_fixed_string->getN();
-            //            }
-            else {
+            } else {
                 LOG(FATAL)
                         << "Logical error: ColumnConst contains not String nor FixedString column";
             }
@@ -745,9 +724,9 @@ private:
             UInt8 res = 0;
             StringImpl::constant_constant(*c0_const_chars, c0_const_size, *c1_const_chars,
                                           c1_const_size, res);
-            block.get_by_position(result).column =
-                    block.get_by_position(result).type->create_column_const(c0_const->size(),
-                                                                          to_field(res));
+            block.replace_by_position(result,
+                                      block.get_by_position(result).type->create_column_const(
+                                              c0_const->size(), to_field(res)));
             return true;
         } else {
             auto c_res = ColumnUInt8::create();
@@ -758,59 +737,34 @@ private:
                 StringImpl::string_vector_string_vector(
                         c0_string->get_chars(), c0_string->get_offsets(), c1_string->get_chars(),
                         c1_string->get_offsets(), c_res->get_data());
-            //            else if (c0_string && c1_fixed_string)
-            //                StringImpl::string_vector_fixed_string_vector(
-            //                    c0_string->get_chars(), c0_string->get_offsets(),
-            //                    c1_fixed_string->get_chars(), c1_fixed_string->getN(),
-            //                    c_res->get_data());
             else if (c0_string && c1_const)
                 StringImpl::string_vector_constant(c0_string->get_chars(), c0_string->get_offsets(),
                                                    *c1_const_chars, c1_const_size,
                                                    c_res->get_data());
-            //            else if (c0_fixed_string && c1_string)
-            //                StringImpl::fixed_string_vector_string_vector(
-            //                    c0_fixed_string->get_chars(), c0_fixed_string->getN(),
-            //                    c1_string->get_chars(), c1_string->get_offsets(),
-            //                    c_res->get_data());
-            //            else if (c0_fixed_string && c1_fixed_string)
-            //                StringImpl::fixed_string_vector_fixed_string_vector(
-            //                    c0_fixed_string->get_chars(), c0_fixed_string->getN(),
-            //                    c1_fixed_string->get_chars(), c1_fixed_string->getN(),
-            //                    c_res->get_data());
-            //            else if (c0_fixed_string && c1_const)
-            //                StringImpl::fixed_string_vector_constant(
-            //                    c0_fixed_string->get_chars(), c0_fixed_string->getN(),
-            //                    *c1_const_chars, c1_const_size,
-            //                    c_res->get_data());
             else if (c0_const && c1_string)
                 StringImpl::constant_string_vector(*c0_const_chars, c0_const_size,
                                                    c1_string->get_chars(), c1_string->get_offsets(),
                                                    c_res->get_data());
-            //            else if (c0_const && c1_fixed_string)
-            //                StringImpl::constant_fixed_string_vector(
-            //                    *c0_const_chars, c0_const_size,
-            //                    c1_fixed_string->getChars(), c1_fixed_string->getN(),
-            //                    c_res->getData());
             else {
                 LOG(FATAL) << fmt::format("Illegal columns {} and {} of arguments of function {}",
                                           c0->get_name(), c1->get_name(), get_name());
             }
 
-            block.get_by_position(result).column = std::move(c_res);
+            block.replace_by_position(result, std::move(c_res));
             return true;
         }
     }
 
     void execute_generic_identical_types(Block& block, size_t result, const IColumn* c0,
-                                      const IColumn* c1) {
+                                         const IColumn* c1) {
         bool c0_const = is_column_const(*c0);
         bool c1_const = is_column_const(*c1);
 
         if (c0_const && c1_const) {
             UInt8 res = 0;
             GenericComparisonImpl<Op<int, int>>::constant_constant(*c0, *c1, res);
-            block.get_by_position(result).column =
-                    DataTypeUInt8().create_column_const(c0->size(), to_field(res));
+            block.replace_by_position(
+                    result, DataTypeUInt8().create_column_const(c0->size(), to_field(res)));
         } else {
             auto c_res = ColumnUInt8::create();
             ColumnUInt8::Container& vec_res = c_res->get_data();
@@ -823,16 +777,13 @@ private:
             else
                 GenericComparisonImpl<Op<int, int>>::vector_vector(*c0, *c1, vec_res);
 
-            block.get_by_position(result).column = std::move(c_res);
+            block.replace_by_position(result, std::move(c_res));
         }
     }
 
     Status execute_generic(Block& block, size_t result, const ColumnWithTypeAndName& c0,
-                        const ColumnWithTypeAndName& c1) {
+                           const ColumnWithTypeAndName& c1) {
         DataTypePtr common_type = get_least_supertype({c0.type, c1.type});
-        // TODO: Support full castColumn
-        //        ColumnPtr c0_converted = castColumn(c0, common_type, context);
-        //        ColumnPtr c1_converted = castColumn(c1, common_type, context);
 
         ColumnPtr c0_converted = cast_column_nullable(c0, common_type);
         ColumnPtr c1_converted = cast_column_nullable(c1, common_type);
@@ -860,56 +811,11 @@ public:
         WhichDataType left(arguments[0].get());
         WhichDataType right(arguments[1].get());
 
-        //        const DataTypeTuple * left_tuple = check_and_get_data_type<DataTypeTuple>(arguments[0].get());
-        //        const DataTypeTuple * right_tuple = check_and_get_data_type<DataTypeTuple>(arguments[1].get());
-
-        //        bool both_represented_by_number = arguments[0]->is_value_represented_by_number() && arguments[1]->is_value_represented_by_number();
-        //        bool has_date = left.is_date() || right.is_date();
-
-        //        if (!((both_represented_by_number && !has_date)   /// Do not allow compare date and number.
-        //            || (left.is_string_or_fixed_string() && right.is_string_or_fixed_string())
-        //            || (left.is_date() && right.is_date())
-        //            || (left.is_date() && right.is_string())    /// You can compare the date, datetime and an enumeration with a constant string.
-        //            || (left.is_string() && right.is_date())
-        //            || (left.is_date_time() && right.is_date_time())
-        //            || (left.is_date_time() && right.is_string())
-        //            || (left.is_string() && right.is_date_time())
-        //            || (left.is_uuid() && right.is_uuid())
-        //            || (left.is_uuid() && right.is_string())
-        //            || (left.is_string() && right.is_uuid())
-        //            || (left.is_enum() && right.is_enum() && arguments[0]->get_name() == arguments[1]->get_name()) /// only equivalent enum type values can be compared against
-        //            || (left.is_enum() && right.is_string())
-        //            || (left.is_string() && right.is_enum())
-        //            || (left_tuple && right_tuple && left_tuple->getElements().size() == right_tuple->getElements().size())
-        //            || (arguments[0]->equals(*arguments[1]))))
-        //        {
-        //            try
-        //            {
-        //                get_least_supertype(arguments);
-        //            }
-        //            catch (const Exception &)
-        //            {
-        //                throw Exception("Illegal types of arguments (" + arguments[0]->get_name() + ", " + arguments[1]->get_name() + ")"
-        //                    " of function " + get_name(), ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
-        //            }
-        //        }
-
-        //        if (left_tuple && right_tuple)
-        //        {
-        //            size_t size = left_tuple->getElements().size();
-        //            for (size_t i = 0; i < size; ++i)
-        //            {
-        //                ColumnsWithTypeAndName args = {{nullptr, left_tuple->getElements()[i], ""},
-        //                                               {nullptr, right_tuple->getElements()[i], ""}};
-        //                get_return_type(args);
-        //            }
-        //        }
-
         return std::make_shared<DataTypeUInt8>();
     }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         const auto& col_with_type_and_name_left = block.get_by_position(arguments[0]);
         const auto& col_with_type_and_name_right = block.get_by_position(arguments[1]);
         const IColumn* col_left_untyped = col_with_type_and_name_left.column.get();
@@ -971,66 +877,13 @@ public:
             }
 
             return execute_decimal(block, result, col_with_type_and_name_left,
-                                  col_with_type_and_name_right);
-        }
-        //        else if (!left_is_num && !right_is_num && executeString(block, result, col_left_untyped, col_right_untyped))
-        //        {
-        //        }
-        //        else if (left_type->equals(*right_type))
-        //        {
-        //            execute_generic_identical_types(block, result, col_left_untyped, col_right_untyped);
-        //        }
-        //        else if (executeDateOrDateTimeOrEnumOrUUIDWithConstString(
-        //                block, result, col_left_untyped, col_right_untyped,
-        //                left_type, right_type,
-        //                left_is_num, input_rows_count))
-        //        {
-        //        }
-        else {
+                                   col_with_type_and_name_right);
+        } else {
             return execute_generic(block, result, col_with_type_and_name_left,
-                           col_with_type_and_name_right);
+                                   col_with_type_and_name_right);
         }
         return Status::OK();
     }
-
-#if USE_EMBEDDED_COMPILER
-    bool isCompilableImpl(const DataTypes& types) const override {
-        auto isBigInteger = &typeIsEither<DataTypeInt64, DataTypeUInt64, DataTypeUUID>;
-        auto is_floatingPoint = &typeIsEither<DataTypeFloat32, DataTypeFloat64>;
-        if ((isBigInteger(*types[0]) && is_floatingPoint(*types[1])) ||
-            (isBigInteger(*types[1]) && is_floatingPoint(*types[0])) ||
-            (WhichDataType(types[0]).is_date() && WhichDataType(types[1]).is_date_time()) ||
-            (WhichDataType(types[1]).is_date() && WhichDataType(types[0]).is_date_time()))
-            return false; /// TODO: implement (double, int_N where N > double's mantissa width)
-        return is_compilable_type(types[0]) && is_compilable_type(types[1]);
-    }
-
-    llvm::Value* compileImpl(llvm::IRBuilderBase& builder, const DataTypes& types,
-                             ValuePlaceholders values) const override {
-        auto& b = static_cast<llvm::IRBuilder<>&>(builder);
-        auto* x = values[0]();
-        auto* y = values[1]();
-        if (!types[0]->equals(*types[1])) {
-            llvm::Type* common;
-            if (x->getType()->is_integer_ty() && y->getType()->is_integer_ty())
-                common = b.getIntNTy(std::max(
-                        /// if one integer has a sign bit, make sure the other does as well. llvm generates optimal code
-                        /// (e.g. uses overflow flag on x86) for (word size + 1)-bit integer operations.
-                        x->getType()->getIntegerBitWidth() +
-                                (!typeIsSigned(*types[0]) && typeIsSigned(*types[1])),
-                        y->getType()->getIntegerBitWidth() +
-                                (!typeIsSigned(*types[1]) && typeIsSigned(*types[0]))));
-            else
-                /// (double, float) or (double, int_N where N <= double's mantissa width) -> double
-                common = b.getDoubleTy();
-            x = nativeCast(b, types[0], x, common);
-            y = nativeCast(b, types[1], y, common);
-        }
-        auto* result =
-                CompileOp<Op>::compile(b, x, y, typeIsSigned(*types[0]) || typeIsSigned(*types[1]));
-        return b.CreateSelect(result, b.getInt8(1), b.getInt8(0));
-    }
-#endif
 };
 
 } // namespace doris::vectorized

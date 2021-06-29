@@ -22,8 +22,8 @@
 #include <typeindex>
 #include <typeinfo>
 
-#include "fmt/format.h"
 #include "common/logging.h"
+#include "fmt/format.h"
 #include "vec/common/demangle.h"
 #include "vec/common/exception.h"
 
@@ -50,7 +50,9 @@ To assert_cast(From&& from) {
         LOG(FATAL) << "assert cast err:" << e.what();
     }
 
-    LOG(FATAL) << fmt::format("Bad cast from type:{} to {}",  demangle(typeid(from).name()), demangle(typeid(To).name()));
+    LOG(FATAL) << fmt::format("Bad cast from type:{} to {}", demangle(typeid(from).name()),
+                              demangle(typeid(To).name()));
+    __builtin_unreachable();
 #else
     return static_cast<To>(from);
 #endif

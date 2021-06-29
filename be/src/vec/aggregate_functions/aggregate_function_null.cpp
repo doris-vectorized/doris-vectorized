@@ -15,14 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common/logging.h"
 #include <vec/aggregate_functions/aggregate_function.h>
 #include <vec/aggregate_functions/aggregate_function_combinator.h>
 #include <vec/aggregate_functions/aggregate_function_count.h>
 #include <vec/aggregate_functions/aggregate_function_nothing.h>
 #include <vec/aggregate_functions/aggregate_function_null.h>
-#include <vec/data_types/data_type_nullable.h>
 #include <vec/aggregate_functions/aggregate_function_simple_factory.h>
+#include <vec/data_types/data_type_nullable.h>
+
+#include "common/logging.h"
 
 namespace doris::vectorized {
 
@@ -44,8 +45,8 @@ public:
     }
 
     AggregateFunctionPtr transform_aggregate_function(const AggregateFunctionPtr& nested_function,
-                                                    const DataTypes& arguments,
-                                                    const Array& params) const override {
+                                                      const DataTypes& arguments,
+                                                      const Array& params) const override {
         bool has_nullable_types = false;
         bool has_null_types = false;
         for (const auto& arg_type : arguments) {
@@ -59,7 +60,9 @@ public:
         }
 
         if (!has_nullable_types) {
-            LOG(WARNING) << fmt::format("Aggregate function combinator 'Null' requires at least one argument to be Nullable");
+            LOG(WARNING) << fmt::format(
+                    "Aggregate function combinator 'Null' requires at least one argument to be "
+                    "Nullable");
             return nullptr;
         }
 
@@ -90,7 +93,7 @@ public:
     }
 };
 
-void registerAggregateFunctionCombinatorNull(AggregateFunctionSimpleFactory& factory) {
+void register_aggregate_function_combinator_null(AggregateFunctionSimpleFactory& factory) {
     // factory.registerCombinator(std::make_shared<AggregateFunctionCombinatorNull>());
     AggregateFunctionCreator creator = [&](const std::string& name, const DataTypes& types,
                                            const Array& params) {

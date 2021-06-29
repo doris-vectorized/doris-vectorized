@@ -22,6 +22,7 @@
 #include "runtime/descriptors.h"
 #include "vec/aggregate_functions/aggregate_function_simple_factory.h"
 #include "vec/columns/column_nullable.h"
+#include "vec/core/materialize_block.h"
 #include "vec/data_types/data_type_nullable.h"
 #include "vec/exprs/vexpr.h"
 
@@ -60,7 +61,6 @@ Status AggFnEvaluator::prepare(RuntimeState* state, const RowDescriptor& desc, M
     DCHECK(intermediate_slot_desc != NULL);
     DCHECK(_intermediate_slot_desc == NULL);
     _output_slot_desc = output_slot_desc;
-    //
     _intermediate_slot_desc = intermediate_slot_desc;
 
     Status status = VExpr::prepare(_input_exprs_ctxs, state, desc, mem_tracker);
@@ -77,7 +77,6 @@ Status AggFnEvaluator::prepare(RuntimeState* state, const RowDescriptor& desc, M
         // Now, For correctness. We have to treat each AggFn argument as nullable. which will cause execute slowly
         // TODO: RECHCK THE BEHAVIOR
         auto data_type = _input_exprs_ctxs[i]->root()->data_type();
-//        argument_types.emplace_back(data_type->is_nullable() ? data_type : std::make_shared<DataTypeNullable>(data_type));
         argument_types.emplace_back(data_type);
         child_expr_name.emplace_back(_input_exprs_ctxs[i]->root()->expr_name());
     }
@@ -107,28 +106,14 @@ void AggFnEvaluator::destroy(AggregateDataPtr place) {
 }
 
 void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place, Arena* arena) {
-    auto columns = _get_argment_columns(block);
-    // Because the `convert_to_full_column_if_const()` may return a temporary variable, so we need keep the reference of it
-    // to make sure program do not destroy it before we call `add_batch_single_place`.
-    // WARNING:
-    //      There's danger to call `convert_to_full_column_if_const().get()` to get the `const IColumn*` directly.
-    std::vector<const IColumn*> column_arguments(columns.size());
-    std::transform(columns.cbegin(), columns.cend(), column_arguments.begin(),
-                   [](const auto& ptr) { return ptr.get(); });
+    auto column_arguments = _get_argment_columns(block);
     SCOPED_TIMER(_exec_timer);
     _function->add_batch_single_place(block->rows(), place, column_arguments.data(), nullptr);
 }
 
 void AggFnEvaluator::execute_batch_add(Block* block, size_t offset, AggregateDataPtr* places,
                                        Arena* arena) {
-    auto columns = _get_argment_columns(block);
-    // Because the `convert_to_full_column_if_const()` may return a temporary variable, so we need keep the reference of it
-    // to make sure program do not destroy it before we call `add_batch_single_place`.
-    // WARNING:
-    //      There's danger to call `convert_to_full_column_if_const().get()` to get the `const IColumn*` directly.
-    std::vector<const IColumn*> column_arguments(columns.size());
-    std::transform(columns.cbegin(), columns.cend(), column_arguments.begin(),
-                   [](const auto& ptr) { return ptr.get(); });
+    auto column_arguments = _get_argment_columns(block);
     SCOPED_TIMER(_exec_timer);
     _function->add_batch(block->rows(), places, offset, column_arguments.data(), arena);
 }
@@ -160,15 +145,14 @@ std::string AggFnEvaluator::debug_string() const {
     out << ")";
     return out.str();
 }
-
-std::vector<ColumnPtr> AggFnEvaluator::_get_argment_columns(Block* block) const {
+std::vector<const IColumn*> AggFnEvaluator::_get_argment_columns(Block* block) const {
     SCOPED_TIMER(_expr_timer);
-    std::vector<ColumnPtr> columns(_input_exprs_ctxs.size());
+    std::vector<const IColumn*> columns(_input_exprs_ctxs.size());
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
         int column_id = -1;
         _input_exprs_ctxs[i]->execute(block, &column_id);
-        auto ptr = block->get_by_position(column_id).column->convert_to_full_column_if_const();
-        columns[i] = ptr;
+        materialize_block_inplace(*block);
+        columns[i] = block->get_by_position(column_id).column.get();
     }
     return columns;
 }

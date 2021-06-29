@@ -667,7 +667,7 @@ struct DateTimeTransformImpl {
         if (const auto* sources = check_and_get_column<ColumnVector<FromType>>(source_col.get())) {
             auto col_to = ColumnVector<ToType>::create();
             Op::vector(sources->get_data(), col_to->get_data());
-            block.get_by_position(result).column = std::move(col_to);
+            block.replace_by_position(result, std::move(col_to));
         } else {
             return Status::RuntimeError(fmt::format(
                     "Illegal column {} of first argument of function {}",

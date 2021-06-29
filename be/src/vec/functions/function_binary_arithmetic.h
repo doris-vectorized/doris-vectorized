@@ -276,7 +276,7 @@ private:
 
     template <bool scale_left>
     static NativeResultType apply_scaled(NativeResultType a, NativeResultType b,
-                                        NativeResultType scale) {
+                                         NativeResultType scale) {
         if constexpr (is_plus_minus_compare) {
             NativeResultType res;
 
@@ -308,7 +308,7 @@ private:
     }
 
     static NativeResultType apply_scaled_div(NativeResultType a, NativeResultType b,
-                                           NativeResultType scale) {
+                                             NativeResultType scale) {
         if constexpr (is_division) {
             if constexpr (_check_overflow) {
                 bool overflow = false;
@@ -465,12 +465,12 @@ class FunctionBinaryArithmetic : public IFunction {
     template <typename F>
     static bool cast_type(const IDataType* type, F&& f) {
         return cast_type_to_either<DataTypeUInt8, DataTypeUInt16, DataTypeUInt32, DataTypeUInt64,
-                                DataTypeInt8, DataTypeInt16, DataTypeInt32, DataTypeInt64,
-                                DataTypeFloat32, DataTypeFloat64,
-                                //            DataTypeDate,
-                                //            DataTypeDateTime,
-                                DataTypeDecimal<Decimal32>, DataTypeDecimal<Decimal64>,
-                                DataTypeDecimal<Decimal128>>(type, std::forward<F>(f));
+                                   DataTypeInt8, DataTypeInt16, DataTypeInt32, DataTypeInt64,
+                                   DataTypeFloat32, DataTypeFloat64,
+                                   //            DataTypeDate,
+                                   //            DataTypeDateTime,
+                                   DataTypeDecimal<Decimal32>, DataTypeDecimal<Decimal64>,
+                                   DataTypeDecimal<Decimal128>>(type, std::forward<F>(f));
     }
 
     template <typename F>
@@ -765,7 +765,7 @@ public:
     }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         //        /// Special case when multiply aggregate function state
         //        if (is_aggregate_multiply(block.get_by_position(arguments[0]).type, block.get_by_position(arguments[1]).type))
         //        {
@@ -829,7 +829,8 @@ public:
                         auto col_left_raw = block.get_by_position(arguments[0]).column.get();
                         auto col_right_raw = block.get_by_position(arguments[1]).column.get();
                         if (auto col_left = check_and_get_column_const<ColVecT0>(col_left_raw)) {
-                            if (auto col_right = check_and_get_column_const<ColVecT1>(col_right_raw)) {
+                            if (auto col_right =
+                                        check_and_get_column_const<ColVecT1>(col_right_raw)) {
                                 /// the only case with a non-vector result
                                 if constexpr (result_is_decimal) {
                                     ResultDataType type = decimal_result_type(
@@ -837,7 +838,8 @@ public:
                                     typename ResultDataType::FieldType scale_a =
                                             type.scale_factor_for(left, is_multiply);
                                     typename ResultDataType::FieldType scale_b =
-                                            type.scale_factor_for(right, is_multiply || is_division);
+                                            type.scale_factor_for(right,
+                                                                  is_multiply || is_division);
                                     if constexpr (IsDataTypeDecimal<RightDataType> && is_division)
                                         scale_a = right.get_scale_multiplier();
 
@@ -857,7 +859,7 @@ public:
                                             col_right->template get_value<T1>());
                                     block.get_by_position(result).column =
                                             ResultDataType().create_column_const(col_left->size(),
-                                                                               to_field(res));
+                                                                                 to_field(res));
                                 }
                                 return true;
                             }
@@ -874,7 +876,8 @@ public:
                         auto& vec_res = col_res->get_data();
                         vec_res.resize(block.rows());
 
-                        if (auto col_left_const = check_and_get_column_const<ColVecT0>(col_left_raw)) {
+                        if (auto col_left_const =
+                                    check_and_get_column_const<ColVecT0>(col_left_raw)) {
                             if (auto col_right = check_and_get_column<ColVecT1>(col_right_raw)) {
                                 if constexpr (result_is_decimal) {
                                     ResultDataType type = decimal_result_type(
@@ -883,7 +886,8 @@ public:
                                     typename ResultDataType::FieldType scale_a =
                                             type.scale_factor_for(left, is_multiply);
                                     typename ResultDataType::FieldType scale_b =
-                                            type.scale_factor_for(right, is_multiply || is_division);
+                                            type.scale_factor_for(right,
+                                                                  is_multiply || is_division);
                                     if constexpr (IsDataTypeDecimal<RightDataType> && is_division)
                                         scale_a = right.get_scale_multiplier();
 
@@ -913,8 +917,9 @@ public:
                                     OpImpl::vector_vector(col_left->get_data(),
                                                           col_right->get_data(), vec_res, scale_a,
                                                           scale_b, check_decimal_overflow);
-                                } else if (auto col_right_const = check_and_get_column_const<ColVecT1>(
-                                                   col_right_raw)) {
+                                } else if (auto col_right_const =
+                                                   check_and_get_column_const<ColVecT1>(
+                                                           col_right_raw)) {
                                     OpImpl::vector_constant(
                                             col_left->get_data(),
                                             col_right_const->template get_value<T1>(), vec_res,
@@ -926,7 +931,8 @@ public:
                                     OpImpl::vector_vector(col_left->get_data(),
                                                           col_right->get_data(), vec_res);
                                 else if (auto col_right_const =
-                                                 check_and_get_column_const<ColVecT1>(col_right_raw))
+                                                 check_and_get_column_const<ColVecT1>(
+                                                         col_right_raw))
                                     OpImpl::vector_constant(
                                             col_left->get_data(),
                                             col_right_const->template get_value<T1>(), vec_res);
@@ -936,7 +942,7 @@ public:
                         } else
                             return false;
 
-                        block.get_by_position(result).column = std::move(col_res);
+                        block.replace_by_position(result, std::move(col_res));
                         return true;
                     }
                     return false;
