@@ -21,11 +21,11 @@
 
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/columns/column_complex.h"
-#include "vec/data_types/data_type_number.h"
-#include "vec/data_types/data_type_bitmap.h"
-#include "vec/data_types/data_type_nullable.h"
 #include "vec/columns/column_nullable.h"
 #include "vec/common/assert_cast.h"
+#include "vec/data_types/data_type_bitmap.h"
+#include "vec/data_types/data_type_nullable.h"
+#include "vec/data_types/data_type_number.h"
 #include "vec/io/io_helper.h"
 
 namespace doris::vectorized {
@@ -37,7 +37,7 @@ struct AggregateFunctionBitmapUnionOp {
     static void add(BitmapValue& res, const T& data) {
         res.add(data);
     }
-    
+
     static void add(BitmapValue& res, const BitmapValue& data) { res |= data; }
 
     static void merge(BitmapValue& res, const BitmapValue& data) { res |= data; }
@@ -55,13 +55,15 @@ struct AggregateFunctionBitmapData {
     BitmapValue value;
 
     template <typename T>
-    void add(const T& data) { Op::add(value, data); }
-    
+    void add(const T& data) {
+        Op::add(value, data);
+    }
+
     void merge(const BitmapValue& data) { Op::merge(value, data); }
 
-    void write(std::ostream& buf) const { DataTypeBitMap::serializeAsStream(value, buf); }
+    void write(std::ostream& buf) const { DataTypeBitMap::serialize_as_stream(value, buf); }
 
-    void read(std::istream& buf) { DataTypeBitMap::deserializeAsStream(value, buf); }
+    void read(std::istream& buf) { DataTypeBitMap::deserialize_as_stream(value, buf); }
 
     BitmapValue& get() { return value; }
 };
@@ -112,7 +114,8 @@ public:
 };
 
 template <bool nullable, typename ColVecType>
-class AggregateFunctionBitmapCount final : public IAggregateFunctionDataHelper<
+class AggregateFunctionBitmapCount final
+        : public IAggregateFunctionDataHelper<
                   AggregateFunctionBitmapData<AggregateFunctionBitmapUnionOp>,
                   AggregateFunctionBitmapCount<nullable, ColVecType>> {
 public:
@@ -121,18 +124,20 @@ public:
     using AggFunctionData = AggregateFunctionBitmapData<AggregateFunctionBitmapUnionOp>;
 
     AggregateFunctionBitmapCount(const DataTypes& argument_types_)
-            : IAggregateFunctionDataHelper<AggregateFunctionBitmapData<AggregateFunctionBitmapUnionOp>,
-                                           AggregateFunctionBitmapCount<nullable, ColVecType>>(argument_types_, {}) {}
+            : IAggregateFunctionDataHelper<
+                      AggregateFunctionBitmapData<AggregateFunctionBitmapUnionOp>,
+                      AggregateFunctionBitmapCount<nullable, ColVecType>>(argument_types_, {}) {}
 
     String get_name() const override { return "count"; }
     DataTypePtr get_return_type() const override { return std::make_shared<DataTypeInt64>(); }
-    
+
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
         if constexpr (nullable) {
             auto& nullable_column = assert_cast<const ColumnNullable&>(*columns[0]);
             if (!nullable_column.is_null_at(row_num)) {
-                const auto& column = static_cast<const ColVecType&>(nullable_column.get_nested_column());
+                const auto& column =
+                        static_cast<const ColVecType&>(nullable_column.get_nested_column());
                 this->data(place).add(column.get_data()[row_num]);
             }
         } else {
@@ -142,8 +147,7 @@ public:
     }
 
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {
-        this->data(place).merge(
-                const_cast<AggFunctionData&>(this->data(rhs)).get());
+        this->data(place).merge(const_cast<AggFunctionData&>(this->data(rhs)).get());
     }
 
     void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
@@ -155,7 +159,7 @@ public:
     }
 
     void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
-        auto & value_data = const_cast<AggFunctionData&>(this->data(place)).get();
+        auto& value_data = const_cast<AggFunctionData&>(this->data(place)).get();
         auto& column = static_cast<ColVecResult&>(to);
         column.get_data().push_back(value_data.cardinality());
     }

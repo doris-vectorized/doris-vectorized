@@ -16,6 +16,7 @@
 // under the License.
 
 #include "vec/aggregate_functions/aggregate_function_bitmap.h"
+
 #include "vec/aggregate_functions/aggregate_function_simple_factory.h"
 
 namespace doris::vectorized {
@@ -23,7 +24,7 @@ namespace doris::vectorized {
 template <bool nullable, template <bool, typename> class AggregateFunctionTemplate>
 static IAggregateFunction* createWithIntDataType(const DataTypes& argument_type) {
     auto type = argument_type[0].get();
-    if(type->is_nullable()) {
+    if (type->is_nullable()) {
         type = assert_cast<const DataTypeNullable*>(type)->get_nested_type().get();
     }
     WhichDataType which(type);
@@ -38,39 +39,45 @@ static IAggregateFunction* createWithIntDataType(const DataTypes& argument_type)
     return nullptr;
 }
 
-AggregateFunctionPtr createAggregateFunctionBitmapUnion(const std::string& name,
-                                                  const DataTypes& argument_types,
-                                                  const Array& parameters) {
-    return std::make_shared<AggregateFunctionBitmapOp<AggregateFunctionBitmapUnionOp>>(argument_types);
+AggregateFunctionPtr create_aggregate_function_bitmap_union(const std::string& name,
+                                                            const DataTypes& argument_types,
+                                                            const Array& parameters) {
+    return std::make_shared<AggregateFunctionBitmapOp<AggregateFunctionBitmapUnionOp>>(
+            argument_types);
 }
 
-AggregateFunctionPtr createAggregateFunctionBitmapIntersect(const std::string& name,
-                                                  const DataTypes& argument_types,
-                                                  const Array& parameters) {
-    return std::make_shared<AggregateFunctionBitmapOp<AggregateFunctionBitmapIntersectOp>>(argument_types);
+AggregateFunctionPtr create_aggregate_function_bitmap_intersect(const std::string& name,
+                                                                const DataTypes& argument_types,
+                                                                const Array& parameters) {
+    return std::make_shared<AggregateFunctionBitmapOp<AggregateFunctionBitmapIntersectOp>>(
+            argument_types);
 }
 template <bool nullable>
-AggregateFunctionPtr createAggregateFunctionBitmapUnionCount(const std::string& name,
-                                                  const DataTypes& argument_types,
-                                                  const Array& parameters) {
+AggregateFunctionPtr create_aggregate_function_bitmap_union_count(const std::string& name,
+                                                                  const DataTypes& argument_types,
+                                                                  const Array& parameters) {
     return std::make_shared<AggregateFunctionBitmapCount<nullable, ColumnBitmap>>(argument_types);
 }
 
 template <bool nullable>
-AggregateFunctionPtr createAggregateFunctionBitmapUnionInt(const std::string& name,
-                                                  const DataTypes& argument_types,
-                                                  const Array& parameters) {
-
-    return std::shared_ptr<IAggregateFunction>(createWithIntDataType<nullable, AggregateFunctionBitmapCount>(argument_types));
+AggregateFunctionPtr create_aggregate_function_bitmap_union_int(const std::string& name,
+                                                                const DataTypes& argument_types,
+                                                                const Array& parameters) {
+    return std::shared_ptr<IAggregateFunction>(
+            createWithIntDataType<nullable, AggregateFunctionBitmapCount>(argument_types));
 }
 
-void registerAggregateFunctionBitmap(AggregateFunctionSimpleFactory& factory) {
-    factory.register_function("bitmap_union", createAggregateFunctionBitmapUnion);
-    factory.register_function("bitmap_intersect", createAggregateFunctionBitmapIntersect);
-    factory.register_function("bitmap_union_count", createAggregateFunctionBitmapUnionCount<false>);
-    factory.register_function("bitmap_union_count", createAggregateFunctionBitmapUnionCount<true>, true);
-    
-    factory.register_function("bitmap_union_int", createAggregateFunctionBitmapUnionInt<false>);
-    factory.register_function("bitmap_union_int", createAggregateFunctionBitmapUnionInt<true>, true);
+void register_aggregate_function_bitmap(AggregateFunctionSimpleFactory& factory) {
+    factory.register_function("bitmap_union", create_aggregate_function_bitmap_union);
+    factory.register_function("bitmap_intersect", create_aggregate_function_bitmap_intersect);
+    factory.register_function("bitmap_union_count",
+                              create_aggregate_function_bitmap_union_count<false>);
+    factory.register_function("bitmap_union_count",
+                              create_aggregate_function_bitmap_union_count<true>, true);
+
+    factory.register_function("bitmap_union_int",
+                              create_aggregate_function_bitmap_union_int<false>);
+    factory.register_function("bitmap_union_int", create_aggregate_function_bitmap_union_int<true>,
+                              true);
 }
-}
+} // namespace doris::vectorized

@@ -76,11 +76,11 @@ public:
 
 protected:
     virtual Status execute_impl_dry_run(Block& block, const ColumnNumbers& arguments, size_t result,
-                                     size_t input_rows_count) {
+                                        size_t input_rows_count) {
         return execute_impl(block, arguments, result, input_rows_count);
     }
     virtual Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                               size_t input_rows_count) = 0;
+                                size_t input_rows_count) = 0;
 
     /** Default implementation in presence of Nullable arguments or NULL constants as arguments is the following:
       *  if some of arguments are NULL constants then return NULL constant,
@@ -114,13 +114,13 @@ protected:
 
 private:
     Status default_implementation_for_nulls(Block& block, const ColumnNumbers& args, size_t result,
-                                         size_t input_rows_count, bool dry_run, bool* executed);
+                                            size_t input_rows_count, bool dry_run, bool* executed);
     Status default_implementation_for_constant_arguments(Block& block, const ColumnNumbers& args,
-                                                     size_t result, size_t input_rows_count,
-                                                     bool dry_run, bool* executed);
+                                                         size_t result, size_t input_rows_count,
+                                                         bool dry_run, bool* executed);
     Status execute_without_low_cardinality_columns(Block& block, const ColumnNumbers& arguments,
-                                               size_t result, size_t input_rows_count,
-                                               bool dry_run);
+                                                   size_t result, size_t input_rows_count,
+                                                   bool dry_run);
 
     /// Cache is created by function create_low_cardinality_result_cache()
     PreparedFunctionLowCardinalityResultCachePtr low_cardinality_result_cache;
@@ -150,25 +150,6 @@ public:
         return prepare(block, arguments, result)
                 ->execute(block, arguments, result, input_rows_count, dry_run);
     }
-
-#if USE_EMBEDDED_COMPILER
-
-    virtual bool isCompilable() const { return false; }
-
-    /** Produce LLVM IR code that operates on scalar values. See `toNativeType` in DataTypes/Native.h
-      * for supported value types and how they map to LLVM types.
-      *
-      * NOTE: the builder is actually guaranteed to be exactly `llvm::IRBuilder<>`, so you may safely
-      *       downcast it to that type. This method is specified with `IRBuilderBase` because forward-declaring
-      *       templates with default arguments is impossible and including LLVM in such a generic header
-      *       as this one is a major pain.
-      */
-    virtual llvm::Value* compile(llvm::IRBuilderBase& /*builder*/,
-                                 ValuePlaceholders /*values*/) const {
-        LOG(FATAL) << get_name() << " is not JIT-compilable";
-    }
-
-#endif
 
     virtual bool is_stateful() const { return false; }
 
@@ -248,8 +229,9 @@ public:
     /** Get information about monotonicity on a range of values. Call only if hasInformationAboutMonotonicity.
       * NULL can be passed as one of the arguments. This means that the corresponding range is unlimited on the left or on the right.
       */
-    virtual Monotonicity get_monotonicity_for_range(const IDataType& /*type*/, const Field& /*left*/,
-                                                 const Field& /*right*/) const {
+    virtual Monotonicity get_monotonicity_for_range(const IDataType& /*type*/,
+                                                    const Field& /*left*/,
+                                                    const Field& /*right*/) const {
         LOG(FATAL) << fmt::format("Function {} has no information about its monotonicity.",
                                   get_name());
         return Monotonicity{};
@@ -362,7 +344,7 @@ protected:
     virtual bool can_be_executed_on_low_cardinality_dictionary() const { return true; }
 
     virtual FunctionBasePtr build_impl(const ColumnsWithTypeAndName& arguments,
-                                      const DataTypePtr& return_type) const = 0;
+                                       const DataTypePtr& return_type) const = 0;
 
     virtual void get_lambda_argument_types_impl(DataTypes& /*arguments*/) const {
         LOG(FATAL) << fmt::format("Function {} can't have lambda-expressions as arguments",
@@ -370,7 +352,8 @@ protected:
     }
 
 private:
-    DataTypePtr get_return_type_without_low_cardinality(const ColumnsWithTypeAndName& arguments) const;
+    DataTypePtr get_return_type_without_low_cardinality(
+            const ColumnsWithTypeAndName& arguments) const;
 };
 
 /// Previous function interface.
@@ -385,7 +368,7 @@ public:
 
     /// TODO: make const
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override = 0;
+                        size_t input_rows_count) override = 0;
 
     /// Override this functions to change default implementation behavior. See details in IMyFunction.
     bool use_default_implementation_for_nulls() const override { return true; }
@@ -411,19 +394,6 @@ public:
         LOG(FATAL) << "prepare is not implemented for IFunction";
     }
 
-#if USE_EMBEDDED_COMPILER
-
-    bool isCompilable() const final {
-        LOG(FATAL) << "isCompilable without explicit types is not implemented for IFunction";
-    }
-
-    llvm::Value* compile(llvm::IRBuilderBase& /*builder*/,
-                         ValuePlaceholders /*values*/) const final {
-        LOG(FATAL) << "compile without explicit types is not implemented for IFunction";
-    }
-
-#endif
-
     [[noreturn]] const DataTypes& get_argument_types() const final {
         LOG(FATAL) << "get_argument_types is not implemented for IFunction";
     }
@@ -432,29 +402,9 @@ public:
         LOG(FATAL) << "get_return_type is not implemented for IFunction";
     }
 
-#if USE_EMBEDDED_COMPILER
-
-    bool isCompilable(const DataTypes& arguments) const;
-
-    llvm::Value* compile(llvm::IRBuilderBase&, const DataTypes& arguments,
-                         ValuePlaceholders values) const;
-
-#endif
-
 protected:
-#if USE_EMBEDDED_COMPILER
-
-    virtual bool isCompilableImpl(const DataTypes&) const { return false; }
-
-    virtual llvm::Value* compileImpl(llvm::IRBuilderBase&, const DataTypes&,
-                                     ValuePlaceholders) const {
-        LOG(FATAL) << get_name() << " is not JIT-compilable";
-    }
-
-#endif
-
     FunctionBasePtr build_impl(const ColumnsWithTypeAndName& /*arguments*/,
-                              const DataTypePtr& /*return_type*/) const final {
+                               const DataTypePtr& /*return_type*/) const final {
         LOG(FATAL) << "build_impl is not implemented for IFunction";
         return {};
     }
@@ -471,11 +421,11 @@ public:
 
 protected:
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) final {
+                        size_t input_rows_count) final {
         return function->execute_impl(block, arguments, result, input_rows_count);
     }
     Status execute_impl_dry_run(Block& block, const ColumnNumbers& arguments, size_t result,
-                             size_t input_rows_count) final {
+                                size_t input_rows_count) final {
         return function->execute_impl_dry_run(block, arguments, result, input_rows_count);
     }
     bool use_default_implementation_for_nulls() const final {
@@ -549,7 +499,7 @@ public:
     }
 
     IFunctionBase::Monotonicity get_monotonicity_for_range(const IDataType& type, const Field& left,
-                                                        const Field& right) const override {
+                                                           const Field& right) const override {
         return function->get_monotonicity_for_range(type, left, right);
     }
 
@@ -605,7 +555,7 @@ protected:
     }
 
     FunctionBasePtr build_impl(const ColumnsWithTypeAndName& arguments,
-                              const DataTypePtr& return_type) const override {
+                               const DataTypePtr& return_type) const override {
         DataTypes data_types(arguments.size());
         for (size_t i = 0; i < arguments.size(); ++i) data_types[i] = arguments[i].type;
         return std::make_shared<DefaultFunction>(function, data_types, return_type);

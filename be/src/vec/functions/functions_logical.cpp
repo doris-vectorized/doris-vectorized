@@ -56,7 +56,7 @@ using UInt8Container = ColumnUInt8::Container;
 using UInt8ColumnPtrs = std::vector<const ColumnUInt8*>;
 
 MutableColumnPtr convert_from_ternary_data(const UInt8Container& ternary_data,
-                                        const bool make_nullable) {
+                                           const bool make_nullable) {
     const size_t rows_count = ternary_data.size();
 
     auto new_column = ColumnUInt8::create(rows_count);
@@ -129,7 +129,7 @@ inline bool extract_const_columns_ternary(ColumnRawPtrs& in, UInt8& res_3v) {
     return extract_const_columns<Op>(in, res_3v, [](const Field& value) {
         return value.is_null() ? Ternary::make_value(false, true)
                                : Ternary::make_value(
-                                        apply_visitor(FieldVisitorConvertToNumber<bool>(), value));
+                                         apply_visitor(FieldVisitorConvertToNumber<bool>(), value));
     });
 }
 
@@ -285,8 +285,9 @@ struct OperationApplier<Op, OperationApplierImpl, 1> {
 };
 
 template <class Op>
-static void execute_for_ternary_logic_impl(ColumnRawPtrs arguments, ColumnWithTypeAndName& result_info,
-                                       size_t input_rows_count) {
+static void execute_for_ternary_logic_impl(ColumnRawPtrs arguments,
+                                           ColumnWithTypeAndName& result_info,
+                                           size_t input_rows_count) {
     /// Combine all constant columns into a single constant value.
     UInt8 const_3v_value = 0;
     const bool has_consts = extract_const_columns_ternary<Op>(arguments, const_3v_value);
@@ -296,7 +297,7 @@ static void execute_for_ternary_logic_impl(ColumnRawPtrs arguments, ColumnWithTy
         (arguments.empty() || (Op::is_saturable() && Op::is_saturated_value(const_3v_value)))) {
         result_info.column =
                 ColumnConst::create(convert_from_ternary_data(UInt8Container({const_3v_value}),
-                                                           result_info.type->is_nullable()),
+                                                              result_info.type->is_nullable()),
                                     input_rows_count);
         return;
     }
@@ -358,7 +359,7 @@ struct TypedExecutorInvoker<Op> {
 
 template <class Op>
 static void basic_execute_impl(ColumnRawPtrs arguments, ColumnWithTypeAndName& result_info,
-                             size_t input_rows_count) {
+                               size_t input_rows_count) {
     /// Combine all constant columns into a single constant value.
     UInt8 const_val = 0;
     bool has_consts = extract_const_columns<Op>(arguments, const_val);
@@ -449,7 +450,6 @@ DataTypePtr FunctionAnyArityLogical<Impl, Name>::get_return_type_impl(
             LOG(FATAL) << fmt::format("Illegal type ({}) of {} argument of function {}",
                                       arg_type->get_name(), i + 1, get_name());
         }
-
     }
 
     auto result_type = std::make_shared<DataTypeUInt8>();
@@ -458,9 +458,9 @@ DataTypePtr FunctionAnyArityLogical<Impl, Name>::get_return_type_impl(
 
 template <typename Impl, typename Name>
 Status FunctionAnyArityLogical<Impl, Name>::execute_impl(Block& block,
-                                                        const ColumnNumbers& arguments,
-                                                        size_t result_index,
-                                                        size_t input_rows_count) {
+                                                         const ColumnNumbers& arguments,
+                                                         size_t result_index,
+                                                         size_t input_rows_count) {
     ColumnRawPtrs args_in;
     for (const auto arg_index : arguments)
         args_in.push_back(block.get_by_position(arg_index).column.get());
@@ -485,7 +485,8 @@ struct UnaryOperationImpl {
 };
 
 template <template <typename> class Impl, typename Name>
-DataTypePtr FunctionUnaryLogical<Impl, Name>::get_return_type_impl(const DataTypes& arguments) const {
+DataTypePtr FunctionUnaryLogical<Impl, Name>::get_return_type_impl(
+        const DataTypes& arguments) const {
     if (!is_native_number(arguments[0])) {
         LOG(FATAL) << fmt::format("Illegal type ({}) of argument of function {}",
                                   arguments[0]->get_name(), get_name());
@@ -504,7 +505,7 @@ bool functionUnaryExecuteType(Block& block, const ColumnNumbers& arguments, size
         vec_res.resize(col->get_data().size());
         UnaryOperationImpl<T, Impl<T>>::vector(col->get_data(), vec_res);
 
-        block.get_by_position(result).column = std::move(col_res);
+        block.replace_by_position(result, std::move(col_res));
         return true;
     }
 
@@ -513,7 +514,7 @@ bool functionUnaryExecuteType(Block& block, const ColumnNumbers& arguments, size
 
 template <template <typename> class Impl, typename Name>
 Status FunctionUnaryLogical<Impl, Name>::execute_impl(Block& block, const ColumnNumbers& arguments,
-                                                     size_t result, size_t /*input_rows_count*/) {
+                                                      size_t result, size_t /*input_rows_count*/) {
     if (!(functionUnaryExecuteType<Impl, UInt8>(block, arguments, result) ||
           functionUnaryExecuteType<Impl, UInt16>(block, arguments, result) ||
           functionUnaryExecuteType<Impl, UInt32>(block, arguments, result) ||

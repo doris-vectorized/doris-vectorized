@@ -22,26 +22,26 @@
 
 namespace doris::vectorized {
 
-AggregateFunctionPtr createAggregateFunctionCount(const std::string& name,
-                                                  const DataTypes& argument_types,
-                                                  const Array& parameters) {
+AggregateFunctionPtr create_aggregate_function_count(const std::string& name,
+                                                     const DataTypes& argument_types,
+                                                     const Array& parameters) {
     assert_no_parameters(name, parameters);
     assert_arity_at_most<1>(name, argument_types);
 
     return std::make_shared<AggregateFunctionCount>(argument_types);
 }
 
-AggregateFunctionPtr createAggregateFunctionCountNotNullUnary(const std::string& name,
-                                                              const DataTypes& argument_types,
-                                                              const Array& parameters) {
+AggregateFunctionPtr create_aggregate_function_count_not_null_unary(const std::string& name,
+                                                                    const DataTypes& argument_types,
+                                                                    const Array& parameters) {
     assert_arity_at_most<1>(name, argument_types);
 
     return std::make_shared<AggregateFunctionCountNotNullUnary>(argument_types);
 }
 
-void registerAggregateFunctionCount(AggregateFunctionSimpleFactory& factory) {
-    factory.register_function("count", createAggregateFunctionCount);
-    factory.register_function("count", createAggregateFunctionCountNotNullUnary, true);
+void register_aggregate_function_count(AggregateFunctionSimpleFactory& factory) {
+    factory.register_function("count", create_aggregate_function_count);
+    factory.register_function("count", create_aggregate_function_count_not_null_unary, true);
 }
 
 } // namespace doris::vectorized
