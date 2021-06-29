@@ -222,19 +222,20 @@ struct DateTimeAddIntervalImpl {
                 Op::vector_vector(sources->get_data(), delta_vec_column->get_data(),
                                   col_to->get_data());
             }
-            block.get_by_position(result).column = std::move(col_to);
+            block.replace_by_position(result, std::move(col_to));
         } else if (const auto* sources_const =
                            check_and_get_column_const<ColumnVector<FromType>>(source_col.get())) {
             auto col_to = ColumnVector<ToType>::create();
             if (const auto* delta_vec_column = check_and_get_column<ColumnVector<FromType>>(
-                    *block.get_by_position(arguments[1]).column)) {
-                Op::constant_vector(sources_const->template get_value<FromType>(), col_to->get_data(),
-                                    delta_vec_column->get_data());
+                        *block.get_by_position(arguments[1]).column)) {
+                Op::constant_vector(sources_const->template get_value<FromType>(),
+                                    col_to->get_data(), delta_vec_column->get_data());
             } else {
-                Op::constant_vector(sources_const->template get_value<FromType>(), col_to->get_data(),
+                Op::constant_vector(sources_const->template get_value<FromType>(),
+                                    col_to->get_data(),
                                     *block.get_by_position(arguments[1]).column);
             }
-            block.get_by_position(result).column = std::move(col_to);
+            block.replace_by_position(result, std::move(col_to));
         } else {
             return Status::RuntimeError(fmt::format(
                     "Illegal column {} of first argument of function {}",
@@ -277,7 +278,8 @@ public:
                         "Function {} supports 2 or 3 arguments. The 1st argument must be of type "
                         "Date or DateTime. The 2nd argument must be number. The 3rd argument "
                         "(optional) must be a constant string with timezone name. The timezone "
-                        "argument is allowed only when the 1st argument has the type DateTime", get_name());
+                        "argument is allowed only when the 1st argument has the type DateTime",
+                        get_name());
             }
         }
 
@@ -287,7 +289,7 @@ public:
     bool use_default_implementation_for_constants() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t /*input_rows_count*/) override {
+                        size_t /*input_rows_count*/) override {
         const IDataType* from_type = block.get_by_position(arguments[0]).type.get();
         WhichDataType which(from_type);
 

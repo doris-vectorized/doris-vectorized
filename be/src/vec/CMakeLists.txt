@@ -28,6 +28,7 @@ set(VEC_FILES
   aggregate_functions/aggregate_function_null.cpp
   aggregate_functions/aggregate_function_uniq.cpp
   aggregate_functions/aggregate_function_hll_union_agg.cpp
+  aggregate_functions/aggregate_function_bitmap.cpp
   columns/collator.cpp
   columns/column.cpp
   columns/column_const.cpp
@@ -47,6 +48,7 @@ set(VEC_FILES
   core/field.cpp
   core/field.cpp
   core/sort_block.cpp
+  core/materialize_block.cpp
   data_types/data_type.cpp
   data_types/data_type_bitmap.cpp
   data_types/data_type_nothing.cpp

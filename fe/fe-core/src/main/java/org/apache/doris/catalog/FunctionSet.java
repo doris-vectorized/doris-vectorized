@@ -1651,6 +1651,17 @@ public class FunctionSet {
                 "_ZN5doris15BitmapFunctions16bitmap_serializeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                 true, false, true));
 
+        addBuiltin(AggregateFunction.createBuiltin(BITMAP_UNION, Lists.newArrayList(Type.BITMAP),
+                Type.BITMAP,
+                Type.BITMAP,
+                "",
+                "",
+                "",
+                "",
+                "",
+                true, false, true, true));
+
+
         addBuiltin(AggregateFunction.createBuiltin(BITMAP_UNION_COUNT, Lists.newArrayList(Type.BITMAP),
                 Type.BIGINT,
                 Type.VARCHAR,
@@ -1662,6 +1673,19 @@ public class FunctionSet {
                 null,
                 "_ZN5doris15BitmapFunctions15bitmap_finalizeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                 true, true, true));
+
+        addBuiltin(AggregateFunction.createBuiltin(BITMAP_UNION_COUNT, Lists.newArrayList(Type.BITMAP),
+                Type.BIGINT,
+                Type.BITMAP,
+                "",
+                "",
+                "",
+                "",
+                "",
+                null,
+                "",
+                true, true, true, true));
+        
         // TODO(ml): supply function symbol
         addBuiltin(AggregateFunction.createBuiltin(BITMAP_INTERSECT, Lists.newArrayList(Type.BITMAP),
                 Type.BITMAP, Type.VARCHAR,
@@ -1671,6 +1695,15 @@ public class FunctionSet {
                 "_ZN5doris15BitmapFunctions16bitmap_serializeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                 "_ZN5doris15BitmapFunctions16bitmap_serializeEPN9doris_udf15FunctionContextERKNS1_9StringValE",
                 true, false, true));
+
+        addBuiltin(AggregateFunction.createBuiltin(BITMAP_INTERSECT, Lists.newArrayList(Type.BITMAP),
+                Type.BITMAP, Type.BITMAP,
+                "",
+                "",
+                "",
+                "",
+                "",
+                true, false, true, true));
 
         //PercentileApprox
         addBuiltin(AggregateFunction.createBuiltin("percentile_approx",

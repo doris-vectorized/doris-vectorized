@@ -38,18 +38,19 @@ public:
 
     DataTypes transform_arguments(const DataTypes& arguments) const override {
         if (arguments.empty()) {
-            LOG(FATAL) << "Incorrect number of arguments for aggregate function with Distinct suffix";
+            LOG(FATAL)
+                    << "Incorrect number of arguments for aggregate function with Distinct suffix";
         }
         return arguments;
     }
 
     AggregateFunctionPtr transform_aggregate_function(const AggregateFunctionPtr& nested_function,
-                                                    const DataTypes& arguments,
-                                                    const Array& params) const override {
+                                                      const DataTypes& arguments,
+                                                      const Array& params) const override {
         AggregateFunctionPtr res;
         if (arguments.size() == 1) {
             res.reset(create_with_numeric_type<AggregateFunctionDistinct,
-                                            AggregateFunctionDistinctSingleNumericData>(
+                                               AggregateFunctionDistinctSingleNumericData>(
                     *arguments[0], nested_function, arguments));
 
             if (res) return res;
@@ -72,7 +73,7 @@ public:
 
 const std::string DISTINCT_FUNCTION_PREFIX = "multi_distinct_";
 
-void registerAggregateFunctionCombinatorDistinct(AggregateFunctionSimpleFactory& factory) {
+void register_aggregate_function_combinator_distinct(AggregateFunctionSimpleFactory& factory) {
     AggregateFunctionCreator creator = [&](const std::string& name, const DataTypes& types,
                                            const Array& params) {
         // 1. we should get not nullable types;

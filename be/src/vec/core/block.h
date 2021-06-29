@@ -76,7 +76,7 @@ public:
     template <class T>
     void erase_not_in(const T& container) {
         Container new_data;
-        for(auto pos: container) {
+        for (auto pos : container) {
             new_data.emplace_back(std::move(data[pos]));
         }
         std::swap(data, new_data);
@@ -86,6 +86,19 @@ public:
 
     ColumnWithTypeAndName& get_by_position(size_t position) { return data[position]; }
     const ColumnWithTypeAndName& get_by_position(size_t position) const { return data[position]; }
+
+    void replace_by_position(size_t position, ColumnPtr&& res) {
+        this->get_by_position(position).column = std::move(res);
+    }
+
+    void replace_by_position(size_t position, const ColumnPtr& res) {
+        this->get_by_position(position).column = res;
+    }
+
+    void replace_by_position_if_const(size_t position) {
+        auto& element = this->get_by_position(position);
+        element.column = element.column->convert_to_full_column_if_const();
+    }
 
     ColumnWithTypeAndName& safe_get_by_position(size_t position);
     const ColumnWithTypeAndName& safe_get_by_position(size_t position) const;
@@ -221,10 +234,9 @@ public:
             _columns.resize(block.columns());
             for (size_t i = 0; i < block.columns(); ++i) {
                 if (block.get_by_position(i).column) {
-                    _columns[i] =
-                            (*std::move(
-                                    block.get_by_position(i).column->convert_to_full_column_if_const()))
-                                    .mutate();
+                    _columns[i] = (*std::move(block.get_by_position(i)
+                                                      .column->convert_to_full_column_if_const()))
+                                          .mutate();
                 } else {
                     _columns[i] = _data_types[i]->create_column();
                 }
@@ -232,8 +244,8 @@ public:
         } else {
             for (int i = 0; i < _columns.size(); ++i) {
                 _columns[i]->insert_range_from(
-                        *block.get_by_position(i).column->convert_to_full_column_if_const().get(), 0,
-                        block.rows());
+                        *block.get_by_position(i).column->convert_to_full_column_if_const().get(),
+                        0, block.rows());
             }
         }
     }
@@ -243,10 +255,9 @@ public:
             _columns.resize(block.columns());
             for (size_t i = 0; i < block.columns(); ++i) {
                 if (block.get_by_position(i).column) {
-                    _columns[i] =
-                            (*std::move(
-                                    block.get_by_position(i).column->convert_to_full_column_if_const()))
-                                    .mutate();
+                    _columns[i] = (*std::move(block.get_by_position(i)
+                                                      .column->convert_to_full_column_if_const()))
+                                          .mutate();
                 } else {
                     _columns[i] = _data_types[i]->create_column();
                 }
@@ -254,8 +265,8 @@ public:
         } else {
             for (int i = 0; i < _columns.size(); ++i) {
                 _columns[i]->insert_range_from(
-                        *block.get_by_position(i).column->convert_to_full_column_if_const().get(), 0,
-                        block.rows());
+                        *block.get_by_position(i).column->convert_to_full_column_if_const().get(),
+                        0, block.rows());
             }
         }
     }
@@ -271,7 +282,7 @@ public:
     }
 
     // TODO: use add_rows instead of this
-    // add_rows(Block* block,PODArray<Int32>& group, int group_num);
+    // add_rows(Block* block,PODArray<Int32>& group,int group_num);
 };
 
 } // namespace vectorized

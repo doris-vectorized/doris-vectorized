@@ -15,12 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "common/logging.h"
 #include <vec/aggregate_functions/aggregate_function_simple_factory.h>
 #include <vec/aggregate_functions/aggregate_function_uniq.h>
 #include <vec/aggregate_functions/factory_helpers.h>
 #include <vec/aggregate_functions/helpers.h>
 #include <vec/data_types/data_type_string.h>
+
+#include "common/logging.h"
 
 namespace doris::vectorized {
 
@@ -30,9 +31,9 @@ extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
 } // namespace ErrorCodes
 
 template <template <typename> class Data, typename DataForVariadic>
-AggregateFunctionPtr createAggregateFunctionUniq(const std::string& name,
-                                                 const DataTypes& argument_types,
-                                                 const Array& params) {
+AggregateFunctionPtr create_aggregate_function_uniq(const std::string& name,
+                                                    const DataTypes& argument_types,
+                                                    const Array& params) {
     assert_no_parameters(name, params);
 
     if (argument_types.empty()) {
@@ -57,10 +58,10 @@ AggregateFunctionPtr createAggregateFunctionUniq(const std::string& name,
     return nullptr;
 }
 
-void registerAggregateFunctionsUniq(AggregateFunctionSimpleFactory& factory) {
+void register_aggregate_function_uniq(AggregateFunctionSimpleFactory& factory) {
     AggregateFunctionCreator creator =
-            createAggregateFunctionUniq<AggregateFunctionUniqExactData,
-                                        AggregateFunctionUniqExactData<String>>;
+            create_aggregate_function_uniq<AggregateFunctionUniqExactData,
+                                           AggregateFunctionUniqExactData<String>>;
     factory.register_function("multi_distinct_count", creator);
 }
 

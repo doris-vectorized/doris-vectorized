@@ -19,8 +19,8 @@
 
 #include <functional>
 
-#include "exec/exec_node.h"
 #include "common/object_pool.h"
+#include "exec/exec_node.h"
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/common/columns_hashing.h"
 #include "vec/common/hash_table/hash_map.h"
@@ -143,8 +143,7 @@ private:
     size_t _total_size_of_aggregate_states = 0;
 
     AggregatedDataVariants _agg_data;
-    // TODO:
-    // add tracker here
+
     Arena _agg_arena_pool;
 
     RuntimeProfile::Counter* _build_timer;
@@ -159,11 +158,12 @@ private:
 
     /// Expose the minimum reduction factor to continue growing the hash tables.
     RuntimeProfile::Counter* preagg_streaming_ht_min_reduction_;
+
 private:
     /// Return true if we should keep expanding hash tables in the preagg. If false,
     /// the preagg should pass through any rows it can't fit in its tables.
     bool _should_expand_preagg_hash_tables();
-        
+
     Status _create_agg_status(AggregateDataPtr data);
     Status _destory_agg_status(AggregateDataPtr data);
 
@@ -171,6 +171,7 @@ private:
     Status _serialize_without_key(RuntimeState* state, Block* block, bool* eos);
     Status _execute_without_key(Block* block);
     Status _merge_without_key(Block* block);
+    void _update_memusage_without_key();
     void _close_without_key();
 
     Status _get_with_serialized_key_result(RuntimeState* state, Block* block, bool* eos);
@@ -178,22 +179,35 @@ private:
     Status _pre_agg_with_serialized_key(Block* in_block, Block* out_block);
     Status _execute_with_serialized_key(Block* block);
     Status _merge_with_serialized_key(Block* block);
+    void _update_memusage_with_serialized_key();
     void _close_with_serialized_key();
+
+    void release_tracker();
 
     using vectorized_execute = std::function<Status(Block* block)>;
     using vectorized_pre_agg = std::function<Status(Block* in_block, Block* out_block)>;
     using vectorized_get_result =
             std::function<Status(RuntimeState* state, Block* block, bool* eos)>;
     using vectorized_closer = std::function<void()>;
+    using vectorized_update_memusage = std::function<void()>;
 
     struct executor {
         vectorized_execute execute;
         vectorized_pre_agg pre_agg;
         vectorized_get_result get_result;
         vectorized_closer close;
+        vectorized_update_memusage update_memusage;
     };
 
     executor _executor;
+
+    struct MemoryRecord {
+        MemoryRecord() : used_in_arena(0), used_in_state(0) {}
+        int64_t used_in_arena;
+        int64_t used_in_state;
+    };
+
+    MemoryRecord _mem_usage_record;
 };
 } // namespace vectorized
 } // namespace doris

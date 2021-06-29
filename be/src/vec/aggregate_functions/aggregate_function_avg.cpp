@@ -15,21 +15,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "vec/aggregate_functions/aggregate_function_avg.h"
+
 #include "common/logging.h"
 #include "vec/aggregate_functions/aggregate_function_simple_factory.h"
-#include "vec/aggregate_functions/aggregate_function_avg.h"
-#include "vec/aggregate_functions/helpers.h"
 #include "vec/aggregate_functions/factory_helpers.h"
+#include "vec/aggregate_functions/helpers.h"
 
-namespace doris::vectorized
-{
+namespace doris::vectorized {
 
-namespace
-{
+namespace {
 
 template <typename T>
-struct Avg
-{
+struct Avg {
     using FieldType = std::conditional_t<IsDecimalNumber<T>, Decimal128, NearestFieldType<T>>;
     using Function = AggregateFunctionAvg<T, AggregateFunctionAvgData<FieldType>>;
 };
@@ -37,32 +35,30 @@ struct Avg
 template <typename T>
 using AggregateFuncAvg = typename Avg<T>::Function;
 
-AggregateFunctionPtr createAggregateFunctionAvg(const std::string & name, const DataTypes & argument_types, const Array & parameters)
-{
+AggregateFunctionPtr create_aggregate_function_avg(const std::string& name,
+                                                   const DataTypes& argument_types,
+                                                   const Array& parameters) {
     assert_no_parameters(name, parameters);
     assert_unary(name, argument_types);
 
     AggregateFunctionPtr res;
     DataTypePtr data_type = argument_types[0];
     if (is_decimal(data_type))
-        res.reset(create_with_decimal_type<AggregateFuncAvg>(*data_type, *data_type, argument_types));
+        res.reset(
+                create_with_decimal_type<AggregateFuncAvg>(*data_type, *data_type, argument_types));
     else
         res.reset(create_with_numeric_type<AggregateFuncAvg>(*data_type, argument_types));
 
     if (!res) {
-        LOG(WARNING) << fmt::format("Illegal type {} of argument for aggregate function {}", argument_types[0]->get_name(), name);
+        LOG(WARNING) << fmt::format("Illegal type {} of argument for aggregate function {}",
+                                    argument_types[0]->get_name(), name);
     }
     return res;
 }
 
-}
+} // namespace
 
-//void registerAggregateFunctionAvg(AggregateFunctionFactory & factory)
-//{
-//    factory.register_function("avg", createAggregateFunctionAvg, AggregateFunctionFactory::CaseInsensitive);
-//}
-
-void registerAggregateFunctionAvg(AggregateFunctionSimpleFactory& factory) {
-    factory.register_function("avg", createAggregateFunctionAvg);
+void register_aggregate_function_avg(AggregateFunctionSimpleFactory& factory) {
+    factory.register_function("avg", create_aggregate_function_avg);
 }
-}
+} // namespace doris::vectorized
