@@ -15,16 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/exec/vcross_join_node.h"
-
 #include <sstream>
 
 #include "exprs/expr.h"
 #include "gen_cpp/PlanNodes_types.h"
 #include "runtime/row_batch.h"
 #include "runtime/runtime_state.h"
-#include "util/debug_util.h"
 #include "util/runtime_profile.h"
+
+#include "vec/exec/vcross_join_node.h"
 
 namespace doris::vectorized {
 
@@ -46,6 +45,7 @@ Status VCrossJoinNode::close(RuntimeState* state) {
     if (is_closed()) {
         return Status::OK();
     }
+    _mem_tracker->Release(_mem_usage);
     VBlockingJoinNode::close(state);
     return Status::OK();
 }
@@ -54,23 +54,29 @@ Status VCrossJoinNode::construct_build_side(RuntimeState* state) {
     // Do a full scan of child(1) and store all build row batches.
     RETURN_IF_ERROR(child(1)->open(state));
 
-    bool eos = true;
+    bool eos = false;
     while (true) {
         SCOPED_TIMER(_build_timer);
         RETURN_IF_CANCELLED(state);
 
-        auto& block = _build_blocks.emplace_back();
+        Block block;
         RETURN_IF_ERROR(child(1)->get_next(state, &block, &eos));
-
+        auto rows = block.rows();
+        if (rows != 0) {
+            _build_rows += rows;
+            _mem_usage += block.allocated_bytes();
+            _build_blocks.emplace_back(std::move(block));
+        }
         // to prevent use too many memory
         RETURN_IF_LIMIT_EXCEEDED(state, "Cross join, while getting next from the child 1.");
-        COUNTER_UPDATE(_build_row_counter, block.rows());
 
         if (eos) {
             break;
         }
     }
 
+    COUNTER_UPDATE(_build_row_counter, _build_rows);
+    _mem_tracker->Consume(_mem_usage);
     return Status::OK();
 }
 
@@ -114,6 +120,7 @@ Status VCrossJoinNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     if (!_eos) {
         auto block_nums = 0;
         do {
+            block->clear();
             // Compute max rows that should be added to block
             const auto &now_process_build_block = _build_blocks[_current_build_pos++];
             int64_t max_added_rows = now_process_build_block.rows();

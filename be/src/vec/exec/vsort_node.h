@@ -25,9 +25,7 @@
 #include "vec/core/sort_cursor.h"
 #include "vec/exec/vsort_exec_exprs.h"
 
-namespace doris {
-
-namespace vectorized {
+namespace doris::vectorized {
 // Node that implements a full sort of its input with a fixed memory budget
 // In open() the input Block to VSortNode will sort firstly, using the expressions specified in _sort_exec_exprs.
 // In get_next(), VSortNode do the merge sort to gather data to a new block
@@ -37,7 +35,7 @@ class VSortNode : public doris::ExecNode {
 public:
     VSortNode(ObjectPool *pool, const TPlanNode &tnode, const DescriptorTbl &descs);
 
-    ~VSortNode();
+    ~VSortNode() override = default;
 
     virtual Status init(const TPlanNode &tnode, RuntimeState *state = nullptr);
 
@@ -57,7 +55,7 @@ protected:
     virtual void debug_string(int indentation_level, std::stringstream *out) const;
 
 private:
-//    // Fetch input rows and feed them to the sorter until the input is exhausted.
+    // Fetch input rows and feed them to the sorter until the input is exhausted.
     Status sort_input(RuntimeState *state);
 
     Status pretreat_block(Block& block);
@@ -82,9 +80,13 @@ private:
     // TODO: Not using now, maybe should be delete
     // Keeps track of the number of rows skipped for handling _offset.
     int64_t _num_rows_skipped;
+    uint64_t _mem_usage = 0;
+
+    // only valid in TOP-N node
+    uint64_t _num_rows_in_block = 0;
+    std::priority_queue<SortBlockCursor> _block_priority_queue;
 };
 
-}
 } // end namespace doris
 
 

@@ -682,17 +682,13 @@ Status Block::filter_block(Block* block, int filter_column_id, int column_to_kee
         }
         filter_block_internal(block, filter, column_to_keep);
     } else if (auto* const_column = check_and_get_column<ColumnConst>(*filter_column)) {
-        UInt64 ret = const_column->get_uint(0);
-        if (ret == 0) {
-            block->get_by_position(0).column = block->get_by_position(0).column->clone_empty();
-        } else if (ret == 1) {
+        bool ret = const_column->get_bool(0);
+        if (ret) {
             for (size_t i = column_to_keep; i < block->columns(); ++i) {
                 block->erase(i);
             }
         } else {
-            std::stringstream ss;
-            ss << "invalid const value for filter block, value = " << ret;
-            return Status::InternalError(ss.str());
+            block->get_by_position(0).column = block->get_by_position(0).column->clone_empty();
         }
     } else {
         const IColumn::Filter& filter =
