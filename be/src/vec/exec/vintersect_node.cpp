@@ -44,7 +44,7 @@ Status VIntersectNode::open(RuntimeState* state) {
 }
 
 Status VIntersectNode::get_next(RuntimeState* state, Block* block, bool* eos) {
-    return Status::NotSupported("Not Implemented.");
+    return Status::NotSupported("Not Implemented VIntersectNode::get_next.");
 }
 
 Status VIntersectNode::close(RuntimeState* state) {

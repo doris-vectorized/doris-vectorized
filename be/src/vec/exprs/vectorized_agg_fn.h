@@ -73,7 +73,7 @@ private:
 
     AggFnEvaluator(const TExprNode& desc);
 
-    std::vector<const IColumn*> _get_argment_columns(Block* block) const;
+    void _calc_argment_columns(Block* block);
 
     const TypeDescriptor _return_type;
     const TypeDescriptor _intermediate_type;
@@ -93,6 +93,8 @@ private:
     AggregateFunctionPtr _function;
 
     std::string _expr_name;
+
+    std::vector<const IColumn*> _agg_columns;
 };
 } // namespace vectorized
 
