@@ -184,37 +184,6 @@ void tryLogCurrentException(const char* log_name, const std::string& start_of_me
     std::cout << "[TODO] should use glog here :" << start_of_message << std::endl;
 }
 
-// void tryLogCurrentException(Poco::Logger * logger, const std::string & start_of_message)
-// {
-//     try
-//     {
-//         LOG_ERROR(logger, start_of_message << (start_of_message.empty() ? "" : ": ") << getCurrentExceptionMessage(true));
-//     }
-//     catch (...)
-//     {
-//     }
-// }
-
-// void getNoSpaceLeftInfoMessage(std::filesystem::path path, std::string & msg)
-// {
-//     path = std::filesystem::absolute(path);
-//     /// It's possible to get ENOSPC for non existent file (e.g. if there are no free inodes and creat() fails)
-//     /// So try to get info for existent parent directory.
-//     while (!std::filesystem::exists(path) && path.has_relative_path())
-//         path = path.parent_path();
-
-//     auto fs = DiskSpace::getStatVFS(path);
-//     msg += "\nTotal space: "      + formatReadableSizeWithBinarySuffix(fs.f_blocks * fs.f_bsize)
-//          + "\nAvailable space: "  + formatReadableSizeWithBinarySuffix(fs.f_bavail * fs.f_bsize)
-//          + "\nTotal inodes: "     + formatReadableQuantity(fs.f_files)
-//          + "\nAvailable inodes: " + formatReadableQuantity(fs.f_favail);
-
-//     auto mount_point = DiskSpace::getMountPoint(path).string();
-//     msg += "\nMount point: " + mount_point;
-// #if defined(__linux__)
-//     msg += "\nFilesystem: " + DiskSpace::getFilesystemName(mount_point);
-// #endif
-// }
 
 std::string getExtraExceptionInfo(const std::exception& e) {
     std::string msg;
@@ -263,26 +232,12 @@ std::string getCurrentExceptionMessage(bool with_stacktrace,
         }
     } catch (const std::exception& e) {
         try {
-            // int status = 0;
-            // auto name = demangle(typeid(e).name(), status);
-
-            // if (status)
-            //     name += " (demangling status: " + std::to_string(status) + ")";
-
-            // stream << "std::exception. Code: " << ErrorCodes::STD_EXCEPTION << ", type: " << name << ", e.what() = " << e.what()
-            //        << (with_extra_info ? getExtraExceptionInfo(e) : "")
-            //        << ", version = " << "VERSION_STRING" << "VERSION_OFFICIAL";
+          
         } catch (...) {
         }
     } catch (...) {
         try {
-            // int status = 0;
-            // auto name = demangle(abi::__cxa_current_exception_type()->name(), status);
-
-            // if (status)
-            //     name += " (demangling status: " + std::to_string(status) + ")";
-
-            // stream << "Unknown exception. Code: " << ErrorCodes::UNKNOWN_EXCEPTION << ", type: " << name << " (version " << "VERSION_STRING" << "VERSION_OFFICIAL" << ")";
+           
         } catch (...) {
         }
     }
@@ -290,60 +245,6 @@ std::string getCurrentExceptionMessage(bool with_stacktrace,
     return stream.str();
 }
 
-// int getCurrentExceptionCode()
-// {
-//     try
-//     {
-//         throw;
-//     }
-//     catch (const Exception & e)
-//     {
-//         return e.code();
-//     }
-//     catch (const Poco::Exception &)
-//     {
-//         return ErrorCodes::POCO_EXCEPTION;
-//     }
-//     catch (const std::exception &)
-//     {
-//         return ErrorCodes::STD_EXCEPTION;
-//     }
-//     catch (...)
-//     {
-//         return ErrorCodes::UNKNOWN_EXCEPTION;
-//     }
-// }
-
-// void rethrowFirstException(const Exceptions & exceptions)
-// {
-//     for (size_t i = 0, size = exceptions.size(); i < size; ++i)
-//         if (exceptions[i])
-//             std::rethrow_exception(exceptions[i]);
-// }
-
-// void tryLogException(std::exception_ptr e, const char * log_name, const std::string & start_of_message)
-// {
-//     try
-//     {
-//         std::rethrow_exception(std::move(e));
-//     }
-//     catch (...)
-//     {
-//         tryLogCurrentException(log_name, start_of_message);
-//     }
-// }
-
-// void tryLogException(std::exception_ptr e, Poco::Logger * logger, const std::string & start_of_message)
-// {
-//     try
-//     {
-//         std::rethrow_exception(std::move(e));
-//     }
-//     catch (...)
-//     {
-//         tryLogCurrentException(logger, start_of_message);
-//     }
-// }
 
 std::string getExceptionMessage(const Exception& e, bool with_stacktrace,
                                 bool check_embedded_stacktrace) {
@@ -379,38 +280,5 @@ std::string getExceptionMessage(std::exception_ptr e, bool with_stacktrace) {
         return getCurrentExceptionMessage(with_stacktrace);
     }
 }
-
-// std::string ExecutionStatus::serializeText() const
-// {
-//     WriteBufferFromOwnString wb;
-//     wb << code << "\n" << escape << message;
-//     return wb.str();
-// }
-
-// void ExecutionStatus::deserializeText(const std::string & data)
-// {
-//     ReadBufferFromString rb(data);
-//     rb >> code >> "\n" >> escape >> message;
-// }
-
-// bool ExecutionStatus::tryDeserializeText(const std::string & data)
-// {
-//     try
-//     {
-//         deserializeText(data);
-//     }
-//     catch (...)
-//     {
-//         return false;
-//     }
-
-//     return true;
-// }
-
-// ExecutionStatus ExecutionStatus::fromCurrentException(const std::string & start_of_message)
-// {
-//     String msg = (start_of_message.empty() ? "" : (start_of_message + ": ")) + getCurrentExceptionMessage(false, true);
-//     return ExecutionStatus(getCurrentExceptionCode(), msg);
-// }
 
 } // namespace  doris::vectorized
