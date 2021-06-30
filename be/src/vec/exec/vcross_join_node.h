@@ -62,7 +62,7 @@ private:
     size_t _num_columns_to_add = 0;
 
     uint64_t _build_rows = 0;
-    uint64_t _mem_usage = 0;
+    uint64_t _total_mem_usage = 0;
     // Processes a batch from the left child.
     //  output_batch: the batch for resulting tuple rows
     //  batch: the batch from the left child to process.  This function can be called to

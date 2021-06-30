@@ -103,7 +103,7 @@ Status VSortNode::close(RuntimeState* state) {
     if (is_closed()) {
         return Status::OK();
     }
-    _mem_tracker->Release(_mem_usage);
+    _mem_tracker->Release(_total_mem_usage);
     _vsort_exec_exprs.close(state);
     ExecNode::close(state);
     return Status::OK();
@@ -129,6 +129,8 @@ Status VSortNode::sort_input(RuntimeState* state) {
 
         if (rows != 0) {
             RETURN_IF_ERROR(pretreat_block(block));
+            size_t mem_usage = block.allocated_bytes();
+
             // dispose TOP-N logic
             if (_limit != -1 ) {
                 // Here is a little opt to reduce the mem uasge, we build a max heap
@@ -136,29 +138,32 @@ Status VSortNode::sort_input(RuntimeState* state) {
                 // if one block totally greater the heap top of _block_priority_queue
                 // we can throw the block data directly.
                 if (_num_rows_in_block < _limit) {
-                    _mem_usage += block.allocated_bytes();
+                    _total_mem_usage += mem_usage;
                     _sorted_blocks.emplace_back(std::move(block));
                     _num_rows_in_block += rows;
-                    _block_priority_queue.emplace(new SortCursorImpl(_sorted_blocks.back(), _sort_description));
+                    _block_priority_queue.emplace(
+                            _pool->add(new SortCursorImpl(_sorted_blocks.back(), _sort_description)));
                 } else {
-                    SortBlockCursor block_cursor(new SortCursorImpl(block, _sort_description));
+                    SortBlockCursor block_cursor(
+                            _pool->add(new SortCursorImpl(block, _sort_description)));
                     if (!block_cursor.totally_greater(_block_priority_queue.top())) {
                         _sorted_blocks.emplace_back(std::move(block));
                         _block_priority_queue.push(block_cursor);
-                        _mem_usage += block.allocated_bytes();
+                        _total_mem_usage += mem_usage;
                     }
                 }
             } else {
                 // dispose normal sort logic
-                _mem_usage += block.allocated_bytes();
+                _total_mem_usage += mem_usage;
                 _sorted_blocks.emplace_back(std::move(block));
             }
+
+            _mem_tracker->Consume(mem_usage);
             RETURN_IF_CANCELLED(state);
             RETURN_IF_ERROR(state->check_query_state("vsort, while sorting input."));
         }
     } while (!eos);
 
-    _mem_tracker->Consume(_mem_usage);
     build_merge_tree();
     return Status::OK();
 }
