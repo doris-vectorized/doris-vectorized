@@ -45,7 +45,7 @@ Status VCrossJoinNode::close(RuntimeState* state) {
     if (is_closed()) {
         return Status::OK();
     }
-    _mem_tracker->Release(_mem_usage);
+    _mem_tracker->Release(_total_mem_usage);
     VBlockingJoinNode::close(state);
     return Status::OK();
 }
@@ -62,10 +62,13 @@ Status VCrossJoinNode::construct_build_side(RuntimeState* state) {
         Block block;
         RETURN_IF_ERROR(child(1)->get_next(state, &block, &eos));
         auto rows = block.rows();
+        auto mem_usage = block.allocated_bytes();
+
         if (rows != 0) {
             _build_rows += rows;
-            _mem_usage += block.allocated_bytes();
+            _total_mem_usage += mem_usage;
             _build_blocks.emplace_back(std::move(block));
+            _mem_tracker->Consume(mem_usage);
         }
         // to prevent use too many memory
         RETURN_IF_LIMIT_EXCEEDED(state, "Cross join, while getting next from the child 1.");
@@ -76,7 +79,6 @@ Status VCrossJoinNode::construct_build_side(RuntimeState* state) {
     }
 
     COUNTER_UPDATE(_build_row_counter, _build_rows);
-    _mem_tracker->Consume(_mem_usage);
     return Status::OK();
 }
 

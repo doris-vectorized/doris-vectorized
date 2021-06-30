@@ -80,7 +80,7 @@ private:
     // TODO: Not using now, maybe should be delete
     // Keeps track of the number of rows skipped for handling _offset.
     int64_t _num_rows_skipped;
-    uint64_t _mem_usage = 0;
+    uint64_t _total_mem_usage = 0;
 
     // only valid in TOP-N node
     uint64_t _num_rows_in_block = 0;
