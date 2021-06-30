@@ -29,7 +29,6 @@
 
 #include "vec/common/allocator.h"
 #include "vec/common/strong_typedef.h"
-// #include <vec/Common/Exception.h>
 #include "vec/common/bit_helpers.h"
 #include "vec/common/memcpy_small.h"
 
@@ -192,7 +191,6 @@ protected:
         if (right_rounded_down > left_rounded_up) {
             size_t length = right_rounded_down - left_rounded_up;
             if (0 != mprotect(left_rounded_up, length, prot)) throw std::exception();
-            // throwFromErrno("Cannot mprotect memory region", ErrorCodes::CANNOT_MPROTECT);
         }
     }
 

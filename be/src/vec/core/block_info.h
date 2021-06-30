@@ -23,8 +23,6 @@
 
 namespace doris::vectorized {
 
-// class ReadBuffer;
-// class WriteBuffer;
 
 /** More information about the block.
   */
@@ -51,11 +49,6 @@ struct BlockInfo {
 
 #undef DECLARE_FIELD_VEC
 
-    // /// Write the values in binary form. NOTE: You could use protobuf, but it would be overkill for this case.
-    // void write(WriteBuffer & out) const;
-
-    // /// Read the values in binary form.
-    // void read(ReadBuffer & in);
 };
 
 /// Block extention to support delayed defaults. AddingDefaultsBlockInputStream uses it to replace missing values with column defaults.

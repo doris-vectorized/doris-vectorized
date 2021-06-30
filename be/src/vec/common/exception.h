@@ -26,12 +26,9 @@
 
 using stacktrace = boost::error_info<struct tag_stacktrace, boost::stacktrace::stacktrace>;
 
-// #include <Poco/Exception.h>
-//#include <vec/Common/StackTrace.h>
 
 namespace Poco {
 
-// #include "Poco/Foundation.h"
 
 class Exception : public std::exception
 /// This is the base class for all exceptions defined
@@ -332,7 +329,6 @@ struct ExecutionStatus {
 
 void tryLogException(std::exception_ptr e, const char* log_name,
                      const std::string& start_of_message = "");
-// void tryLogException(std::exception_ptr e, Poco::Logger * logger, const std::string & start_of_message = "");
 
 std::string getExceptionMessage(const Exception& e, bool with_stacktrace,
                                 bool check_embedded_stacktrace = false);
