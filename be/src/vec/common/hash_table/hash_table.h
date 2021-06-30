@@ -59,11 +59,9 @@ extern const int NO_AVAILABLE_DATA;
 struct HashTableNoState {
     /// Serialization, in binary and text form.
     void write(std::ostream&) const {}
-    // void write_text(doris::vectorized::WriteBuffer &) const     {}
 
     // /// Deserialization, in binary and text form.
     void read(std::istream&) {}
-    // void read_text(doris::vectorized::ReadBuffer &)             {}
 };
 
 /// These functions can be overloaded for custom types.
@@ -206,11 +204,9 @@ struct HashTableCell {
 
     /// Serialization, in binary and text form.
     void write(std::ostream& wb) const { doris::vectorized::write_binary(key, wb); }
-    // void write_text(doris::vectorized::WriteBuffer & wb) const     { doris::vectorized::writeDoubleQuoted(key, wb); }
 
     /// Deserialization, in binary and text form.
     void read(std::istream& rb) { doris::vectorized::read_binary(key, rb); }
-    // void read_text(doris::vectorized::ReadBuffer & rb)    { doris::vectorized::readDoubleQuoted(key, rb); }
 };
 
 template <typename Key, typename Hash, typename State>

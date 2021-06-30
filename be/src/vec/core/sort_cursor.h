@@ -197,8 +197,6 @@ struct SortBlockCursor {
     SortCursorImpl* operator->() { return impl; }
     const SortCursorImpl* operator->() const { return impl; }
 
-//    ~SortBlockCursor() { delete impl;}
-
     /// The specified row of this cursor is greater than the specified row of another cursor.
     int8_t less_at(const SortBlockCursor& rhs, int rows) const {
         for (size_t i = 0; i < impl->sort_columns_size; ++i) {

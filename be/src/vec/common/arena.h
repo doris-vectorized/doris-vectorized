@@ -29,11 +29,6 @@
 #include "vec/common/allocator.h"
 #include "vec/common/memcpy_small.h"
 
-//namespace ProfileEvents
-//{
-//    extern const Event ArenaAllocChunks;
-//    extern const Event ArenaAllocBytes;
-//}
 
 namespace doris::vectorized {
 
@@ -60,8 +55,6 @@ private:
         Chunk* prev;
 
         Chunk(size_t size_, Chunk* prev_) {
-            //            ProfileEvents::increment(ProfileEvents::ArenaAllocChunks);
-            //            ProfileEvents::increment(ProfileEvents::ArenaAllocBytes, size_);
 
             begin = reinterpret_cast<char*>(Allocator<false>::alloc(size_));
             pos = begin;
