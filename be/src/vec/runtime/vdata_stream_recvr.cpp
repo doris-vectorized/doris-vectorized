@@ -105,6 +105,8 @@ void VDataStreamRecvr::SenderQueue::add_batch(const PBlock& pblock, int be_numbe
         SCOPED_TIMER(_recvr->_deserialize_row_batch_timer);
         block = new Block(pblock);
     }
+    _recvr->_mem_tracker->Consume(block->allocated_bytes());
+
     VLOG_ROW << "added #rows=" << block->rows() << " batch_size=" << block_byte_size << "\n";
     _block_queue.emplace_back(block_byte_size, block);
     // if done is nullptr, this function can't delay this response
@@ -261,6 +263,7 @@ Status VDataStreamRecvr::get_next(Block* block, bool* eos) {
         RETURN_IF_ERROR(_merger->get_next(block, eos));
     }
 
+    _mem_tracker->Release(block->allocated_bytes());
     return Status::OK();
 }
 
