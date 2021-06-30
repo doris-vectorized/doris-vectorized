@@ -31,8 +31,6 @@ VSortNode::VSortNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorT
           _offset(tnode.sort_node.__isset.offset ? tnode.sort_node.offset : 0),
           _num_rows_skipped(0) {}
 
-VSortNode::~VSortNode() {}
-
 Status VSortNode::init(const TPlanNode& tnode, RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::init(tnode, state));
     RETURN_IF_ERROR(_vsort_exec_exprs.init(tnode.sort_node.sort_info, _pool));
@@ -43,6 +41,7 @@ Status VSortNode::init(const TPlanNode& tnode, RuntimeState* state) {
 
 Status VSortNode::prepare(RuntimeState* state) {
     SCOPED_TIMER(_runtime_profile->total_time_counter());
+    _runtime_profile->add_info_string("TOP-N", _limit == -1 ? "false" : "true");
     RETURN_IF_ERROR(ExecNode::prepare(state));
     RETURN_IF_ERROR(_vsort_exec_exprs.prepare(state, child(0)->row_desc(), _row_descriptor,
                                               expr_mem_tracker()));
@@ -104,6 +103,7 @@ Status VSortNode::close(RuntimeState* state) {
     if (is_closed()) {
         return Status::OK();
     }
+    _mem_tracker->Release(_mem_usage);
     _vsort_exec_exprs.close(state);
     ExecNode::close(state);
     return Status::OK();
@@ -111,7 +111,7 @@ Status VSortNode::close(RuntimeState* state) {
 
 void VSortNode::debug_string(int indentation_level, stringstream* out) const {
     *out << string(indentation_level * 2, ' ');
-//    *out << "SortNode(" << Expr::debug_string(_vsort_exec_exprs.lhs_ordering_expr_ctxs());
+    *out << "VSortNode(";
     for (int i = 0; i < _is_asc_order.size(); ++i) {
         *out << (i > 0 ? " " : "") << (_is_asc_order[i] ? "asc" : "desc") << " nulls "
              << (_nulls_first[i] ? "first" : "last");
@@ -125,14 +125,40 @@ Status VSortNode::sort_input(RuntimeState* state) {
     do {
         Block block;
         RETURN_IF_ERROR(child(0)->get_next(state, &block, &eos));
-        if ( block.rows() != 0) {
+        auto rows = block.rows();
+
+        if (rows != 0) {
             RETURN_IF_ERROR(pretreat_block(block));
-            _sorted_blocks.emplace_back(std::move(block));
+            // dispose TOP-N logic
+            if (_limit != -1 ) {
+                // Here is a little opt to reduce the mem uasge, we build a max heap
+                // to order the block in _block_priority_queue.
+                // if one block totally greater the heap top of _block_priority_queue
+                // we can throw the block data directly.
+                if (_num_rows_in_block < _limit) {
+                    _mem_usage += block.allocated_bytes();
+                    _sorted_blocks.emplace_back(std::move(block));
+                    _num_rows_in_block += rows;
+                    _block_priority_queue.emplace(new SortCursorImpl(_sorted_blocks.back(), _sort_description));
+                } else {
+                    SortBlockCursor block_cursor(new SortCursorImpl(block, _sort_description));
+                    if (!block_cursor.totally_greater(_block_priority_queue.top())) {
+                        _sorted_blocks.emplace_back(std::move(block));
+                        _block_priority_queue.push(block_cursor);
+                        _mem_usage += block.allocated_bytes();
+                    }
+                }
+            } else {
+                // dispose normal sort logic
+                _mem_usage += block.allocated_bytes();
+                _sorted_blocks.emplace_back(std::move(block));
+            }
             RETURN_IF_CANCELLED(state);
             RETURN_IF_ERROR(state->check_query_state("vsort, while sorting input."));
         }
     } while (!eos);
 
+    _mem_tracker->Consume(_mem_usage);
     build_merge_tree();
     return Status::OK();
 }
@@ -167,20 +193,13 @@ Status VSortNode::pretreat_block(doris::vectorized::Block& block) {
 }
 
 void VSortNode::build_merge_tree() {
-    std::vector<Block> nonempty_blocks;
     for (const auto &block : _sorted_blocks) {
-        if (block.rows() == 0)
-            continue;
-
-        nonempty_blocks.push_back(block);
         _cursors.emplace_back(block, _sort_description);
     }
 
-    _sorted_blocks.swap(nonempty_blocks);
-
     if (_sorted_blocks.size() > 1) {
-        for (size_t i = 0; i < _cursors.size(); ++i)
-            _priority_queue.push(SortCursor(&_cursors[i]));
+        for (auto& _cursor : _cursors)
+            _priority_queue.push(SortCursor(&_cursor));
     }
 }
 

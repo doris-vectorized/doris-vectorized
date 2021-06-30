@@ -98,13 +98,6 @@ Status VBlockingJoinNode::open(RuntimeState* state) {
 
     if (state->resource_pool()->try_acquire_thread_token()) {
         add_runtime_exec_option("Join Build-Side Prepared Asynchronously");
-        // Thread build_thread(_node_name, "build thread",
-        //     bind(&VBlockingJoinNode::BuildSideThread, this, state, &build_side_status));
-        // if (!state->cgroup().empty()) {
-        //   RETURN_IF_ERROR(
-        //       state->exec_env()->cgroups_mgr()->assign_thread_to_cgroup(
-        //           build_thread, state->cgroup()));
-        // }
         boost::thread(boost::bind(&VBlockingJoinNode::build_side_thread, this, state, &build_side_status));
     } else {
         build_side_status.set_value(construct_build_side(state));

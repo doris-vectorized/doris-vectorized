@@ -64,7 +64,7 @@ public:
         }
     }
 
-    void registerDistinctFunctionCombinator(Creator creator, const std::string& prefix) {
+    void register_distinct_function_combinator(Creator creator, const std::string& prefix) {
         std::vector<std::string> need_insert;
         for (auto entity : aggregate_functions) {
             std::string target_value = prefix + entity.first;
