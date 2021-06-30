@@ -15,17 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/aggregate_functions/aggregate_function_distinct.h"
-
 #include <algorithm>
+#include <boost/algorithm/string.hpp>
 
-#include "boost/algorithm/string.hpp"
 #include "vec/aggregate_functions/aggregate_function_combinator.h"
+#include "vec/aggregate_functions/aggregate_function_distinct.h"
 #include "vec/aggregate_functions/aggregate_function_simple_factory.h"
 #include "vec/aggregate_functions/helpers.h"
 #include "vec/common/typeid_cast.h"
 #include "vec/data_types/data_type_nullable.h"
-// #include "registerAggregateFunctions.h"
 
 namespace doris::vectorized {
 namespace ErrorCodes {
@@ -89,7 +87,6 @@ void register_aggregate_function_combinator_distinct(AggregateFunctionSimpleFact
         auto nested_function = factory.get(nested_function_name, transform_arguments, params);
         return function_combinator->transform_aggregate_function(nested_function, types, params);
     };
-    factory.registerDistinctFunctionCombinator(creator, DISTINCT_FUNCTION_PREFIX);
-    // factory.registerCombinator(std::make_shared<AggregateFunctionCombinatorDistinct>());
+    factory.register_distinct_function_combinator(creator, DISTINCT_FUNCTION_PREFIX);
 }
 } // namespace doris::vectorized

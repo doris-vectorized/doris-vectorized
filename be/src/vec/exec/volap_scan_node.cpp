@@ -300,6 +300,7 @@ Status VOlapScanNode::add_one_block(Block* block) {
 
         VLOG_CRITICAL << "Push block to materialized_blocks";
         _materialized_blocks.push_back(block);
+        _mem_tracker->Consume(block->allocated_bytes());
     }
     // remove one block, notify main thread
     _block_added_cv.notify_one();
@@ -397,12 +398,14 @@ Status VOlapScanNode::close(RuntimeState* state) {
     // join transfer thread
     _transfer_thread.join_all();
 
+    size_t mem_usege_in_block = 0;
     // clear some block in queue
     for (auto block : _materialized_blocks) {
+        mem_usege_in_block += block->allocated_bytes();
         delete block;
     }
-
     _materialized_blocks.clear();
+    _mem_tracker->Release(mem_usege_in_block);
 
     for (auto block : _scan_blocks) {
         delete block;
@@ -485,6 +488,7 @@ Status VOlapScanNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         VLOG_ROW << "VOlapScanNode output rows: " << block->rows();
         _num_rows_returned += block->rows();
         COUNTER_SET(_rows_returned_counter, _num_rows_returned);
+        _mem_tracker->Release(block->allocated_bytes());
 
         // reach scan node limit
         if (reached_limit()) {

@@ -17,8 +17,7 @@
 
 #pragma once
 
-// #include <IO/VarInt.h>
-// #include <IO/WriteHelpers.h>
+#include <array>
 
 #include "common/logging.h"
 #include <vec/aggregate_functions/aggregate_function.h>
@@ -26,8 +25,6 @@
 #include <vec/common/assert_cast.h>
 #include <vec/data_types/data_type_number.h>
 #include <vec/io/io_helper.h>
-
-#include <array>
 
 namespace doris::vectorized {
 
