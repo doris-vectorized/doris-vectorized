@@ -17,17 +17,14 @@
 
 #pragma once
 
-#include "common/logging.h"
-#include <vec/aggregate_functions/aggregate_function.h>
-#include <vec/columns/column_nullable.h>
-#include <vec/common/assert_cast.h>
-#include <vec/data_types/data_type_nullable.h>
-
 #include <array>
 
+#include "common/logging.h"
+#include "vec/aggregate_functions/aggregate_function.h"
+#include "vec/columns/column_nullable.h"
+#include "vec/common/assert_cast.h"
+#include "vec/data_types/data_type_nullable.h"
 #include "vec/io/io_helper.h"
-// #include <IO/ReadHelpers.h>
-// #include <IO/WriteHelpers.h>
 
 namespace doris::vectorized {
 
@@ -107,7 +104,9 @@ public:
         nested_function->destroy(nested_place(place));
     }
 
-    bool has_trivial_destructor() const override { return nested_function->has_trivial_destructor(); }
+    bool has_trivial_destructor() const override {
+        return nested_function->has_trivial_destructor();
+    }
 
     size_t size_of_data() const override { return prefix_size + nested_function->size_of_data(); }
 
@@ -139,7 +138,7 @@ public:
             ColumnNullable& to_concrete = assert_cast<ColumnNullable&>(to);
             if (get_flag(place)) {
                 nested_function->insert_result_into(nested_place(place),
-                                                  to_concrete.get_nested_column());
+                                                    to_concrete.get_nested_column());
                 to_concrete.get_null_map_data().push_back(0);
             } else {
                 to_concrete.insert_default();
@@ -183,7 +182,7 @@ public:
     }
 
     void add_batch_single_place(size_t batch_size, AggregateDataPtr place, const IColumn** columns,
-                             Arena* arena) const override {
+                                Arena* arena) const override {
         const ColumnNullable* column = assert_cast<const ColumnNullable*>(columns[0]);
         bool has_null = column->has_null();
 
@@ -198,7 +197,7 @@ public:
             this->set_flag(place);
             const IColumn* nested_column = &column->get_nested_column();
             this->nested_function->add_batch_single_place(batch_size, this->nested_place(place),
-                                                       &nested_column, arena);
+                                                          &nested_column, arena);
         }
     }
 };
@@ -215,11 +214,14 @@ public:
                       std::move(nested_function_), arguments, params),
               number_of_arguments(arguments.size()) {
         if (number_of_arguments == 1) {
-            LOG(FATAL) << "Logical error: single argument is passed to AggregateFunctionNullVariadic";
+            LOG(FATAL)
+                    << "Logical error: single argument is passed to AggregateFunctionNullVariadic";
         }
 
         if (number_of_arguments > MAX_ARGS) {
-            LOG(FATAL) << fmt::format("Maximum number of arguments for aggregate function with Nullable types is {}", size_t(MAX_ARGS));
+            LOG(FATAL) << fmt::format(
+                    "Maximum number of arguments for aggregate function with Nullable types is {}",
+                    size_t(MAX_ARGS));
         }
 
         for (size_t i = 0; i < number_of_arguments; ++i)
