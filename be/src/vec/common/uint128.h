@@ -181,15 +181,6 @@ struct UInt256 {
 
     bool operator==(const UInt256 rhs) const {
         return a == rhs.a && b == rhs.b && c == rhs.c && d == rhs.d;
-
-        /* So it's no better.
-        return 0xFFFF == _mm_movemask_epi8(_mm_and_si128(
-            _mm_cmpeq_epi8(
-                _mm_loadu_si128(reinterpret_cast<const __m128i *>(&a)),
-                _mm_loadu_si128(reinterpret_cast<const __m128i *>(&rhs.a))),
-            _mm_cmpeq_epi8(
-                _mm_loadu_si128(reinterpret_cast<const __m128i *>(&c)),
-                _mm_loadu_si128(reinterpret_cast<const __m128i *>(&rhs.c)))));*/
     }
 
     bool operator!=(const UInt256 rhs) const { return !operator==(rhs); }
