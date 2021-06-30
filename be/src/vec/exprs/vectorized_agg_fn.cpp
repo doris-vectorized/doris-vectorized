@@ -106,16 +106,16 @@ void AggFnEvaluator::destroy(AggregateDataPtr place) {
 }
 
 void AggFnEvaluator::execute_single_add(Block* block, AggregateDataPtr place, Arena* arena) {
-    auto column_arguments = _get_argment_columns(block);
+    _calc_argment_columns(block);
     SCOPED_TIMER(_exec_timer);
-    _function->add_batch_single_place(block->rows(), place, column_arguments.data(), nullptr);
+    _function->add_batch_single_place(block->rows(), place, _agg_columns.data(), nullptr);
 }
 
 void AggFnEvaluator::execute_batch_add(Block* block, size_t offset, AggregateDataPtr* places,
                                        Arena* arena) {
-    auto column_arguments = _get_argment_columns(block);
+    _calc_argment_columns(block);
     SCOPED_TIMER(_exec_timer);
-    _function->add_batch(block->rows(), places, offset, column_arguments.data(), arena);
+    _function->add_batch(block->rows(), places, offset, _agg_columns.data(), arena);
 }
 
 void AggFnEvaluator::execute_single_merge(AggregateDataPtr place, ConstAggregateDataPtr rhs,
@@ -145,16 +145,19 @@ std::string AggFnEvaluator::debug_string() const {
     out << ")";
     return out.str();
 }
-std::vector<const IColumn*> AggFnEvaluator::_get_argment_columns(Block* block) const {
+void AggFnEvaluator::_calc_argment_columns(Block* block) {
     SCOPED_TIMER(_expr_timer);
-    std::vector<const IColumn*> columns(_input_exprs_ctxs.size());
+    _agg_columns.resize(_input_exprs_ctxs.size());
+    int column_ids[_input_exprs_ctxs.size()];
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
         int column_id = -1;
         _input_exprs_ctxs[i]->execute(block, &column_id);
-        materialize_block_inplace(*block);
-        columns[i] = block->get_by_position(column_id).column.get();
+        column_ids[i] = column_id;
     }
-    return columns;
+    materialize_block_inplace(*block, column_ids, column_ids + _input_exprs_ctxs.size());
+    for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
+        _agg_columns[i] = block->get_by_position(column_ids[i]).column.get();
+    }
 }
 
 } // namespace doris::vectorized

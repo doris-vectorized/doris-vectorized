@@ -26,4 +26,11 @@ namespace doris::vectorized {
 Block materialize_block(const Block& block);
 void materialize_block_inplace(Block& block);
 
+template <typename Iterator>
+void materialize_block_inplace(Block& block, Iterator start, Iterator end) {
+    for (; start < end;) {
+        block.replace_by_position_if_const(*start);
+        ++start;
+    }
+}
 } // namespace doris::vectorized
