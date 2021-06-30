@@ -43,7 +43,6 @@ void ColumnWithTypeAndName::dump_structure(std::ostream& out) const {
     out << name;
 
     if (type)
-        //out << ' ' << type->get_name();
         out << " ";
     else
         out << " nullptr";
