@@ -233,13 +233,8 @@ public:
     virtual size_t serialize(const IColumn& column, PColumn* pcolumn) const = 0;
     virtual void deserialize(const PColumn& pcolumn, IColumn* column) const = 0;
 
-    // static String getFileNameForStream(const String & column_name, const SubstreamPath & path);
-
 private:
     friend class DataTypeFactory;
-    /** Customize this DataType
-      */
-    // void setCustomization(DataTypeCustomDescPtr custom_desc_) const;
 
 private:
     /** This is mutable to allow setting custom name and serialization on `const IDataType` post construction.

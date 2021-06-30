@@ -57,8 +57,8 @@ std::string DataTypeNullable::to_string(const IColumn& column, size_t row_num) c
 }
 
 size_t DataTypeNullable::serialize(const IColumn& column, PColumn* pcolumn) const {
-    const ColumnNullable& col =
-            assert_cast<const ColumnNullable&>(*column.convert_to_full_column_if_const().get());
+    auto ptr = column.convert_to_full_column_if_const();
+    const ColumnNullable& col = assert_cast<const ColumnNullable&>(*ptr.get());
     pcolumn->mutable_is_null()->Reserve(column.size());
 
     for (size_t i = 0; i < column.size(); ++i) {

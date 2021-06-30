@@ -19,9 +19,6 @@
 
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/aggregate_functions/key_holder_helpers.h"
-
-// #include <Columns/ColumnArray.h>
-// #include <DataTypes/DataTypeArray.h>
 #include "vec/common/aggregation_common.h"
 #include "vec/common/assert_cast.h"
 #include "vec/common/field_visitors.h"
@@ -213,8 +210,6 @@ public:
     bool allocates_memory_in_arena() const override { return true; }
 
     const char* get_header_file_path() const override { return __FILE__; }
-
-    // AggregateFunctionPtr getNestedFunction() const override { return nested_func; }
 };
 
 } // namespace doris::vectorized

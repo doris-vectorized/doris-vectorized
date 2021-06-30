@@ -58,8 +58,6 @@ public:
         return Status::NotSupported("Not Implemented VBlocking Join Node::get_next scalar");
     }
 
-    // Subclasses should close any other structures and then call
-    // VBlockingJoinNode::close().
     virtual Status close(RuntimeState *state);
 
 private:
