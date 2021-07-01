@@ -15,14 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/functions/function_binary_arithmetic.h"
-#include "vec/functions/simple_function_factory.h"
-
 #ifdef __SSE2__
 #define LIBDIVIDE_SSE2 1
 #endif
 
-#include "vec/common/libdivide.h"
+#include <libdivide.h>
+
+#include "vec/functions/function_binary_arithmetic.h"
+#include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
 
@@ -35,10 +35,11 @@ struct ModuloImpl {
     using ResultType = typename NumberTraits::ResultOfModulo<A, B>::Type;
 
     template <typename Result = ResultType>
-    static inline Result apply(A a, B b)
-    {
-        throw_if_division_leads_to_fpe(typename NumberTraits::ToInteger<A>::Type(a), typename NumberTraits::ToInteger<B>::Type(b));
-        return typename NumberTraits::ToInteger<A>::Type(a) % typename NumberTraits::ToInteger<B>::Type(b);
+    static inline Result apply(A a, B b) {
+        throw_if_division_leads_to_fpe(typename NumberTraits::ToInteger<A>::Type(a),
+                                       typename NumberTraits::ToInteger<B>::Type(b));
+        return typename NumberTraits::ToInteger<A>::Type(a) %
+               typename NumberTraits::ToInteger<B>::Type(b);
     }
 
 #if USE_EMBEDDED_COMPILER
@@ -136,8 +137,7 @@ struct NameModulo {
 };
 using FunctionModulo = FunctionBinaryArithmetic<ModuloImpl, NameModulo, false>;
 
-void register_function_modulo(SimpleFunctionFactory& factory)
-{
+void register_function_modulo(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionModulo>();
 }
 

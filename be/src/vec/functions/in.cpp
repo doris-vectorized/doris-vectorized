@@ -15,7 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "fmt/format.h"
+#include <fmt/format.h>
+
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_nullable.h"
 #include "vec/columns/column_set.h"
@@ -26,11 +27,6 @@
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int ILLEGAL_COLUMN;
-}
-
 /** in(x, set) - function for evaluating the IN
   * notIn(x, set) - and NOT IN.
   */
@@ -62,7 +58,6 @@ template <bool negative, bool null_in_set>
 class FunctionIn : public IFunction {
 public:
     static constexpr auto name = FunctionInName<negative, null_in_set>::name;
-    //    static FunctionPtr create(const Context &)
     static FunctionPtr create() { return std::make_shared<FunctionIn>(); }
 
     String get_name() const override { return name; }

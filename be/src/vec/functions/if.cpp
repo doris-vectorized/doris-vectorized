@@ -449,8 +449,6 @@ public:
         } else {
             return execute_generic(block, cond_col, arg_then, arg_else, result, input_rows_count);
         }
-
-        return Status::OK();
     }
 };
 

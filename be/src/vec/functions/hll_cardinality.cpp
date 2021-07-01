@@ -15,10 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//#include <Functions/FunctionFactory.h>
 #include "exprs/hll_function.h"
 #include "udf/udf.h"
-
 #include "vec/data_types/number_traits.h"
 #include "vec/functions/function_string_or_array_to_t.h"
 #include "vec/functions/simple_function_factory.h"
@@ -26,10 +24,12 @@
 namespace doris::vectorized {
 
 struct HLLCardinalityImpl {
-    static void vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets, PaddedPODArray<Int64>& res) {
+    static void vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
+                       PaddedPODArray<Int64>& res) {
         auto size = res.size();
         for (int i = 0; i < size; ++i) {
-            auto val = HllFunctions::hll_cardinality(nullptr,
+            auto val = HllFunctions::hll_cardinality(
+                    nullptr,
                     StringVal((uint8_t*)&data[offsets[i - 1]], offsets[i] - offsets[i - 1] - 1));
             res[i] = val.val;
         }
@@ -40,10 +40,11 @@ struct NameHLLCardinality {
     static constexpr auto name = "hll_cardinality";
 };
 
-using FunctionHLLCardinality = FunctionStringOrArrayToT<HLLCardinalityImpl, NameHLLCardinality, Int64>;
+using FunctionHLLCardinality =
+        FunctionStringOrArrayToT<HLLCardinalityImpl, NameHLLCardinality, Int64>;
 
 void register_function_hll_cardinality(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionHLLCardinality>();
 }
 
-}
+} // namespace doris::vectorized

@@ -15,18 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//#include <Functions/FunctionFactory.h>
 #include "exprs/hll_function.h"
 #include "udf/udf.h"
-
 #include "vec/functions/function_string_to_string.h"
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
 
 struct HLLHashImpl {
-    static void vector(const ColumnString::Chars & data, const ColumnString::Offsets & offsets,
-        ColumnString::Chars & res_data, ColumnString::Offsets & res_offsets) {
+    static void vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
+                       ColumnString::Chars& res_data, ColumnString::Offsets& res_offsets) {
         size_t size = offsets.size();
         res_offsets.resize(size);
         res_data.reserve(data.size());
@@ -35,11 +33,12 @@ struct HLLHashImpl {
         size_t res_offset = 0;
 
         for (size_t i = 0; i < size; ++i) {
-            auto hash_string = HllFunctions::hll_hash(StringVal((uint8_t*)(&data[prev_offset]),
-                    offsets[i] - prev_offset - 1));
+            auto hash_string = HllFunctions::hll_hash(
+                    StringVal((uint8_t*)(&data[prev_offset]), offsets[i] - prev_offset - 1));
 
             res_data.resize(res_data.size() + hash_string.length() + 1);
-            memcpy_small_allow_read_write_overflow15(&res_data[res_offset], hash_string.c_str(), hash_string.length());
+            memcpy_small_allow_read_write_overflow15(&res_data[res_offset], hash_string.c_str(),
+                                                     hash_string.length());
             res_offset += hash_string.length() + 1;
             res_data[res_offset - 1] = 0;
 
@@ -59,4 +58,4 @@ void register_function_hll_hash(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionHLLHash>();
 }
 
-}
+} // namespace doris::vectorized

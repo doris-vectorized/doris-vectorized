@@ -25,7 +25,7 @@ namespace doris::vectorized {
 class DataTypeBitMap : public IDataType {
 public:
     DataTypeBitMap() = default;
-    ~DataTypeBitMap() = default;
+    ~DataTypeBitMap() override = default;
 
     using FieldType = BitmapValue;
 

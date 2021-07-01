@@ -17,8 +17,9 @@
 
 #pragma once
 
+#include <fmt/format.h>
+
 #include "common/logging.h"
-#include "fmt/format.h"
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_nullable.h"
 #include "vec/columns/column_string.h"
@@ -38,29 +39,6 @@
 #include "vec/io/reader_buffer.h"
 
 namespace doris::vectorized {
-namespace ErrorCodes {
-extern const int ATTEMPT_TO_READ_AFTER_EOF;
-extern const int CANNOT_PARSE_NUMBER;
-extern const int CANNOT_READ_ARRAY_FROM_TEXT;
-extern const int CANNOT_PARSE_INPUT_ASSERTION_FAILED;
-extern const int CANNOT_PARSE_QUOTED_STRING;
-extern const int CANNOT_PARSE_ESCAPE_SEQUENCE;
-extern const int CANNOT_PARSE_DATE;
-extern const int CANNOT_PARSE_DATETIME;
-extern const int CANNOT_PARSE_TEXT;
-extern const int CANNOT_PARSE_UUID;
-extern const int TOO_LARGE_STRING_SIZE;
-extern const int TOO_FEW_ARGUMENTS_FOR_FUNCTION;
-extern const int LOGICAL_ERROR;
-extern const int TYPE_MISMATCH;
-extern const int CANNOT_CONVERT_TYPE;
-extern const int ILLEGAL_COLUMN;
-extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-extern const int NOT_IMPLEMENTED;
-extern const int CANNOT_INSERT_NULL_IN_ORDINARY_COLUMN;
-} // namespace ErrorCodes
-
 /** Type conversion functions.
   * toType - conversion in "natural way";
   */
@@ -465,12 +443,6 @@ struct ToStringMonotonicity {
         IFunction::Monotonicity positive(true, true);
         IFunction::Monotonicity not_monotonic;
 
-        /// `to_string` function is monotonous if the argument is Date or DateTime, or non-negative numbers with the same number of symbols.
-
-        // if (check_and_get_data_type<DataTypeDate>(&type)
-        //     || typeid_cast<const DataTypeDateTime *>(&type))
-        //     return positive;
-
         if (left.is_null() || right.is_null()) return {};
 
         if (left.get_type() == Field::Types::UInt64 && right.get_type() == Field::Types::UInt64) {
@@ -749,8 +721,6 @@ struct ConvertThroughParsing {
         typename ColVecTo::MutablePtr col_to = nullptr;
 
         if constexpr (IsDataTypeDecimal<ToDataType>) {
-            //            UInt32 scale = additions;
-            //            ToDataType check_bounds_in_ctor(ToDataType::max_precision(), scale);
             col_to = ColVecTo::create(size, 9);
         } else
             col_to = ColVecTo::create(size);
@@ -770,11 +740,6 @@ struct ConvertThroughParsing {
             chars = &col_from_string->get_chars();
             offsets = &col_from_string->get_offsets();
         }
-        //        else
-        //        {
-        //            chars = &col_from_fixed_string->get_chars();
-        //            fixed_string_size = col_from_fixed_string->getN();
-        //        }
 
         size_t current_offset = 0;
 
@@ -829,13 +794,6 @@ public:
     DataTypePtr get_return_type_impl(const ColumnsWithTypeAndName& arguments) const override {
         DataTypePtr res;
         if constexpr (IsDataTypeDecimal<ToDataType>) {
-            //            UInt64 scale = extract_to_decimal_scale(arguments[1]);
-            //
-            //            if constexpr (std::is_same_v<ToDataType, DataTypeDecimal<Decimal32>>)
-            //                res = create_decimal(9, scale);
-            //            else if constexpr (std::is_same_v<ToDataType, DataTypeDecimal<Decimal64>>)
-            //                res = create_decimal(18, scale);
-            //            else if constexpr (std::is_same_v<ToDataType, DataTypeDecimal<Decimal128>>)
             res = create_decimal(27, 9);
 
             if (!res) {

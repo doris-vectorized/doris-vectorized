@@ -28,12 +28,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-extern const int ILLEGAL_COLUMN;
-} // namespace ErrorCodes
-
 template <TimeUnit unit>
 inline Int128 date_time_add(const Int128& t, Int64 delta) {
     auto ts_value = binary_cast<Int128, doris::DateTimeValue>(t);
@@ -304,8 +298,6 @@ public:
                     fmt::format("Illegal type {} of argument of function {}",
                                 block.get_by_position(arguments[0]).type->get_name(), get_name()));
         }
-
-        return Status::OK();
     }
 };
 

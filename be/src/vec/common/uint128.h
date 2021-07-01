@@ -17,12 +17,12 @@
 
 #pragma once
 
-#include <city.h>
-
 #include <iomanip>
 #include <sstream>
 #include <tuple>
 
+#include "gutil/hash/city.h"
+#include "gutil/hash/hash128to64.h"
 #include "vec/core/types.h"
 
 #ifdef __SSE4_2__
@@ -140,7 +140,7 @@ struct TypeId<UInt128> {
 };
 
 struct UInt128Hash {
-    size_t operator()(UInt128 x) const { return CityHash_v1_0_2::Hash128to64({x.low, x.high}); }
+    size_t operator()(UInt128 x) const { return Hash128to64({x.low, x.high}); }
 };
 
 #ifdef __SSE4_2__
@@ -204,8 +204,7 @@ struct UInt256 {
 struct UInt256Hash {
     size_t operator()(UInt256 x) const {
         /// NOTE suboptimal
-        return CityHash_v1_0_2::Hash128to64({CityHash_v1_0_2::Hash128to64({x.a, x.b}),
-                                             CityHash_v1_0_2::Hash128to64({x.c, x.d})});
+        return Hash128to64({Hash128to64({x.a, x.b}), Hash128to64({x.c, x.d})});
     }
 };
 
@@ -235,7 +234,7 @@ namespace std {
 template <>
 struct hash<doris::vectorized::UInt128> {
     size_t operator()(const doris::vectorized::UInt128& u) const {
-        return CityHash_v1_0_2::Hash128to64({u.low, u.high});
+        return Hash128to64({u.low, u.high});
     }
 };
 

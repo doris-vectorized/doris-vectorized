@@ -17,50 +17,21 @@
 
 #pragma once
 
-// Include this first, because `#define _asan_poison_address` from
-// llvm/Support/Compiler.h conflicts with its forward declaration in
-// sanitizer/asan_interface.h
-//#include "vec/common/arena.h"
-
-#include "vec/data_types/data_type.h"
-#include "vec/data_types/data_type_decimal.h"
-#include "vec/data_types/data_type_number.h"
-//#include "vec/data_types/data_type_date.h"
-//#include "vec/data_types/data_type_date_time.h"
-//#include "vec/data_types/data_type_interval.h"
-//#include "vec/data_types/data_type_aggregate_function.h"
-//#include "vec/data_types/native.h"
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_decimal.h"
 #include "vec/columns/column_vector.h"
+#include "vec/common/assert_cast.h"
+#include "vec/common/typeid_cast.h"
+#include "vec/data_types/data_type.h"
+#include "vec/data_types/data_type_decimal.h"
+#include "vec/data_types/data_type_number.h"
 #include "vec/data_types/number_traits.h"
-//#include "vec/columns/column_aggregate_function.h"
 #include "vec/functions/cast_type_to_either.h"
 #include "vec/functions/function.h"
 #include "vec/functions/function_helpers.h"
 #include "vec/functions/int_div.h"
-//#include "vec/functions/FunctionFactory.h"
-#include "vec/common/assert_cast.h"
-#include "vec/common/typeid_cast.h"
-//#include "vec/common/config.h"
-
-#if USE_EMBEDDED_COMPILER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#include <llvm/IR/IRBuilder.h>
-#pragma GCC diagnostic pop
-#endif
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int ILLEGAL_COLUMN;
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-extern const int LOGICAL_ERROR;
-extern const int DECIMAL_OVERFLOW;
-extern const int CANNOT_ADD_DIFFERENT_AGGREGATE_STATES;
-extern const int ILLEGAL_DIVISION;
-} // namespace ErrorCodes
 
 /** Arithmetic operations: +, -, *, /, %,
   * intDiv (integer division)
@@ -366,10 +337,6 @@ inline constexpr bool IsFloatingPoint<DataTypeFloat32> = true;
 template <>
 inline constexpr bool IsFloatingPoint<DataTypeFloat64> = true;
 
-//template <typename DataType> constexpr bool IsDateOrDateTime = false;
-//template <> inline constexpr bool IsDateOrDateTime<DataTypeDate> = true;
-//template <> inline constexpr bool IsDateOrDateTime<DataTypeDateTime> = true;
-
 template <typename T0, typename T1>
 constexpr bool UseLeftDecimal = false;
 template <>
@@ -433,27 +400,6 @@ public:
             /// number <op> number -> see corresponding impl
             Case<!IsDataTypeDecimal<LeftDataType> && !IsDataTypeDecimal<RightDataType>,
                  DataTypeFromFieldType<typename Op::ResultType>>>;
-    /// number <op> number -> see corresponding impl
-    //        Case<!IsDateOrDateTime<LeftDataType> && !IsDateOrDateTime<RightDataType>,
-    //            DataTypeFromFieldType<typename Op::ResultType>>>;
-    //        /// Date + Integral -> Date
-    //        /// Integral + Date -> Date
-    //        Case<std::is_same_v<Op, PlusImpl<T0, T1>>, Switch<
-    //            Case<IsIntegral<RightDataType>, LeftDataType>,
-    //            Case<IsIntegral<LeftDataType>, RightDataType>>>,
-    //        /// Date - Date     -> Int32
-    //        /// Date - Integral -> Date
-    //        Case<std::is_same_v<Op, MinusImpl<T0, T1>>, Switch<
-    //            Case<std::is_same_v<LeftDataType, RightDataType>, DataTypeInt32>,
-    //            Case<IsDateOrDateTime<LeftDataType> && IsIntegral<RightDataType>, LeftDataType>>>,
-    //        /// least(Date, Date) -> Date
-    //        /// greatest(Date, Date) -> Date
-    //        Case<std::is_same_v<LeftDataType, RightDataType> && (std::is_same_v<Op, LeastBaseImpl<T0, T1>> || std::is_same_v<Op, GreatestBaseImpl<T0, T1>>),
-    //            LeftDataType>,
-    //        /// Date % Int32 -> int32
-    //        Case<std::is_same_v<Op, ModuloImpl<T0, T1>>, Switch<
-    //            Case<IsDateOrDateTime<LeftDataType> && IsIntegral<RightDataType>, RightDataType>,
-    //            Case<IsDateOrDateTime<LeftDataType> && IsFloatingPoint<RightDataType>, DataTypeInt32>>>>;
 };
 
 template <template <typename, typename> class Op, typename Name,
@@ -480,47 +426,6 @@ class FunctionBinaryArithmetic : public IFunction {
         });
     }
 
-    //    FunctionBuilderPtr getFunctionForIntervalArithmetic(const DataTypePtr & type0, const DataTypePtr & type1) const
-    //    {
-    //        /// Special case when the function is plus or minus, one of arguments is Date/DateTime and another is Interval.
-    //        /// We construct another function (example: addMonths) and call it.
-    //
-    //        bool function_is_plus = std::is_same_v<Op<UInt8, UInt8>, PlusImpl<UInt8, UInt8>>;
-    //        bool function_is_minus = std::is_same_v<Op<UInt8, UInt8>, MinusImpl<UInt8, UInt8>>;
-    //
-    //        if (!function_is_plus && !function_is_minus)
-    //            return {};
-
-    //        int interval_arg = 1;
-    //        const DataTypeInterval * interval_data_type = check_and_get_data_type<DataTypeInterval>(type1.get());
-    //        if (!interval_data_type)
-    //        {
-    //            interval_arg = 0;
-    //            interval_data_type = check_and_get_data_type<DataTypeInterval>(type0.get());
-    //        }
-    //        if (!interval_data_type)
-    //            return {};
-    //
-    //        if (interval_arg == 0 && function_is_minus)
-    //            throw Exception("Wrong order of arguments for function " + get_name() + ": argument of type Interval cannot be first.",
-    //                ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
-
-    //        const DataTypeDate * date_data_type = check_and_get_data_type<DataTypeDate>(interval_arg == 0 ? type1.get() : type0.get());
-    //        const DataTypeDateTime * date_time_data_type = nullptr;
-    //        if (!date_data_type)
-    //        {
-    //            date_time_data_type = check_and_get_data_type<DataTypeDateTime>(interval_arg == 0 ? type1.get() : type0.get());
-    //            if (!date_time_data_type)
-    //                throw Exception("Wrong argument types for function " + get_name() + ": if one argument is Interval, then another must be Date or DateTime.",
-    //                    ErrorCodes::ILLEGAL_TYPE_OF_ARGUMENT);
-    //        }
-    //
-    //        std::stringstream function_name;
-    //        function_name << (function_is_plus ? "add" : "subtract") << interval_data_type->kindToString() << 's';
-    //
-    //        return FunctionFactory::instance().get(function_name.str(), context);
-    //    }
-
     bool is_aggregate_multiply(const DataTypePtr& type0, const DataTypePtr& type1) const {
         if constexpr (!std::is_same_v<Op<UInt8, UInt8>, MultiplyImpl<UInt8, UInt8>>) return false;
 
@@ -540,184 +445,16 @@ class FunctionBinaryArithmetic : public IFunction {
         return which0.is_aggregate_function() && which1.is_aggregate_function();
     }
 
-    /// Multiply aggregation state by integer constant: by merging it with itself specified number of times.
-    //    void executeAggregateMultiply(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) const
-    //    {
-    //        ColumnNumbers new_arguments = arguments;
-    //        if (WhichDataType(block.get_by_position(new_arguments[1]).type).is_aggregate_function())
-    //            std::swap(new_arguments[0], new_arguments[1]);
-    //
-    //        if (!is_column_const(*block.get_by_position(new_arguments[1]).column))
-    //            throw Exception{"Illegal column " + block.get_by_position(new_arguments[1]).column->get_name()
-    //                + " of argument of aggregation state multiply. Should be integer constant", ErrorCodes::ILLEGAL_COLUMN};
-    //
-    //        const IColumn & agg_state_column = *block.get_by_position(new_arguments[0]).column;
-    //        bool agg_state_is_const = is_column_const(agg_state_column);
-    //        const ColumnAggregateFunction & column = typeid_cast<const ColumnAggregateFunction &>(
-    //            agg_state_is_const ? assert_cast<const ColumnConst &>(agg_state_column).get_data_column() : agg_state_column);
-    //
-    //        AggregateFunctionPtr function = column.getAggregateFunction();
-    //
-    //
-    //        size_t size = agg_state_is_const ? 1 : input_rows_count;
-    //
-    //        auto column_to = ColumnAggregateFunction::create(function);
-    //        column_to->reserve(size);
-    //
-    //        auto column_from = ColumnAggregateFunction::create(function);
-    //        column_from->reserve(size);
-    //
-    //        for (size_t i = 0; i < size; ++i)
-    //        {
-    //            column_to->insert_default();
-    //            column_from->insert_from(column.get_data()[i]);
-    //        }
-    //
-    //        auto & vec_to = column_to->get_data();
-    //        auto & vec_from = column_from->get_data();
-    //
-    //        UInt64 m = typeid_cast<const ColumnConst *>(block.get_by_position(new_arguments[1]).column.get())->get_value<UInt64>();
-    //
-    //        // Since we merge the function states by ourselves, we have to have an
-    //        // Arena for this. Pass it to the resulting column so that the arena
-    //        // has a proper lifetime.
-    //        auto arena = std::make_shared<Arena>();
-    //        column_to->addArena(arena);
-    //
-    //        /// We use exponentiation by squaring algorithm to perform multiplying aggregate states by N in O(log(N)) operations
-    //        /// https://en.wikipedia.org/wiki/Exponentiation_by_squaring
-    //        while (m)
-    //        {
-    //            if (m % 2)
-    //            {
-    //                for (size_t i = 0; i < size; ++i)
-    //                    function->merge(vec_to[i], vec_from[i], arena.get());
-    //                --m;
-    //            }
-    //            else
-    //            {
-    //                for (size_t i = 0; i < size; ++i)
-    //                    function->merge(vec_from[i], vec_from[i], arena.get());
-    //                m /= 2;
-    //            }
-    //        }
-    //
-    //        if (agg_state_is_const)
-    //            block.get_by_position(result).column = ColumnConst::create(std::move(column_to), input_rows_count);
-    //        else
-    //            block.get_by_position(result).column = std::move(column_to);
-    //    }
-
-    /// Merge two aggregation states together.
-    //    void executeAggregateAddition(Block & block, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) const
-    //    {
-    //        const IColumn & lhs_column = *block.get_by_position(arguments[0]).column;
-    //        const IColumn & rhs_column = *block.get_by_position(arguments[1]).column;
-    //
-    //        bool lhs_is_const = is_column_const(lhs_column);
-    //        bool rhs_is_const = is_column_const(rhs_column);
-    //
-    //        const ColumnAggregateFunction & lhs = typeid_cast<const ColumnAggregateFunction &>(
-    //            lhs_is_const ? assert_cast<const ColumnConst &>(lhs_column).get_data_column() : lhs_column);
-    //        const ColumnAggregateFunction & rhs = typeid_cast<const ColumnAggregateFunction &>(
-    //            rhs_is_const ? assert_cast<const ColumnConst &>(rhs_column).get_data_column() : rhs_column);
-    //
-    //        AggregateFunctionPtr function = lhs.getAggregateFunction();
-    //
-    //        size_t size = (lhs_is_const && rhs_is_const) ? 1 : input_rows_count;
-    //
-    //        auto column_to = ColumnAggregateFunction::create(function);
-    //        column_to->reserve(size);
-    //
-    //        for (size_t i = 0; i < size; ++i)
-    //        {
-    //            column_to->insert_from(lhs.get_data()[lhs_is_const ? 0 : i]);
-    //            column_to->insertMergeFrom(rhs.get_data()[rhs_is_const ? 0 : i]);
-    //        }
-    //
-    //        if (lhs_is_const && rhs_is_const)
-    //            block.get_by_position(result).column = ColumnConst::create(std::move(column_to), input_rows_count);
-    //        else
-    //            block.get_by_position(result).column = std::move(column_to);
-    //    }
-
-    //    void executeDateTimeIntervalPlusMinus(Block & block, const ColumnNumbers & arguments,
-    //        size_t result, size_t input_rows_count, const FunctionBuilderPtr & function_builder) const
-    //    {
-    //        ColumnNumbers new_arguments = arguments;
-    //
-    //        /// Interval argument must be second.
-    //        if (WhichDataType(block.get_by_position(arguments[0]).type).is_interval())
-    //            std::swap(new_arguments[0], new_arguments[1]);
-    //
-    //        /// Change interval argument type to its representation
-    //        Block new_block = block;
-    //        new_block.get_by_position(new_arguments[1]).type = std::make_shared<DataTypeNumber<DataTypeInterval::FieldType>>();
-    //
-    //        ColumnsWithTypeAndName new_arguments_with_type_and_name =
-    //                {new_block.get_by_position(new_arguments[0]), new_block.get_by_position(new_arguments[1])};
-    //        auto function = function_builder->build(new_arguments_with_type_and_name);
-    //
-    //        function->execute(new_block, new_arguments, result, input_rows_count);
-    //        block.get_by_position(result).column = new_block.get_by_position(result).column;
-    //    }
-
 public:
     static constexpr auto name = Name::name;
-    //    static FunctionPtr create(const Context & context) { return std::make_shared<FunctionBinaryArithmetic>(context); }
     static FunctionPtr create() { return std::make_shared<FunctionBinaryArithmetic>(); }
 
-    //    FunctionBinaryArithmetic(const Context & context_)
-    //    :   context(context_),
-    //        check_decimal_overflow(decimal_check_arithmetic_overflow(context))
-    //    {}
-
-    FunctionBinaryArithmetic()
-    //        : context(context_),
-    //        : check_decimal_overflow(decimal_check_arithmetic_overflow(context))
-    {}
+    FunctionBinaryArithmetic() {}
     String get_name() const override { return name; }
 
     size_t get_number_of_arguments() const override { return 2; }
 
     DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
-        //        /// Special case when multiply aggregate function state
-        //        if (is_aggregate_multiply(arguments[0], arguments[1]))
-        //        {
-        //            if (WhichDataType(arguments[0]).is_aggregate_function())
-        //                return arguments[0];
-        //            return arguments[1];
-        //        }
-
-        /// Special case - addition of two aggregate functions states
-        //        if (is_aggregate_addition(arguments[0], arguments[1]))
-        //        {
-        //            if (!arguments[0]->equals(*arguments[1]))
-        //                throw Exception("Cannot add aggregate states of different functions: "
-        //                    + arguments[0]->get_name() + " and " + arguments[1]->get_name(), ErrorCodes::CANNOT_ADD_DIFFERENT_AGGREGATE_STATES);
-        //
-        //            return arguments[0];
-        //        }
-
-        //        /// Special case when the function is plus or minus, one of arguments is Date/DateTime and another is Interval.
-        //        if (auto function_builder = getFunctionForIntervalArithmetic(arguments[0], arguments[1]))
-        //        {
-        //            ColumnsWithTypeAndName new_arguments(2);
-        //
-        //            for (size_t i = 0; i < 2; ++i)
-        //                new_arguments[i].type = arguments[i];
-        //
-        //            /// Interval argument must be second.
-        //            if (WhichDataType(new_arguments[0].type).is_interval())
-        //                std::swap(new_arguments[0], new_arguments[1]);
-        //
-        //            /// Change interval argument to its representation
-        //            new_arguments[1].type = std::make_shared<DataTypeNumber<DataTypeInterval::FieldType>>();
-        //
-        //            auto function = function_builder->build(new_arguments);
-        //            return function->get_return_type();
-        //        }
-
         DataTypePtr type_res;
         bool valid = cast_both_types(
                 arguments[0].get(), arguments[1].get(), [&](const auto& left, const auto& right) {
@@ -766,27 +503,6 @@ public:
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                         size_t input_rows_count) override {
-        //        /// Special case when multiply aggregate function state
-        //        if (is_aggregate_multiply(block.get_by_position(arguments[0]).type, block.get_by_position(arguments[1]).type))
-        //        {
-        //            executeAggregateMultiply(block, arguments, result, input_rows_count);
-        //            return;
-        //        }
-        //
-        //        /// Special case - addition of two aggregate functions states
-        //        if (is_aggregate_addition(block.get_by_position(arguments[0]).type, block.get_by_position(arguments[1]).type))
-        //        {
-        //            executeAggregateAddition(block, arguments, result, input_rows_count);
-        //            return;
-        //        }
-
-        //        /// Special case when the function is plus or minus, one of arguments is Date/DateTime and another is Interval.
-        //        if (auto function_builder = getFunctionForIntervalArithmetic(block.get_by_position(arguments[0]).type, block.get_by_position(arguments[1]).type))
-        //        {
-        //            executeDateTimeIntervalPlusMinus(block, arguments, result, input_rows_count, function_builder);
-        //            return;
-        //        }
-
         auto* left_generic = block.get_by_position(arguments[0]).type.get();
         auto* right_generic = block.get_by_position(arguments[1]).type.get();
         bool valid = cast_both_types(
@@ -954,47 +670,6 @@ public:
 
         return Status::OK();
     }
-
-#if USE_EMBEDDED_COMPILER
-    bool isCompilableImpl(const DataTypes& arguments) const override {
-        return cast_both_types(
-                arguments[0].get(), arguments[1].get(), [&](const auto& left, const auto& right) {
-                    using LeftDataType = std::decay_t<decltype(left)>;
-                    using RightDataType = std::decay_t<decltype(right)>;
-                    using ResultDataType =
-                            typename BinaryOperationTraits<Op, LeftDataType,
-                                                           RightDataType>::ResultDataType;
-                    using OpSpec =
-                            Op<typename LeftDataType::FieldType, typename RightDataType::FieldType>;
-                    return !std::is_same_v<ResultDataType, InvalidType> &&
-                           !IsDataTypeDecimal<ResultDataType> && OpSpec::compilable;
-                });
-    }
-
-    llvm::Value* compileImpl(llvm::IRBuilderBase& builder, const DataTypes& types,
-                             ValuePlaceholders values) const override {
-        llvm::Value* result = nullptr;
-        cast_both_types(types[0].get(), types[1].get(), [&](const auto& left, const auto& right) {
-            using LeftDataType = std::decay_t<decltype(left)>;
-            using RightDataType = std::decay_t<decltype(right)>;
-            using ResultDataType =
-                    typename BinaryOperationTraits<Op, LeftDataType, RightDataType>::ResultDataType;
-            using OpSpec = Op<typename LeftDataType::FieldType, typename RightDataType::FieldType>;
-            if constexpr (!std::is_same_v<ResultDataType, InvalidType> &&
-                          !IsDataTypeDecimal<ResultDataType> && OpSpec::compilable) {
-                auto& b = static_cast<llvm::IRBuilder<>&>(builder);
-                auto type = std::make_shared<ResultDataType>();
-                auto* lval = nativeCast(b, types[0], values[0](), type);
-                auto* rval = nativeCast(b, types[1], values[1](), type);
-                result = OpSpec::compile(b, lval, rval,
-                                         std::is_signed_v<typename ResultDataType::FieldType>);
-                return true;
-            }
-            return false;
-        });
-        return result;
-    }
-#endif
 
     bool can_be_executed_on_default_arguments() const override {
         return CanBeExecutedOnDefaultArguments;

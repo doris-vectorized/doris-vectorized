@@ -29,11 +29,7 @@ class PBlock;
 class PColumn;
 namespace vectorized {
 
-// class ReadBuffer;
-// class WriteBuffer;
-
 class IDataType;
-struct FormatSettings;
 
 class IColumn;
 using ColumnPtr = COW<IColumn>::Ptr;
@@ -43,9 +39,6 @@ class Field;
 
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
-
-class ProtobufReader;
-class ProtobufWriter;
 
 /** Properties of data type.
   * Contains methods for serialization/deserialization.
@@ -188,7 +181,9 @@ public:
       *  (because Array(String) values became ambiguous if you concatenate Strings).
       * Counterexamples: Nullable, Tuple.
       */
-    virtual bool is_value_unambiguously_represented_in_contiguous_memory_region() const { return false; }
+    virtual bool is_value_unambiguously_represented_in_contiguous_memory_region() const {
+        return false;
+    }
 
     virtual bool is_value_unambiguously_represented_in_fixed_size_contiguous_memory_region() const {
         return is_value_represented_by_number();
@@ -202,7 +197,9 @@ public:
 
     /** Size in amount of bytes in memory. Throws an exception if not have_maximum_size_of_value.
       */
-    virtual size_t get_maximum_size_of_value_in_memory() const { return get_size_of_value_in_memory(); }
+    virtual size_t get_maximum_size_of_value_in_memory() const {
+        return get_size_of_value_in_memory();
+    }
 
     /** Throws an exception if value is not of fixed size.
       */
@@ -235,15 +232,6 @@ public:
 
 private:
     friend class DataTypeFactory;
-
-private:
-    /** This is mutable to allow setting custom name and serialization on `const IDataType` post construction.
-     */
-    // mutable DataTypeCustomNamePtr custom_name;
-    // mutable DataTypeCustomTextSerializationPtr custom_text_serialization;
-
-public:
-    // const IDataTypeCustomName * getCustomName() const { return custom_name.get(); }
 };
 
 /// Some sugar to check data type of IDataType
@@ -273,7 +261,9 @@ struct WhichDataType {
     bool is_int32() const { return idx == TypeIndex::Int32; }
     bool is_int64() const { return idx == TypeIndex::Int64; }
     bool is_int128() const { return idx == TypeIndex::Int128; }
-    bool is_int() const { return is_int8() || is_int16() || is_int32() || is_int64() || is_int128(); }
+    bool is_int() const {
+        return is_int8() || is_int16() || is_int32() || is_int64() || is_int128();
+    }
     bool is_native_int() const { return is_int8() || is_int16() || is_int32() || is_int64(); }
 
     bool is_decimal32() const { return idx == TypeIndex::Decimal32; }
