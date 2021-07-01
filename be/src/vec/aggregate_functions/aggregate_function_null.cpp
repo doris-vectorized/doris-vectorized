@@ -15,15 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <vec/aggregate_functions/aggregate_function.h>
-#include <vec/aggregate_functions/aggregate_function_combinator.h>
-#include <vec/aggregate_functions/aggregate_function_count.h>
-#include <vec/aggregate_functions/aggregate_function_nothing.h>
-#include <vec/aggregate_functions/aggregate_function_null.h>
-#include <vec/aggregate_functions/aggregate_function_simple_factory.h>
-#include <vec/data_types/data_type_nullable.h>
+#include "vec/aggregate_functions/aggregate_function_null.h"
 
 #include "common/logging.h"
+#include "vec/aggregate_functions/aggregate_function.h"
+#include "vec/aggregate_functions/aggregate_function_combinator.h"
+#include "vec/aggregate_functions/aggregate_function_count.h"
+#include "vec/aggregate_functions/aggregate_function_nothing.h"
+#include "vec/aggregate_functions/aggregate_function_simple_factory.h"
+#include "vec/data_types/data_type_nullable.h"
 
 namespace doris::vectorized {
 

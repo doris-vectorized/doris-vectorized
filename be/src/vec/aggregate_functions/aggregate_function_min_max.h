@@ -160,86 +160,10 @@ public:
 
     StringRef get_string_ref() const { return StringRef(get_data(), size); }
 
-    // void insert_result_into(IColumn & to) const
-    // {
-    //     if (has())
-    //         assert_cast<ColumnString &>(to).insert_data_with_terminating_zero(get_data(), size);
-    //     else
-    //         assert_cast<ColumnString &>(to).insert_default();
-    // }
-
-    // void write(WriteBuffer & buf, const IDataType & /*data_type*/) const
-    // {
-    //     write_binary(size, buf);
-    //     if (has())
-    //         buf.write(get_data(), size);
-    // }
-
-    // void read(ReadBuffer & buf, const IDataType & /*data_type*/, Arena * arena)
-    // {
-    //     Int32 rhs_size;
-    //     read_binary(rhs_size, buf);
-
-    //     if (rhs_size >= 0)
-    //     {
-    //         if (rhs_size <= MAX_SMALL_STRING_SIZE)
-    //         {
-    //             /// Don't free large_data here.
-
-    //             size = rhs_size;
-
-    //             if (size > 0)
-    //                 buf.read(small_data, size);
-    //         }
-    //         else
-    //         {
-    //             if (capacity < rhs_size)
-    //             {
-    //                 capacity = static_cast<UInt32>(round_up_to_power_of_two_or_zero(rhs_size));
-    //                 /// Don't free large_data here.
-    //                 large_data = arena->alloc(capacity);
-    //             }
-
-    //             size = rhs_size;
-    //             buf.read(large_data, size);
-    //         }
-    //     }
-    //     else
-    //     {
-    //         /// Don't free large_data here.
-    //         size = rhs_size;
-    //     }
-    // }
-
     /// Assuming to.has()
-    void change_impl(StringRef value, Arena* arena) {
-        // Int32 value_size = value.size;
+    void change_impl(StringRef value, Arena* arena) {}
 
-        // if (value_size <= MAX_SMALL_STRING_SIZE)
-        // {
-        //     /// Don't free large_data here.
-        //     size = value_size;
-
-        //     if (size > 0)
-        //         memcpy(small_data, value.data, size);
-        // }
-        // else
-        // {
-        //     if (capacity < value_size)
-        //     {
-        //         /// Don't free large_data here.
-        //         capacity = round_up_to_power_of_two_or_zero(value_size);
-        //         large_data = arena->alloc(capacity);
-        //     }
-
-        //     size = value_size;
-        //     memcpy(large_data, value.data, size);
-        // }
-    }
-
-    void change(const IColumn& column, size_t row_num, Arena* arena) {
-        // change_impl(assert_cast<const ColumnString &>(column).get_data_at_with_terminating_zero(row_num), arena);
-    }
+    void change(const IColumn& column, size_t row_num, Arena* arena) {}
 
     void change(const Self& to, Arena* arena) { change_impl(to.get_string_ref(), arena); }
 
@@ -272,17 +196,6 @@ public:
             return false;
     }
 
-    // bool change_if_less(const IColumn & column, size_t row_num, Arena * arena)
-    // {
-    //     if (!has() || assert_cast<const ColumnString &>(column).get_data_at_with_terminating_zero(row_num) < get_string_ref())
-    //     {
-    //         change(column, row_num, arena);
-    //         return true;
-    //     }
-    //     else
-    //         return false;
-    // }
-
     bool change_if_less(const Self& to, Arena* arena) {
         if (to.has() && (!has() || to.get_string_ref() < get_string_ref())) {
             change(to, arena);
@@ -290,17 +203,6 @@ public:
         } else
             return false;
     }
-
-    // bool change_if_greater(const IColumn & column, size_t row_num, Arena * arena)
-    // {
-    //     if (!has() || assert_cast<const ColumnString &>(column).get_data_at_with_terminating_zero(row_num) > get_string_ref())
-    //     {
-    //         change(column, row_num, arena);
-    //         return true;
-    //     }
-    //     else
-    //         return false;
-    // }
 
     bool change_if_greater(const Self& to, Arena* arena) {
         if (to.has() && (!has() || to.get_string_ref() > get_string_ref())) {
@@ -310,12 +212,11 @@ public:
             return false;
     }
 
-    bool is_equal_to(const Self& to) const { return has() && to.get_string_ref() == get_string_ref(); }
-
-    bool is_equal_to(const IColumn& column, size_t row_num) const {
-        // return has() && assert_cast<const ColumnString &>(column).get_data_at_with_terminating_zero(row_num) == get_string_ref();
-        return false;
+    bool is_equal_to(const Self& to) const {
+        return has() && to.get_string_ref() == get_string_ref();
     }
+
+    bool is_equal_to(const IColumn& column, size_t row_num) const { return false; }
 };
 
 /// For any other value types.
@@ -334,26 +235,6 @@ public:
         else
             to.insert_default();
     }
-
-    // void write(WriteBuffer & buf, const IDataType & data_type) const
-    // {
-    //     if (!value.is_null())
-    //     {
-    //         write_binary(true, buf);
-    //         data_type.serializeBinary(value, buf);
-    //     }
-    //     else
-    //         write_binary(false, buf);
-    // }
-
-    // void read(ReadBuffer & buf, const IDataType & data_type, Arena *)
-    // {
-    //     bool is_not_null;
-    //     read_binary(is_not_null, buf);
-
-    //     if (is_not_null)
-    //         data_type.deserializeBinary(value, buf);
-    // }
 
     void change(const IColumn& column, size_t row_num, Arena*) { column.get(row_num, value); }
 
@@ -448,7 +329,9 @@ struct AggregateFunctionMaxData : Data {
     bool change_if_better(const IColumn& column, size_t row_num, Arena* arena) {
         return this->change_if_greater(column, row_num, arena);
     }
-    bool change_if_better(const Self& to, Arena* arena) { return this->change_if_greater(to, arena); }
+    bool change_if_better(const Self& to, Arena* arena) {
+        return this->change_if_greater(to, arena);
+    }
 
     static const char* name() { return "max"; }
 };

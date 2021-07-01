@@ -28,18 +28,6 @@
 #include "vec/data_types/data_type.h"
 
 namespace doris::vectorized {
-
-class AggregateFunctionSimpleFactory;
-void register_aggregate_function_sum(AggregateFunctionSimpleFactory& factory);
-void register_aggregate_function_combinator_null(AggregateFunctionSimpleFactory& factory);
-void register_aggregate_function_minmax(AggregateFunctionSimpleFactory& factory);
-void register_aggregate_function_avg(AggregateFunctionSimpleFactory& factory);
-void register_aggregate_function_count(AggregateFunctionSimpleFactory& factory);
-void register_aggregate_function_HLL_union_agg(AggregateFunctionSimpleFactory& factory);
-void register_aggregate_function_uniq(AggregateFunctionSimpleFactory& factory);
-void register_aggregate_function_combinator_distinct(AggregateFunctionSimpleFactory& factory);
-void register_aggregate_function_bitmap(AggregateFunctionSimpleFactory& factory);
-
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
 using AggregateFunctionCreator =
@@ -105,21 +93,6 @@ public:
     }
 
 public:
-    static AggregateFunctionSimpleFactory& instance() {
-        static std::once_flag oc;
-        static AggregateFunctionSimpleFactory instance;
-        std::call_once(oc, [&]() {
-            register_aggregate_function_sum(instance);
-            register_aggregate_function_minmax(instance);
-            register_aggregate_function_avg(instance);
-            register_aggregate_function_count(instance);
-            register_aggregate_function_uniq(instance);
-            register_aggregate_function_bitmap(instance);
-            register_aggregate_function_combinator_distinct(instance);
-            register_aggregate_function_HLL_union_agg(instance);
-            register_aggregate_function_combinator_null(instance);
-        });
-        return instance;
-    }
+    static AggregateFunctionSimpleFactory& instance();
 };
 }; // namespace doris::vectorized

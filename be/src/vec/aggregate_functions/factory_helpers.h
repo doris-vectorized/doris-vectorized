@@ -18,28 +18,23 @@
 #pragma once
 
 #include "common/logging.h"
-#include "fmt/format.h"
-#include <vec/core/field.h>
-#include <vec/data_types/data_type.h>
-// #include <IO/WriteHelpers.h>
+#include "vec/core/field.h"
+#include "vec/data_types/data_type.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int AGGREGATE_FUNCTION_DOESNT_ALLOW_PARAMETERS;
-extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-} // namespace ErrorCodes
 
 inline void assert_no_parameters(const std::string& name, const Array& parameters) {
     CHECK(parameters.empty()) << fmt::format("Aggregate function {} cannot have parameters", name);
 }
 
 inline void assert_unary(const std::string& name, const DataTypes& argument_types) {
-    CHECK_EQ(argument_types.size(), 1) << fmt::format("Aggregate function {} require single argument", name);
+    CHECK_EQ(argument_types.size(), 1)
+            << fmt::format("Aggregate function {} require single argument", name);
 }
 
 inline void assert_binary(const std::string& name, const DataTypes& argument_types) {
-    CHECK_EQ(argument_types.size(), 2) << fmt::format("Aggregate function {} require two arguments") << name;
+    CHECK_EQ(argument_types.size(), 2)
+            << fmt::format("Aggregate function {} require two arguments") << name;
 }
 
 template <std::size_t maximal_arity>
@@ -47,14 +42,15 @@ inline void assert_arity_at_most(const std::string& name, const DataTypes& argum
     if (argument_types.size() <= maximal_arity) return;
 
     if constexpr (maximal_arity == 0) {
-       LOG(FATAL) << fmt::format("Aggregate function {} cannot have arguments", name);
+        LOG(FATAL) << fmt::format("Aggregate function {} cannot have arguments", name);
     }
 
     if constexpr (maximal_arity == 1) {
         LOG(FATAL) << fmt::format("Aggregate function {} requires zero or one argument", name);
     }
 
-    LOG(FATAL) << fmt::format("Aggregate function {} requires at most {} arguments", name , maximal_arity);
+    LOG(FATAL) << fmt::format("Aggregate function {} requires at most {} arguments", name,
+                              maximal_arity);
 }
 
 } // namespace doris::vectorized
