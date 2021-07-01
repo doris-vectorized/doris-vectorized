@@ -26,16 +26,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int ARGUMENT_OUT_OF_BOUND;
-extern const int CANNOT_CONVERT_TYPE;
-extern const int DECIMAL_OVERFLOW;
-} // namespace ErrorCodes
-
-class Context;
-bool decimal_check_comparison_overflow(const Context& context);
-bool decimal_check_arithmetic_overflow(const Context& context);
-
 static constexpr size_t min_decimal_precision() {
     return 1;
 }
@@ -130,7 +120,9 @@ public:
     bool text_can_contain_only_valid_utf8() const override { return true; }
     bool is_comparable() const override { return true; }
     bool is_value_represented_by_number() const override { return true; }
-    bool is_value_unambiguously_represented_in_contiguous_memory_region() const override { return true; }
+    bool is_value_unambiguously_represented_in_contiguous_memory_region() const override {
+        return true;
+    }
     bool have_maximum_size_of_value() const override { return true; }
     size_t get_size_of_value_in_memory() const override { return sizeof(T); }
 
@@ -215,13 +207,13 @@ typename std::enable_if_t<(sizeof(T) < sizeof(U)), const DataTypeDecimal<U>> dec
 
 template <typename T, typename U>
 const DataTypeDecimal<T> decimal_result_type(const DataTypeDecimal<T>& tx, const DataTypeNumber<U>&,
-                                           bool, bool) {
+                                             bool, bool) {
     return DataTypeDecimal<T>(max_decimal_precision<T>(), tx.get_scale());
 }
 
 template <typename T, typename U>
 const DataTypeDecimal<U> decimal_result_type(const DataTypeNumber<T>&, const DataTypeDecimal<U>& ty,
-                                           bool, bool) {
+                                             bool, bool) {
     return DataTypeDecimal<U>(max_decimal_precision<U>(), ty.get_scale());
 }
 
@@ -231,7 +223,7 @@ inline const DataTypeDecimal<T>* check_decimal(const IDataType& data_type) {
 }
 
 inline UInt32 get_decimal_scale(const IDataType& data_type,
-                              UInt32 default_value = std::numeric_limits<UInt32>::max()) {
+                                UInt32 default_value = std::numeric_limits<UInt32>::max()) {
     if (auto* decimal_type = check_decimal<Decimal32>(data_type)) return decimal_type->get_scale();
     if (auto* decimal_type = check_decimal<Decimal64>(data_type)) return decimal_type->get_scale();
     if (auto* decimal_type = check_decimal<Decimal128>(data_type)) return decimal_type->get_scale();
@@ -256,7 +248,8 @@ constexpr bool IsDataTypeDecimalOrNumber =
 template <typename FromDataType, typename ToDataType>
 inline std::enable_if_t<IsDataTypeDecimal<FromDataType> && IsDataTypeDecimal<ToDataType>,
                         typename ToDataType::FieldType>
-convert_decimals(const typename FromDataType::FieldType& value, UInt32 scale_from, UInt32 scale_to) {
+convert_decimals(const typename FromDataType::FieldType& value, UInt32 scale_from,
+                 UInt32 scale_to) {
     using FromFieldType = typename FromDataType::FieldType;
     using ToFieldType = typename ToDataType::FieldType;
     using MaxFieldType = std::conditional_t<(sizeof(FromFieldType) > sizeof(ToFieldType)),
@@ -265,7 +258,8 @@ convert_decimals(const typename FromDataType::FieldType& value, UInt32 scale_fro
 
     MaxNativeType converted_value;
     if (scale_to > scale_from) {
-        converted_value = DataTypeDecimal<MaxFieldType>::get_scale_multiplier(scale_to - scale_from);
+        converted_value =
+                DataTypeDecimal<MaxFieldType>::get_scale_multiplier(scale_to - scale_from);
         if (common::mul_overflow(static_cast<MaxNativeType>(value), converted_value,
                                  converted_value)) {
             LOG(FATAL) << "Decimal convert overflow";

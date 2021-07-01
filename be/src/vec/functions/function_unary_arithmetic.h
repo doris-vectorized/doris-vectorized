@@ -17,29 +17,15 @@
 
 #pragma once
 
-#include "vec/data_types/data_type_decimal.h"
-#include "vec/data_types/data_type_number.h"
-//#include <vec/DataTypes/Native.h>
 #include "vec/columns/column_decimal.h"
 #include "vec/columns/column_vector.h"
+#include "vec/data_types/data_type_decimal.h"
+#include "vec/data_types/data_type_number.h"
 #include "vec/functions/cast_type_to_either.h"
 #include "vec/functions/function.h"
 #include "vec/functions/function_helpers.h"
-//#include <vec/Common/config.h>
-
-//#if USE_EMBEDDED_COMPILER
-//#pragma GCC diagnostic push
-//#pragma GCC diagnostic ignored "-Wunused-parameter"
-//#include <llvm/IR/IRBuilder.h>
-//#pragma GCC diagnostic pop
-//#endif
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-extern const int LOGICAL_ERROR;
-} // namespace ErrorCodes
 
 template <typename A, typename Op>
 struct UnaryOperationImpl {
@@ -86,7 +72,6 @@ class FunctionUnaryArithmetic : public IFunction {
 
 public:
     static constexpr auto name = Name::name;
-    //    static FunctionPtr create(const Context &) { return std::make_shared<FunctionUnaryArithmetic>(); }
     static FunctionPtr create() { return std::make_shared<FunctionUnaryArithmetic>(); }
 
     String get_name() const override { return name; }
@@ -158,44 +143,7 @@ public:
         return Status::OK();
     }
 
-#if USE_EMBEDDED_COMPILER
-    bool isCompilableImpl(const DataTypes& arguments) const override {
-        return cast_type(arguments[0].get(), [&](const auto& type) {
-            using DataType = std::decay_t<decltype(type)>;
-            return !IsDataTypeDecimal<DataType> && Op<typename DataType::FieldType>::compilable;
-        });
-    }
-
-    llvm::Value* compileImpl(llvm::IRBuilderBase& builder, const DataTypes& types,
-                             ValuePlaceholders values) const override {
-        llvm::Value* result = nullptr;
-        cast_type(types[0].get(), [&](const auto& type) {
-            using DataType = std::decay_t<decltype(type)>;
-            using T0 = typename DataType::FieldType;
-            using T1 = typename Op<T0>::ResultType;
-            if constexpr (!std::is_same_v<T1, InvalidType> && !IsDataTypeDecimal<DataType> &&
-                          Op<T0>::compilable) {
-                auto& b = static_cast<llvm::IRBuilder<>&>(builder);
-                auto* v = nativeCast(b, types[0], values[0](),
-                                     std::make_shared<DataTypeNumber<T1>>());
-                result = Op<T0>::compile(b, v, std::is_signed_v<T1>);
-                return true;
-            }
-            return false;
-        });
-        return result;
-    }
-#endif
-
-    bool has_information_about_monotonicity() const override {
-        //        return FunctionUnaryArithmeticMonotonicity<Name>::has();
-        return false;
-    }
-
-    //    Monotonicity get_monotonicity_for_range(const IDataType &, const Field & left, const Field & right) const override
-    //    {
-    //        return FunctionUnaryArithmeticMonotonicity<Name>::get(left, right);
-    //    }
+    bool has_information_about_monotonicity() const override { return false; }
 };
 
 struct PositiveMonotonicity {

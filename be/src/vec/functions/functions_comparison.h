@@ -39,14 +39,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int TOO_LARGE_STRING_SIZE;
-extern const int ILLEGAL_COLUMN;
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-extern const int LOGICAL_ERROR;
-extern const int NOT_IMPLEMENTED;
-} // namespace ErrorCodes
-
 /** Comparison functions: ==, !=, <, >, <=, >=.
   * The comparison functions always return 0 or 1 (UInt8).
   *
@@ -526,18 +518,11 @@ template <template <typename, typename> class Op, typename Name>
 class FunctionComparison : public IFunction {
 public:
     static constexpr auto name = Name::name;
-    //    static FunctionPtr create(const Context & context) { return std::make_shared<FunctionComparison>(context); }
     static FunctionPtr create() { return std::make_shared<FunctionComparison>(); }
 
-    //    FunctionComparison(const Context & context_)
-    //    :   context(context_),
-    //        check_decimal_overflow(decimal_check_comparison_overflow(context))
     FunctionComparison() {}
 
 private:
-    //    const Context & context;
-    //    bool check_decimal_overflow = true;
-
     template <typename T0, typename T1>
     bool execute_num_right_type(Block& block, size_t result, const ColumnVector<T0>* col_left,
                                 const IColumn* col_right_untyped) {

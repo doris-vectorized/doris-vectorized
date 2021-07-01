@@ -20,7 +20,6 @@
 #include <unordered_set>
 
 #include "vec/common/typeid_cast.h"
-#include "vec/data_types/data_type_date.h"
 #include "vec/data_types/data_type_date_time.h"
 #include "vec/data_types/data_type_decimal.h"
 #include "vec/data_types/data_type_nothing.h"
@@ -30,13 +29,9 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int BAD_ARGUMENTS;
-extern const int NO_COMMON_TYPE;
-} // namespace ErrorCodes
-
 namespace {
-String getExceptionMessagePrefix(const DataTypes& types) {
+
+String get_exception_message_prefix(const DataTypes& types) {
     std::stringstream res;
     res << "There is no supertype for types ";
 
@@ -124,7 +119,7 @@ DataTypePtr get_least_supertype(const DataTypes& types) {
             bool all_strings = type_ids.size() == (have_string + have_fixed_string);
             if (!all_strings) {
                 LOG(FATAL)
-                        << getExceptionMessagePrefix(types)
+                        << get_exception_message_prefix(types)
                         << " because some of them are String/FixedString and some of them are not";
             }
 
@@ -140,7 +135,7 @@ DataTypePtr get_least_supertype(const DataTypes& types) {
         if (have_date || have_datetime) {
             bool all_date_or_datetime = type_ids.size() == (have_date + have_datetime);
             if (!all_date_or_datetime) {
-                LOG(FATAL) << getExceptionMessagePrefix(types)
+                LOG(FATAL) << get_exception_message_prefix(types)
                            << " because some of them are Date/DateTime and some of them are not";
             }
 
@@ -171,7 +166,7 @@ DataTypePtr get_least_supertype(const DataTypes& types) {
             }
 
             if (num_supported != type_ids.size()) {
-                LOG(FATAL) << getExceptionMessagePrefix(types)
+                LOG(FATAL) << get_exception_message_prefix(types)
                            << " because some of them have no lossless convertion to Decimal";
             }
 
@@ -193,7 +188,7 @@ DataTypePtr get_least_supertype(const DataTypes& types) {
 
             if (min_precision > DataTypeDecimal<Decimal128>::max_precision()) {
                 LOG(FATAL) << fmt::format("{} because the least supertype is Decimal({},{})",
-                                          getExceptionMessagePrefix(types), min_precision,
+                                          get_exception_message_prefix(types), min_precision,
                                           max_scale);
             }
 
@@ -248,7 +243,7 @@ DataTypePtr get_least_supertype(const DataTypes& types) {
         if (max_bits_of_signed_integer || max_bits_of_unsigned_integer ||
             max_mantissa_bits_of_floating) {
             if (!all_numbers) {
-                LOG(FATAL) << getExceptionMessagePrefix(types)
+                LOG(FATAL) << get_exception_message_prefix(types)
                            << " because some of them are numbers and some of them are not";
             }
 
@@ -272,7 +267,7 @@ DataTypePtr get_least_supertype(const DataTypes& types) {
                 else if (min_mantissa_bits <= 53)
                     return std::make_shared<DataTypeFloat64>();
                 else {
-                    LOG(FATAL) << getExceptionMessagePrefix(types)
+                    LOG(FATAL) << get_exception_message_prefix(types)
                                << " because some of them are integers and some are floating point "
                                   "but there is no floating point type, that can exactly represent "
                                   "all required integers";
@@ -290,7 +285,7 @@ DataTypePtr get_least_supertype(const DataTypes& types) {
                 else if (min_bit_width_of_integer <= 64)
                     return std::make_shared<DataTypeInt64>();
                 else {
-                    LOG(FATAL) << getExceptionMessagePrefix(types)
+                    LOG(FATAL) << get_exception_message_prefix(types)
                                << " because some of them are signed integers and some are unsigned "
                                   "integers, but there is no signed integer type, that can exactly "
                                   "represent all required unsigned integer values";
@@ -308,7 +303,7 @@ DataTypePtr get_least_supertype(const DataTypes& types) {
                 else if (min_bit_width_of_integer <= 64)
                     return std::make_shared<DataTypeUInt64>();
                 else {
-                    LOG(FATAL) << "Logical error: " << getExceptionMessagePrefix(types)
+                    LOG(FATAL) << "Logical error: " << get_exception_message_prefix(types)
                                << "but as all data types are unsigned integers, we must have found "
                                   "maximum unsigned integer type";
                 }
@@ -317,7 +312,7 @@ DataTypePtr get_least_supertype(const DataTypes& types) {
     }
 
     /// All other data types (UUID, AggregateFunction, Enum...) are compatible only if they are the same (checked in trivial cases).
-    LOG(FATAL) << getExceptionMessagePrefix(types);
+    LOG(FATAL) << get_exception_message_prefix(types);
     return nullptr;
 }
 

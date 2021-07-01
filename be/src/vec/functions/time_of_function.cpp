@@ -15,8 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//#include <Functions/FunctionFactory.h>
-
 #include "vec/data_types/data_type_number.h"
 #include "vec/functions/date_time_transforms.h"
 #include "vec/functions/function_date_or_datetime_to_something.h"
@@ -29,11 +27,10 @@ using FunctionDayOfYear = FunctionDateOrDateTimeToSomething<DataTypeInt32, DayOf
 using FunctionDayOfWeek = FunctionDateOrDateTimeToSomething<DataTypeInt32, DayOfWeekImpl>;
 using FunctionDayOfMonth = FunctionDateOrDateTimeToSomething<DataTypeInt32, DayOfMonthImpl>;
 
-void register_function_time_of_fuction(SimpleFunctionFactory & factory)
-{
+void register_function_time_of_fuction(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionDayOfWeek>();
     factory.register_function<FunctionDayOfMonth>();
     factory.register_function<FunctionDayOfYear>();
     factory.register_function<FunctionWeekOfYear>();
 }
-}
+} // namespace doris::vectorized

@@ -24,14 +24,8 @@
 #include "vec/common/typeid_cast.h"
 #include "vec/core/field.h"
 #include "vec/data_types/data_type_nothing.h"
-#include "vec/data_types/data_type_number.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-} // namespace ErrorCodes
 
 DataTypeNullable::DataTypeNullable(const DataTypePtr& nested_data_type_)
         : nested_data_type{nested_data_type_} {
@@ -66,7 +60,8 @@ size_t DataTypeNullable::serialize(const IColumn& column, PColumn* pcolumn) cons
         pcolumn->add_is_null(is_null);
     }
 
-    return nested_data_type->serialize(col.get_nested_column(), pcolumn) + sizeof(bool) * column.size();
+    return nested_data_type->serialize(col.get_nested_column(), pcolumn) +
+           sizeof(bool) * column.size();
 }
 
 void DataTypeNullable::deserialize(const PColumn& pcolumn, IColumn* column) const {
