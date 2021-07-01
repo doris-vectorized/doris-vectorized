@@ -31,7 +31,7 @@ namespace vectorized {
 class VExpr {
 public:
     VExpr(const TExprNode& node);
-    VExpr(const TypeDescriptor& type, bool is_slotref);
+    VExpr(const TypeDescriptor& type, bool is_slotref, bool is_nullable);
     virtual ~VExpr() = default;
 
     virtual VExpr* clone(ObjectPool* pool) const = 0;

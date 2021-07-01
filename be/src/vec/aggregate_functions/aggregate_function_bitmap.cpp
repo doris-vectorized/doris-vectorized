@@ -41,28 +41,32 @@ static IAggregateFunction* createWithIntDataType(const DataTypes& argument_type)
 
 AggregateFunctionPtr create_aggregate_function_bitmap_union(const std::string& name,
                                                             const DataTypes& argument_types,
-                                                            const Array& parameters) {
+                                                            const Array& parameters,
+                                                            const bool result_is_nullable) {
     return std::make_shared<AggregateFunctionBitmapOp<AggregateFunctionBitmapUnionOp>>(
             argument_types);
 }
 
 AggregateFunctionPtr create_aggregate_function_bitmap_intersect(const std::string& name,
                                                                 const DataTypes& argument_types,
-                                                                const Array& parameters) {
+                                                                const Array& parameters,
+                                                                const bool result_is_nullable) {
     return std::make_shared<AggregateFunctionBitmapOp<AggregateFunctionBitmapIntersectOp>>(
             argument_types);
 }
 template <bool nullable>
 AggregateFunctionPtr create_aggregate_function_bitmap_union_count(const std::string& name,
                                                                   const DataTypes& argument_types,
-                                                                  const Array& parameters) {
+                                                                  const Array& parameters,
+                                                                  const bool result_is_nullable) {
     return std::make_shared<AggregateFunctionBitmapCount<nullable, ColumnBitmap>>(argument_types);
 }
 
 template <bool nullable>
 AggregateFunctionPtr create_aggregate_function_bitmap_union_int(const std::string& name,
                                                                 const DataTypes& argument_types,
-                                                                const Array& parameters) {
+                                                                const Array& parameters,
+                                                                const bool result_is_nullable) {
     return std::shared_ptr<IAggregateFunction>(
             createWithIntDataType<nullable, AggregateFunctionBitmapCount>(argument_types));
 }

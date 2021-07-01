@@ -106,21 +106,22 @@ public class ArithmeticExpr extends Expr {
         functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DOUBLE, Type.DOUBLE),
-                Type.DOUBLE));
+                Type.DOUBLE, Function.NullableMode.ALWAYS_NULLABLE));
         functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DECIMAL, Type.DECIMAL),
-                Type.DECIMAL));
+                Type.DECIMAL, Function.NullableMode.ALWAYS_NULLABLE));
         functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DECIMALV2, Type.DECIMALV2),
-                Type.DECIMALV2));
+                Type.DECIMALV2, Function.NullableMode.ALWAYS_NULLABLE));
 
         // MOD(), FACTORIAL(), BITAND(), BITOR(), BITXOR(), and BITNOT() are registered as
         // builtins, see palo_functions.py
         for (Type t : Type.getIntegerTypes()) {
             functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
-                    Operator.INT_DIVIDE.getName(), Lists.newArrayList(t, t), t));
+                    Operator.INT_DIVIDE.getName(), Lists.newArrayList(t, t),
+                    t, Function.NullableMode.ALWAYS_NULLABLE));
         }
 
         // init vec build function
@@ -144,15 +145,15 @@ public class ArithmeticExpr extends Expr {
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DOUBLE, Type.DOUBLE),
-                Type.DOUBLE));
+                Type.DOUBLE, Function.NullableMode.ALWAYS_NULLABLE));
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DECIMAL, Type.DECIMAL),
-                Type.DECIMAL));
+                Type.DECIMAL, Function.NullableMode.ALWAYS_NULLABLE));
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DECIMALV2, Type.DECIMALV2),
-                Type.DECIMALV2));
+                Type.DECIMALV2, Function.NullableMode.ALWAYS_NULLABLE));
 
         for (int i = 0; i < Type.getIntegerTypes().size(); i++) {
             Type t1 = Type.getIntegerTypes().get(i);
@@ -161,7 +162,8 @@ public class ArithmeticExpr extends Expr {
 
                 functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                         Operator.INT_DIVIDE.getName(), Lists.newArrayList(t1, t2),
-                        Type.getAssignmentCompatibleType(t1, t2, false)));
+                        Type.getAssignmentCompatibleType(t1, t2, false),
+                        Function.NullableMode.ALWAYS_NULLABLE));
             }
         }
     }
@@ -390,4 +392,5 @@ public class ArithmeticExpr extends Expr {
     public int hashCode() {
         return 31 * super.hashCode() + Objects.hashCode(op);
     }
+
 }

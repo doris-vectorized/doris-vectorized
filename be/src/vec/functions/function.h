@@ -238,7 +238,7 @@ public:
     virtual void check_number_of_arguments(size_t number_of_arguments) const = 0;
 
     /// Check arguments and return IFunctionBase.
-    virtual FunctionBasePtr build(const ColumnsWithTypeAndName& arguments) const = 0;
+    virtual FunctionBasePtr build(const ColumnsWithTypeAndName& arguments, const DataTypePtr& return_type) const = 0;
 
     /// For higher-order functions (functions, that have lambda expression as at least one argument).
     /// You pass data types with empty DataTypeFunction for lambda arguments.
@@ -257,8 +257,8 @@ using FunctionBuilderPtr = std::shared_ptr<IFunctionBuilder>;
 
 class FunctionBuilderImpl : public IFunctionBuilder {
 public:
-    FunctionBasePtr build(const ColumnsWithTypeAndName& arguments) const final {
-        return build_impl(arguments, get_return_type(arguments));
+    FunctionBasePtr build(const ColumnsWithTypeAndName& arguments, const DataTypePtr& return_type) const final {
+        return build_impl(arguments, return_type);
     }
 
     bool is_deterministic() const override { return true; }

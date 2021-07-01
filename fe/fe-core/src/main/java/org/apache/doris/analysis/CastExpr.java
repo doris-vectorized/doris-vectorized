@@ -126,7 +126,8 @@ public class CastExpr extends Expr {
                 String beSymbol = "doris::" + beClass + "::cast_to_"
                         + typeName;
                 functionSet.addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltin(getFnName(toType),
-                        Lists.newArrayList(fromType), false, toType, beSymbol, null, null, true));
+                        toType, Function.NullableMode.ALWAYS_NULLABLE, Lists.newArrayList(fromType), false ,
+                        beSymbol, null, null, true));
             }
         }
     }

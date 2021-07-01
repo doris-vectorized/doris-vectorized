@@ -28,7 +28,8 @@ namespace doris::vectorized {
 template <template <typename> class Data, typename DataForVariadic>
 AggregateFunctionPtr create_aggregate_function_uniq(const std::string& name,
                                                     const DataTypes& argument_types,
-                                                    const Array& params) {
+                                                    const Array& params,
+                                                    const bool result_is_nullable) {
     assert_no_parameters(name, params);
 
     if (argument_types.empty()) {

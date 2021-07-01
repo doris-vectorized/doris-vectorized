@@ -17,12 +17,6 @@
 
 package org.apache.doris.catalog;
 
-import static org.apache.doris.common.io.IOUtils.writeOptionString;
-
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.gson.Gson;
 import org.apache.doris.analysis.CreateFunctionStmt;
 import org.apache.doris.analysis.FunctionName;
 import org.apache.doris.analysis.HdfsURI;
@@ -30,6 +24,11 @@ import org.apache.doris.common.io.Text;
 import org.apache.doris.thrift.TFunction;
 import org.apache.doris.thrift.TFunctionBinaryType;
 import org.apache.doris.thrift.TScalarFunction;
+
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -40,6 +39,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+
+import com.google.gson.Gson;
+
+import static org.apache.doris.common.io.IOUtils.writeOptionString;
 
 // import org.apache.doris.thrift.TSymbolType;
 
@@ -87,44 +90,31 @@ public class ScalarFunction extends Function {
      * Creates a builtin scalar function. This is a helper that wraps a few steps
      * into one call.
      */
+    public static ScalarFunction createBuiltin(String name, Type retType,
+                                               ArrayList<Type> argTypes, boolean hasVarArgs,
+                                               String symbol, String prepareFnSymbol, String closeFnSymbol,
+                                               boolean userVisible) {
+        return createBuiltin(name, retType, NullableMode.DEPEND_ON_ARGUMENT, argTypes, hasVarArgs,
+                symbol, prepareFnSymbol, closeFnSymbol, userVisible);
+    }
+
     public static ScalarFunction createBuiltin(
-            String name, ArrayList<Type> argTypes,
-            boolean hasVarArgs, Type retType, String symbol,
-            String prepareFnSymbol, String closeFnSymbol, boolean userVisible) {
+            String name, Type retType, NullableMode nullableMode,
+            ArrayList<Type> argTypes, boolean hasVarArgs,
+            String symbol, String prepareFnSymbol, String closeFnSymbol, boolean userVisible) {
         Preconditions.checkNotNull(symbol);
         ScalarFunction fn = new ScalarFunction(
                 new FunctionName(name), argTypes, retType, hasVarArgs, userVisible);
         fn.symbolName = symbol;
         fn.prepareFnSymbol = prepareFnSymbol;
         fn.closeFnSymbol = closeFnSymbol;
-
-///*        try {
-//            fn.symbolName = fn.lookupSymbol(symbol, TSymbolType.UDF_EVALUATE, null,
-//                    fn.hasVarArgs(), fn.getArgs());
-//        } catch (AnalysisException e) {
-//            // This should never happen
-//            throw new RuntimeException("Builtin symbol '" + symbol + "'" + argTypes
-//                    + " not found!", e);
-//        }
-//        if (prepareFnSymbol != null) {
-//            try {
-//                fn.prepareFnSymbol = fn.lookupSymbol(prepareFnSymbol, TSymbolType.UDF_PREPARE);
-//            } catch (AnalysisException e) {
-//                // This should never happen
-//                throw new RuntimeException(
-//                        "Builtin symbol '" + prepareFnSymbol + "' not found!", e);
-//            }
-//        }
-//        if (closeFnSymbol != null) {
-//            try {
-//                fn.closeFnSymbol = fn.lookupSymbol(closeFnSymbol, TSymbolType.UDF_CLOSE);
-//            } catch (AnalysisException e) {
-//                // This should never happen
-//                throw new RuntimeException(
-//                        "Builtin symbol '" + closeFnSymbol + "' not found!", e);
-//            }
-//        }*/
+        fn.nullableMode = nullableMode;
         return fn;
+    }
+
+    public static ScalarFunction createBuiltinOperator(
+            String name, ArrayList<Type> argTypes, Type retType) {
+        return createBuiltinOperator(name, argTypes, retType, NullableMode.DEPEND_ON_ARGUMENT);
     }
 
     /**
@@ -134,7 +124,7 @@ public class ScalarFunction extends Function {
      * implementations. (gen_functions.py). Is there a better way to coordinate this.
      */
     public static ScalarFunction createBuiltinOperator(
-            String name, ArrayList<Type> argTypes, Type retType) {
+            String name, ArrayList<Type> argTypes, Type retType, NullableMode nullableMode) {
         // Operators have a well defined symbol based on the function name and type.
         // Convert Add(TINYINT, TINYINT) --> Add_TinyIntVal_TinyIntVal
         String beFn = name;
@@ -192,7 +182,12 @@ public class ScalarFunction extends Function {
         String beClass = usesDecimal ? "DecimalOperators" : "Operators";
         if (usesDecimalV2) beClass = "DecimalV2Operators";
         String symbol = "doris::" + beClass + "::" + beFn;
-        return createBuiltinOperator(name, symbol, argTypes, retType);
+        return createBuiltinOperator(name, symbol, argTypes, retType, nullableMode);
+    }
+
+    public static ScalarFunction createVecBuiltinOperator(
+            String name, ArrayList<Type> argTypes, Type retType) {
+        return createVecBuiltinOperator(name, argTypes, retType, NullableMode.DEPEND_ON_ARGUMENT);
     }
 
     /**
@@ -202,7 +197,7 @@ public class ScalarFunction extends Function {
      * implementations. (gen_functions.py). Is there a better way to coordinate this.
      */
     public static ScalarFunction createVecBuiltinOperator(
-            String name, ArrayList<Type> argTypes, Type retType) {
+            String name, ArrayList<Type> argTypes, Type retType, NullableMode nullableMode) {
         StringBuilder beFn = new StringBuilder(name);
         boolean usesDecimal = false;
         boolean usesDecimalV2 = false;
@@ -261,20 +256,26 @@ public class ScalarFunction extends Function {
         String beClass = usesDecimal ? "DecimalOperators" : "Operators";
         if (usesDecimalV2) beClass = "DecimalV2Operators";
         String symbol = "doris::" + beClass + "::" + beFn;
-        return createVecBuiltinOperator(name, symbol, argTypes, retType);
+        return createVecBuiltinOperator(name, symbol, argTypes, retType, nullableMode);
     }
 
     public static ScalarFunction createBuiltinOperator(
             String name, String symbol, ArrayList<Type> argTypes, Type retType) {
-        return createBuiltin(name, symbol, argTypes, false, retType, false);
+        return createBuiltinOperator(name, symbol, argTypes, retType, NullableMode.DEPEND_ON_ARGUMENT);
+    }
+
+    public static ScalarFunction createBuiltinOperator(
+            String name, String symbol, ArrayList<Type> argTypes, Type retType, NullableMode nullableMode) {
+        return createBuiltin(name, symbol, argTypes, false, retType, false, nullableMode);
     }
 
     public static ScalarFunction createBuiltin(
             String name, String symbol, ArrayList<Type> argTypes,
-            boolean hasVarArgs, Type retType, boolean userVisible) {
+            boolean hasVarArgs, Type retType, boolean userVisible, NullableMode nullableMode) {
         ScalarFunction fn = new ScalarFunction(
                 new FunctionName(name), argTypes, retType, hasVarArgs, userVisible);
         fn.symbolName = symbol;
+        fn.nullableMode = nullableMode;
 
 //        try {
 //            fn.symbolName_ = fn.lookupSymbol(symbol, TSymbolType.UDF_EVALUATE, null,
@@ -289,17 +290,18 @@ public class ScalarFunction extends Function {
     }
 
     public static ScalarFunction createVecBuiltinOperator(
-            String name, String symbol, ArrayList<Type> argTypes, Type retType) {
-        return createVecBuiltin(name, symbol, argTypes, false, retType, false);
+            String name, String symbol, ArrayList<Type> argTypes, Type retType, NullableMode nullableMode) {
+        return createVecBuiltin(name, symbol, argTypes, false, retType, false, nullableMode);
     }
 
     //TODO: This method should not be here, move to other place in the future
     public static ScalarFunction createVecBuiltin(
             String name, String symbol, ArrayList<Type> argTypes,
-            boolean hasVarArgs, Type retType, boolean userVisible) {
+            boolean hasVarArgs, Type retType, boolean userVisible, NullableMode nullableMode) {
         ScalarFunction fn = new ScalarFunction(
                 new FunctionName(name), argTypes, retType, hasVarArgs, userVisible, true);
         fn.symbolName = symbol;
+        fn.nullableMode = nullableMode;
         return fn;
     }
 
