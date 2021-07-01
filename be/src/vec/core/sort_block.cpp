@@ -17,8 +17,9 @@
 
 #include "vec/core/sort_block.h"
 
+#include <pdqsort.h>
+
 #include "vec/columns/column_string.h"
-#include "vec/common/pdqsort.h"
 #include "vec/common/typeid_cast.h"
 
 namespace doris::vectorized {

@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//#include <vec/Functions/FunctionFactory.h>
 #include "vec/functions/functions_logical.h"
 
 #include <algorithm>
@@ -33,21 +32,6 @@
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
-
-//void register_functionsLogical(FunctionFactory & factory)
-//{
-//    factory.register_function<FunctionAnd>();
-//    factory.register_function<FunctionOr>();
-//    factory.register_function<FunctionXor>();
-//    factory.register_function<FunctionNot>();
-//}
-
-namespace ErrorCodes {
-extern const int LOGICAL_ERROR;
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-extern const int TOO_FEW_ARGUMENTS_FOR_FUNCTION;
-extern const int ILLEGAL_COLUMN;
-} // namespace ErrorCodes
 
 namespace {
 using namespace FunctionsLogicalDetail;

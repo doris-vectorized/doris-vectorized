@@ -19,26 +19,13 @@
 
 #include <memory>
 
-//#include "config_core.h"
 #include "common/status.h"
 #include "vec/core/block.h"
 #include "vec/core/column_numbers.h"
 #include "vec/core/names.h"
 #include "vec/data_types/data_type.h"
 
-namespace llvm {
-class LLVMContext;
-class Value;
-class IRBuilderBase;
-} // namespace llvm
-
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-extern const int NOT_IMPLEMENTED;
-extern const int LOGICAL_ERROR;
-} // namespace ErrorCodes
 
 class Field;
 
@@ -59,20 +46,10 @@ public:
 
 using PreparedFunctionPtr = std::shared_ptr<IPreparedFunction>;
 
-/// Cache for functions result if it was executed on low cardinality column.
-class PreparedFunctionLowCardinalityResultCache;
-using PreparedFunctionLowCardinalityResultCachePtr =
-        std::shared_ptr<PreparedFunctionLowCardinalityResultCache>;
-
 class PreparedFunctionImpl : public IPreparedFunction {
 public:
     Status execute(Block& block, const ColumnNumbers& arguments, size_t result,
                    size_t input_rows_count, bool dry_run = false) final;
-
-    /// Create cache which will be used to store result of function executed on LowCardinality column.
-    /// Only for default LowCardinality implementation.
-    /// Cannot be called concurrently for the same object.
-    void create_low_cardinality_result_cache(size_t cache_size);
 
 protected:
     virtual Status execute_impl_dry_run(Block& block, const ColumnNumbers& arguments, size_t result,
@@ -121,12 +98,7 @@ private:
     Status execute_without_low_cardinality_columns(Block& block, const ColumnNumbers& arguments,
                                                    size_t result, size_t input_rows_count,
                                                    bool dry_run);
-
-    /// Cache is created by function create_low_cardinality_result_cache()
-    PreparedFunctionLowCardinalityResultCachePtr low_cardinality_result_cache;
 };
-
-using ValuePlaceholders = std::vector<std::function<llvm::Value*()>>;
 
 /// Function with known arguments and return type.
 class IFunctionBase {
@@ -460,16 +432,6 @@ public:
 
     const DataTypes& get_argument_types() const override { return arguments; }
     const DataTypePtr& get_return_type() const override { return return_type; }
-
-#if USE_EMBEDDED_COMPILER
-
-    bool isCompilable() const override { return function->isCompilable(arguments); }
-
-    llvm::Value* compile(llvm::IRBuilderBase& builder, ValuePlaceholders values) const override {
-        return function->compile(builder, arguments, std::move(values));
-    }
-
-#endif
 
     PreparedFunctionPtr prepare(const Block& /*sample_block*/, const ColumnNumbers& /*arguments*/,
                                 size_t /*result*/) const override {

@@ -17,32 +17,11 @@
 
 #include "vec/functions/function_helpers.h"
 
-#include "vec/functions/function.h"
 #include "vec/columns/column_nullable.h"
-//#include <vec/Common/assert_cast.h>
 #include "vec/data_types/data_type_nullable.h"
-//#include <IO/WriteHelpers.h>
+#include "vec/functions/function.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int ILLEGAL_COLUMN;
-extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-} // namespace ErrorCodes
-
-//const ColumnConst * check_and_get_column_constStringOrFixedString(const IColumn * column)
-//{
-//    if (!is_column_const(*column))
-//        return {};
-//
-//    const ColumnConst * res = assert_cast<const ColumnConst *>(column);
-//
-//    if (check_column<ColumnString>(&res->get_data_column())
-//        || check_column<ColumnFixedString>(&res->get_data_column()))
-//        return res;
-//
-//    return {};
-//}
 
 static Block create_block_with_nested_columns_impl(const Block& block,
                                                    const std::unordered_set<size_t>& args) {
@@ -82,14 +61,15 @@ Block create_block_with_nested_columns(const Block& block, const ColumnNumbers& 
     return create_block_with_nested_columns_impl(block, args_set);
 }
 
-Block create_block_with_nested_columns(const Block& block, const ColumnNumbers& args, size_t result) {
+Block create_block_with_nested_columns(const Block& block, const ColumnNumbers& args,
+                                       size_t result) {
     std::unordered_set<size_t> args_set(args.begin(), args.end());
     args_set.insert(result);
     return create_block_with_nested_columns_impl(block, args_set);
 }
 
-void validate_argument_type(const IFunction& func, const DataTypes& arguments, size_t argument_index,
-                            bool (*validator_func)(const IDataType&),
+void validate_argument_type(const IFunction& func, const DataTypes& arguments,
+                            size_t argument_index, bool (*validator_func)(const IDataType&),
                             const char* expected_type_description) {
     if (arguments.size() <= argument_index) {
         LOG(FATAL) << "Incorrect number of arguments of function " << func.get_name();

@@ -17,13 +17,13 @@
 
 #pragma once
 
-#include <city.h>
-
 #include <functional>
 #include <ostream>
 #include <string>
 #include <vector>
 
+#include "gutil/hash/city.h"
+#include "gutil/hash/hash128to64.h"
 #include "vec/common/unaligned.h"
 #include "vec/core/types.h"
 
@@ -202,7 +202,7 @@ inline bool operator>(StringRef lhs, StringRef rhs) {
   */
 
 struct StringRefHash64 {
-    size_t operator()(StringRef x) const { return CityHash_v1_0_2::CityHash64(x.data, x.size); }
+    size_t operator()(StringRef x) const { return util_hash::CityHash64(x.data, x.size); }
 };
 
 #if defined(__SSE4_2__)
@@ -211,7 +211,7 @@ struct StringRefHash64 {
 
 inline doris::vectorized::UInt64 hash_len16(doris::vectorized::UInt64 u,
                                             doris::vectorized::UInt64 v) {
-    return CityHash_v1_0_2::Hash128to64(CityHash_v1_0_2::uint128(u, v));
+    return Hash128to64(uint128(u, v));
 }
 
 inline doris::vectorized::UInt64 shift_mix(doris::vectorized::UInt64 val) {

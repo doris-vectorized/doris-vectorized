@@ -17,20 +17,13 @@
 
 #include "vec/data_types/data_type.h"
 
+#include <fmt/format.h>
+
 #include "common/logging.h"
-#include "fmt/format.h"
 #include "vec/columns/column.h"
 #include "vec/columns/column_const.h"
-#include "vec/common/exception.h"
-#include "vec/data_types/nested_utils.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int MULTIPLE_STREAMS_REQUIRED;
-extern const int LOGICAL_ERROR;
-extern const int DATA_TYPE_CANNOT_BE_PROMOTED;
-} // namespace ErrorCodes
 
 IDataType::IDataType() {}
 

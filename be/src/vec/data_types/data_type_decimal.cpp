@@ -17,8 +17,6 @@
 
 #include "vec/data_types/data_type_decimal.h"
 
-#include <type_traits>
-
 #include "gen_cpp/data.pb.h"
 #include "vec/common/assert_cast.h"
 #include "vec/common/int_exp.h"
@@ -26,12 +24,6 @@
 #include "vec/io/io_helper.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-extern const int ARGUMENT_OUT_OF_BOUND;
-} // namespace ErrorCodes
 
 template <typename T>
 std::string DataTypeDecimal<T>::do_get_name() const {
@@ -110,7 +102,6 @@ template <typename T>
 MutableColumnPtr DataTypeDecimal<T>::create_column() const {
     return ColumnType::create(0, scale);
 }
-
 
 DataTypePtr create_decimal(UInt64 precision_value, UInt64 scale_value) {
     if (precision_value < min_decimal_precision() ||
