@@ -25,12 +25,6 @@ class SipHash;
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int CANNOT_CONVERT_TYPE;
-extern const int BAD_TYPE_OF_FIELD;
-extern const int LOGICAL_ERROR;
-} // namespace ErrorCodes
-
 UInt128 string_to_uuid(const String&);
 
 /** StaticVisitor (and its descendants) - class with overloaded operator() for all types of fields.

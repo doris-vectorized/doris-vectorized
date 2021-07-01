@@ -28,9 +28,9 @@
 #include <memory>
 
 #include "vec/common/allocator.h"
-#include "vec/common/strong_typedef.h"
 #include "vec/common/bit_helpers.h"
 #include "vec/common/memcpy_small.h"
+#include "vec/common/strong_typedef.h"
 
 #ifndef NDEBUG
 #include <sys/mman.h>
@@ -39,10 +39,6 @@
 #include "vec/common/pod_array_fwd.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int CANNOT_MPROTECT;
-}
 
 /** A dynamic array for POD types.
   * Designed for a small number of large arrays (rather than a lot of small ones).
@@ -394,7 +390,7 @@ public:
     /// Works under assumption, that it's possible to read up to 15 excessive bytes after `from_end` and this PODArray is padded.
     template <typename It1, typename It2, typename... TAllocatorParams>
     void insert_small_allow_read_write_overflow15(It1 from_begin, It2 from_end,
-                                             TAllocatorParams&&... allocator_params) {
+                                                  TAllocatorParams&&... allocator_params) {
         static_assert(pad_right_ >= 15);
         insert_prepare(from_begin, from_end, std::forward<TAllocatorParams>(allocator_params)...);
         size_t bytes_to_copy = this->byte_size(from_end - from_begin);

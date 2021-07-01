@@ -23,6 +23,7 @@
 #include <boost/noncopyable.hpp>
 #include <utility>
 
+#include "common/status.h"
 #include "vec/common/exception.h"
 #include "vec/common/hash_table/hash_table_allocator.h"
 #include "vec/common/hash_table/hash_table_key_holder.h"
@@ -40,13 +41,6 @@
   * Example: std::string is not position independent in libstdc++ with C++11 ABI or in libc++.
   * Also, key in hash table must be of type, that zero bytes is compared equals to zero key.
   */
-
-namespace doris::vectorized {
-namespace ErrorCodes {
-extern const int LOGICAL_ERROR;
-extern const int NO_AVAILABLE_DATA;
-} // namespace ErrorCodes
-} // namespace doris::vectorized
 
 /** The state of the hash table that affects the properties of its cells.
   * Used as a template parameter.
@@ -326,7 +320,7 @@ struct ZeroValueStorage<false, Cell> {
     bool get_has_zero() const { return false; }
     void set_get_has_zero() {
         throw doris::vectorized::Exception("HashTable: logical error",
-                                           doris::vectorized::ErrorCodes::LOGICAL_ERROR);
+                                           doris::TStatusCode::VEC_LOGIC_ERROR);
     }
     void clear_get_has_zero() {}
 

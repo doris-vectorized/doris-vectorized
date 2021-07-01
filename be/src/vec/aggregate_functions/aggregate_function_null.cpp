@@ -27,10 +27,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-}
-
 class AggregateFunctionCombinatorNull final : public IAggregateFunctionCombinator {
 public:
     String get_name() const override { return "Null"; }

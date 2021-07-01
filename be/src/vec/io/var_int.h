@@ -22,10 +22,6 @@
 #include "vec/core/types.h"
 
 namespace doris::vectorized {
-namespace ErrorCodes {
-extern const int ATTEMPT_TO_READ_AFTER_EOF;
-}
-
 /** Write UInt64 in variable length format (base128) NOTE Only up to 2^63 - 1 are supported. */
 void write_var_uint(UInt64 x, std::ostream& ostr);
 char* write_var_uint(UInt64 x, char* ostr);
@@ -43,7 +39,7 @@ size_t get_length_of_var_int(Int64 x);
 /** Write Int64 in variable length format (base128) */
 template <typename OUT>
 inline void write_var_int(Int64 x, OUT& ostr) {
-        write_var_uint(static_cast<UInt64>((x << 1) ^ (x >> 63)), ostr);
+    write_var_uint(static_cast<UInt64>((x << 1) ^ (x >> 63)), ostr);
 }
 
 inline char* write_var_int(Int64 x, char* ostr) {
@@ -53,12 +49,12 @@ inline char* write_var_int(Int64 x, char* ostr) {
 /** Read Int64, written in variable length format (base128) */
 template <typename IN>
 inline void read_var_int(Int64& x, IN& istr) {
-        read_var_uint(*reinterpret_cast<UInt64 *>(&x), istr);
+    read_var_uint(*reinterpret_cast<UInt64*>(&x), istr);
     x = (static_cast<UInt64>(x) >> 1) ^ -(x & 1);
 }
 
 inline const char* read_var_int(Int64& x, const char* istr, size_t size) {
-    const char* res = read_var_uint(*reinterpret_cast<UInt64 *>(&x), istr, size);
+    const char* res = read_var_uint(*reinterpret_cast<UInt64*>(&x), istr, size);
     x = (static_cast<UInt64>(x) >> 1) ^ -(x & 1);
     return res;
 }
@@ -129,15 +125,24 @@ inline char* write_var_uint(UInt64 x, char* ostr) {
 }
 
 inline size_t get_length_of_var_uint(UInt64 x) {
-    return x < (1ULL << 7) ? 1
-        : (x < (1ULL << 14) ? 2
-        : (x < (1ULL << 21) ? 3
-        : (x < (1ULL << 28) ? 4
-        : (x < (1ULL << 35) ? 5
-        : (x < (1ULL << 42) ? 6
-        : (x < (1ULL << 49) ? 7
-        : (x < (1ULL << 56) ? 8
-        : 9)))))));
+    return x < (1ULL << 7)
+                   ? 1
+                   : (x < (1ULL << 14)
+                              ? 2
+                              : (x < (1ULL << 21)
+                                         ? 3
+                                         : (x < (1ULL << 28)
+                                                    ? 4
+                                                    : (x < (1ULL << 35)
+                                                               ? 5
+                                                               : (x < (1ULL << 42)
+                                                                          ? 6
+                                                                          : (x < (1ULL << 49)
+                                                                                     ? 7
+                                                                                     : (x < (1ULL
+                                                                                             << 56)
+                                                                                                ? 8
+                                                                                                : 9)))))));
 }
 
 inline size_t get_length_of_var_int(Int64 x) {

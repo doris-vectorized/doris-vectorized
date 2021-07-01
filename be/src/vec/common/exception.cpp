@@ -25,13 +25,14 @@
 #include <string>
 #include <typeinfo>
 
-namespace Poco {
+namespace doris::vectorized {
 
-Exception::Exception(int code) : _pNested(0), _code(code) {}
+AbstractException::AbstractException(int code) : _pNested(0), _code(code) {}
 
-Exception::Exception(const std::string& msg, int code) : _msg(msg), _pNested(0), _code(code) {}
+AbstractException::AbstractException(const std::string& msg, int code)
+        : _msg(msg), _pNested(0), _code(code) {}
 
-Exception::Exception(const std::string& msg, const std::string& arg, int code)
+AbstractException::AbstractException(const std::string& msg, const std::string& arg, int code)
         : _msg(msg), _pNested(0), _code(code) {
     if (!arg.empty()) {
         _msg.append(": ");
@@ -39,20 +40,22 @@ Exception::Exception(const std::string& msg, const std::string& arg, int code)
     }
 }
 
-Exception::Exception(const std::string& msg, const Exception& nested, int code)
+AbstractException::AbstractException(const std::string& msg, const AbstractException& nested,
+                                     int code)
         : _msg(msg), _pNested(nested.clone()), _code(code) {}
 
-Exception::Exception(const Exception& exc) : std::exception(exc), _msg(exc._msg), _code(exc._code) {
+AbstractException::AbstractException(const AbstractException& exc)
+        : std::exception(exc), _msg(exc._msg), _code(exc._code) {
     _pNested = exc._pNested ? exc._pNested->clone() : 0;
 }
 
-Exception::~Exception() throw() {
+AbstractException::~AbstractException() throw() {
     delete _pNested;
 }
 
-Exception& Exception::operator=(const Exception& exc) {
+AbstractException& AbstractException::operator=(const AbstractException& exc) {
     if (&exc != this) {
-        Exception* newPNested = exc._pNested ? exc._pNested->clone() : 0;
+        AbstractException* newPNested = exc._pNested ? exc._pNested->clone() : 0;
         delete _pNested;
         _msg = exc._msg;
         _pNested = newPNested;
@@ -61,19 +64,19 @@ Exception& Exception::operator=(const Exception& exc) {
     return *this;
 }
 
-const char* Exception::name() const throw() {
+const char* AbstractException::name() const throw() {
     return "Exception";
 }
 
-const char* Exception::className() const throw() {
+const char* AbstractException::className() const throw() {
     return typeid(*this).name();
 }
 
-const char* Exception::what() const throw() {
+const char* AbstractException::what() const throw() {
     return name();
 }
 
-std::string Exception::displayText() const {
+std::string AbstractException::displayText() const {
     std::string txt = name();
     if (!_msg.empty()) {
         txt.append(": ");
@@ -82,85 +85,20 @@ std::string Exception::displayText() const {
     return txt;
 }
 
-void Exception::extendedMessage(const std::string& arg) {
+void AbstractException::extendedMessage(const std::string& arg) {
     if (!arg.empty()) {
         if (!_msg.empty()) _msg.append(": ");
         _msg.append(arg);
     }
 }
 
-Exception* Exception::clone() const {
-    return new Exception(*this);
+AbstractException* AbstractException::clone() const {
+    return new AbstractException(*this);
 }
 
-void Exception::rethrow() const {
+void AbstractException::rethrow() const {
     throw *this;
 }
-
-POCO_IMPLEMENT_EXCEPTION(LogicException, Exception, "Logic exception")
-POCO_IMPLEMENT_EXCEPTION(AssertionViolationException, LogicException, "Assertion violation")
-POCO_IMPLEMENT_EXCEPTION(NullPointerException, LogicException, "Null pointer")
-POCO_IMPLEMENT_EXCEPTION(NullValueException, LogicException, "Null value")
-POCO_IMPLEMENT_EXCEPTION(BugcheckException, LogicException, "Bugcheck")
-POCO_IMPLEMENT_EXCEPTION(InvalidArgumentException, LogicException, "Invalid argument")
-POCO_IMPLEMENT_EXCEPTION(NotImplementedException, LogicException, "Not implemented")
-POCO_IMPLEMENT_EXCEPTION(RangeException, LogicException, "Out of range")
-POCO_IMPLEMENT_EXCEPTION(IllegalStateException, LogicException, "Illegal state")
-POCO_IMPLEMENT_EXCEPTION(InvalidAccessException, LogicException, "Invalid access")
-POCO_IMPLEMENT_EXCEPTION(SignalException, LogicException, "Signal received")
-POCO_IMPLEMENT_EXCEPTION(UnhandledException, LogicException, "Unhandled exception")
-
-POCO_IMPLEMENT_EXCEPTION(RuntimeException, Exception, "Runtime exception")
-POCO_IMPLEMENT_EXCEPTION(NotFoundException, RuntimeException, "Not found")
-POCO_IMPLEMENT_EXCEPTION(ExistsException, RuntimeException, "Exists")
-POCO_IMPLEMENT_EXCEPTION(TimeoutException, RuntimeException, "Timeout")
-POCO_IMPLEMENT_EXCEPTION(SystemException, RuntimeException, "System exception")
-POCO_IMPLEMENT_EXCEPTION(RegularExpressionException, RuntimeException,
-                         "Error in regular expression")
-POCO_IMPLEMENT_EXCEPTION(LibraryLoadException, RuntimeException, "Cannot load library")
-POCO_IMPLEMENT_EXCEPTION(LibraryAlreadyLoadedException, RuntimeException, "Library already loaded")
-POCO_IMPLEMENT_EXCEPTION(NoThreadAvailableException, RuntimeException, "No thread available")
-POCO_IMPLEMENT_EXCEPTION(PropertyNotSupportedException, RuntimeException, "Property not supported")
-POCO_IMPLEMENT_EXCEPTION(PoolOverflowException, RuntimeException, "Pool overflow")
-POCO_IMPLEMENT_EXCEPTION(NoPermissionException, RuntimeException, "No permission")
-POCO_IMPLEMENT_EXCEPTION(OutOfMemoryException, RuntimeException, "Out of memory")
-POCO_IMPLEMENT_EXCEPTION(DataException, RuntimeException, "Data error")
-
-POCO_IMPLEMENT_EXCEPTION(DataFormatException, DataException, "Bad data format")
-POCO_IMPLEMENT_EXCEPTION(SyntaxException, DataException, "Syntax error")
-POCO_IMPLEMENT_EXCEPTION(CircularReferenceException, DataException, "Circular reference")
-POCO_IMPLEMENT_EXCEPTION(PathSyntaxException, SyntaxException, "Bad path syntax")
-POCO_IMPLEMENT_EXCEPTION(IOException, RuntimeException, "I/O error")
-POCO_IMPLEMENT_EXCEPTION(ProtocolException, IOException, "Protocol error")
-POCO_IMPLEMENT_EXCEPTION(FileException, IOException, "File access error")
-POCO_IMPLEMENT_EXCEPTION(FileExistsException, FileException, "File exists")
-POCO_IMPLEMENT_EXCEPTION(FileNotFoundException, FileException, "File not found")
-POCO_IMPLEMENT_EXCEPTION(PathNotFoundException, FileException, "Path not found")
-POCO_IMPLEMENT_EXCEPTION(FileReadOnlyException, FileException, "File is read-only")
-POCO_IMPLEMENT_EXCEPTION(FileAccessDeniedException, FileException, "Access to file denied")
-POCO_IMPLEMENT_EXCEPTION(CreateFileException, FileException, "Cannot create file")
-POCO_IMPLEMENT_EXCEPTION(OpenFileException, FileException, "Cannot open file")
-POCO_IMPLEMENT_EXCEPTION(WriteFileException, FileException, "Cannot write file")
-POCO_IMPLEMENT_EXCEPTION(ReadFileException, FileException, "Cannot read file")
-POCO_IMPLEMENT_EXCEPTION(DirectoryNotEmptyException, FileException, "Directory not empty")
-POCO_IMPLEMENT_EXCEPTION(UnknownURISchemeException, RuntimeException, "Unknown URI scheme")
-POCO_IMPLEMENT_EXCEPTION(TooManyURIRedirectsException, RuntimeException, "Too many URI redirects")
-POCO_IMPLEMENT_EXCEPTION(URISyntaxException, SyntaxException, "Bad URI syntax")
-
-POCO_IMPLEMENT_EXCEPTION(ApplicationException, Exception, "Application exception")
-POCO_IMPLEMENT_EXCEPTION(BadCastException, RuntimeException, "Bad cast exception")
-
-} // namespace Poco
-
-namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int POCO_EXCEPTION;
-extern const int STD_EXCEPTION;
-extern const int UNKNOWN_EXCEPTION;
-extern const int CANNOT_TRUNCATE_FILE;
-extern const int NOT_IMPLEMENTED;
-} // namespace ErrorCodes
 
 //TODO: use fmt
 std::string errnoToString(int code, int e) {
@@ -186,24 +124,6 @@ void tryLogCurrentException(const char* log_name, const std::string& start_of_me
 
 std::string getExtraExceptionInfo(const std::exception& e) {
     std::string msg;
-    // try
-    // {
-    //     if (auto file_exception = dynamic_cast<const Poco::FileException *>(&e))
-    //     {
-    //         if (file_exception->code() == ENOSPC)
-    //             getNoSpaceLeftInfoMessage(file_exception->message(), msg);
-    //     }
-    //     else if (auto errno_exception = dynamic_cast<const doris::vectorized::ErrnoException *>(&e))
-    //     {
-    //         if (errno_exception->getErrno() == ENOSPC && errno_exception->getPath())
-    //             getNoSpaceLeftInfoMessage(errno_exception->getPath().value(), msg);
-    //     }
-    // }
-    // catch (...)
-    // {
-    //     msg += "\nCannot print extra info: " + getCurrentExceptionMessage(false, false, false);
-    // }
-
     return msg;
 }
 
@@ -220,9 +140,9 @@ std::string getCurrentExceptionMessage(bool with_stacktrace,
                << "VERSION_STRING"
                << "VERSION_OFFICIAL"
                << ")";
-    } catch (const Poco::Exception& e) {
+    } catch (const AbstractException& e) {
         try {
-            stream << "Poco::Exception. Code: " << ErrorCodes::POCO_EXCEPTION
+            stream << "Poco::Exception. Code: " << TStatusCode::VEC_EXCEPTION
                    << ", e.code() = " << e.code() << ", e.displayText() = " << e.displayText()
                    << (with_extra_info ? getExtraExceptionInfo(e) : "") << " (version "
                    << "VERSION_STRING"
