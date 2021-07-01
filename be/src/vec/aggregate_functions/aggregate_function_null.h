@@ -20,6 +20,7 @@
 #include <array>
 
 #include "common/logging.h"
+#include "common/status.h"
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/columns/column_nullable.h"
 #include "vec/common/assert_cast.h"
@@ -27,11 +28,6 @@
 #include "vec/io/io_helper.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int LOGICAL_ERROR;
-extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-} // namespace ErrorCodes
 
 /// This class implements a wrapper around an aggregate function. Despite its name,
 /// this is an adapter. It is used to handle aggregate functions that are called with

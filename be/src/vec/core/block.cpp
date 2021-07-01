@@ -43,14 +43,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int POSITION_OUT_OF_BOUND;
-extern const int NOT_FOUND_COLUMN_IN_BLOCK;
-extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
-extern const int BLOCKS_HAVE_DIFFERENT_STRUCTURE;
-extern const int UNKNOWN_TYPE;
-} // namespace ErrorCodes
-
 inline DataTypePtr get_data_type(const PColumn& pcolumn) {
     switch (pcolumn.type()) {
     case PColumn::UINT8: {
