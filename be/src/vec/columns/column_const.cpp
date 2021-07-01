@@ -25,10 +25,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
-}
-
 ColumnConst::ColumnConst(const ColumnPtr& data_, size_t s_) : data(data_), s(s_) {
     /// Squash Const of Const.
     while (const ColumnConst* const_data = typeid_cast<const ColumnConst*>(data.get())) {

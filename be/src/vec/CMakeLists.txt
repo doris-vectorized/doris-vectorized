@@ -39,7 +39,6 @@ set(VEC_FILES
   columns/column_vector.cpp
   columns/columns_common.cpp
   common/demangle.cpp
-  common/error_codes.cpp
   common/exception.cpp
   common/pod_array.cpp
   common/string_utils/string_utils.cpp

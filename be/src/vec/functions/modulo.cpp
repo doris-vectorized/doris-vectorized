@@ -21,14 +21,11 @@
 
 #include <libdivide.h>
 
+#include "common/status.h"
 #include "vec/functions/function_binary_arithmetic.h"
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int ILLEGAL_DIVISION;
-}
 
 template <typename A, typename B>
 struct ModuloImpl {
@@ -52,7 +49,8 @@ struct ModuloByConstantImpl : BinaryOperationImplBase<A, B, ModuloImpl<A, B>> {
     using ResultType = typename ModuloImpl<A, B>::ResultType;
 
     static void vector_constant(const PaddedPODArray<A>& a, B b, PaddedPODArray<ResultType>& c) {
-        if (UNLIKELY(b == 0)) throw Exception("Division by zero", ErrorCodes::ILLEGAL_DIVISION);
+        if (UNLIKELY(b == 0))
+            throw Exception("Division by zero", TStatusCode::VEC_ILLEGAL_DIVISION);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"

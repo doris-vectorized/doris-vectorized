@@ -50,18 +50,15 @@ struct SortCursorImpl {
     bool has_collation = false;
 
     SortCursorImpl() = default;
+    virtual ~SortCursorImpl() = default;
 
     SortCursorImpl(const Block& block, const SortDescription& desc_)
-            : desc(desc_),
-              sort_columns_size(desc.size()),
-              need_collation(desc.size()) {
+            : desc(desc_), sort_columns_size(desc.size()), need_collation(desc.size()) {
         reset(block);
     }
 
     SortCursorImpl(const Columns& columns, const SortDescription& desc_)
-            : desc(desc_),
-              sort_columns_size(desc.size()),
-              need_collation(desc.size()) {
+            : desc(desc_), sort_columns_size(desc.size()), need_collation(desc.size()) {
         for (auto& column_desc : desc) {
             if (!column_desc.column_name.empty()) {
                 LOG(FATAL) << "SortDesctiption should contain column position if SortCursor was "
@@ -183,7 +180,9 @@ struct SortCursor {
         return greater_at(rhs, impl->rows - 1, 0) == -1;
     }
 
-    bool greater(const SortCursor& rhs) const { return greater_at(rhs, impl->pos, rhs.impl->pos) > 0; }
+    bool greater(const SortCursor& rhs) const {
+        return greater_at(rhs, impl->pos, rhs.impl->pos) > 0;
+    }
 
     /// Inverted so that the priority queue elements are removed in ascending order.
     bool operator<(const SortCursor& rhs) const { return greater(rhs); }
