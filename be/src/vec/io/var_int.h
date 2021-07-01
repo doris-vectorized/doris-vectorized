@@ -124,26 +124,19 @@ inline char* write_var_uint(UInt64 x, char* ostr) {
     return ostr;
 }
 
+// clang-format off
 inline size_t get_length_of_var_uint(UInt64 x) {
-    return x < (1ULL << 7)
-                   ? 1
-                   : (x < (1ULL << 14)
-                              ? 2
-                              : (x < (1ULL << 21)
-                                         ? 3
-                                         : (x < (1ULL << 28)
-                                                    ? 4
-                                                    : (x < (1ULL << 35)
-                                                               ? 5
-                                                               : (x < (1ULL << 42)
-                                                                          ? 6
-                                                                          : (x < (1ULL << 49)
-                                                                                     ? 7
-                                                                                     : (x < (1ULL
-                                                                                             << 56)
-                                                                                                ? 8
-                                                                                                : 9)))))));
+    return x < (1ULL << 7) ? 1
+        : (x < (1ULL << 14) ? 2
+        : (x < (1ULL << 21) ? 3
+        : (x < (1ULL << 28) ? 4
+        : (x < (1ULL << 35) ? 5
+        : (x < (1ULL << 42) ? 6
+        : (x < (1ULL << 49) ? 7
+        : (x < (1ULL << 56) ? 8
+        : 9)))))));
 }
+// clang-format on
 
 inline size_t get_length_of_var_int(Int64 x) {
     return get_length_of_var_uint(static_cast<UInt64>((x << 1) ^ (x >> 63)));
