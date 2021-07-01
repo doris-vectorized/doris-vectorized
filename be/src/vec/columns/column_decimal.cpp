@@ -29,12 +29,6 @@ bool decimal_less(T x, T y, doris::vectorized::UInt32 x_scale, doris::vectorized
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int PARAMETER_OUT_OF_BOUND;
-extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
-extern const int NOT_IMPLEMENTED;
-} // namespace ErrorCodes
-
 template <typename T>
 int ColumnDecimal<T>::compare_at(size_t n, size_t m, const IColumn& rhs_, int) const {
     auto& other = static_cast<const Self&>(rhs_);
@@ -175,12 +169,6 @@ ColumnPtr ColumnDecimal<T>::filter(const IColumn::Filter& filt, ssize_t result_s
     return res;
 }
 
-//template <typename T>
-//ColumnPtr ColumnDecimal<T>::index(const IColumn & indexes, size_t limit) const
-//{
-//    return select_index_impl(*this, indexes, limit);
-//}
-
 template <typename T>
 ColumnPtr ColumnDecimal<T>::replicate(const IColumn::Offsets& offsets) const {
     size_t size = data.size();
@@ -204,12 +192,6 @@ ColumnPtr ColumnDecimal<T>::replicate(const IColumn::Offsets& offsets) const {
 
     return res;
 }
-
-//template <typename T>
-//void ColumnDecimal<T>::gather(ColumnGathererStream & gatherer)
-//{
-//    gatherer.gather(*this);
-//}
 
 template <typename T>
 void ColumnDecimal<T>::get_extremes(Field& min, Field& max) const {

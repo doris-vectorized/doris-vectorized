@@ -22,8 +22,6 @@
 #include "vec/columns/column.h"
 #include "vec/columns/column_vector.h"
 #include "vec/common/typeid_cast.h"
-//#include <vec/Common/HashTable/HashSet.h>
-//#include <vec/Common/HashTable/HashMap.h>
 
 namespace doris::vectorized {
 

@@ -17,8 +17,9 @@
 
 #include "vec/aggregate_functions/aggregate_function_sum.h"
 
+#include <fmt/format.h>
+
 #include "common/logging.h"
-#include "fmt/format.h"
 #include "vec/aggregate_functions/aggregate_function_simple_factory.h"
 #include "vec/aggregate_functions/helpers.h"
 

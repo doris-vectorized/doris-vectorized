@@ -27,10 +27,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int LOGICAL_ERROR;
-}
-
 /// PaddedPODArray extended by Decimal scale
 template <typename T>
 class DecimalPaddedPODArray : public PaddedPODArray<T> {
@@ -107,7 +103,8 @@ public:
     const char* deserialize_and_insert_from_arena(const char* pos) override;
     void update_hash_with_value(size_t n, SipHash& hash) const override;
     int compare_at(size_t n, size_t m, const IColumn& rhs_, int nan_direction_hint) const override;
-    void get_permutation(bool reverse, size_t limit, int nan_direction_hint, IColumn::Permutation & res) const override;
+    void get_permutation(bool reverse, size_t limit, int nan_direction_hint,
+                         IColumn::Permutation& res) const override;
 
     MutableColumnPtr clone_resized(size_t size) const override;
 

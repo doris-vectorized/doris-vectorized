@@ -23,15 +23,8 @@
 #include "vec/common/nan_utils.h"
 #include "vec/common/sip_hash.h"
 #include "vec/common/typeid_cast.h"
-//#include <DataStreams/ColumnGathererStream.h>
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int LOGICAL_ERROR;
-extern const int ILLEGAL_COLUMN;
-extern const int SIZES_OF_NESTED_COLUMNS_ARE_INCONSISTENT;
-} // namespace ErrorCodes
 
 ColumnNullable::ColumnNullable(MutableColumnPtr&& nested_column_, MutableColumnPtr&& null_map_)
         : nested_column(std::move(nested_column_)), null_map(std::move(null_map_)) {
@@ -98,7 +91,7 @@ void ColumnNullable::insert_data(const char* pos, size_t length) {
 }
 
 StringRef ColumnNullable::serialize_value_into_arena(size_t n, Arena& arena,
-                                                  char const*& begin) const {
+                                                     char const*& begin) const {
     const auto& arr = get_null_map_data();
     static constexpr auto s = sizeof(arr[0]);
 
@@ -154,12 +147,14 @@ void ColumnNullable::insert_from_not_nullable(const IColumn& src, size_t n) {
     get_null_map_data().push_back(0);
 }
 
-void ColumnNullable::insert_range_from_not_nullable(const IColumn& src, size_t start, size_t length) {
+void ColumnNullable::insert_range_from_not_nullable(const IColumn& src, size_t start,
+                                                    size_t length) {
     get_nested_column().insert_range_from(src, start, length);
     get_null_map_data().resize_fill(get_null_map_data().size() + length, 0);
 }
 
-void ColumnNullable::insert_many_from_not_nullable(const IColumn& src, size_t position, size_t length) {
+void ColumnNullable::insert_many_from_not_nullable(const IColumn& src, size_t position,
+                                                   size_t length) {
     for (size_t i = 0; i < length; ++i) insert_from_not_nullable(src, position);
 }
 
@@ -180,15 +175,8 @@ ColumnPtr ColumnNullable::permute(const Permutation& perm, size_t limit) const {
     return ColumnNullable::create(permuted_data, permuted_null_map);
 }
 
-//ColumnPtr ColumnNullable::index(const IColumn & indexes, size_t limit) const
-//{
-//    ColumnPtr indexed_data = get_nested_column().index(indexes, limit);
-//    ColumnPtr indexed_null_map = get_null_map_column().index(indexes, limit);
-//    return ColumnNullable::create(indexed_data, indexed_null_map);
-//}
-
 int ColumnNullable::compare_at(size_t n, size_t m, const IColumn& rhs_,
-                              int null_direction_hint) const {
+                               int null_direction_hint) const {
     /// NULL values share the properties of NaN values.
     /// Here the last parameter of compare_at is called null_direction_hint
     /// instead of the usual nan_direction_hint and is used to implement
@@ -212,7 +200,7 @@ int ColumnNullable::compare_at(size_t n, size_t m, const IColumn& rhs_,
 }
 
 void ColumnNullable::get_permutation(bool reverse, size_t limit, int null_direction_hint,
-                                    Permutation& res) const {
+                                     Permutation& res) const {
     /// Cannot pass limit because of unknown amount of NULLs.
     get_nested_column().get_permutation(reverse, 0, null_direction_hint, res);
 

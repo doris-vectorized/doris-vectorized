@@ -17,8 +17,6 @@
 
 #include "vec/columns/collator.h"
 
-//#include "config_core.h"
-
 #if USE_ICU
 #include <unicode/ucol.h>
 #else
@@ -30,15 +28,8 @@
 
 #include <boost/algorithm/string/case_conv.hpp>
 
+#include "common/logging.h"
 #include "vec/common/exception.h"
-//#include <IO/WriteHelpers.h>
-//#include <Poco/String.h>
-
-namespace doris::vectorized::ErrorCodes {
-extern const int UNSUPPORTED_COLLATION_LOCALE;
-extern const int COLLATION_COMPARISON_FAILED;
-extern const int SUPPORT_IS_DISABLED;
-} // namespace doris::vectorized::ErrorCodes
 
 Collator::Collator(const std::string& locale_) : locale(boost::algorithm::to_lower_copy(locale_)) {
 #if USE_ICU
@@ -47,14 +38,10 @@ Collator::Collator(const std::string& locale_) : locale(boost::algorithm::to_low
     collator = ucol_open(locale.c_str(), &status);
     if (status != U_ZERO_ERROR) {
         ucol_close(collator);
-        throw doris::vectorized::Exception(
-                "Unsupported collation locale: " + locale,
-                doris::vectorized::ErrorCodes::UNSUPPORTED_COLLATION_LOCALE);
+        LOG(FATAL) << "Unsupported collation locale: " << locale;
     }
 #else
-    throw doris::vectorized::Exception(
-            "Collations support is disabled, because ClickHouse was built without ICU library",
-            doris::vectorized::ErrorCodes::SUPPORT_IS_DISABLED);
+    LOG(FATAL) << "Collations support is disabled, In Doris";
 #endif
 }
 
@@ -73,11 +60,10 @@ int Collator::compare(const char* str1, size_t length1, const char* str2, size_t
     UErrorCode status = U_ZERO_ERROR;
     UCollationResult compare_result = ucol_strcollIter(collator, &iter1, &iter2, &status);
 
-    if (status != U_ZERO_ERROR)
-        throw doris::vectorized::Exception(
-                "ICU collation comparison failed with error code: " +
-                        doris::vectorized::toString<int>(status),
-                doris::vectorized::ErrorCodes::COLLATION_COMPARISON_FAILED);
+    if (status != U_ZERO_ERROR) {
+        LOG(FATAL) << "ICU collation comparison failed with error code: "
+                   << doris::vectorized::toString<int>(status);
+    }
 
     /** Values of enum UCollationResult are equals to what exactly we need:
      *     UCOL_EQUAL = 0

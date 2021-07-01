@@ -15,8 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//#include <IO/WriteBufferFromString.h>
-//#include <IO/Operators.h>
 #include "vec/columns/column.h"
 
 #include <sstream>
@@ -35,7 +33,7 @@ std::string IColumn::dump_structure() const {
         res << ", " << subcolumn->dump_structure();
     };
 
-    const_cast<IColumn *>(this)->for_each_subcolumn(callback);
+    const_cast<IColumn*>(this)->for_each_subcolumn(callback);
 
     res << ")";
     return res.str();

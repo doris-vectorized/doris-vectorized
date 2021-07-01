@@ -26,9 +26,6 @@
 #include "vec/data_types/data_type_nullable.h"
 
 namespace doris::vectorized {
-namespace ErrorCodes {
-extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-}
 
 class AggregateFunctionCombinatorDistinct final : public IAggregateFunctionCombinator {
 public:
