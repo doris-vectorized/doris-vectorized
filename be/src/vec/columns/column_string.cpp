@@ -26,11 +26,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int PARAMETER_OUT_OF_BOUND;
-extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
-} // namespace ErrorCodes
-
 MutableColumnPtr ColumnString::clone_resized(size_t to_size) const {
     auto res = ColumnString::create();
     if (to_size == 0) return res;
@@ -290,11 +285,6 @@ ColumnPtr ColumnString::replicate(const Offsets& replicate_offsets) const {
 
     return res;
 }
-
-//void ColumnString::gather(ColumnGathererStream & gatherer)
-//{
-//    gatherer.gather(*this);
-//}
 
 void ColumnString::reserve(size_t n) {
     offsets.reserve(n);

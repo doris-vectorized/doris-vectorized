@@ -23,23 +23,18 @@
 #include <cstring>
 
 #include "vec/common/arena.h"
+#include "vec/common/bit_cast.h"
 #include "vec/common/exception.h"
 #include "vec/common/nan_utils.h"
+#include "vec/common/pdqsort.h"
 #include "vec/common/sip_hash.h"
 #include "vec/common/unaligned.h"
-#include "vec/common/bit_cast.h"
-#include "vec/common/pdqsort.h"
 
 #ifdef __SSE2__
 #include <emmintrin.h>
 #endif
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int PARAMETER_OUT_OF_BOUND;
-extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
-} // namespace ErrorCodes
 
 template <typename T>
 StringRef ColumnVector<T>::serialize_value_into_arena(size_t n, Arena& arena,
@@ -296,12 +291,6 @@ ColumnPtr ColumnVector<T>::permute(const IColumn::Permutation& perm, size_t limi
     return res;
 }
 
-//template <typename T>
-//ColumnPtr ColumnVector<T>::index(const IColumn & indexes, size_t limit) const
-//{
-//    return select_index_impl(*this, indexes, limit);
-//}
-
 template <typename T>
 ColumnPtr ColumnVector<T>::replicate(const IColumn::Offsets& offsets) const {
     size_t size = data.size();
@@ -325,12 +314,6 @@ ColumnPtr ColumnVector<T>::replicate(const IColumn::Offsets& offsets) const {
 
     return res;
 }
-
-//template <typename T>
-//void ColumnVector<T>::gather(ColumnGathererStream & gatherer)
-//{
-////    gatherer.gather(*this);
-//}
 
 template <typename T>
 void ColumnVector<T>::get_extremes(Field& min, Field& max) const {

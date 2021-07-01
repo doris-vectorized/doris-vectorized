@@ -25,10 +25,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int NOT_IMPLEMENTED;
-}
-
 /** ColumnConst contains another column with single element,
   *  but looks like a column with arbitrary amount of same elements.
   */
