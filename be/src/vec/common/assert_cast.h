@@ -27,12 +27,6 @@
 #include "vec/common/demangle.h"
 #include "vec/common/exception.h"
 
-namespace doris::vectorized {
-namespace ErrorCodes {
-extern const int BAD_CAST;
-}
-} // namespace doris::vectorized
-
 /** Perform static_cast in release build.
   * Checks type by comparing typeid and throw an exception in debug build.
   * The exact match of the type is checked. That is, cast to the ancestor will be unsuccessful.
