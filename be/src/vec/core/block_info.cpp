@@ -15,15 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/common/exception.h"
-#include "vec/core/types.h"
 #include "vec/core/block_info.h"
 
-namespace doris::vectorized {
+#include "vec/common/exception.h"
+#include "vec/core/types.h"
 
-namespace ErrorCodes {
-extern const int UNKNOWN_BLOCK_INFO_FIELD;
-}
+namespace doris::vectorized {
 
 void BlockMissingValues::set_bit(size_t column_idx, size_t row_idx) {
     RowsBitMask& mask = rows_mask_by_column_id[column_idx];

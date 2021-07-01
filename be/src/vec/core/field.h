@@ -31,14 +31,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int BAD_TYPE_OF_FIELD;
-extern const int BAD_GET;
-extern const int NOT_IMPLEMENTED;
-extern const int LOGICAL_ERROR;
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-} // namespace ErrorCodes
-
 template <typename T>
 struct NearestFieldTypeImpl;
 

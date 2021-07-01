@@ -18,15 +18,12 @@
 #pragma once
 
 #include "common/compiler_util.h"
+#include "common/status.h"
 #include "type_traits"
 #include "vec/common/exception.h"
 #include "vec/data_types/number_traits.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int ILLEGAL_DIVISION;
-}
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"
@@ -35,13 +32,16 @@ template <typename A, typename B>
 inline void throw_if_division_leads_to_fpe(A a, B b) {
     /// Is it better to use siglongjmp instead of checks?
 
-    if (UNLIKELY(b == 0)) throw Exception("Division by zero", ErrorCodes::ILLEGAL_DIVISION);
+    if (UNLIKELY(b == 0)) {
+        throw Exception("Division by zero", TStatusCode::VEC_ILLEGAL_DIVISION);
+    }
 
     /// http://avva.livejournal.com/2548306.html
     if (UNLIKELY(std::is_signed_v<A> && std::is_signed_v<B> && a == std::numeric_limits<A>::min() &&
-                 b == -1))
+                 b == -1)) {
         throw Exception("Division of minimal signed number by minus one",
-                        ErrorCodes::ILLEGAL_DIVISION);
+                        TStatusCode::VEC_ILLEGAL_DIVISION);
+    }
 }
 
 template <typename A, typename B>

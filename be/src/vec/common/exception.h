@@ -24,34 +24,34 @@
 #include <stdexcept>
 #include <vector>
 
+#include "common/status.h"
+
 using stacktrace = boost::error_info<struct tag_stacktrace, boost::stacktrace::stacktrace>;
 
+namespace doris::vectorized {
 
-namespace Poco {
-
-
-class Exception : public std::exception
+class AbstractException : public std::exception
 /// This is the base class for all exceptions defined
 /// in the Poco class library.
 {
 public:
-    Exception(const std::string& msg, int code = 0);
+    AbstractException(const std::string& msg, int code = 0);
     /// Creates an exception.
 
-    Exception(const std::string& msg, const std::string& arg, int code = 0);
+    AbstractException(const std::string& msg, const std::string& arg, int code = 0);
     /// Creates an exception.
 
-    Exception(const std::string& msg, const Exception& nested, int code = 0);
+    AbstractException(const std::string& msg, const AbstractException& nested, int code = 0);
     /// Creates an exception and stores a clone
     /// of the nested exception.
 
-    Exception(const Exception& exc);
+    AbstractException(const AbstractException& exc);
     /// Copy constructor.
 
-    ~Exception() throw();
+    ~AbstractException() throw();
     /// Destroys the exception and deletes the nested exception.
 
-    Exception& operator=(const Exception& exc);
+    AbstractException& operator=(const AbstractException& exc);
     /// Assignment operator.
 
     virtual const char* name() const throw();
@@ -65,7 +65,7 @@ public:
     ///
     /// Same as name(), but for compatibility with std::exception.
 
-    const Exception* nested() const;
+    const AbstractException* nested() const;
     /// Returns a pointer to the nested exception, or
     /// null if no nested exception exists.
 
@@ -79,7 +79,7 @@ public:
     /// Returns a string consisting of the
     /// message name and the message text.
 
-    virtual Exception* clone() const;
+    virtual AbstractException* clone() const;
     /// Creates an exact copy of the exception.
     ///
     /// The copy can later be thrown again by
@@ -93,7 +93,7 @@ public:
     /// throwing it again.
 
 protected:
-    Exception(int code = 0);
+    AbstractException(int code = 0);
     /// Standard constructor.
 
     void message(const std::string& msg);
@@ -104,26 +104,26 @@ protected:
 
 private:
     std::string _msg;
-    Exception* _pNested;
+    AbstractException* _pNested;
     int _code;
 };
 
 //
 // inlines
 //
-inline const Exception* Exception::nested() const {
+inline const AbstractException* AbstractException::nested() const {
     return _pNested;
 }
 
-inline const std::string& Exception::message() const {
+inline const std::string& AbstractException::message() const {
     return _msg;
 }
 
-inline void Exception::message(const std::string& msg) {
+inline void AbstractException::message(const std::string& msg) {
     _msg = msg;
 }
 
-inline int Exception::code() const {
+inline int AbstractException::code() const {
     return _code;
 }
 
@@ -133,29 +133,29 @@ inline int Exception::code() const {
 // pointers (which we need for specifying the exception name)
 // are not allowed as template arguments.
 //
-#define POCO_DECLARE_EXCEPTION_CODE(API, CLS, BASE, CODE)                         \
-    class CLS : public BASE {                                                     \
-    public:                                                                       \
-        CLS(int code = CODE);                                                     \
-        CLS(const std::string& msg, int code = CODE);                             \
-        CLS(const std::string& msg, const std::string& arg, int code = CODE);     \
-        CLS(const std::string& msg, const Poco::Exception& exc, int code = CODE); \
-        CLS(const CLS& exc);                                                      \
-        ~CLS() throw();                                                           \
-        CLS& operator=(const CLS& exc);                                           \
-        const char* name() const throw();                                         \
-        const char* className() const throw();                                    \
-        Poco::Exception* clone() const;                                           \
-        void rethrow() const;                                                     \
+#define DORIS_DECLARE_EXCEPTION_CODE(API, CLS, BASE, CODE)                          \
+    class CLS : public BASE {                                                       \
+    public:                                                                         \
+        CLS(int code = CODE);                                                       \
+        CLS(const std::string& msg, int code = CODE);                               \
+        CLS(const std::string& msg, const std::string& arg, int code = CODE);       \
+        CLS(const std::string& msg, const AbstractException& exc, int code = CODE); \
+        CLS(const CLS& exc);                                                        \
+        ~CLS() throw();                                                             \
+        CLS& operator=(const CLS& exc);                                             \
+        const char* name() const throw();                                           \
+        const char* className() const throw();                                      \
+        AbstractException* clone() const;                                           \
+        void rethrow() const;                                                       \
     };
 
-#define POCO_DECLARE_EXCEPTION(API, CLS, BASE) POCO_DECLARE_EXCEPTION_CODE(API, CLS, BASE, 0)
+#define DORIS_DECLARE_EXCEPTION(API, CLS, BASE) POCO_DECLARE_EXCEPTION_CODE(API, CLS, BASE, 0)
 
-#define POCO_IMPLEMENT_EXCEPTION(CLS, BASE, NAME)                                                \
+#define DORIS_IMPLEMENT_EXCEPTION(CLS, BASE, NAME)                                               \
     CLS::CLS(int code) : BASE(code) {}                                                           \
     CLS::CLS(const std::string& msg, int code) : BASE(msg, code) {}                              \
     CLS::CLS(const std::string& msg, const std::string& arg, int code) : BASE(msg, arg, code) {} \
-    CLS::CLS(const std::string& msg, const Poco::Exception& exc, int code)                       \
+    CLS::CLS(const std::string& msg, const AbstractException& exc, int code)                     \
             : BASE(msg, exc, code) {}                                                            \
     CLS::CLS(const CLS& exc) : BASE(exc) {}                                                      \
     CLS::~CLS() throw() {}                                                                       \
@@ -165,84 +165,20 @@ inline int Exception::code() const {
     }                                                                                            \
     const char* CLS::name() const throw() { return NAME; }                                       \
     const char* CLS::className() const throw() { return typeid(*this).name(); }                  \
-    Poco::Exception* CLS::clone() const { return new CLS(*this); }                               \
+    AbstractException* CLS::clone() const { return new CLS(*this); }                             \
     void CLS::rethrow() const { throw *this; }
 
-//
-// Standard exception classes
-//
-POCO_DECLARE_EXCEPTION("Foundation_API", LogicException, Exception)
-POCO_DECLARE_EXCEPTION("Foundation_API", AssertionViolationException, LogicException)
-POCO_DECLARE_EXCEPTION("Foundation_API", NullPointerException, LogicException)
-POCO_DECLARE_EXCEPTION("Foundation_API", NullValueException, LogicException)
-POCO_DECLARE_EXCEPTION("Foundation_API", BugcheckException, LogicException)
-POCO_DECLARE_EXCEPTION("Foundation_API", InvalidArgumentException, LogicException)
-POCO_DECLARE_EXCEPTION("Foundation_API", NotImplementedException, LogicException)
-POCO_DECLARE_EXCEPTION("Foundation_API", RangeException, LogicException)
-POCO_DECLARE_EXCEPTION("Foundation_API", IllegalStateException, LogicException)
-POCO_DECLARE_EXCEPTION("Foundation_API", InvalidAccessException, LogicException)
-POCO_DECLARE_EXCEPTION("Foundation_API", SignalException, LogicException)
-POCO_DECLARE_EXCEPTION("Foundation_API", UnhandledException, LogicException)
-
-POCO_DECLARE_EXCEPTION("Foundation_API", RuntimeException, Exception)
-POCO_DECLARE_EXCEPTION("Foundation_API", NotFoundException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", ExistsException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", TimeoutException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", SystemException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", RegularExpressionException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", LibraryLoadException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", LibraryAlreadyLoadedException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", NoThreadAvailableException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", PropertyNotSupportedException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", PoolOverflowException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", NoPermissionException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", OutOfMemoryException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", DataException, RuntimeException)
-
-POCO_DECLARE_EXCEPTION("Foundation_API", DataFormatException, DataException)
-POCO_DECLARE_EXCEPTION("Foundation_API", SyntaxException, DataException)
-POCO_DECLARE_EXCEPTION("Foundation_API", CircularReferenceException, DataException)
-POCO_DECLARE_EXCEPTION("Foundation_API", PathSyntaxException, SyntaxException)
-POCO_DECLARE_EXCEPTION("Foundation_API", IOException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", ProtocolException, IOException)
-POCO_DECLARE_EXCEPTION("Foundation_API", FileException, IOException)
-POCO_DECLARE_EXCEPTION("Foundation_API", FileExistsException, FileException)
-POCO_DECLARE_EXCEPTION("Foundation_API", FileNotFoundException, FileException)
-POCO_DECLARE_EXCEPTION("Foundation_API", PathNotFoundException, FileException)
-POCO_DECLARE_EXCEPTION("Foundation_API", FileReadOnlyException, FileException)
-POCO_DECLARE_EXCEPTION("Foundation_API", FileAccessDeniedException, FileException)
-POCO_DECLARE_EXCEPTION("Foundation_API", CreateFileException, FileException)
-POCO_DECLARE_EXCEPTION("Foundation_API", OpenFileException, FileException)
-POCO_DECLARE_EXCEPTION("Foundation_API", WriteFileException, FileException)
-POCO_DECLARE_EXCEPTION("Foundation_API", ReadFileException, FileException)
-POCO_DECLARE_EXCEPTION("Foundation_API", DirectoryNotEmptyException, FileException)
-POCO_DECLARE_EXCEPTION("Foundation_API", UnknownURISchemeException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", TooManyURIRedirectsException, RuntimeException)
-POCO_DECLARE_EXCEPTION("Foundation_API", URISyntaxException, SyntaxException)
-
-POCO_DECLARE_EXCEPTION("Foundation_API", ApplicationException, Exception)
-POCO_DECLARE_EXCEPTION("Foundation_API", BadCastException, RuntimeException)
-
-} // namespace Poco
-
-namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int POCO_EXCEPTION;
-extern const int METRIKA_OTHER_ERROR;
-} // namespace ErrorCodes
-
-class Exception : public Poco::Exception {
+class Exception : public AbstractException {
 public:
     Exception() : trace(boost::stacktrace::stacktrace()) {} /// For deferred initialization.
     Exception(const std::string& msg, int code)
-            : Poco::Exception(msg, code), trace(boost::stacktrace::stacktrace()) {}
+            : AbstractException(msg, code), trace(boost::stacktrace::stacktrace()) {}
     Exception(const std::string& msg, const Exception& nested_exception, int code)
-            : Poco::Exception(msg, nested_exception, code), trace(nested_exception.trace) {}
+            : AbstractException(msg, nested_exception, code), trace(nested_exception.trace) {}
 
     enum CreateFromPocoTag { CreateFromPoco };
-    Exception(CreateFromPocoTag, const Poco::Exception& exc)
-            : Poco::Exception(exc.displayText(), ErrorCodes::POCO_EXCEPTION),
+    Exception(CreateFromPocoTag, const AbstractException& exc)
+            : AbstractException(exc.displayText(), TStatusCode::VEC_EXCEPTION),
               trace(boost::stacktrace::stacktrace()) {}
 
     Exception* clone() const override { return new Exception(*this); }
@@ -295,7 +231,6 @@ std::string errnoToString(int code, int the_errno = errno);
   * Can be used in destructors in the catch-all block.
   */
 void tryLogCurrentException(const char* log_name, const std::string& start_of_message = "");
-// void tryLogCurrentException(Poco::Logger* logger, const std::string& start_of_message = "");
 
 /** Prints current exception in canonical format.
   * with_stacktrace - prints stack trace for doris::vectorized::Exception.
@@ -305,7 +240,6 @@ void tryLogCurrentException(const char* log_name, const std::string& start_of_me
 std::string getCurrentExceptionMessage(bool with_stacktrace, bool check_embedded_stacktrace = false,
                                        bool with_extra_info = true);
 
-/// Returns error code from ErrorCodes
 int getCurrentExceptionCode();
 
 /// An execution status of any piece of code, contains return code and optional error

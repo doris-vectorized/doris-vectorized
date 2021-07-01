@@ -29,11 +29,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int DECIMAL_OVERFLOW;
-}
-
-///
 inline bool allowDecimalComparison(const DataTypePtr& left_type, const DataTypePtr& right_type) {
     if (is_decimal(left_type)) {
         if (is_decimal(right_type) || is_not_decimal_but_comparable_to_decimal(right_type))

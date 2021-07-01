@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "common/status.h"
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/columns/columns_number.h"
 #include "vec/data_types/data_type_decimal.h"
@@ -24,10 +25,6 @@
 #include "vec/io/io_helper.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int LOGICAL_ERROR;
-}
 
 template <typename T>
 struct AggregateFunctionAvgData {
@@ -41,7 +38,7 @@ struct AggregateFunctionAvgData {
                 return static_cast<ResultT>(sum) / count; /// allow division by zero
 
         if (!count)
-            throw Exception("AggregateFunctionAvg with zero values", ErrorCodes::LOGICAL_ERROR);
+            throw Exception("AggregateFunctionAvg with zero values", TStatusCode::VEC_LOGIC_ERROR);
         return static_cast<ResultT>(sum) / count;
     }
 

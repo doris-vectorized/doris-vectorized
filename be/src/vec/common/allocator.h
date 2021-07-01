@@ -25,6 +25,8 @@
 
 #include <exception>
 
+#include "common/status.h"
+
 #ifdef NDEBUG
 #define ALLOCATOR_ASLR 0
 #else
@@ -81,15 +83,6 @@ static constexpr size_t MMAP_THRESHOLD = 4096;
 static constexpr size_t MMAP_MIN_ALIGNMENT = 4096;
 static constexpr size_t MALLOC_MIN_ALIGNMENT = 8;
 
-namespace doris::vectorized {
-namespace ErrorCodes {
-extern const int BAD_ARGUMENTS;
-extern const int CANNOT_ALLOCATE_MEMORY;
-extern const int CANNOT_MUNMAP;
-extern const int CANNOT_MREMAP;
-} // namespace ErrorCodes
-} // namespace doris::vectorized
-
 /** Responsible for allocating / freeing memory. Used, for example, in PODArray, Arena.
   * Also used in hash tables.
   * The interface is different from std::allocator
@@ -130,10 +123,10 @@ public:
 
             void* new_buf = ::realloc(buf, new_size);
             if (nullptr == new_buf)
-                doris::vectorized::throwFromErrno(
-                        "Allocator: Cannot realloc from " + std::to_string(old_size) + " to " +
-                                std::to_string(new_size) + ".",
-                        doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
+                doris::vectorized::throwFromErrno("Allocator: Cannot realloc from " +
+                                                          std::to_string(old_size) + " to " +
+                                                          std::to_string(new_size) + ".",
+                                                  doris::TStatusCode::VEC_CANNOT_ALLOCATE_MEMORY);
 
             buf = new_buf;
             if constexpr (clear_memory)
@@ -150,7 +143,7 @@ public:
                 doris::vectorized::throwFromErrno("Allocator: Cannot mremap memory chunk from " +
                                                           std::to_string(old_size) + " to " +
                                                           std::to_string(new_size) + ".",
-                                                  doris::vectorized::ErrorCodes::CANNOT_MREMAP);
+                                                  doris::TStatusCode::VEC_CANNOT_MREMAP);
 
             /// No need for zero-fill, because mmap guarantees it.
         } else if (new_size < MMAP_THRESHOLD) {
@@ -201,13 +194,12 @@ private:
                         fmt::format(
                                 "Too large alignment {}: more than page size when allocating {}.",
                                 alignment, size),
-                        doris::vectorized::ErrorCodes::BAD_ARGUMENTS);
+                        doris::TStatusCode::VEC_BAD_ARGUMENTS);
 
             buf = mmap(get_mmap_hint(), size, PROT_READ | PROT_WRITE, mmap_flags, -1, 0);
             if (MAP_FAILED == buf)
-                doris::vectorized::throwFromErrno(
-                        fmt::format("Allocator: Cannot mmap {}.", size),
-                        doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
+                doris::vectorized::throwFromErrno(fmt::format("Allocator: Cannot mmap {}.", size),
+                                                  doris::TStatusCode::VEC_CANNOT_ALLOCATE_MEMORY);
 
             /// No need for zero-fill, because mmap guarantees it.
         } else {
@@ -220,7 +212,7 @@ private:
                 if (nullptr == buf)
                     doris::vectorized::throwFromErrno(
                             fmt::format("Allocator: Cannot malloc {}.", size),
-                            doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY);
+                            doris::TStatusCode::VEC_CANNOT_ALLOCATE_MEMORY);
             } else {
                 buf = nullptr;
                 int res = posix_memalign(&buf, alignment, size);
@@ -228,7 +220,7 @@ private:
                 if (0 != res)
                     doris::vectorized::throwFromErrno(
                             fmt::format("Cannot allocate memory (posix_memalign) {}.", size),
-                            doris::vectorized::ErrorCodes::CANNOT_ALLOCATE_MEMORY, res);
+                            doris::TStatusCode::VEC_CANNOT_ALLOCATE_MEMORY, res);
 
                 if constexpr (clear_memory) memset(buf, 0, size);
             }
@@ -240,7 +232,7 @@ private:
         if (size >= MMAP_THRESHOLD) {
             if (0 != munmap(buf, size))
                 doris::vectorized::throwFromErrno(fmt::format("Allocator: Cannot munmap {}.", size),
-                                                  doris::vectorized::ErrorCodes::CANNOT_MUNMAP);
+                                                  doris::TStatusCode::VEC_CANNOT_MUNMAP);
         } else {
             ::free(buf);
         }

@@ -80,10 +80,6 @@ bool memory_is_zero(const void* data, size_t size) {
     return memory_is_byte(data, size, 0x0);
 }
 
-namespace ErrorCodes {
-extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
-}
-
 namespace {
 /// Implementation details of filterArraysImpl function, used as template parameter.
 /// Allow to build or not to build offsets array.
