@@ -16,102 +16,19 @@
 // under the License.
 
 #include "vec/functions/function.h"
-//#include <vec/Common/config.h>
-#include "vec/common/assert_cast.h"
-#include "vec/common/typeid_cast.h"
-//#include <vec/Common/LRUCache.h>
-#include "vec/columns/column_const.h"
-#include "vec/columns/column_nullable.h"
-//#include <vec/Columns/ColumnArray.h>
-//#include <vec/Columns/ColumnTuple.h>
-//#include <vec/Columns/ColumnLowCardinality.h>
-#include "vec/data_types/data_type_nothing.h"
-#include "vec/data_types/data_type_nullable.h"
-//#include <vec/DataTypes/DataTypeNullable.h>
-//#include <vec/DataTypes/DataTypeTuple.h>
-//#include <vec/DataTypes/Native.h>
-//#include <vec/DataTypes/DataTypeLowCardinality.h>
-//#include <vec/DataTypes/get_least_supertype.h>
-#include "vec/functions/function_helpers.h"
-//#include <Interpreters/ExpressionActions.h>
-//#include <IO/WriteHelpers.h>
-//#include <ext/range.h>
-//#include <ext/collection_cast.h>
-#include <cstdlib>
+
 #include <memory>
 #include <optional>
 
-#if USE_EMBEDDED_COMPILER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#include <llvm/IR/IRBuilder.h>
-#pragma GCC diagnostic pop
-#endif
+#include "vec/columns/column_const.h"
+#include "vec/columns/column_nullable.h"
+#include "vec/common/assert_cast.h"
+#include "vec/common/typeid_cast.h"
+#include "vec/data_types/data_type_nothing.h"
+#include "vec/data_types/data_type_nullable.h"
+#include "vec/functions/function_helpers.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-extern const int ILLEGAL_COLUMN;
-} // namespace ErrorCodes
-
-/// Cache for functions result if it was executed on low cardinality column.
-/// It's LRUCache which stores function result executed on dictionary and index mapping.
-/// It's expected that cache_size is a number of reading streams (so, will store single cached value per thread).
-//class PreparedFunctionLowCardinalityResultCache
-//{
-//public:
-//    /// Will assume that dictionaries with same hash has the same keys.
-//    /// Just in case, check that they have also the same size.
-//    struct DictionaryKey
-//    {
-//        UInt128 hash;
-//        UInt64 size;
-//
-//        bool operator== (const DictionaryKey & other) const { return hash == other.hash && size == other.size; }
-//    };
-//
-//    struct DictionaryKeyHash
-//    {
-//        size_t operator()(const DictionaryKey & key) const
-//        {
-//            SipHash hash;
-//            hash.update(key.hash.low);
-//            hash.update(key.hash.high);
-//            hash.update(key.size);
-//            return hash.get64();
-//        }
-//    };
-//
-//    struct CachedValues
-//    {
-//        /// Store ptr to dictionary to be sure it won't be deleted.
-//        ColumnPtr dictionary_holder;
-//        ColumnUniquePtr function_result;
-//        /// Remap positions. new_pos = index_mapping->index(old_pos);
-//        ColumnPtr index_mapping;
-//    };
-//
-//    using CachedValuesPtr = std::shared_ptr<CachedValues>;
-//
-//    explicit PreparedFunctionLowCardinalityResultCache(size_t cache_size) : cache(cache_size) {}
-//
-//    CachedValuesPtr get(const DictionaryKey & key) { return cache.get(key); }
-//    void set(const DictionaryKey & key, const CachedValuesPtr & mapped) { cache.set(key, mapped); }
-//    CachedValuesPtr getOrSet(const DictionaryKey & key, const CachedValuesPtr & mapped)
-//    {
-//        return cache.getOrSet(key, [&]() { return mapped; }).first;
-//    }
-//
-//private:
-//    using Cache = LRUCache<DictionaryKey, CachedValues, DictionaryKeyHash>;
-//    Cache cache;
-//};
-
-void PreparedFunctionImpl::create_low_cardinality_result_cache(size_t cache_size) {
-    //    if (!low_cardinality_result_cache)
-    //        low_cardinality_result_cache = std::make_shared<PreparedFunctionLowCardinalityResultCache>(cache_size);
-}
 
 ColumnPtr wrap_in_nullable(const ColumnPtr& src, const Block& block, const ColumnNumbers& args,
                            size_t result, size_t input_rows_count) {
@@ -326,58 +243,6 @@ Status PreparedFunctionImpl::execute_without_low_cardinality_columns(Block& bloc
         return execute_impl(block, args, result, input_rows_count);
 }
 
-//static const ColumnLowCardinality * findLowCardinalityArgument(const Block & block, const ColumnNumbers & args)
-//{
-//    const ColumnLowCardinality * result_column = nullptr;
-//
-//    for (auto arg : args)
-//    {
-//        const ColumnWithTypeAndName & column = block.get_by_position(arg);
-//        if (auto * low_cardinality_column = check_and_get_column<ColumnLowCardinality>(column.column.get()))
-//        {
-//            if (result_column)
-//                throw Exception("Expected single dictionary argument for function.", ErrorCodes::LOGICAL_ERROR);
-//
-//            result_column = low_cardinality_column;
-//        }
-//    }
-//
-//    return result_column;
-//}
-
-[[maybe_unused]] static ColumnPtr replaceLowCardinalityColumnsByNestedAndGetDictionaryIndexes(
-        Block& block, const ColumnNumbers& args, bool can_be_executed_on_default_arguments,
-        size_t input_rows_count) {
-    size_t num_rows = input_rows_count;
-    ColumnPtr indexes;
-
-    /// Change size of constants.
-    for (auto arg : args) {
-        ColumnWithTypeAndName& column = block.get_by_position(arg);
-        if (auto* column_const = check_and_get_column<ColumnConst>(column.column.get())) {
-            column.column = column_const->remove_low_cardinality()->clone_resized(num_rows);
-            //            column.type = remove_low_cardinality(column.type);
-        }
-    }
-
-#ifndef NDEBUG
-    block.check_number_of_rows(true);
-#endif
-
-    return indexes;
-}
-
-//static void convertLowCardinalityColumnsToFull(Block & block, const ColumnNumbers & args)
-//{
-//    for (auto arg : args)
-//    {
-//        ColumnWithTypeAndName & column = block.get_by_position(arg);
-//
-//        column.column = recursiveRemoveLowCardinality(column.column);
-//        column.type = recursiveRemoveLowCardinality(column.type);
-//    }
-//}
-
 Status PreparedFunctionImpl::execute(Block& block, const ColumnNumbers& args, size_t result,
                                      size_t input_rows_count, bool dry_run) {
     if (use_default_implementation_for_low_cardinality_columns()) {
@@ -433,71 +298,8 @@ DataTypePtr FunctionBuilderImpl::get_return_type_without_low_cardinality(
     return get_return_type_impl(arguments);
 }
 
-#if USE_EMBEDDED_COMPILER
-
-static std::optional<DataTypes> removeNullables(const DataTypes& types) {
-    for (const auto& type : types) {
-        if (!typeid_cast<const DataTypeNullable*>(type.get())) continue;
-        DataTypes filtered;
-        for (const auto& sub_type : types) filtered.emplace_back(removeNullable(sub_type));
-        return filtered;
-    }
-    return {};
-}
-
-bool IFunction::isCompilable(const DataTypes& arguments) const {
-    if (use_default_implementation_for_nulls())
-        if (auto denulled = removeNullables(arguments)) return isCompilableImpl(*denulled);
-    return isCompilableImpl(arguments);
-}
-
-llvm::Value* IFunction::compile(llvm::IRBuilderBase& builder, const DataTypes& arguments,
-                                ValuePlaceholders values) const {
-    if (use_default_implementation_for_nulls()) {
-        if (auto denulled = removeNullables(arguments)) {
-            /// FIXME: when only one column is nullable, this can actually be slower than the non-jitted version
-            ///        because this involves copying the null map while `wrap_in_nullable` reuses it.
-            auto& b = static_cast<llvm::IRBuilder<>&>(builder);
-            auto* fail = llvm::BasicBlock::Create(b.GetInsertBlock()->getContext(), "",
-                                                  b.GetInsertBlock()->getParent());
-            auto* join = llvm::BasicBlock::Create(b.GetInsertBlock()->getContext(), "",
-                                                  b.GetInsertBlock()->getParent());
-            auto* zero = llvm::Constant::getNullValue(
-                    toNativeType(b, make_nullable(get_return_type_impl(*denulled))));
-            for (size_t i = 0; i < arguments.size(); i++) {
-                if (!arguments[i]->is_nullable()) continue;
-                /// Would be nice to evaluate all this lazily, but that'd change semantics: if only unevaluated
-                /// arguments happen to contain NULLs, the return value would not be NULL, though it should be.
-                auto* value = values[i]();
-                auto* ok = llvm::BasicBlock::Create(b.GetInsertBlock()->getContext(), "",
-                                                    b.GetInsertBlock()->getParent());
-                b.CreateCondBr(b.CreateExtractValue(value, {1}), fail, ok);
-                b.SetInsertPoint(ok);
-                values[i] = [value = b.CreateExtractValue(value, {0})]() { return value; };
-            }
-            auto* result = b.CreateInsertValue(
-                    zero, compileImpl(builder, *denulled, std::move(values)), {0});
-            auto* result_block = b.GetInsertBlock();
-            b.CreateBr(join);
-            b.SetInsertPoint(fail);
-            auto* null = b.CreateInsertValue(zero, b.getTrue(), {1});
-            b.CreateBr(join);
-            b.SetInsertPoint(join);
-            auto* phi = b.CreatePHI(result->getType(), 2);
-            phi->addIncoming(result, result_block);
-            phi->addIncoming(null, fail);
-            return phi;
-        }
-    }
-    return compileImpl(builder, arguments, std::move(values));
-}
-
-#endif
-
 DataTypePtr FunctionBuilderImpl::get_return_type(const ColumnsWithTypeAndName& arguments) const {
     if (use_default_implementation_for_low_cardinality_columns()) {
-        //        bool has_low_cardinality = false;
-        //        size_t num_full_low_cardinality_columns = 0;
         size_t num_full_ordinary_columns = 0;
 
         ColumnsWithTypeAndName args_without_low_cardinality(arguments);
@@ -506,33 +308,12 @@ DataTypePtr FunctionBuilderImpl::get_return_type(const ColumnsWithTypeAndName& a
             bool is_const = arg.column && is_column_const(*arg.column);
             if (is_const)
                 arg.column = assert_cast<const ColumnConst&>(*arg.column).remove_low_cardinality();
-
-            //            if (auto * low_cardinality_type = typeid_cast<const DataTypeLowCardinality *>(arg.type.get()))
-            //            {
-            //                arg.type = low_cardinality_type->getDictionaryType();
-            //                has_low_cardinality = true;
-            //
-            //                if (!is_const)
-            //                    ++num_full_low_cardinality_columns;
-            //            }
-            //            else
             if (!is_const) ++num_full_ordinary_columns;
         }
-
-        //        for (auto & arg : args_without_low_cardinality)
-        //        {
-        //            arg.column = recursiveRemoveLowCardinality(arg.column);
-        //            arg.type = recursiveRemoveLowCardinality(arg.type);
-        //        }
 
         auto type_without_low_cardinality =
                 get_return_type_without_low_cardinality(args_without_low_cardinality);
 
-        //        if (can_be_executed_on_low_cardinality_dictionary() && has_low_cardinality
-        //            && num_full_low_cardinality_columns <= 1 && num_full_ordinary_columns == 0
-        //            && type_without_low_cardinality->can_be_inside_low_cardinality())
-        //            return std::make_shared<DataTypeLowCardinality>(type_without_low_cardinality);
-        //        else
         return type_without_low_cardinality;
     }
 

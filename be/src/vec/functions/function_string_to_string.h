@@ -21,15 +21,8 @@
 #include "vec/data_types/data_type_string.h"
 #include "vec/functions/function.h"
 #include "vec/functions/function_helpers.h"
-//#include<vec/columns/column_fixed_string.h>
-//#include<vec/columns/column_array.h>
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int ILLEGAL_COLUMN;
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-} // namespace ErrorCodes
 
 template <typename Impl, typename Name, bool is_injective = false>
 class FunctionStringToString : public IFunction {

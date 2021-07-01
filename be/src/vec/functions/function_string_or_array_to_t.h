@@ -21,15 +21,8 @@
 #include "vec/data_types/data_type_string.h"
 #include "vec/functions/function.h"
 #include "vec/functions/function_helpers.h"
-//#include<vec/columns/column_fixed_string.h>
-//#include<vec/columns/column_array.h>
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int ILLEGAL_COLUMN;
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-} // namespace ErrorCodes
 
 template <typename Impl, typename Name, typename ResultType>
 class FunctionStringOrArrayToT : public IFunction {
@@ -64,38 +57,7 @@ public:
             Impl::vector(col->get_chars(), col->get_offsets(), vec_res);
 
             block.replace_by_position(result, std::move(col_res));
-        }
-        //        else if (const ColumnFixedString * col_fixed = check_and_get_column<ColumnFixedString>(column.get()))
-        //        {
-        //            if (Impl::is_fixed_to_constant)
-        //            {
-        //                ResultType res = 0;
-        //                Impl::vector_fixed_to_constant(col_fixed->get_chars(), col_fixed->getN(), res);
-        //
-        //                block.get_by_position(result).column = block.get_by_position(result).type->create_column_const(col_fixed->size(), to_field(res));
-        //            }
-        //            else
-        //            {
-        //                auto col_res = ColumnVector<ResultType>::create();
-        //
-        //                typename ColumnVector<ResultType>::Container & vec_res = col_res->get_data();
-        //                vec_res.resize(col_fixed->size());
-        //                Impl::vector_fixed_to_vector(col_fixed->get_chars(), col_fixed->getN(), vec_res);
-        //
-        //                block.get_by_position(result).column = std::move(col_res);
-        //            }
-        //        }
-        //        else if (const ColumnArray * col_arr = check_and_get_column<ColumnArray>(column.get()))
-        //        {
-        //            auto col_res = ColumnVector<ResultType>::create();
-        //
-        //            typename ColumnVector<ResultType>::Container & vec_res = col_res->get_data();
-        //            vec_res.resize(col_arr->size());
-        //            Impl::array(col_arr->get_offsets(), vec_res);
-        //
-        //            block.get_by_position(result).column = std::move(col_res);
-        //        }
-        else {
+        } else {
             return Status::RuntimeError(fmt::format(
                     "Illegal column {} of argument of function {}",
                     block.get_by_position(arguments[0]).column->get_name(), get_name()));

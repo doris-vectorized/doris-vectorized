@@ -17,19 +17,11 @@
 
 #include "vec/data_types/nested_utils.h"
 
-#include <string.h>
-
 #include "vec/columns/column_const.h"
-#include "vec/common/assert_cast.h"
 #include "vec/common/string_utils/string_utils.h"
 #include "vec/common/typeid_cast.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int ILLEGAL_COLUMN;
-extern const int SIZES_OF_ARRAYS_DOESNT_MATCH;
-} // namespace ErrorCodes
 
 namespace Nested {
 

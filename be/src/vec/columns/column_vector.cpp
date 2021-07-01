@@ -17,6 +17,7 @@
 
 #include "vec/columns/column_vector.h"
 
+#include <pdqsort.h>
 #include <vec/common/radix_sort.h>
 
 #include <cmath>
@@ -26,7 +27,6 @@
 #include "vec/common/bit_cast.h"
 #include "vec/common/exception.h"
 #include "vec/common/nan_utils.h"
-#include "vec/common/pdqsort.h"
 #include "vec/common/sip_hash.h"
 #include "vec/common/unaligned.h"
 

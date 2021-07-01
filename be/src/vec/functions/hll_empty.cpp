@@ -15,10 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//#include <Functions/FunctionFactory.h>
 #include "exprs/hll_function.h"
 #include "olap/hll.h"
-
 #include "vec/data_types/data_type_string.h"
 #include "vec/functions/function_const.h"
 #include "vec/functions/simple_function_factory.h"
@@ -27,7 +25,7 @@ namespace doris::vectorized {
 
 struct HLLEmptyImpl {
     static constexpr auto name = "hll_empty";
-    static auto get_return_type() { return std::make_shared<DataTypeString>();}
+    static auto get_return_type() { return std::make_shared<DataTypeString>(); }
     static Field init_value() {
         auto hll = HyperLogLog::empty();
         return {hll.c_str(), hll.size()};
@@ -40,4 +38,4 @@ void register_function_hll_empty(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionHLLEmpty>();
 }
 
-}
+} // namespace doris::vectorized

@@ -20,9 +20,7 @@
 #include "gen_cpp/data.pb.h"
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_string.h"
-#include "vec/columns/columns_number.h"
 #include "vec/common/assert_cast.h"
-#include "vec/common/typeid_cast.h"
 #include "vec/core/field.h"
 #include "vec/io/io_helper.h"
 
