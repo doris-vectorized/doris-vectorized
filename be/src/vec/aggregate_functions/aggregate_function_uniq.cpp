@@ -15,20 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <vec/aggregate_functions/aggregate_function_simple_factory.h>
-#include <vec/aggregate_functions/aggregate_function_uniq.h>
-#include <vec/aggregate_functions/factory_helpers.h>
-#include <vec/aggregate_functions/helpers.h>
-#include <vec/data_types/data_type_string.h>
+#include "vec/aggregate_functions/aggregate_function_uniq.h"
 
 #include "common/logging.h"
+#include "vec/aggregate_functions/aggregate_function_simple_factory.h"
+#include "vec/aggregate_functions/factory_helpers.h"
+#include "vec/aggregate_functions/helpers.h"
+#include "vec/data_types/data_type_string.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-} // namespace ErrorCodes
 
 template <template <typename> class Data, typename DataForVariadic>
 AggregateFunctionPtr create_aggregate_function_uniq(const std::string& name,

@@ -24,11 +24,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int SIZES_OF_COLUMNS_DOESNT_MATCH;
-extern const int NOT_IMPLEMENTED;
-} // namespace ErrorCodes
-
 /** Base class for columns-constants that contain a value that is not in the `Field`.
   * Not a full-fledged column and is used in a special way.
   */
@@ -94,14 +89,6 @@ public:
         return clone_dummy(limit ? std::min(s, limit) : s);
     }
 
-    // ColumnPtr index(const IColumn & indexes, size_t limit) const override
-    // {
-    //     if (indexes.size() < limit)
-    //         throw Exception("Size of indexes is less than required.", ErrorCodes::SIZES_OF_COLUMNS_DOESNT_MATCH);
-
-    //     return clone_dummy(limit ? limit : s);
-    // }
-
     void get_permutation(bool /*reverse*/, size_t /*limit*/, int /*nan_direction_hint*/,
                          Permutation& res) const override {
         res.resize(s);
@@ -129,11 +116,6 @@ public:
 
         return res;
     }
-
-    // void gather(ColumnGathererStream &) override
-    // {
-    //     throw Exception("Method gather is not supported for " + get_name(), ErrorCodes::NOT_IMPLEMENTED);
-    // }
 
     void get_extremes(Field&, Field&) const override {}
 

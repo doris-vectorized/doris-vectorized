@@ -17,11 +17,11 @@
 
 #pragma once
 
-#include <vec/aggregate_functions/aggregate_function.h>
-#include <vec/columns/column.h>
-#include <vec/data_types/data_type_nothing.h>
-#include <vec/data_types/data_type_nullable.h>
-#include <vec/io/io_helper.h>
+#include "vec/aggregate_functions/aggregate_function.h"
+#include "vec/columns/column.h"
+#include "vec/data_types/data_type_nothing.h"
+#include "vec/data_types/data_type_nullable.h"
+#include "vec/io/io_helper.h"
 
 namespace doris::vectorized {
 
@@ -56,7 +56,9 @@ public:
 
     void deserialize(AggregateDataPtr, std::istream&, Arena*) const override {}
 
-    void insert_result_into(ConstAggregateDataPtr, IColumn& to) const override { to.insert_default(); }
+    void insert_result_into(ConstAggregateDataPtr, IColumn& to) const override {
+        to.insert_default();
+    }
 
     const char* get_header_file_path() const override { return __FILE__; }
 };
