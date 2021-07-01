@@ -29,19 +29,6 @@ struct DivideFloatingImpl {
     static inline Result apply(A a, B b) {
         return static_cast<Result>(a) / b;
     }
-
-#if USE_EMBEDDED_COMPILER
-    static constexpr bool compilable = true;
-
-    static inline llvm::Value* compile(llvm::IRBuilder<>& b, llvm::Value* left, llvm::Value* right,
-                                       bool) {
-        if (left->getType()->is_integer_ty())
-            LOG(FATAL) << "DivideFloatingImpl expected a floating-point type";
-        }
-
-        return b.CreateFDiv(left, right);
-    }
-#endif
 };
 
 struct NameDivide {

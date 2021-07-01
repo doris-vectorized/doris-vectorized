@@ -17,10 +17,9 @@
 
 #pragma once
 
-#include <city.h>
-
 #include <type_traits>
 
+#include "gutil/hash/city.h"
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/common/aggregation_common.h"
 #include "vec/common/assert_cast.h"

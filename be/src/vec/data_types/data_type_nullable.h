@@ -26,8 +26,6 @@ namespace doris::vectorized {
 /// embodies this concept.
 class DataTypeNullable final : public IDataType {
 public:
-    static constexpr bool is_parametric = true;
-
     explicit DataTypeNullable(const DataTypePtr& nested_data_type_);
     std::string do_get_name() const override {
         return "Nullable(" + nested_data_type->get_name() + ")";

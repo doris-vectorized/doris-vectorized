@@ -1,3 +1,20 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/common/arithmetic_overflow.h"
 #include "vec/functions/function_binary_arithmetic.h"
 #include "vec/functions/simple_function_factory.h"
@@ -20,16 +37,6 @@ struct PlusImpl {
     static inline bool apply(A a, B b, Result& c) {
         return common::add_overflow(static_cast<Result>(a), b, c);
     }
-
-#if USE_EMBEDDED_COMPILER
-    static constexpr bool compilable = true;
-
-    static inline llvm::Value* compile(llvm::IRBuilder<>& b, llvm::Value* left, llvm::Value* right,
-                                       bool) {
-        return left->getType()->is_integer_ty() ? b.CreateAdd(left, right)
-                                              : b.CreateFAdd(left, right);
-    }
-#endif
 };
 
 struct NamePlus {
@@ -37,10 +44,6 @@ struct NamePlus {
 };
 using FunctionPlus = FunctionBinaryArithmetic<PlusImpl, NamePlus>;
 
-//void register_function_plus(FunctionFactory & factory)
-//{
-//    factory.register_function<FunctionPlus>();
-//}
 void register_function_plus(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionPlus>();
 }
