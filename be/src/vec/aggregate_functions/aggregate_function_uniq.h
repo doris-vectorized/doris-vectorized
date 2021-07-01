@@ -21,16 +21,13 @@
 
 #include <type_traits>
 
-#include "vec/common/bit_cast.h"
-
-#include <vec/common/hash_table/hash_set.h>
-
-#include "vec/common/aggregation_common.h"
-#include "vec/data_types/data_type_number.h"
-#include <vec/common/assert_cast.h>
-#include <vec/common/typeid_cast.h>
-
 #include "vec/aggregate_functions/aggregate_function.h"
+#include "vec/common/aggregation_common.h"
+#include "vec/common/assert_cast.h"
+#include "vec/common/bit_cast.h"
+#include "vec/common/hash_table/hash_set.h"
+#include "vec/common/typeid_cast.h"
+#include "vec/data_types/data_type_number.h"
 
 namespace doris::vectorized {
 

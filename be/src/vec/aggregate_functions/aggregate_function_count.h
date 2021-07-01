@@ -20,22 +20,17 @@
 #include <array>
 
 #include "common/logging.h"
-#include <vec/aggregate_functions/aggregate_function.h>
-#include <vec/columns/column_nullable.h>
-#include <vec/common/assert_cast.h>
-#include <vec/data_types/data_type_number.h>
-#include <vec/io/io_helper.h>
+#include "vec/aggregate_functions/aggregate_function.h"
+#include "vec/columns/column_nullable.h"
+#include "vec/common/assert_cast.h"
+#include "vec/data_types/data_type_number.h"
+#include "vec/io/io_helper.h"
 
 namespace doris::vectorized {
 
 struct AggregateFunctionCountData {
     UInt64 count = 0;
 };
-
-namespace ErrorCodes {
-extern const int LOGICAL_ERROR;
-extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-} // namespace ErrorCodes
 
 /// Simply count number of calls.
 class AggregateFunctionCount final
@@ -80,7 +75,8 @@ public:
             : IAggregateFunctionDataHelper<AggregateFunctionCountData,
                                            AggregateFunctionCountNotNullUnary>({argument}, params) {
         if (!argument->is_nullable()) {
-            LOG(FATAL) << "Logical error: not Nullable data type passed to AggregateFunctionCountNotNullUnary";
+            LOG(FATAL) << "Logical error: not Nullable data type passed to "
+                          "AggregateFunctionCountNotNullUnary";
         }
     }
 

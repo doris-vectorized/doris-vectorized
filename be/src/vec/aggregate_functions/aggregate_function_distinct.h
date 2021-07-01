@@ -187,7 +187,7 @@ public:
         // nested_func->insert_result_into(get_nested_place(place), to, arena);
 
         nested_func->add_batch_single_place(arguments[0]->size(), get_nested_place(place),
-                                         arguments_raw.data(), nullptr);
+                                            arguments_raw.data(), nullptr);
         nested_func->insert_result_into(get_nested_place(place), to);
     }
 
