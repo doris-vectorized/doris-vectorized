@@ -35,7 +35,9 @@ struct DivideIntegralByConstantImpl : BinaryOperationImplBase<A, B, DivideIntegr
     using ResultType = typename DivideIntegralImpl<A, B>::ResultType;
 
     static void vector_constant(const PaddedPODArray<A>& a, B b, PaddedPODArray<ResultType>& c) {
-        if (UNLIKELY(b == 0)) throw Exception("Division by zero", ErrorCodes::ILLEGAL_DIVISION);
+        if (UNLIKELY(b == 0)) {
+            throw Exception("Division by zero", TStatusCode::VEC_ILLEGAL_DIVISION);
+        }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"

@@ -23,10 +23,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int LOGICAL_ERROR;
-}
-
 /// Counts how many bytes of `filt` are greater than zero.
 size_t count_bytes_in_filter(const IColumn::Filter& filt);
 

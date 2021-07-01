@@ -24,10 +24,6 @@
 
 namespace doris::vectorized {
 
-namespace ErrorCodes {
-extern const int BAD_COLLATION;
-}
-
 static inline bool needCollation(const IColumn* column, const SortColumnDescription& description) {
     if (!description.collator) return false;
 

@@ -185,8 +185,10 @@ template <typename Type>
 inline void read_pod_binary(Type& x, std::istream& buf) {
     buf.read(reinterpret_cast<char*>(&x), sizeof(x));
     if (!buf) {
-        throw Poco::Exception("Cannot read all data. Bytes read: " + std::to_string(buf.gcount()) +
-                              ". Bytes expected: " + std::to_string(sizeof(x)) + ".");
+        throw doris::vectorized::Exception(
+                "Cannot read all data. Bytes read: " + std::to_string(buf.gcount()) +
+                        ". Bytes expected: " + std::to_string(sizeof(x)) + ".",
+                doris::TStatusCode::VEC_LOGIC_ERROR);
     }
 }
 
@@ -205,13 +207,16 @@ inline void read_string_binary(std::string& s, std::istream& buf,
     size_t size = 0;
     read_var_uint(size, buf);
 
-    if (size > MAX_STRING_SIZE) throw Poco::Exception("Too large string size.");
+    if (size > MAX_STRING_SIZE) {
+        throw Exception("Too large string size.", TStatusCode::VEC_EXCEPTION);
+    }
 
     s.resize(size);
     buf.read(s.data(), size);
     if (!buf) {
-        throw Poco::Exception("Cannot read all data. Bytes read: " + std::to_string(buf.gcount()) +
-                              ". Bytes expected: " + std::to_string(size) + ".");
+        throw Exception("Cannot read all data. Bytes read: " + std::to_string(buf.gcount()) +
+                                ". Bytes expected: " + std::to_string(size) + ".",
+                        TStatusCode::VEC_EXCEPTION);
     }
 }
 
@@ -231,7 +236,9 @@ void read_vector_binary(std::vector<Type>& v, std::istream& buf,
     size_t size = 0;
     read_var_uint(size, buf);
 
-    if (size > MAX_VECTOR_SIZE) throw Poco::Exception("Too large vector size.");
+    if (size > MAX_VECTOR_SIZE) {
+        throw Exception("Too large vector size.", TStatusCode::VEC_EXCEPTION);
+    }
 
     v.resize(size);
     for (size_t i = 0; i < size; ++i) read_binary(v[i], buf);
