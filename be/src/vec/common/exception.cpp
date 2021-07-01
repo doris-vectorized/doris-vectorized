@@ -184,7 +184,6 @@ void tryLogCurrentException(const char* log_name, const std::string& start_of_me
     std::cout << "[TODO] should use glog here :" << start_of_message << std::endl;
 }
 
-
 std::string getExtraExceptionInfo(const std::exception& e) {
     std::string msg;
     // try
@@ -232,19 +231,16 @@ std::string getCurrentExceptionMessage(bool with_stacktrace,
         }
     } catch (const std::exception& e) {
         try {
-          
         } catch (...) {
         }
     } catch (...) {
         try {
-           
         } catch (...) {
         }
     }
 
     return stream.str();
 }
-
 
 std::string getExceptionMessage(const Exception& e, bool with_stacktrace,
                                 bool check_embedded_stacktrace) {
@@ -259,7 +255,6 @@ std::string getExceptionMessage(const Exception& e, bool with_stacktrace,
             has_embedded_stack_trace = embedded_stack_trace_pos != std::string::npos;
             if (!with_stacktrace && has_embedded_stack_trace) {
                 text.resize(embedded_stack_trace_pos);
-                // Poco::trimRightInPlace(text);
             }
         }
 

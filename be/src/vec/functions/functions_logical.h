@@ -86,12 +86,6 @@ struct XorImpl {
         return (a != b) ? Ternary::True : Ternary::False;
     }
     static inline constexpr bool special_implementation_for_nulls() { return false; }
-
-#if USE_EMBEDDED_COMPILER
-    static inline llvm::Value* apply(llvm::IRBuilder<>& builder, llvm::Value* a, llvm::Value* b) {
-        return builder.CreateXor(a, b);
-    }
-#endif
 };
 
 template <typename A>
@@ -99,12 +93,6 @@ struct NotImpl {
     using ResultType = UInt8;
 
     static inline ResultType apply(A a) { return !a; }
-
-#if USE_EMBEDDED_COMPILER
-    static inline llvm::Value* apply(llvm::IRBuilder<>& builder, llvm::Value* a) {
-        return builder.CreateNot(a);
-    }
-#endif
 };
 
 template <typename Impl, typename Name>
@@ -128,51 +116,13 @@ public:
     DataTypePtr get_return_type_impl(const DataTypes& arguments) const override;
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result_index,
-                       size_t input_rows_count) override;
-
-#if USE_EMBEDDED_COMPILER
-    bool isCompilableImpl(const DataTypes&) const override {
-        return use_default_implementation_for_nulls();
-    }
-
-    llvm::Value* compileImpl(llvm::IRBuilderBase& builder, const DataTypes& types,
-                             ValuePlaceholders values) const override {
-        auto& b = static_cast<llvm::IRBuilder<>&>(builder);
-        if constexpr (!Impl::is_saturable()) {
-            auto* result = nativeBoolCast(b, types[0], values[0]());
-            for (size_t i = 1; i < types.size(); i++)
-                result = Impl::apply(b, result, nativeBoolCast(b, types[i], values[i]()));
-            return b.CreateSelect(result, b.getInt8(1), b.getInt8(0));
-        }
-        constexpr bool breakOnTrue = Impl::is_saturated_value(true);
-        auto* next = b.GetInsertBlock();
-        auto* stop = llvm::BasicBlock::Create(next->getContext(), "", next->getParent());
-        b.SetInsertPoint(stop);
-        auto* phi = b.CreatePHI(b.getInt8Ty(), values.size());
-        for (size_t i = 0; i < types.size(); i++) {
-            b.SetInsertPoint(next);
-            auto* value = values[i]();
-            auto* truth = nativeBoolCast(b, types[i], value);
-            if (!types[i]->equals(DataTypeUInt8{}))
-                value = b.CreateSelect(truth, b.getInt8(1), b.getInt8(0));
-            phi->addIncoming(value, b.GetInsertBlock());
-            if (i + 1 < types.size()) {
-                next = llvm::BasicBlock::Create(next->getContext(), "", next->getParent());
-                b.CreateCondBr(truth, breakOnTrue ? stop : next, breakOnTrue ? next : stop);
-            }
-        }
-        b.CreateBr(stop);
-        b.SetInsertPoint(stop);
-        return phi;
-    }
-#endif
+                        size_t input_rows_count) override;
 };
 
 template <template <typename> class Impl, typename Name>
 class FunctionUnaryLogical : public IFunction {
 public:
     static constexpr auto name = Name::name;
-    //    static FunctionPtr create(const Context &) { return std::make_shared<FunctionUnaryLogical>(); }
     static FunctionPtr create() { return std::make_shared<FunctionUnaryLogical>(); }
 
 public:
@@ -185,18 +135,7 @@ public:
     bool use_default_implementation_for_constants() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t /*input_rows_count*/) override;
-
-#if USE_EMBEDDED_COMPILER
-    bool isCompilableImpl(const DataTypes&) const override { return true; }
-
-    llvm::Value* compileImpl(llvm::IRBuilderBase& builder, const DataTypes& types,
-                             ValuePlaceholders values) const override {
-        auto& b = static_cast<llvm::IRBuilder<>&>(builder);
-        return b.CreateSelect(Impl<UInt8>::apply(b, nativeBoolCast(b, types[0], values[0]())),
-                              b.getInt8(1), b.getInt8(0));
-    }
-#endif
+                        size_t /*input_rows_count*/) override;
 };
 
 } // namespace FunctionsLogicalDetail

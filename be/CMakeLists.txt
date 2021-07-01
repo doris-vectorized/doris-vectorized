@@ -291,9 +291,6 @@ set_target_properties(aws-checksums PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DI
 add_library(aws-s2n STATIC IMPORTED)
 set_target_properties(aws-s2n PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib64/libs2n.a)
 
-add_library(cityhash STATIC IMPORTED)
-set_target_properties(cityhash PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/libcityhash.a)
-
 add_library(minzip STATIC IMPORTED)
 set_target_properties(minzip PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib64/libminizip.a)
 
@@ -505,7 +502,6 @@ set(DORIS_DEPENDENCIES
     brotlienc
     zstd
     arrow
-    cityhash
     parquet
     orc
     odbc

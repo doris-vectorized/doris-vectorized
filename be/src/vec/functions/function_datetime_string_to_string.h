@@ -15,8 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include <vec/columns/column_nullable.h>
-
+#include "vec/columns/column_nullable.h"
 #include "vec/columns/columns_number.h"
 #include "vec/data_types/data_type_date.h"
 #include "vec/data_types/data_type_date_time.h"
@@ -26,11 +25,6 @@
 #include "vec/functions/function.h"
 
 namespace doris::vectorized {
-
-namespace ErrorCodes {
-extern const int ILLEGAL_TYPE_OF_ARGUMENT;
-extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
-} // namespace ErrorCodes
 
 template <typename Transform>
 class FunctionDateTimeStringToString : public IFunction {
@@ -52,12 +46,13 @@ public:
     ColumnNumbers get_arguments_that_are_always_constant() const override { return {1}; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                       size_t input_rows_count) override {
+                        size_t input_rows_count) override {
         const ColumnPtr source_col = block.get_by_position(arguments[0]).column;
 
         const auto* nullable_column = check_and_get_column<ColumnNullable>(source_col.get());
         const auto* sources = check_and_get_column<ColumnVector<typename Transform::FromType>>(
-                nullable_column ? nullable_column->get_nested_column_ptr().get() : source_col.get());
+                nullable_column ? nullable_column->get_nested_column_ptr().get()
+                                : source_col.get());
 
         if (sources) {
             auto col_res = ColumnString::create();
@@ -75,8 +70,8 @@ public:
                 } else {
                     return Status::InternalError(
                             "Illegal column " +
-                                    block.get_by_position(arguments[1]).column->get_name() + " is not const" +
-                            name);
+                            block.get_by_position(arguments[1]).column->get_name() +
+                            " is not const" + name);
                 }
             } else {
                 TransformerToStringTwoArgument<Transform>::vector_constant(
@@ -94,7 +89,7 @@ public:
                     ColumnNullable::create(std::move(col_res), std::move(col_null_map_to));
         } else {
             return Status::InternalError("Illegal column " +
-                                                 block.get_by_position(arguments[0]).column->get_name() +
+                                         block.get_by_position(arguments[0]).column->get_name() +
                                          " of first argument of function " + name);
         }
         return Status::OK();
