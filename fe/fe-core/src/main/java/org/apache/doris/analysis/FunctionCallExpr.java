@@ -28,6 +28,7 @@ import org.apache.doris.catalog.Type;
 import org.apache.doris.common.AnalysisException;
 import org.apache.doris.common.ErrorCode;
 import org.apache.doris.common.ErrorReport;
+import org.apache.doris.common.util.VectorizedUtil;
 import org.apache.doris.mysql.privilege.PrivPredicate;
 import org.apache.doris.qe.ConnectContext;
 import org.apache.doris.thrift.TAggregateExpr;
@@ -563,7 +564,7 @@ public class FunctionCallExpr extends Expr {
             }
             // Prevent the cast type in vector exec engine
             Type type = getChild(0).type;
-            if (!ConnectContext.get().getSessionVariable().enableVectorizedEngine()) {
+            if (!VectorizedUtil.isVectorized()) {
                 type = getChild(0).type.getMaxResolutionType();
             }
             fn = getBuiltinFunction(analyzer, fnName.getFunction(), new Type[]{type},
