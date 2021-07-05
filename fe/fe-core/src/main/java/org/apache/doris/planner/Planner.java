@@ -28,10 +28,10 @@ import org.apache.doris.analysis.SlotId;
 import org.apache.doris.analysis.StatementBase;
 import org.apache.doris.analysis.TupleDescriptor;
 import org.apache.doris.catalog.PrimitiveType;
+import org.apache.doris.common.util.VectorizedUtil;
 import org.apache.doris.common.UserException;
 import org.apache.doris.common.profile.PlanTreeBuilder;
 import org.apache.doris.common.profile.PlanTreePrinter;
-import org.apache.doris.qe.ConnectContext;
 import org.apache.doris.rewrite.mvrewrite.MVSelectFailedException;
 import org.apache.doris.thrift.TExplainLevel;
 import org.apache.doris.thrift.TQueryOptions;
@@ -168,7 +168,7 @@ public class Planner {
         singleNodePlanner = new SingleNodePlanner(plannerContext);
         PlanNode singleNodePlan = singleNodePlanner.createSingleNodePlan();
 
-        if (ConnectContext.get().getSessionVariable().enableVectorizedEngine()) {
+        if (VectorizedUtil.isVectorized()) {
             singleNodePlan.convertToVectoriezd();
         }
 

@@ -26,7 +26,7 @@ import org.apache.doris.common.AnalysisException;
 import org.apache.doris.common.Config;
 import org.apache.doris.common.TreeNode;
 import org.apache.doris.common.io.Writable;
-import org.apache.doris.qe.ConnectContext;
+import org.apache.doris.common.util.VectorizedUtil;
 import org.apache.doris.thrift.TExpr;
 import org.apache.doris.thrift.TExprNode;
 import org.apache.doris.thrift.TExprOpcode;
@@ -1488,7 +1488,7 @@ abstract public class Expr extends TreeNode<Expr> implements ParseNode, Cloneabl
             throws AnalysisException {
         FunctionName fnName = new FunctionName(name);
         Function searchDesc = new Function(fnName, argTypes, Type.INVALID, false,
-                ConnectContext.get().getSessionVariable().enableVectorizedEngine());
+                VectorizedUtil.isVectorized());
         Function f = Catalog.getCurrentCatalog().getFunction(searchDesc, mode);
         if (f != null && fnName.getFunction().equalsIgnoreCase("rand")) {
             if (this.children.size() == 1
