@@ -61,7 +61,6 @@
 #include "runtime/runtime_state.h"
 #include "util/debug_util.h"
 #include "util/runtime_profile.h"
-
 #include "vec/core/block.h"
 #include "vec/exec/vaggregation_node.h"
 #include "vec/exec/vcross_join_node.h"
@@ -166,9 +165,13 @@ void ExecNode::push_down_predicate(RuntimeState* state, std::list<ExprContext*>*
 }
 
 Status ExecNode::init(const TPlanNode& tnode, RuntimeState* state) {
-    init_runtime_profile(state->enable_vectorized_exec()
-                                 ? "V" + print_plan_node_type(tnode.node_type)
-                                 : print_plan_node_type(tnode.node_type));
+    std::string profile;
+    if (state && state->enable_vectorized_exec()) {
+        profile = "V" + print_plan_node_type(tnode.node_type);
+    } else {
+        profile = print_plan_node_type(tnode.node_type);
+    }
+    init_runtime_profile(profile);
 
     if (tnode.__isset.vconjunct) {
         _vconjunct_ctx_ptr.reset(new doris::vectorized::VExprContext*);
