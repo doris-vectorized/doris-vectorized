@@ -17,6 +17,8 @@
 
 package org.apache.doris.analysis;
 
+import java.util.Arrays;
+
 import org.apache.doris.catalog.Catalog;
 import org.apache.doris.catalog.Function;
 import org.apache.doris.catalog.FunctionSet;
@@ -35,6 +37,7 @@ import com.google.common.collect.Lists;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 
 public class CastExpr extends Expr {
     private static final Logger LOG = LogManager.getLogger(CastExpr.class);
@@ -188,7 +191,7 @@ public class CastExpr extends Expr {
 
         this.opcode = TExprOpcode.CAST;
         FunctionName fnName = new FunctionName(getFnName(type));
-        Function searchDesc = new Function(fnName, collectChildReturnTypes(), Type.INVALID, false);
+        Function searchDesc = new Function(fnName, Arrays.asList(collectChildReturnTypes()), Type.INVALID, false);
         if (isImplicit) {
             fn = Catalog.getCurrentCatalog().getFunction(
                     searchDesc, Function.CompareMode.IS_NONSTRICT_SUPERTYPE_OF);

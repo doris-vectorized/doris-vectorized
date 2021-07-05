@@ -46,6 +46,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -1487,7 +1488,7 @@ abstract public class Expr extends TreeNode<Expr> implements ParseNode, Cloneabl
             Analyzer analyzer, String name, Type[] argTypes, Function.CompareMode mode)
             throws AnalysisException {
         FunctionName fnName = new FunctionName(name);
-        Function searchDesc = new Function(fnName, argTypes, Type.INVALID, false,
+        Function searchDesc = new Function(fnName, Arrays.asList(argTypes), Type.INVALID, false,
                 VectorizedUtil.isVectorized());
         Function f = Catalog.getCurrentCatalog().getFunction(searchDesc, mode);
         if (f != null && fnName.getFunction().equalsIgnoreCase("rand")) {
