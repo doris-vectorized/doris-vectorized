@@ -19,6 +19,7 @@
 
 #include "vec/columns/column_complex.h"
 #include "vec/columns/column_nullable.h"
+#include "vec/columns/column_string.h"
 #include "vec/columns/column_vector.h"
 #include "vec/common/assert_cast.h"
 #include "vec/core/block.h"
@@ -46,12 +47,16 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
     int64_t raw_rows_threshold = raw_rows_read() + config::doris_scanner_row_num;
     auto agg_object_pool = std::make_unique<ObjectPool>();
 
+    auto column_size = get_query_slots().size();
+    std::vector<vectorized::MutableColumnPtr> columns(column_size);
+
     do {
         block->clear();
-        std::vector<vectorized::MutableColumnPtr> columns;
-        for (auto slot : get_query_slots()) {
-            columns.emplace_back(slot->get_empty_mutable_column())->reserve(state->batch_size());
+        for (auto i = 0; i < column_size; i++) {
+            columns[i] = get_query_slots()[i]->get_empty_mutable_column();
+            columns[i]->reserve(state->batch_size());
         }
+
         while (true) {
             // block is full, break
             if (state->batch_size() <= columns[0]->size()) {
@@ -105,40 +110,71 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
     for (int i = 0; i < slots_size; ++i) {
         SlotDescriptor* slot_desc = _query_slots[i];
         auto cid = _return_columns[i];
-        if (_read_row_cursor.is_null(cid)) {
-            (*columns)[i]->insert_data(nullptr, 0);
-            continue;
+
+        auto* column_ptr = (*columns)[i].get();
+        if (slot_desc->is_nullable()) {
+            auto* nullable_column = reinterpret_cast<ColumnNullable*>((*columns)[i].get());
+            if (_read_row_cursor.is_null(cid)) {
+                nullable_column->insert_data(nullptr, 0);
+                continue;
+            } else {
+                nullable_column->get_null_map_data().push_back(0);
+                column_ptr = &nullable_column->get_nested_column();
+            }
         }
 
         char* ptr = (char*)_read_row_cursor.cell_ptr(cid);
-        size_t len = _read_row_cursor.column_size(cid);
         switch (slot_desc->type().type) {
+        case TYPE_TINYINT: {
+            assert_cast<ColumnVector<Int8>*>(column_ptr)->insert_data(ptr, 0);
+            break;
+        }
+        case TYPE_SMALLINT: {
+            assert_cast<ColumnVector<Int16>*>(column_ptr)->insert_data(ptr, 0);
+            break;
+        }
+        case TYPE_INT: {
+            assert_cast<ColumnVector<Int32>*>(column_ptr)->insert_data(ptr, 0);
+            break;
+        }
+        case TYPE_BIGINT: {
+            assert_cast<ColumnVector<Int64>*>(column_ptr)->insert_data(ptr, 0);
+            break;
+        }
+        case TYPE_LARGEINT: {
+            assert_cast<ColumnVector<Int128>*>(column_ptr)->insert_data(ptr, 0);
+            break;
+        }
+        case TYPE_FLOAT: {
+            assert_cast<ColumnVector<Float32>*>(column_ptr)->insert_data(ptr, 0);
+            break;
+        }
+        case TYPE_DOUBLE: {
+            assert_cast<ColumnVector<Float64>*>(column_ptr)->insert_data(ptr, 0);
+            break;
+        }
         case TYPE_CHAR: {
             Slice* slice = reinterpret_cast<Slice*>(ptr);
-            (*columns)[i]->insert_data(slice->data, strnlen(slice->data, slice->size));
+            assert_cast<ColumnString*>(column_ptr)->insert_data(
+                    slice->data, strnlen(slice->data, slice->size));
             break;
         }
         case TYPE_VARCHAR: {
             Slice* slice = reinterpret_cast<Slice*>(ptr);
-            (*columns)[i]->insert_data(slice->data, slice->size);
+            assert_cast<ColumnString*>(column_ptr)->insert_data(
+                    slice->data, slice->size);
             break;
         }
         case TYPE_OBJECT: {
             Slice* slice = reinterpret_cast<Slice*>(ptr);
             // insert_default()
-            auto& target_column = (*columns)[i];
+            auto* target_column = assert_cast<ColumnBitmap*>(column_ptr);
+
             target_column->insert_default();
             BitmapValue* pvalue = nullptr;
             int pos = target_column->size() - 1;
-            if (target_column->is_nullable()) {
-                auto& nullable_column = assert_cast<ColumnNullable&>(*target_column);
-                nullable_column.get_null_map_data()[pos] = 0;
-                auto& bitmap_column = assert_cast<ColumnBitmap&>(nullable_column.get_nested_column());
-                pvalue = &bitmap_column.get_element(pos);
-            } else {
-                auto& bitmap_column = assert_cast<ColumnBitmap&>(*target_column);
-                pvalue = &bitmap_column.get_element(pos);
-            }
+            pvalue = &target_column->get_element(pos);
+
             if (slice->size != 0) {
                 BitmapValue value;
                 value.deserialize(slice->data);
@@ -151,7 +187,8 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
         case TYPE_HLL: {
             Slice* slice = reinterpret_cast<Slice*>(ptr);
             if (slice->size != 0) {
-                (*columns)[i]->insert_data(slice->data, slice->size);
+                assert_cast<ColumnString*>(column_ptr)->insert_data(
+                    slice->data, slice->size);
                 // TODO: in vector exec engine, it is diffcult to set hll size = 0
                 // so we have to serialize here. which will cause two problem
                 //      1. some unnecessary mem malloc and delay mem release
@@ -161,7 +198,8 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
                 std::string result(dst_hll->max_serialized_size(), '0');
                 int size = dst_hll->serialize((uint8_t*)result.c_str());
                 result.resize(size);
-                (*columns)[i]->insert_data(result.c_str(), size);
+                assert_cast<ColumnString*>(column_ptr)->insert_data(
+                        result.c_str(), size);
             }
             break;
         }
@@ -176,13 +214,13 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
             int64_t int_value = *(int64_t*)(ptr);
             int32_t frac_value = *(int32_t*)(ptr + sizeof(int64_t));
             DecimalV2Value data(int_value, frac_value);
-            (*columns)[i]->insert_data(reinterpret_cast<char*>(&data), slot_desc->slot_size());
+            assert_cast<ColumnDecimal<Decimal128>*>(column_ptr)->insert_data(reinterpret_cast<char*>(&data), 0);
             break;
         }
         case TYPE_DATETIME: {
             uint64_t value = *reinterpret_cast<uint64_t*>(ptr);
             DateTimeValue data(value);
-            (*columns)[i]->insert_data(reinterpret_cast<char*>(&data), slot_desc->slot_size());
+            assert_cast<ColumnVector<Int128>*>(column_ptr)->insert_data(reinterpret_cast<char*>(&data), 0);
             break;
         }
         case TYPE_DATE: {
@@ -194,11 +232,10 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
             value |= *(unsigned char*)(ptr);
             DateTimeValue date;
             date.from_olap_date(value);
-            (*columns)[i]->insert_data(reinterpret_cast<char *>(&date), slot_desc->slot_size());
+            assert_cast<ColumnVector<Int128>*>(column_ptr)->insert_data(reinterpret_cast<char*>(&date), 0);
             break;
         }
         default: {
-            (*columns)[i]->insert_data(ptr, len);
             break;
         }
         }
