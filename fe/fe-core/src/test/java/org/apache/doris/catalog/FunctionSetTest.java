@@ -23,6 +23,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 public class FunctionSetTest {
 
     private FunctionSet functionSet;
@@ -43,7 +45,7 @@ public class FunctionSetTest {
         Assert.assertTrue(newArgTypes[0].matchesType(ScalarType.DECIMALV2));
 
         Type[] argTypes2 = {ScalarType.VARCHAR, ScalarType.TINYINT, ScalarType.TINYINT};
-        Function lagDesc2 = new Function(new FunctionName("lag"), argTypes2, (Type) ScalarType.INVALID, false);
+        Function lagDesc2 = new Function(new FunctionName("lag"), Arrays.asList(argTypes2), (Type) ScalarType.INVALID, false);
         newFunction = functionSet.getFunction(lagDesc2, Function.CompareMode.IS_SUPERTYPE_OF);
         newArgTypes = newFunction.getArgs();
         Assert.assertTrue(newArgTypes[0].matchesType(newArgTypes[2]));

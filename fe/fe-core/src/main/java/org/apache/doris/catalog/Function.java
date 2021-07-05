@@ -126,65 +126,40 @@ public class Function implements Writable {
     protected Function() {
     }
 
-    public Function(FunctionName name, Type[] argTypes, Type retType, boolean varArgs) {
-        this(0, name, argTypes, retType, varArgs);
-    }
-
-    public Function(FunctionName name, Type[] argTypes, Type retType, boolean varArgs, boolean vectorized) {
-        this(0, name, argTypes, retType, varArgs, vectorized);
-    }
     public Function(FunctionName name, List<Type> args, Type retType, boolean varArgs) {
-        this(0, name, args, retType, varArgs);
+        this(0, name, args, retType, varArgs, false, NullableMode.DEPEND_ON_ARGUMENT);
     }
 
     public Function(FunctionName name, List<Type> args, Type retType, boolean varArgs, boolean vectorized) {
-        this(0, name, args, retType, varArgs, vectorized);
+        this(0, name, args, retType, varArgs, vectorized, NullableMode.DEPEND_ON_ARGUMENT);
     }
 
-    public Function(long id, FunctionName name, Type[] argTypes, Type retType, boolean hasVarArgs) {
-        this(id, name, argTypes, retType, hasVarArgs, false);
+    public Function(FunctionName name, List<Type> args, Type retType, boolean varArgs, boolean vectorized, NullableMode mode) {
+        this(0, name, args, retType, varArgs, vectorized, mode);
     }
 
-    public Function(long id, FunctionName name, Type[] argTypes, Type retType, boolean hasVarArgs, boolean vectorized) {
+    public Function(long id, FunctionName name, List<Type> argTypes, Type retType, boolean hasVarArgs,
+                    TFunctionBinaryType binaryType, boolean userVisible, boolean vectorized, NullableMode mode) {
         this.id = id;
         this.name = name;
         this.hasVarArgs = hasVarArgs;
-        if (argTypes == null) {
-            this.argTypes = new Type[0];
-        } else {
-            this.argTypes = argTypes;
-        }
-        this.retType = retType;
-        this.vectorized = vectorized;
-    }
-
-    public Function(long id, FunctionName name, Type[] argTypes, Type retType, boolean hasVarArgs,
-                    TFunctionBinaryType binaryType, boolean userVisible, boolean vectorized) {
-        this.id = id;
-        this.name = name;
-        this.hasVarArgs = hasVarArgs;
-        if (argTypes == null) {
-            this.argTypes = new Type[0];
-        } else {
-            this.argTypes = argTypes;
-        }
-        this.retType = retType;
-        this.binaryType = binaryType;
-        this.userVisible = userVisible;
-        this.vectorized = vectorized;
-    }
-
-    public Function(long id, FunctionName name, List<Type> argTypes, Type retType, boolean hasVarArgs, boolean vectorized) {
-        this(id, name, (Type[]) null, retType, hasVarArgs, vectorized);
         if (argTypes.size() > 0) {
             this.argTypes = argTypes.toArray(new Type[argTypes.size()]);
         } else {
             this.argTypes = new Type[0];
         }
+        this.retType = retType;
+        this.binaryType = binaryType;
+        this.userVisible = userVisible;
+        this.vectorized = vectorized;
+        this.nullableMode = mode;
     }
-    public Function(long id, FunctionName name, List<Type> argTypes, Type retType, boolean hasVarArgs) {
-        this(id, name, argTypes, retType, hasVarArgs, false);
+
+    public Function(long id, FunctionName name, List<Type> argTypes, Type retType,
+                    boolean hasVarArgs, boolean vectorized, NullableMode mode) {
+        this(id, name, argTypes, retType, hasVarArgs, TFunctionBinaryType.BUILTIN, true, vectorized, mode);
     }
+
     public FunctionName getFunctionName() {
         return name;
     }
