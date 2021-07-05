@@ -20,14 +20,12 @@
 #include <algorithm>
 #include <boost/variant.hpp>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <utility>
 
 #include "agent/cgroups_mgr.h"
 #include "common/logging.h"
 #include "common/resource_tls.h"
-#include "exprs/binary_predicate.h"
 #include "exprs/expr.h"
 #include "exprs/expr_context.h"
 #include "gen_cpp/PlanNodes_types.h"
@@ -36,7 +34,6 @@
 #include "runtime/runtime_state.h"
 #include "runtime/string_value.h"
 #include "runtime/tuple_row.h"
-#include "util/debug_util.h"
 #include "util/priority_thread_pool.hpp"
 #include "util/runtime_profile.h"
 
@@ -446,6 +443,14 @@ void OlapScanNode::remove_pushed_conjuncts(RuntimeState* state) {
 
     _conjunct_ctxs = std::move(new_conjunct_ctxs);
     _direct_conjunct_size = new_direct_conjunct_size;
+
+    // set vconjunct_ctx is empty, if all conjunct
+    if (_direct_conjunct_size == 0) {
+        if (_vconjunct_ctx_ptr.get() != nullptr) {
+            (*_vconjunct_ctx_ptr.get())->close(state);
+            _vconjunct_ctx_ptr = nullptr;
+        }
+    }
 }
 
 void OlapScanNode::eval_const_conjuncts() {
