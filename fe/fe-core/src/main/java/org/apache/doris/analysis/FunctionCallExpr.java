@@ -51,6 +51,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 // TODO: for aggregations, we need to unify the code paths for builtins and UDAs.
@@ -625,7 +626,7 @@ public class FunctionCallExpr extends Expr {
                     Database db = Catalog.getCurrentCatalog().getDb(dbName);
                     if (db != null) {
                         Function searchDesc = new Function(
-                                fnName, collectChildReturnTypes(), Type.INVALID, false);
+                                fnName, Arrays.asList(collectChildReturnTypes()), Type.INVALID, false);
                         fn = db.getFunction(searchDesc, Function.CompareMode.IS_NONSTRICT_SUPERTYPE_OF);
                     }
                 }
