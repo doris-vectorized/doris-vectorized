@@ -1563,6 +1563,7 @@ public class FunctionSet {
                     null, null,
                     prefix + "10sum_removeIN9doris_udf11LargeIntValES3_EEvPNS2_15FunctionContextERKT_PT0_",
                     null, false, true, false));
+
             // vectorized
             addBuiltin(AggregateFunction.createBuiltin(name,
                     Lists.<Type>newArrayList(Type.TINYINT), Type.BIGINT, Type.BIGINT, initNull,

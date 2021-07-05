@@ -37,6 +37,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -57,19 +58,19 @@ public class ScalarFunction extends Function {
     protected ScalarFunction() {
     }
 
-    public ScalarFunction(
-            FunctionName fnName, Type[] argTypes, Type retType, boolean hasVarArgs) {
-        super(fnName, argTypes, retType, hasVarArgs);
+    public ScalarFunction(FunctionName fnName, List<Type> argTypes, Type retType, boolean hasVarArgs,
+             boolean userVisible) {
+        this(fnName, argTypes, retType, hasVarArgs, TFunctionBinaryType.BUILTIN, userVisible, false);
     }
 
-    public ScalarFunction(
-            FunctionName fnName, ArrayList<Type> argTypes, Type retType, boolean hasVarArgs) {
-        super(fnName, argTypes, retType, hasVarArgs);
+    public ScalarFunction(FunctionName fnName, List<Type> argTypes, Type retType, boolean hasVarArgs,
+            boolean userVisible, boolean isVec) {
+        this(fnName, argTypes, retType, hasVarArgs, TFunctionBinaryType.BUILTIN, userVisible, isVec);
     }
 
-    public ScalarFunction(
-            FunctionName fnName, ArrayList<Type> argTypes, Type retType, boolean hasVarArgs, boolean isVec) {
-        super(fnName, argTypes, retType, hasVarArgs, isVec);
+    public ScalarFunction(FunctionName fnName, List<Type> argTypes, Type retType, boolean hasVarArgs,
+                          TFunctionBinaryType binaryType, boolean userVisible, boolean isVec) {
+        super(0, fnName, argTypes, retType, hasVarArgs, binaryType, userVisible, isVec, NullableMode.DEPEND_ON_ARGUMENT);
     }
 
     public ScalarFunction(FunctionName fnName, List<Type> argTypes,
@@ -92,9 +93,7 @@ public class ScalarFunction extends Function {
             String prepareFnSymbol, String closeFnSymbol, boolean userVisible) {
         Preconditions.checkNotNull(symbol);
         ScalarFunction fn = new ScalarFunction(
-                new FunctionName(name), argTypes, retType, hasVarArgs);
-        fn.setBinaryType(TFunctionBinaryType.BUILTIN);
-        fn.setUserVisible(userVisible);
+                new FunctionName(name), argTypes, retType, hasVarArgs, userVisible);
         fn.symbolName = symbol;
         fn.prepareFnSymbol = prepareFnSymbol;
         fn.closeFnSymbol = closeFnSymbol;
@@ -270,9 +269,7 @@ public class ScalarFunction extends Function {
             String name, String symbol, ArrayList<Type> argTypes,
             boolean hasVarArgs, Type retType, boolean userVisible) {
         ScalarFunction fn = new ScalarFunction(
-                new FunctionName(name), argTypes, retType, hasVarArgs);
-        fn.setBinaryType(TFunctionBinaryType.BUILTIN);
-        fn.setUserVisible(userVisible);
+                new FunctionName(name), argTypes, retType, hasVarArgs, userVisible);
         fn.symbolName = symbol;
 
 //        try {
@@ -297,9 +294,7 @@ public class ScalarFunction extends Function {
             String name, String symbol, ArrayList<Type> argTypes,
             boolean hasVarArgs, Type retType, boolean userVisible) {
         ScalarFunction fn = new ScalarFunction(
-                new FunctionName(name), argTypes, retType, hasVarArgs, true);
-        fn.setBinaryType(TFunctionBinaryType.BUILTIN);
-        fn.setUserVisible(userVisible);
+                new FunctionName(name), argTypes, retType, hasVarArgs, userVisible, true);
         fn.symbolName = symbol;
         return fn;
     }
@@ -313,8 +308,7 @@ public class ScalarFunction extends Function {
         ArrayList<Type> fnArgs =
                 (argTypes == null) ? new ArrayList<Type>() : Lists.newArrayList(argTypes);
         ScalarFunction fn = new ScalarFunction(
-                new FunctionName(name), fnArgs, Type.INVALID, hasVarArgs);
-        fn.setBinaryType(TFunctionBinaryType.BUILTIN);
+                new FunctionName(name), fnArgs, Type.INVALID, hasVarArgs, true);
         return fn;
     }
 
@@ -322,9 +316,8 @@ public class ScalarFunction extends Function {
             FunctionName name, Type[] args,
             Type returnType, boolean isVariadic,
             String objectFile, String symbol, String prepareFnSymbol, String closeFnSymbol) {
-        ScalarFunction fn = new ScalarFunction(name, args, returnType, isVariadic);
-        fn.setBinaryType(TFunctionBinaryType.NATIVE);
-        fn.setUserVisible(true);
+        ScalarFunction fn = new ScalarFunction(name, Arrays.asList(args), returnType, isVariadic,
+                TFunctionBinaryType.NATIVE, true, false);
         fn.symbolName = symbol;
         fn.prepareFnSymbol = prepareFnSymbol;
         fn.closeFnSymbol = closeFnSymbol;
