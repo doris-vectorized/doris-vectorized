@@ -17,11 +17,9 @@
 
 #include "runtime/mem_tracker.h"
 
-#include <cstdint>
-
-#include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string.hpp>
-
+#include <boost/algorithm/string/join.hpp>
+#include <cstdint>
 #include <limits>
 #include <memory>
 
@@ -72,13 +70,16 @@ static std::shared_ptr<MemTracker> root_tracker;
 static GoogleOnceType root_tracker_once = GOOGLE_ONCE_INIT;
 
 void MemTracker::CreateRootTracker() {
-    root_tracker.reset(new MemTracker(nullptr, -1, "Root", nullptr, true, MemTrackerLevel::OVERVIEW));
+    root_tracker.reset(
+            new MemTracker(nullptr, -1, "Root", nullptr, true, MemTrackerLevel::OVERVIEW));
     root_tracker->Init();
 }
 
 std::shared_ptr<MemTracker> MemTracker::CreateTracker(RuntimeProfile* profile, int64_t byte_limit,
-                                                      const std::string& label, const std::shared_ptr<MemTracker>& parent,
-                                                      bool reset_label_name, MemTrackerLevel level) {
+                                                      const std::string& label,
+                                                      const std::shared_ptr<MemTracker>& parent,
+                                                      bool reset_label_name,
+                                                      MemTrackerLevel level) {
     std::shared_ptr<MemTracker> real_parent;
     std::string label_name;
     // if parent is not null, reset label name to query id.
@@ -101,8 +102,9 @@ std::shared_ptr<MemTracker> MemTracker::CreateTracker(RuntimeProfile* profile, i
         label_name = label;
     }
 
-    shared_ptr<MemTracker> tracker(new MemTracker(profile, byte_limit, label_name, real_parent, true,
-            level > real_parent->_level ? level : real_parent->_level));
+    shared_ptr<MemTracker> tracker(
+            new MemTracker(profile, byte_limit, label_name, real_parent, true,
+                           level > real_parent->_level ? level : real_parent->_level));
     real_parent->AddChildTracker(tracker);
     tracker->Init();
 
@@ -110,7 +112,9 @@ std::shared_ptr<MemTracker> MemTracker::CreateTracker(RuntimeProfile* profile, i
 }
 
 std::shared_ptr<MemTracker> MemTracker::CreateTracker(int64_t byte_limit, const std::string& label,
-        std::shared_ptr<MemTracker> parent, bool log_usage_if_zero, bool reset_label_name, MemTrackerLevel level) {
+                                                      std::shared_ptr<MemTracker> parent,
+                                                      bool log_usage_if_zero, bool reset_label_name,
+                                                      MemTrackerLevel level) {
     std::shared_ptr<MemTracker> real_parent;
     std::string label_name;
     // if parent is not null, reset label name to query id.
@@ -135,7 +139,7 @@ std::shared_ptr<MemTracker> MemTracker::CreateTracker(int64_t byte_limit, const 
 
     shared_ptr<MemTracker> tracker(
             new MemTracker(nullptr, byte_limit, label_name, real_parent, log_usage_if_zero,
-                    level > real_parent->_level ? level : real_parent->_level));
+                           level > real_parent->_level ? level : real_parent->_level));
     real_parent->AddChildTracker(tracker);
     tracker->Init();
 
@@ -143,10 +147,12 @@ std::shared_ptr<MemTracker> MemTracker::CreateTracker(int64_t byte_limit, const 
 }
 
 MemTracker::MemTracker(int64_t byte_limit, const std::string& label)
-        : MemTracker(nullptr, byte_limit, label, std::shared_ptr<MemTracker>(), true, MemTrackerLevel::VERBOSE) {}
+        : MemTracker(nullptr, byte_limit, label, std::shared_ptr<MemTracker>(), true,
+                     MemTrackerLevel::VERBOSE) {}
 
 MemTracker::MemTracker(RuntimeProfile* profile, int64_t byte_limit, const string& label,
-                       const std::shared_ptr<MemTracker>& parent, bool log_usage_if_zero, MemTrackerLevel level)
+                       const std::shared_ptr<MemTracker>& parent, bool log_usage_if_zero,
+                       MemTrackerLevel level)
         : limit_(byte_limit),
           soft_limit_(CalcSoftLimit(byte_limit)),
           label_(label),
@@ -267,8 +273,8 @@ MemTracker::~MemTracker() {
     delete reservation_counters_.load();
 
     if (parent()) {
-        DCHECK(consumption() == 0) << "Memory tracker " << debug_string()
-                                   << " has unreleased consumption " << consumption();
+        //DCHECK(consumption() == 0) << "Memory tracker " << debug_string()
+        //<< " has unreleased consumption " << consumption();
         parent_->Release(consumption());
 
         lock_guard<SpinLock> l(parent_->child_trackers_lock_);
@@ -295,7 +301,8 @@ void MemTracker::ListTrackers(vector<shared_ptr<MemTracker>>* trackers) {
         }
         for (const auto& child_weak : children) {
             shared_ptr<MemTracker> child = child_weak.lock();
-            if (child && static_cast<decltype(config::mem_tracker_level)>(child->_level) <= config::mem_tracker_level) {
+            if (child && static_cast<decltype(config::mem_tracker_level)>(child->_level) <=
+                                 config::mem_tracker_level) {
                 to_process.emplace_back(std::move(child));
             }
         }
