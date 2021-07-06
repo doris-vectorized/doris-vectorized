@@ -18,7 +18,7 @@
 package org.apache.doris.analysis;
 
 import org.apache.doris.catalog.AggregateFunction;
-import org.apache.doris.catalog.FunctionSet;
+import org.apache.doris.catalog.Function;
 import org.apache.doris.catalog.Type;
 
 import com.google.common.base.MoreObjects;
@@ -148,17 +148,11 @@ public abstract class AggregateInfoBase {
                     slotDesc.setSourceExpr(aggExpr);
                 }
 
-                // COUNT(), NDV() and NDV_NO_FINALIZE() are non-nullable. The latter two are used
-                // by compute stats and compute incremental stats, respectively.
-                if (aggExpr.getFnName().getFunction().equals(FunctionSet.COUNT)
-                        || aggExpr.getFnName().getFunction().equals("ndv")
-                        || aggExpr.getFnName().getFunction().equals(FunctionSet.BITMAP_UNION_INT)
-                        || aggExpr.getFnName().getFunction().equals(FunctionSet.BITMAP_UNION_COUNT)
-                        || aggExpr.getFnName().getFunction().equals("ndv_no_finalize")) {
-                    // TODO: Consider making nullability a property of types or of builtin agg fns.
-                    // row_number(), rank(), and dense_rank() are non-nullable as well.
-                    slotDesc.setIsNullable(false);
+                if (isOutputTuple && aggExpr.getFn().getNullableMode().equals(Function.NullableMode.DEPEND_ON_ARGUMENT) &&
+                        groupingExprs_.size() == 0) {
+                    slotDesc.setIsNullable(true);
                 }
+
                 if (!isOutputTuple) {
                     Type intermediateType = ((AggregateFunction)aggExpr.fn).getIntermediateType();
                     if (intermediateType != null) {
