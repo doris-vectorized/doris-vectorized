@@ -20,6 +20,7 @@ package org.apache.doris.catalog;
 import static org.apache.doris.common.io.IOUtils.readOptionStringOrNull;
 import static org.apache.doris.common.io.IOUtils.writeOptionString;
 
+import avro.shaded.com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 import org.apache.doris.analysis.CreateFunctionStmt;
@@ -46,6 +47,10 @@ import java.util.Map;
 public class AggregateFunction extends Function {
 
     private static final Logger LOG = LogManager.getLogger(AggregateFunction.class);
+
+    public static ImmutableSet<String> NOT_NULLABLE_AGGREGATE_FUNCTION_NAME_SET =
+            ImmutableSet.of(FunctionSet.COUNT, "ndv", FunctionSet.BITMAP_UNION_INT, FunctionSet.BITMAP_UNION_COUNT, "ndv_no_finalize");
+
     // Set if different from retType_, null otherwise.
     private Type intermediateType;
 
@@ -122,7 +127,7 @@ public class AggregateFunction extends Function {
                              String removeFnSymbol, String finalizeFnSymbol, boolean vectorized) {
         // only `count` is always not nullable, other aggregate function is always nullable
         super(fnName, argTypes, retType, hasVarArgs, vectorized,
-                fnName.getFunction().toLowerCase().equals("count") ? NullableMode.ALWAYS_NOT_NULLABLE : NullableMode.ALWAYS_NULLABLE);
+                AggregateFunction.NOT_NULLABLE_AGGREGATE_FUNCTION_NAME_SET.contains(fnName.getFunction()) ? NullableMode.ALWAYS_NOT_NULLABLE : NullableMode.DEPEND_ON_ARGUMENT);
         setLocation(location);
         this.intermediateType = (intermediateType.equals(retType)) ? null : intermediateType;
         this.updateFnSymbol = updateFnSymbol;
