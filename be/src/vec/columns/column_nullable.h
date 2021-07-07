@@ -199,6 +199,6 @@ private:
     void apply_null_map_impl(const ColumnUInt8& map);
 };
 
-ColumnPtr make_nullable(const ColumnPtr& column);
+ColumnPtr make_nullable(const ColumnPtr& column, bool is_nullable = false);
 
 } // namespace doris::vectorized
