@@ -102,7 +102,7 @@ public abstract class AggregateInfoBase {
         // Create the intermediate tuple desc first, so that the tuple ids are increasing
         // from bottom to top in the plan tree.
         intermediateTupleDesc_ = createTupleDesc(analyzer, false);
-        if (requiresIntermediateTuple(aggregateExprs_)) {
+        if (requiresIntermediateTuple(aggregateExprs_, groupingExprs_.size() == 0)) {
             outputTupleDesc_ = createTupleDesc(analyzer, true);
         } else {
             outputTupleDesc_ = intermediateTupleDesc_;
@@ -203,6 +203,21 @@ public abstract class AggregateInfoBase {
         for (Expr aggExpr: aggExprs) {
             Type intermediateType = ((AggregateFunction) aggExpr.fn).getIntermediateType();
             if (intermediateType != null) return true;
+        }
+        return false;
+    }
+
+    /**
+     * output tuple maybe different from intermediate when noGrouping and fn null mode
+     * is depend on argument
+     */
+    public static <T extends Expr> boolean requiresIntermediateTuple(List<T> aggExprs, boolean noGrouping) {
+        for (Expr aggExpr: aggExprs) {
+            Type intermediateType = ((AggregateFunction) aggExpr.fn).getIntermediateType();
+            if (intermediateType != null) return true;
+            if (noGrouping && ((AggregateFunction) aggExpr.fn).getNullableMode().equals(Function.NullableMode.DEPEND_ON_ARGUMENT)) {
+                return true;
+            }
         }
         return false;
     }

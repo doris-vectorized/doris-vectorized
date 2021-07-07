@@ -344,6 +344,11 @@ Status PartitionedAggregationNode::open(RuntimeState* state) {
 }
 
 Status PartitionedAggregationNode::get_next(RuntimeState* state, RowBatch* row_batch, bool* eos) {
+    // 1. `!need_finalize` means this aggregation node not the level two aggregation node
+    // 2. `grouping_exprs_.size() == 0 ` means is not group by
+    // 3. `child(0)->rows_returned() == 0` mean not data from child
+    // in level two aggregation node should return NULL result
+    //    level one aggregation node set `eos = true` return directly
     if (UNLIKELY(grouping_exprs_.size() == 0 && !needs_finalize_ && child(0)->rows_returned() == 0)) {
         *eos = true;
         return Status::OK();

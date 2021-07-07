@@ -377,6 +377,9 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
 }
 
 Status AggregationNode::_serialize_without_key(RuntimeState* state, Block* block, bool* eos) {
+    // 1. `child(0)->rows_returned() == 0` mean not data from child
+    // in level two aggregation node should return NULL result
+    //    level one aggregation node set `eos = true` return directly
     if (UNLIKELY(_children[0]->rows_returned() == 0)) {
         *eos = true;
         return Status::OK();

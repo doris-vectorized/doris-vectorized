@@ -130,10 +130,6 @@ public class AggregateFunction extends Function {
                 AggregateFunction.NOT_NULLABLE_AGGREGATE_FUNCTION_NAME_SET.contains(fnName.getFunction()) ? NullableMode.ALWAYS_NOT_NULLABLE : NullableMode.DEPEND_ON_ARGUMENT);
         setLocation(location);
         this.intermediateType = (intermediateType.equals(retType)) ? null : intermediateType;
-        if (this.intermediateType == null &&
-                !AggregateFunction.NOT_NULLABLE_AGGREGATE_FUNCTION_NAME_SET.contains(fnName.getFunction())) {
-            this.intermediateType = intermediateType;
-        }
         this.updateFnSymbol = updateFnSymbol;
         this.initFnSymbol = initFnSymbol;
         this.serializeFnSymbol = serializeFnSymbol;
