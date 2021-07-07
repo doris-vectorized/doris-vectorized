@@ -61,9 +61,9 @@ struct AggregateFunctionBitmapData {
 
     void merge(const BitmapValue& data) { Op::merge(value, data); }
 
-    void write(std::ostream& buf) const { DataTypeBitMap::serialize_as_stream(value, buf); }
+    void write(BufferWritable& buf) const { DataTypeBitMap::serialize_as_stream(value, buf); }
 
-    void read(std::istream& buf) { DataTypeBitMap::deserialize_as_stream(value, buf); }
+    void read(BufferReadable& buf) { DataTypeBitMap::deserialize_as_stream(value, buf); }
 
     BitmapValue& get() { return value; }
 };
@@ -96,11 +96,11 @@ public:
                 const_cast<AggregateFunctionBitmapData<Op>&>(this->data(rhs)).get());
     }
 
-    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
+    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
         this->data(place).write(buf);
     }
 
-    void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
+    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {
         this->data(place).read(buf);
     }
 
@@ -150,11 +150,11 @@ public:
         this->data(place).merge(const_cast<AggFunctionData&>(this->data(rhs)).get());
     }
 
-    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
+    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
         this->data(place).write(buf);
     }
 
-    void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
+    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {
         this->data(place).read(buf);
     }
 

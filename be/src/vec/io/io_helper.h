@@ -100,52 +100,52 @@ void write_text(Decimal<T> value, UInt32 scale, std::ostream& ostr) {
 
 /// Write POD-type in native format. It's recommended to use only with packed (dense) data types.
 template <typename Type>
-inline void write_pod_binary(const Type& x, std::ostream& buf) {
+inline void write_pod_binary(const Type& x, BufferWritable& buf) {
     buf.write(reinterpret_cast<const char*>(&x), sizeof(x));
 }
 
 template <typename Type>
-inline void write_int_binary(const Type& x, std::ostream& buf) {
+inline void write_int_binary(const Type& x, BufferWritable& buf) {
     write_pod_binary(x, buf);
 }
 
 template <typename Type>
-inline void write_float_binary(const Type& x, std::ostream& buf) {
+inline void write_float_binary(const Type& x, BufferWritable& buf) {
     write_pod_binary(x, buf);
 }
 
-inline void write_string_binary(const std::string& s, std::ostream& buf) {
+inline void write_string_binary(const std::string& s, BufferWritable& buf) {
     write_var_uint(s.size(), buf);
     buf.write(s.data(), s.size());
 }
 
-inline void write_string_binary(const StringRef& s, std::ostream& buf) {
+inline void write_string_binary(const StringRef& s, BufferWritable& buf) {
     write_var_uint(s.size, buf);
     buf.write(s.data, s.size);
 }
 
-inline void write_string_binary(const char* s, std::ostream& buf) {
+inline void write_string_binary(const char* s, BufferWritable& buf) {
     write_string_binary(StringRef{s}, buf);
 }
 
 template <typename Type>
-void write_vector_binary(const std::vector<Type>& v, std::ostream& buf) {
+void write_vector_binary(const std::vector<Type>& v, BufferWritable& buf) {
     write_var_uint(v.size(), buf);
 
     for (typename std::vector<Type>::const_iterator it = v.begin(); it != v.end(); ++it)
         write_binary(*it, buf);
 }
 
-inline void write_binary(const String& x, std::ostream& buf) {
+inline void write_binary(const String& x, BufferWritable& buf) {
     write_string_binary(x, buf);
 }
 
-inline void write_binary(const StringRef& x, std::ostream& buf) {
+inline void write_binary(const StringRef& x, BufferWritable& buf) {
     write_string_binary(x, buf);
 }
 
 template <typename Type>
-inline void write_binary(const Type& x, std::ostream& buf) {
+inline void write_binary(const Type& x, BufferWritable& buf) {
     write_pod_binary(x, buf);
 }
 
@@ -182,27 +182,21 @@ inline size_t compress_binary(PColumn* pcolumn) {
 
 /// Read POD-type in native format
 template <typename Type>
-inline void read_pod_binary(Type& x, std::istream& buf) {
+inline void read_pod_binary(Type& x, BufferReadable& buf) {
     buf.read(reinterpret_cast<char*>(&x), sizeof(x));
-    if (!buf) {
-        throw doris::vectorized::Exception(
-                "Cannot read all data. Bytes read: " + std::to_string(buf.gcount()) +
-                        ". Bytes expected: " + std::to_string(sizeof(x)) + ".",
-                doris::TStatusCode::VEC_LOGIC_ERROR);
-    }
 }
 
 template <typename Type>
-inline void read_int_binary(Type& x, std::istream& buf) {
+inline void read_int_binary(Type& x, BufferReadable& buf) {
     read_pod_binary(x, buf);
 }
 
 template <typename Type>
-inline void read_float_binary(Type& x, std::istream& buf) {
+inline void read_float_binary(Type& x, BufferReadable& buf) {
     read_pod_binary(x, buf);
 }
 
-inline void read_string_binary(std::string& s, std::istream& buf,
+inline void read_string_binary(std::string& s, BufferReadable& buf,
                                size_t MAX_STRING_SIZE = DEFAULT_MAX_STRING_SIZE) {
     size_t size = 0;
     read_var_uint(size, buf);
@@ -213,14 +207,21 @@ inline void read_string_binary(std::string& s, std::istream& buf,
 
     s.resize(size);
     buf.read(s.data(), size);
-    if (!buf) {
-        throw Exception("Cannot read all data. Bytes read: " + std::to_string(buf.gcount()) +
-                                ". Bytes expected: " + std::to_string(size) + ".",
-                        TStatusCode::VEC_EXCEPTION);
-    }
 }
 
-inline StringRef read_string_binary_into(Arena& arena, std::istream& buf) {
+inline void read_string_binary(StringRef& s, BufferReadable& buf,
+                               size_t MAX_STRING_SIZE = DEFAULT_MAX_STRING_SIZE) {
+    size_t size = 0;
+    read_var_uint(size, buf);
+
+    if (size > MAX_STRING_SIZE) {
+        throw Exception("Too large string size.", TStatusCode::VEC_EXCEPTION);
+    }
+
+    s = buf.read(size);
+}
+
+inline StringRef read_string_binary_into(Arena& arena, BufferReadable& buf) {
     size_t size = 0;
     read_var_uint(size, buf);
 
@@ -231,7 +232,7 @@ inline StringRef read_string_binary_into(Arena& arena, std::istream& buf) {
 }
 
 template <typename Type>
-void read_vector_binary(std::vector<Type>& v, std::istream& buf,
+void read_vector_binary(std::vector<Type>& v, BufferReadable& buf,
                         size_t MAX_VECTOR_SIZE = DEFAULT_MAX_STRING_SIZE) {
     size_t size = 0;
     read_var_uint(size, buf);
@@ -244,12 +245,16 @@ void read_vector_binary(std::vector<Type>& v, std::istream& buf,
     for (size_t i = 0; i < size; ++i) read_binary(v[i], buf);
 }
 
-inline void read_binary(String& x, std::istream& buf) {
+inline void read_binary(String& x, BufferReadable& buf) {
+    read_string_binary(x, buf);
+}
+
+inline void read_binary(StringRef& x, BufferReadable& buf) {
     read_string_binary(x, buf);
 }
 
 template <typename Type>
-inline void read_binary(Type& x, std::istream& buf) {
+inline void read_binary(Type& x, BufferReadable& buf) {
     read_pod_binary(x, buf);
 }
 

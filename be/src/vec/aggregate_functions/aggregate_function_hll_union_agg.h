@@ -40,17 +40,17 @@ struct AggregateFunctionHLLData {
 
     void merge(const AggregateFunctionHLLData& rhs) { dst_hll.merge(rhs.dst_hll); }
 
-    void write(std::ostream& buf) const {
+    void write(BufferWritable& buf) const {
         std::string result(dst_hll.max_serialized_size(), '0');
         int size = dst_hll.serialize((uint8_t*)result.c_str());
         result.resize(size);
         write_binary(result, buf);
     }
 
-    void read(std::istream& buf) {
-        std::string result;
-        read_binary(result, buf);
-        dst_hll.deserialize(Slice(result.c_str(), result.length()));
+    void read(BufferReadable& buf) {
+        StringRef ref;
+        read_binary(ref, buf);
+        dst_hll.deserialize(Slice(ref.data, ref.size));
     }
 
     Int64 get_cardinality() const { return dst_hll.estimate_cardinality(); }
@@ -88,11 +88,11 @@ public:
         this->data(place).merge(this->data(rhs));
     }
 
-    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
+    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
         this->data(place).write(buf);
     }
 
-    void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
+    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {
         this->data(place).read(buf);
     }
 
