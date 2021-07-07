@@ -364,7 +364,9 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
                            ->equals(*data_types[i]));
             DCHECK(!data_types[i]->is_nullable());
             ColumnPtr ptr = std::move(columns[i]);
-            ptr = make_nullable(ptr);
+            // unless `count`, other aggregate function dispose empty set should be null
+            // so here check the children row return
+            ptr = make_nullable(ptr, _children[0]->rows_returned() == 0);
             columns[i] = std::move(*ptr).mutate();
         }
     }
@@ -375,6 +377,14 @@ Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* bloc
 }
 
 Status AggregationNode::_serialize_without_key(RuntimeState* state, Block* block, bool* eos) {
+    // 1. `child(0)->rows_returned() == 0` mean not data from child
+    // in level two aggregation node should return NULL result
+    //    level one aggregation node set `eos = true` return directly
+    if (UNLIKELY(_children[0]->rows_returned() == 0)) {
+        *eos = true;
+        return Status::OK();
+    }
+
     DCHECK(_agg_data.without_key != nullptr);
     int agg_size = _aggregate_evaluators.size();
 
