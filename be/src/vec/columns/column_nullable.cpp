@@ -410,15 +410,15 @@ void ColumnNullable::check_consistency() const {
     }
 }
 
-ColumnPtr make_nullable(const ColumnPtr& column) {
+ColumnPtr make_nullable(const ColumnPtr& column, bool is_nullable) {
     if (is_column_nullable(*column)) return column;
 
     if (is_column_const(*column))
         return ColumnConst::create(
-                make_nullable(assert_cast<const ColumnConst&>(*column).get_data_column_ptr()),
+                make_nullable(assert_cast<const ColumnConst&>(*column).get_data_column_ptr(), is_nullable),
                 column->size());
 
-    return ColumnNullable::create(column, ColumnUInt8::create(column->size(), 0));
+    return ColumnNullable::create(column, ColumnUInt8::create(column->size(), is_nullable ? 1 : 0));
 }
 
 } // namespace doris::vectorized
