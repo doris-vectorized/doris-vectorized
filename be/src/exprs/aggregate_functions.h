@@ -138,9 +138,17 @@ public:
     template <typename SRC_VAL, typename DST_VAL>
     static void sum(doris_udf::FunctionContext*, const SRC_VAL& src, DST_VAL* dst);
 
+    // MinInit
+    template <typename T>
+    static void min_init(doris_udf::FunctionContext*, T* dst);
+
     // MinUpdate/MinMerge
     template <typename T>
     static void min(doris_udf::FunctionContext*, const T& src, T* dst);
+
+    // MaxInit
+    template <typename T>
+    static void max_init(doris_udf::FunctionContext*, T* dst);
 
     // MaxUpdate/MaxMerge
     template <typename T>

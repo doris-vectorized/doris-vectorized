@@ -1022,23 +1022,6 @@ void PartitionedAggregationNode::InitAggSlots(const vector<NewAggFnEvaluator*>& 
         // initialize the value to max/min possible value for the same effect.
         NewAggFnEvaluator* eval = agg_fn_evals[i];
         eval->Init(intermediate_tuple);
-
-        DCHECK(agg_fns_[i] == &(eval->agg_fn()));
-        const AggFn* agg_fn = agg_fns_[i];
-        const AggFn::AggregationOp agg_op = agg_fn->agg_op();
-        if ((agg_op == AggFn::MIN || agg_op == AggFn::MAX) &&
-            !agg_fn->intermediate_type().is_string_type() &&
-            !agg_fn->intermediate_type().is_date_type()) {
-            ExprValue default_value;
-            void* default_value_ptr = NULL;
-            if (agg_op == AggFn::MIN) {
-                default_value_ptr = default_value.set_to_max((*slot_desc)->type());
-            } else {
-                DCHECK_EQ(agg_op, AggFn::MAX);
-                default_value_ptr = default_value.set_to_min((*slot_desc)->type());
-            }
-            RawValue::write(default_value_ptr, intermediate_tuple, *slot_desc, NULL);
-        }
     }
 }
 

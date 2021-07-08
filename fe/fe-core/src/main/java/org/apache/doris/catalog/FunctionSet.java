@@ -39,7 +39,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class FunctionSet {
+public class FunctionSet<min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionContextEPT_> {
     private static final Logger LOG = LogManager.getLogger(FunctionSet.class);
 
     // All of the registered user functions. The key is the user facing name (e.g. "myUdf"),
@@ -75,6 +75,82 @@ public class FunctionSet {
         LikePredicate.initBuiltins(this);
         InPredicate.initBuiltins(this);
     }
+
+    public void buildNonNullResultWithNullParamFunction(Set<String> funcNames) {
+        ImmutableSet.Builder<String> setBuilder = new ImmutableSet.Builder<String>();
+        for (String funcName : funcNames) {
+            setBuilder.add(funcName);
+        }
+        this.nonNullResultWithNullParamFunctions = setBuilder.build();
+    }
+
+    public boolean isNonNullResultWithNullParamFunctions(String funcName) {
+        return nonNullResultWithNullParamFunctions.contains(funcName);
+    }
+
+    private static final Map<Type, String> MIN_INIT_SYMBOL =
+            ImmutableMap.<Type, String>builder()
+                    .put(Type.BOOLEAN,
+                            "8min_initIN9doris_udf10BooleanValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.TINYINT,
+                            "8min_initIN9doris_udf10TinyIntValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.SMALLINT,
+                            "8min_initIN9doris_udf11SmallIntValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.INT,
+                            "8min_initIN9doris_udf6IntValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.BIGINT,
+                            "8min_initIN9doris_udf9BigIntValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.FLOAT,
+                            "8min_initIN9doris_udf8FloatValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.DOUBLE,
+                            "8min_initIN9doris_udf9DoubleValEEEvPNS2_15FunctionContextEPT_")
+                    // .put(Type.CHAR,
+                    //     "3minIN9doris_udf9StringValEEEvPNS2_15FunctionContextERKT_PS6_")
+                    .put(Type.VARCHAR,
+                            "8min_initIN9doris_udf9StringValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.DATE,
+                            "8min_initIN9doris_udf11DateTimeValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.DATETIME,
+                            "8min_initIN9doris_udf11DateTimeValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.DECIMAL,
+                            "8min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.DECIMALV2,
+                            "8min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.LARGEINT,
+                            "8min_initIN9doris_udf11LargeIntValEEEvPNS2_15FunctionContextEPT_")
+                    .build();
+
+    private static final Map<Type, String> MAX_INIT_SYMBOL =
+            ImmutableMap.<Type, String>builder()
+                    .put(Type.BOOLEAN,
+                            "8max_initIN9doris_udf10BooleanValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.TINYINT,
+                            "8max_initIN9doris_udf10TinyIntValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.SMALLINT,
+                            "8max_initIN9doris_udf11SmallIntValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.INT,
+                            "8max_initIN9doris_udf6IntValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.BIGINT,
+                            "8max_initIN9doris_udf9BigIntValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.FLOAT,
+                            "8max_initIN9doris_udf8FloatValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.DOUBLE,
+                            "8max_initIN9doris_udf9DoubleValEEEvPNS2_15FunctionContextEPT_")
+                    // .put(Type.CHAR,
+                    //     "3minIN9doris_udf9StringValEEEvPNS2_15FunctionContextERKT_PS6_")
+                    .put(Type.VARCHAR,
+                            "8max_initIN9doris_udf9StringValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.DATE,
+                            "8max_initIN9doris_udf11DateTimeValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.DATETIME,
+                            "8max_initIN9doris_udf11DateTimeValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.DECIMAL,
+                            "8max_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.DECIMALV2,
+                            "8max_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionContextEPT_")
+                    .put(Type.LARGEINT,
+                            "8max_initIN9doris_udf11LargeIntValEEEvPNS2_15FunctionContextEPT_")
+                    .build();
 
     private static final Map<Type, String> MIN_UPDATE_SYMBOL =
         ImmutableMap.<Type, String>builder()
@@ -1289,18 +1365,17 @@ public class FunctionSet {
                     false, true, true, true));
             }
             // Min
-            String minMaxInit = t.isStringType() ? initNullString : initNull;
             String minMaxSerializeOrFinalize = t.isStringType() ? stringValSerializeOrFinalize : null;
             String minMaxGetValue = t.isStringType() ? stringValGetValue : null;
             addBuiltin(AggregateFunction.createBuiltin("min",
-                    Lists.newArrayList(t), t, t, minMaxInit,
+                    Lists.newArrayList(t), t, t, prefix + MIN_INIT_SYMBOL.get(t),
                     prefix + MIN_UPDATE_SYMBOL.get(t),
                     prefix + MIN_UPDATE_SYMBOL.get(t),
                     minMaxSerializeOrFinalize, minMaxGetValue,
                     null, minMaxSerializeOrFinalize, true, true, false));
             // vectorized
             addBuiltin(AggregateFunction.createBuiltin("min",
-                    Lists.newArrayList(t), t, t, minMaxInit,
+                    Lists.newArrayList(t), t, t, prefix + MIN_INIT_SYMBOL.get(t),
                     prefix + MIN_UPDATE_SYMBOL.get(t),
                     prefix + MIN_UPDATE_SYMBOL.get(t),
                     minMaxSerializeOrFinalize, minMaxGetValue,
@@ -1308,14 +1383,14 @@ public class FunctionSet {
 
             // Max
             addBuiltin(AggregateFunction.createBuiltin("max",
-                    Lists.newArrayList(t), t, t, minMaxInit,
+                    Lists.newArrayList(t), t, t, prefix + MAX_INIT_SYMBOL.get(t),
                     prefix + MAX_UPDATE_SYMBOL.get(t),
                     prefix + MAX_UPDATE_SYMBOL.get(t),
                     minMaxSerializeOrFinalize, minMaxGetValue,
                     null, minMaxSerializeOrFinalize, true, true, false));
             // vectorized
             addBuiltin(AggregateFunction.createBuiltin("max",
-                    Lists.newArrayList(t), t, t, minMaxInit,
+                    Lists.newArrayList(t), t, t, prefix + MAX_INIT_SYMBOL.get(t),
                     prefix + MAX_UPDATE_SYMBOL.get(t),
                     prefix + MAX_UPDATE_SYMBOL.get(t),
                     minMaxSerializeOrFinalize, minMaxGetValue,

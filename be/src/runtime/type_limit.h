@@ -28,7 +28,7 @@ namespace doris {
 template <typename T>
 struct type_limit {
     static T min() {
-        return std::numeric_limits<T>::min();
+        return std::numeric_limits<T>::lowest();
     }
     static T max() {
         return std::numeric_limits<T>::max();
