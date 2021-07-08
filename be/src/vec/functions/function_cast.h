@@ -210,17 +210,10 @@ struct ConvertImplGenericToString {
         size_t size = col_from.size();
 
         auto col_to = ColumnString::create();
-
-        ColumnString::Chars& data_to = col_to->get_chars();
-        ColumnString::Offsets& offsets_to = col_to->get_offsets();
-
-        offsets_to.resize(size);
-
-        VectorBufferWriter<ColumnString::Chars> write_buffer(data_to);
-
+        VectorBufferWriter write_buffer(*col_to.get());
         for (size_t i = 0; i < size; ++i) {
             type.to_string(col_from, i, write_buffer);
-            offsets_to[i] = write_buffer.count();
+            write_buffer.commit();
         }
 
         block.replace_by_position(result, std::move(col_to));

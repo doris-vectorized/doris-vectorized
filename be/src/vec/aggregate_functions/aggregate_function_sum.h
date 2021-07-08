@@ -37,9 +37,9 @@ struct AggregateFunctionSumData {
 
     void merge(const AggregateFunctionSumData& rhs) { sum += rhs.sum; }
 
-    void write(std::ostream& buf) const { write_binary(sum, buf); }
+    void write(BufferWritable& buf) const { write_binary(sum, buf); }
 
-    void read(std::istream& buf) { read_binary(sum, buf); }
+    void read(BufferReadable& buf) { read_binary(sum, buf); }
 
     T get() const { return sum; }
 };
@@ -122,11 +122,11 @@ public:
         this->data(place).merge(this->data(rhs));
     }
 
-    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
+    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
         this->data(place).write(buf);
     }
 
-    void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
+    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {
         this->data(place).read(buf);
     }
 

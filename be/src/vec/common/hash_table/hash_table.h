@@ -52,10 +52,10 @@
   */
 struct HashTableNoState {
     /// Serialization, in binary and text form.
-    void write(std::ostream&) const {}
+    void write(doris::vectorized::BufferWritable&) const {}
 
     // /// Deserialization, in binary and text form.
-    void read(std::istream&) {}
+    void read(doris::vectorized::BufferReadable&) {}
 };
 
 /// These functions can be overloaded for custom types.
@@ -197,10 +197,10 @@ struct HashTableCell {
     void set_mapped(const value_type& /*value*/) {}
 
     /// Serialization, in binary and text form.
-    void write(std::ostream& wb) const { doris::vectorized::write_binary(key, wb); }
+    void write(doris::vectorized::BufferWritable& wb) const { doris::vectorized::write_binary(key, wb); }
 
     /// Deserialization, in binary and text form.
-    void read(std::istream& rb) { doris::vectorized::read_binary(key, rb); }
+    void read(doris::vectorized::BufferReadable& rb) { doris::vectorized::read_binary(key, rb); }
 };
 
 template <typename Key, typename Hash, typename State>
@@ -794,7 +794,7 @@ public:
         return !buf[place_value].is_zero(*this);
     }
 
-    void write(std::ostream& wb) const {
+    void write(doris::vectorized::BufferWritable& wb) const {
         Cell::State::write(wb);
         doris::vectorized::write_var_uint(m_size, wb);
 
@@ -804,7 +804,7 @@ public:
             if (!ptr->is_zero(*this)) ptr->write(wb);
     }
 
-    void read(std::istream& rb) {
+    void read(doris::vectorized::BufferReadable& rb) {
         Cell::State::read(rb);
 
         destroy_elements();

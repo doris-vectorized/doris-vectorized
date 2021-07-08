@@ -114,13 +114,15 @@ public:
         nested_function->merge(nested_place(place), nested_place(rhs), arena);
     }
 
-    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
+    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
         bool flag = get_flag(place);
         if (result_is_nullable) write_binary(flag, buf);
-        if (flag) nested_function->serialize(nested_place(place), buf);
+        if (flag) {
+            nested_function->serialize(nested_place(place), buf);
+        }
     }
 
-    void deserialize(AggregateDataPtr place, std::istream& buf, Arena* arena) const override {
+    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena* arena) const override {
         bool flag = true;
         if (result_is_nullable) read_binary(flag, buf);
         if (flag) {
