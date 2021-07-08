@@ -63,7 +63,7 @@ Status VSortNode::open(RuntimeState* state) {
     // Unless we are inside a subplan expecting to call open()/get_next() on the child
     // again, the child can be closed at this point.
     // if (!IsInSubplan()) {
-    child(0)->close(state);
+//    child(0)->close(state);
     // }
     return Status::OK();
 }

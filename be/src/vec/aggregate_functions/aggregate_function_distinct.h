@@ -43,9 +43,9 @@ struct AggregateFunctionDistinctSingleNumericData {
 
     void merge(const Self& rhs, Arena*) { set.merge(rhs.set); }
 
-    void serialize(std::ostream& buf) const { set.write(buf); }
+    void serialize(BufferWritable& buf) const { set.write(buf); }
 
-    void deserialize(std::istream& buf, Arena*) { set.read(buf); }
+    void deserialize(BufferReadable& buf, Arena*) { set.read(buf); }
 
     MutableColumns get_arguments(const DataTypes& argument_types) const {
         MutableColumns argument_columns;
@@ -69,15 +69,21 @@ struct AggregateFunctionDistinctGenericData {
             set.emplace(ArenaKeyHolder{elem.get_value(), *arena}, it, inserted);
     }
 
-    void serialize(std::ostream& buf) const {
+    void serialize(BufferWritable& buf) const {
         write_var_uint(set.size(), buf);
-        for (const auto& elem : set) write_string_binary(elem.get_value(), buf);
+        for (const auto& elem : set)
+            write_string_binary(elem.get_value(), buf);
     }
 
-    void deserialize(std::istream& buf, Arena* arena) {
+    void deserialize(BufferReadable& buf, Arena* arena) {
         size_t size;
         read_var_uint(size, buf);
-        for (size_t i = 0; i < size; ++i) set.insert(read_string_binary_into(*arena, buf));
+
+        StringRef ref;
+        for (size_t i = 0; i < size; ++i) {
+            read_string_binary(ref, buf);
+            set.insert(ref);
+        }
     }
 };
 
@@ -167,11 +173,11 @@ public:
         this->data(place).merge(this->data(rhs), arena);
     }
 
-    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
+    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
         this->data(place).serialize(buf);
     }
 
-    void deserialize(AggregateDataPtr place, std::istream& buf, Arena* arena) const override {
+    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena* arena) const override {
         this->data(place).deserialize(buf, arena);
     }
 
