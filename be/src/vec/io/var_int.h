@@ -92,7 +92,6 @@ inline void read_var_uint(UInt64& x, std::istream& istr) {
     for (size_t i = 0; i < 9; ++i) {
         UInt64 byte = istr.get();
         x |= (byte & 0x7F) << (7 * i);
-
         if (!(byte & 0x80)) return;
     }
 }
@@ -107,6 +106,38 @@ inline void write_var_uint(UInt64 x, std::ostream& ostr) {
         x >>= 7;
         if (!x) return;
     }
+}
+
+// TODO: do real implement in the future
+inline void read_var_uint(UInt64& x, BufferReadable& buf) {
+    x = 0;
+    uint8_t len = 0;
+    buf.read((char*)&len, 1);
+    auto ref = buf.read(len);
+
+    char* bytes = const_cast<char *>(ref.data);
+    for (size_t i = 0; i < 9; ++i) {
+        UInt64 byte = bytes[i];
+        x |= (byte & 0x7F) << (7 * i);
+
+        if (!(byte & 0x80)) return;
+    }
+}
+
+inline void write_var_uint(UInt64 x, BufferWritable& ostr) {
+    char bytes[8];
+    uint8_t i = 0;
+    while (i < 9) {
+        uint8_t byte = x & 0x7F;
+        if (x > 0x7F) byte |= 0x80;
+
+        bytes[i++] = byte;
+
+        x >>= 7;
+        if (!x) break;
+    }
+    ostr.write((char*)&i, 1);
+    ostr.write(bytes, i);
 }
 
 inline char* write_var_uint(UInt64 x, char* ostr) {

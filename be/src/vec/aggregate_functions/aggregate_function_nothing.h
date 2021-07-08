@@ -52,9 +52,9 @@ public:
 
     void merge(AggregateDataPtr, ConstAggregateDataPtr, Arena*) const override {}
 
-    void serialize(ConstAggregateDataPtr, std::ostream&) const override {}
+    void serialize(ConstAggregateDataPtr, BufferWritable& buf) const override {}
 
-    void deserialize(AggregateDataPtr, std::istream&, Arena*) const override {}
+    void deserialize(AggregateDataPtr, BufferReadable& buf, Arena*) const override {}
 
     void insert_result_into(ConstAggregateDataPtr, IColumn& to) const override {
         to.insert_default();

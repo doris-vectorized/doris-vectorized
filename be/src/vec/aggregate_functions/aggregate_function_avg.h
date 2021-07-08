@@ -42,12 +42,12 @@ struct AggregateFunctionAvgData {
         return static_cast<ResultT>(sum) / count;
     }
 
-    void write(std::ostream& buf) const {
+    void write(BufferWritable& buf) const {
         write_binary(sum, buf);
         write_binary(count, buf);
     }
 
-    void read(std::istream& buf) {
+    void read(BufferReadable& buf) {
         read_binary(sum, buf);
         read_binary(count, buf);
     }
@@ -98,11 +98,11 @@ public:
         this->data(place).count += this->data(rhs).count;
     }
 
-    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
+    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
         this->data(place).write(buf);
     }
 
-    void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
+    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {
         this->data(place).read(buf);
     }
 

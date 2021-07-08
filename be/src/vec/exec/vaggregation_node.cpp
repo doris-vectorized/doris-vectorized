@@ -392,20 +392,18 @@ Status AggregationNode::_serialize_without_key(RuntimeState* state, Block* block
     std::vector<DataTypePtr> data_types(agg_size);
 
     // will serialize data to string column
+    std::vector<VectorBufferWriter> value_buffer_writers;
+    auto serialize_string_type = std::make_shared<DataTypeString>();
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
-        data_types[i] = make_nullable(std::make_shared<DataTypeString>());
-        value_columns[i] = data_types[i]->create_column();
+        data_types[i] = serialize_string_type;
+        value_columns[i] = serialize_string_type->create_column();
+        value_buffer_writers.emplace_back(*reinterpret_cast<ColumnString*>(value_columns[i].get()));
     }
 
-    // TODO: we could use pod char as buffer instead of ostream ?
-    std::ostringstream buf;
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         _aggregate_evaluators[i]->function()->serialize(
-                _agg_data.without_key + _offsets_of_aggregate_states[i], buf);
-        auto str_buffer = buf.str();
-        value_columns[i]->insert_data(str_buffer.c_str(), str_buffer.length());
-        buf.str("");
-        buf.clear();
+                _agg_data.without_key + _offsets_of_aggregate_states[i], value_buffer_writers[i]);
+        value_buffer_writers[i].commit();
     }
     {
         ColumnsWithTypeAndName data_with_schema;
@@ -444,13 +442,9 @@ Status AggregationNode::_merge_without_key(Block* block) {
         }
 
         for (int j = 0; j < rows; ++j) {
-            std::string data_buffer;
-            StringRef ref = column->get_data_at(j);
-            data_buffer.assign(ref.data, ref.size);
-            std::istringstream buf(data_buffer);
-
+            VectorBufferReader buffer_reader(((ColumnString*)(column.get()))->get_data_at(j));
             _aggregate_evaluators[i]->function()->deserialize(
-                    deserialize_buffer.get() + _offsets_of_aggregate_states[i], buf,
+                    deserialize_buffer.get() + _offsets_of_aggregate_states[i], buffer_reader,
                     &_agg_arena_pool);
 
             _aggregate_evaluators[i]->function()->merge(
@@ -769,9 +763,12 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
     }
 
     // will serialize data to string column
+    std::vector<VectorBufferWriter> value_buffer_writers;
+    auto serialize_string_type = std::make_shared<DataTypeString>();
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
-        value_data_types[i] = make_nullable(std::make_shared<DataTypeString>());
-        value_columns[i] = value_data_types[i]->create_column();
+        value_data_types[i] = serialize_string_type;
+        value_columns[i] = serialize_string_type->create_column();
+        value_buffer_writers.emplace_back(*reinterpret_cast<ColumnString*>(value_columns[i].get()));
     }
 
     while (iter != data.end() && key_columns[0]->size() < state->batch_size()) {
@@ -780,14 +777,11 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
         // insert keys
         method.insertKeyIntoColumns(key, key_columns, {});
 
-        std::ostringstream buf;
         // serialize values
         for (size_t i = 0; i < _aggregate_evaluators.size(); ++i) {
             _aggregate_evaluators[i]->function()->serialize(
-                    mapped + _offsets_of_aggregate_states[i], buf);
-            value_columns[i]->insert_data(buf.str().c_str(), buf.str().length());
-            buf.str("");
-            buf.clear();
+                    mapped + _offsets_of_aggregate_states[i], value_buffer_writers[i]);
+            value_buffer_writers[i].commit();
         }
         ++iter;
     }
@@ -864,16 +858,13 @@ Status AggregationNode::_merge_with_serialized_key(Block* block) {
         if (column->is_nullable()) {
             column = ((ColumnNullable*)column.get())->get_nested_column_ptr();
         }
-        for (int j = 0; j < rows; ++j) {
-            std::string data_buffer;
-            StringRef ref = column->get_data_at(j);
-            data_buffer.assign(ref.data, ref.size);
-            std::istringstream buf(data_buffer);
 
+        for (int j = 0; j < rows; ++j) {
+            VectorBufferReader buffer_reader(((ColumnString*)(column.get()))->get_data_at(j));
             _create_agg_status(deserialize_buffer.get());
 
             _aggregate_evaluators[i]->function()->deserialize(
-                    deserialize_buffer.get() + _offsets_of_aggregate_states[i], buf,
+                    deserialize_buffer.get() + _offsets_of_aggregate_states[i], buffer_reader,
                     &_agg_arena_pool);
 
             _aggregate_evaluators[i]->function()->merge(

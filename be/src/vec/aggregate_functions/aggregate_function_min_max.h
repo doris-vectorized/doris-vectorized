@@ -45,12 +45,12 @@ public:
             assert_cast<ColumnVector<T>&>(to).insert_default();
     }
 
-    void write(std::ostream& buf) const {
+    void write(BufferWritable& buf) const {
         write_binary(has(), buf);
         if (has()) write_binary(value, buf);
     }
 
-    void read(std::istream& buf) {
+    void read(BufferReadable& buf) {
         read_binary(has_value, buf);
         if (has()) read_binary(value, buf);
     }
@@ -385,11 +385,11 @@ public:
         this->data(place).change_if_better(this->data(rhs), arena);
     }
 
-    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
+    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
         this->data(place).write(buf);
     }
 
-    void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
+    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {
         this->data(place).read(buf);
     }
 
