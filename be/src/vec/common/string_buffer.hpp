@@ -16,14 +16,19 @@
 // under the License.
 
 #pragma once
+#include <cstring>
 #include <fmt/format.h>
 
-#include <cstring>
+#include "vec/columns/column_string.h"
+
+#include "vec/common/string_ref.h"
 
 namespace doris::vectorized {
 class BufferWritable {
 public:
     virtual void write(const char* data, int len) = 0;
+    virtual void commit() = 0;
+    virtual ~BufferWritable() = default;
 
     template <typename T>
     void write_number(T data) {
@@ -31,28 +36,58 @@ public:
         fmt::format_to(buffer, "{}", data);
         write(buffer.data(), buffer.size());
     }
-
-    int count() const { return _writer_counter; }
-
-protected:
-    void update_writer_counter(int delta) { _writer_counter += delta; }
-
-private:
-    int _writer_counter = 0;
 };
 
-template <class T>
-class VectorBufferWriter : public BufferWritable {
+class VectorBufferWriter final : public BufferWritable {
 public:
-    VectorBufferWriter(T& vector) : _vector(vector) {}
+    explicit VectorBufferWriter(ColumnString& vector) :
+        _data(vector.get_chars()), _offsets(vector.get_offsets()) {}
 
-    void write(const char* data, int len) {
-        _vector.insert(data, data + len);
-        _vector.emplace_back(0);
-        update_writer_counter(len + 1);
+    void write(const char* data, int len) override {
+        _data.insert(data, data + len);
+        _now_offset += len;
+    }
+
+    void commit() override {
+        _data.push_back(0);
+        _offsets.push_back(_offsets.back() + _now_offset + 1);
+        _now_offset = 0;
+    }
+
+    ~VectorBufferWriter() {
+        DCHECK(_now_offset == 0);
     }
 
 private:
-    T& _vector;
+    ColumnString::Chars& _data;
+    ColumnString::Offsets& _offsets;
+    size_t _now_offset = 0;
 };
+
+class BufferReadable {
+public:
+    virtual void read(char* data, int len) = 0;
+    virtual StringRef read(int len) = 0;
+};
+
+class VectorBufferReader final : public BufferReadable {
+public:
+    explicit VectorBufferReader(StringRef& ref) : _data(ref.data) {}
+    explicit VectorBufferReader(StringRef&& ref) : _data(ref.data) {}
+
+    StringRef read(int len) override {
+        StringRef ref(_data, len);
+        _data += len;
+        return ref;
+    }
+
+    void read(char* data, int len) override {
+        memcpy(data, _data, len);
+        _data += len;
+    }
+
+private:
+    const char* _data;
+};
+
 } // namespace doris::vectorized

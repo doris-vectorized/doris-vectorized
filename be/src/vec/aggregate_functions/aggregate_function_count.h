@@ -51,11 +51,11 @@ public:
         data(place).count += data(rhs).count;
     }
 
-    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
+    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
         write_var_uint(data(place).count, buf);
     }
 
-    void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
+    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {
         read_var_uint(data(place).count, buf);
     }
 
@@ -96,11 +96,11 @@ public:
         data(place).count += data(rhs).count;
     }
 
-    void serialize(ConstAggregateDataPtr place, std::ostream& buf) const override {
+    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
         write_var_uint(data(place).count, buf);
     }
 
-    void deserialize(AggregateDataPtr place, std::istream& buf, Arena*) const override {
+    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {
         read_var_uint(data(place).count, buf);
     }
 

@@ -94,10 +94,10 @@ public:
     virtual void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena* arena) const = 0;
 
     /// Serializes state (to transmit it over the network, for example).
-    virtual void serialize(ConstAggregateDataPtr place, std::ostream& buf) const = 0;
+    virtual void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const = 0;
 
     /// Deserializes state. This function is called only for empty (just created) states.
-    virtual void deserialize(AggregateDataPtr place, std::istream& buf, Arena* arena) const = 0;
+    virtual void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena* arena) const = 0;
 
     /// Returns true if a function requires Arena to handle own states (see add(), merge(), deserialize()).
     virtual bool allocates_memory_in_arena() const { return false; }

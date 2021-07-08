@@ -22,11 +22,11 @@
 
 namespace doris::vectorized {
 
-void read_binary(Array& x, std::istream& buf) {
+void read_binary(Array& x, BufferReadable& buf) {
     size_t size;
     UInt8 type;
-        doris::vectorized::read_binary(type, buf);
-        doris::vectorized::read_binary(size, buf);
+    doris::vectorized::read_binary(type, buf);
+    doris::vectorized::read_binary(size, buf);
 
     for (size_t index = 0; index < size; ++index) {
         switch (type) {
@@ -75,7 +75,7 @@ void read_binary(Array& x, std::istream& buf) {
     }
 }
 
-void write_binary(const Array& x, std::ostream& buf) {
+void write_binary(const Array& x, BufferWritable& buf) {
     UInt8 type = Field::Types::Null;
     size_t size = x.size();
     if (size) type = x.front().get_type();
@@ -113,6 +113,7 @@ void write_binary(const Array& x, std::ostream& buf) {
         }
         }
     }
+    ;
 }
 
 template <>
