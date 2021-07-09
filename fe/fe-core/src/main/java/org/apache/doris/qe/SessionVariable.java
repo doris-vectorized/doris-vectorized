@@ -314,7 +314,7 @@ public class SessionVariable implements Serializable, Writable {
     public boolean extractWideRangeExpr = true;
 
     @VariableMgr.VarAttr(name = ENABLE_VECTORIZED_ENGINE)
-    private boolean enableVectorizedEngine = false;
+    public boolean enableVectorizedEngine = false;
 
     public long getMaxExecMemByte() {
         return maxExecMemByte;
