@@ -87,6 +87,7 @@ set(VEC_FILES
   exprs/vin_predicate.cpp
   exprs/vslot_ref.cpp
   exprs/vcast_expr.cpp
+  exprs/vcase_expr.cpp
   functions/math.cpp
   functions/function_bitmap.cpp
   functions/comparison.cpp
