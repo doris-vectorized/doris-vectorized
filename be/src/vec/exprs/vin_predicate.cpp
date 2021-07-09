@@ -49,8 +49,6 @@ doris::Status VInPredicate::prepare(doris::RuntimeState* state, const doris::Row
         return Status::InternalError("Unknown column type.");
     }
 
-    // expr data_type
-    _data_type = make_nullable(std::make_shared<DataTypeUInt8>());
     _expr_name = fmt::format("({} {} set)", _children[0]->expr_name(), _is_not_in ? "not_in" : "in");
     _is_prepare = true;
     return Status::OK();
@@ -99,7 +97,7 @@ doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* conte
     std::string head(_is_not_in ? "not_" : "");
     std::string tail(_null_in_set ? "_null_in_set" : "");
     std::string real_function_name = head + std::string(function_name) + tail;
-    _function = SimpleFunctionFactory::instance().get_function(real_function_name, argument_template);
+    _function = SimpleFunctionFactory::instance().get_function(real_function_name, argument_template, _data_type);
     if (_function == nullptr) {
         return Status::NotSupported(
                 fmt::format("Function {} is not implemented", _fn.name.function_name));

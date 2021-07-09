@@ -24,7 +24,8 @@ namespace doris::vectorized {
 
 AggregateFunctionPtr create_aggregate_function_HLL_union_agg(const std::string& name,
                                                              const DataTypes& argument_types,
-                                                             const Array& parameters) {
+                                                             const Array& parameters,
+                                                             const bool result_is_nullable) {
     assert_no_parameters(name, parameters);
     assert_arity_at_most<1>(name, argument_types);
 
@@ -33,7 +34,8 @@ AggregateFunctionPtr create_aggregate_function_HLL_union_agg(const std::string& 
 
 AggregateFunctionPtr create_aggregate_function_HLL_union(const std::string& name,
                                                          const DataTypes& argument_types,
-                                                         const Array& parameters) {
+                                                         const Array& parameters,
+                                                         const bool result_is_nullable) {
     assert_no_parameters(name, parameters);
     assert_arity_at_most<1>(name, argument_types);
 

@@ -20,7 +20,6 @@
 #include <fmt/format.h>
 
 #include "runtime/descriptors.h"
-#include "vec/data_types/data_type_nullable.h"
 
 namespace doris::vectorized {
 using doris::Status;
@@ -29,14 +28,19 @@ VSlotRef::VSlotRef(const doris::TExprNode& node)
         : VExpr(node),
           _slot_id(node.slot_ref.slot_id),
           _column_id(-1),
-          _is_nullable(false),
-          _column_name(nullptr) {}
+          _column_name(nullptr) {
+            if (node.__isset.is_nullable) {
+              _is_nullable = node.is_nullable;
+            } else {
+              _is_nullable = true;
+            }
+        }
 
 VSlotRef::VSlotRef(const SlotDescriptor* desc)
-        : VExpr(desc->type(), true),
+        : VExpr(desc->type(), true, desc->is_nullable()),
           _slot_id(desc->id()),
           _column_id(-1),
-          _is_nullable(false),
+          _is_nullable(desc->is_nullable()),
           _column_name(nullptr) {}
 
 Status VSlotRef::prepare(doris::RuntimeState* state, const doris::RowDescriptor& desc,
@@ -49,12 +53,8 @@ Status VSlotRef::prepare(doris::RuntimeState* state, const doris::RowDescriptor&
     if (slot_desc == NULL) {
         return Status::InternalError(fmt::format("couldn't resolve slot descriptor {}", _slot_id));
     }
-    _is_nullable = slot_desc->is_nullable();
     _column_id = desc.get_column_id(_slot_id);
     _column_name = &slot_desc->col_name();
-    if (_is_nullable) {
-        _data_type = std::make_shared<DataTypeNullable>(_data_type);
-    }
     return Status::OK();
 }
 

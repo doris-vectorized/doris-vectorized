@@ -71,10 +71,11 @@ public:
         function_creators[alias] = function_creators[name];
     }
 
-    FunctionBasePtr get_function(const std::string& name, const ColumnsWithTypeAndName& arguments) {
+    FunctionBasePtr get_function(const std::string& name, const ColumnsWithTypeAndName& arguments,
+                                 const DataTypePtr& return_type) {
         auto iter = function_creators.find(name);
         if (iter != function_creators.end()) {
-            return iter->second()->build(arguments);
+            return iter->second()->build(arguments, return_type);
         }
         return nullptr;
     }

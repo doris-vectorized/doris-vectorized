@@ -41,12 +41,12 @@ doris::Status VectorizedFnCall::prepare(doris::RuntimeState* state,
         child_expr_name.emplace_back(child->expr_name());
     }
     _function = SimpleFunctionFactory::instance().get_function(_fn.name.function_name,
-                                                               argument_template);
+                                                               argument_template,
+                                                               _data_type);
     if (_function == nullptr) {
         return Status::InternalError(
                 fmt::format("Function {} is not implemented", _fn.name.function_name));
     }
-    _data_type = _function->get_return_type();
     _expr_name = fmt::format("{}({})", _fn.name.function_name, child_expr_name);
     return Status::OK();
 }
