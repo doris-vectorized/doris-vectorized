@@ -28,7 +28,6 @@ import org.apache.doris.analysis.LikePredicate;
 import org.apache.doris.builtins.ScalarBuiltins;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -39,7 +38,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class FunctionSet {
     private static final Logger LOG = LogManager.getLogger(FunctionSet.class);
@@ -57,9 +55,6 @@ public class FunctionSet {
     // replace the result with NullLiteral when function finished. It leaves to be realized.
     // Functions in this set is defined in `gensrc/script/doris_builtins_functions.py`,
     // and will be built automatically.
-
-    // cmy: This does not contain any user defined functions. All UDFs handle null values by themselves.
-    private ImmutableSet<String> nonNullResultWithNullParamFunctions;
 
     public FunctionSet() {
         functions = Maps.newHashMap();
@@ -79,18 +74,6 @@ public class FunctionSet {
         ScalarBuiltins.initBuiltins(this);
         LikePredicate.initBuiltins(this);
         InPredicate.initBuiltins(this);
-    }
-
-    public void buildNonNullResultWithNullParamFunction(Set<String> funcNames) {
-        ImmutableSet.Builder<String> setBuilder = new ImmutableSet.Builder<String>();
-        for (String funcName : funcNames) {
-            setBuilder.add(funcName);
-        }
-        this.nonNullResultWithNullParamFunctions = setBuilder.build();
-    }
-
-    public boolean isNonNullResultWithNullParamFunctions(String funcName) {
-        return nonNullResultWithNullParamFunctions.contains(funcName);
     }
 
     private static final Map<Type, String> MIN_UPDATE_SYMBOL =
@@ -987,43 +970,31 @@ public class FunctionSet {
     }
 
     /**
-     * Add a builtin with the specified name and signatures to this
-     * This defaults to not using a Prepare/Close function.
-     */
-    public void addScalarBuiltin(String fnName, String symbol, boolean userVisible,
-                                 boolean varArgs, PrimitiveType retType, PrimitiveType ... args) {
-        addScalarBuiltin(fnName, symbol, userVisible, null, null, varArgs, retType, args);
-    }
-
-    public void addScalarAndVectorizedBuiltin(String fnName, String symbol, boolean userVisible,
-                                 boolean varArgs, PrimitiveType retType, PrimitiveType ... args) {
-        addScalarAndVectorizedBuiltin(fnName, symbol, userVisible, null, null, varArgs, retType, args);
-    }
-
-    /**
      * Add a builtin with the specified name and signatures to this db.
      */
     public void addScalarBuiltin(String fnName, String symbol, boolean userVisible,
-                                 String prepareFnSymbol, String closeFnSymbol, boolean varArgs,
-                                 PrimitiveType retType, PrimitiveType ... args) {
+                                 String prepareFnSymbol, String closeFnSymbol,
+                                 Function.NullableMode nullableMode, PrimitiveType retType,
+                                 boolean varArgs, PrimitiveType ... args) {
         ArrayList<Type> argsType = new ArrayList<Type>();
         for (PrimitiveType type : args) {
             argsType.add(Type.fromPrimitiveType(type));
         }
         addBuiltin(ScalarFunction.createBuiltin(
-                fnName, argsType, varArgs, Type.fromPrimitiveType(retType),
+                fnName, Type.fromPrimitiveType(retType), nullableMode, argsType, varArgs,
                 symbol, prepareFnSymbol, closeFnSymbol, userVisible));
     }
 
     public void addScalarAndVectorizedBuiltin(String fnName, String symbol, boolean userVisible,
-                                 String prepareFnSymbol, String closeFnSymbol, boolean varArgs,
-                                 PrimitiveType retType, PrimitiveType ... args) {
+                                              String prepareFnSymbol, String closeFnSymbol,
+                                              Function.NullableMode nullableMode, PrimitiveType retType,
+                                              boolean varArgs, PrimitiveType ... args) {
         ArrayList<Type> argsType = new ArrayList<Type>();
         for (PrimitiveType type : args) {
             argsType.add(Type.fromPrimitiveType(type));
         }
         addBuiltinBothScalaAndVectorized(ScalarFunction.createBuiltin(
-                fnName, argsType, varArgs, Type.fromPrimitiveType(retType),
+                fnName, Type.fromPrimitiveType(retType), nullableMode, argsType, varArgs,
                 symbol, prepareFnSymbol, closeFnSymbol, userVisible));
     }
 
@@ -1060,7 +1031,8 @@ public class FunctionSet {
         }
         ScalarFunction scalarFunction = (ScalarFunction)fn;
         vecFns.add(ScalarFunction.createVecBuiltin(scalarFunction.functionName(), scalarFunction.getSymbolName(),
-                Lists.newArrayList(scalarFunction.getArgs()), scalarFunction.hasVarArgs(), scalarFunction.getReturnType(), scalarFunction.isUserVisible()));
+                Lists.newArrayList(scalarFunction.getArgs()), scalarFunction.hasVarArgs(),
+                scalarFunction.getReturnType(), scalarFunction.isUserVisible(), scalarFunction.getNullableMode()));
     }
 
 

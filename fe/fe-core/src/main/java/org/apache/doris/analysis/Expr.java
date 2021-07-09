@@ -904,6 +904,7 @@ abstract public class Expr extends TreeNode<Expr> implements ParseNode, Cloneabl
             }
         }
         msg.output_scale = getOutputScale();
+        msg.setIsNullable(isNullable());
         toThrift(msg);
         container.addToNodes(msg);
         for (Expr child : children) {
@@ -1712,21 +1713,60 @@ abstract public class Expr extends TreeNode<Expr> implements ParseNode, Cloneabl
         return newExpr != null ? newExpr : this;
     }
 
+    protected boolean hasNullableChild() {
+        for (Expr expr : children) {
+            if (expr.isNullable()) return true;
+        }
+        return false;
+    }
+
     /**
      * For excute expr the result is nullable
      * TODO: Now only SlotRef and LiteralExpr overwrite the method, each child of Expr should
      * overwrite this method to plan correct
      */
     public boolean isNullable() {
-        if (fn != null) {
-            if (fn.getNullableMode().equals(Function.NullableMode.DEPEND_ON_ARGUMENT)) {
-                for (Expr expr : children) {
-                    if (expr.isNullable()) return true;
-                }
+        if (fn == null) {
+            return true;
+        }
+        switch (fn.getNullableMode()) {
+            case DEPEND_ON_ARGUMENT:
+                return hasNullableChild();
+            case ALWAYS_NOT_NULLABLE:
                 return false;
-            } else {
-                return fn.getNullableMode().equals(Function.NullableMode.ALWAYS_NULLABLE);
+            case CUSTOM:
+                return customNullableAlgorithm();
+            case ALWAYS_NULLABLE:
+            default:
+                return true;
+        }
+    }
+
+    private boolean customNullableAlgorithm() {
+        Preconditions.checkState(fn.getNullableMode() == Function.NullableMode.CUSTOM);
+        if (fn.functionName().equalsIgnoreCase("if")) {
+            Preconditions.checkState(children.size() == 3);
+            for (int i = 1; i < children.size(); i++) {
+                if (children.get(i).isNullable()) {
+                    return true;
+                }
             }
+            return false;
+        }
+        if (fn.functionName().equalsIgnoreCase("ifnull")) {
+            Preconditions.checkState(children.size() == 2);
+            if (children.get(0).isNullable()) {
+                return children.get(1).isNullable();
+            }
+            return false;
+        }
+        if (fn.functionName().equalsIgnoreCase("coalesce")) {
+            for (Expr expr : children) {
+                if (!expr.isNullable()) {
+                    return false;
+                }
+            }
+            return true;
         }
         return true;
     }

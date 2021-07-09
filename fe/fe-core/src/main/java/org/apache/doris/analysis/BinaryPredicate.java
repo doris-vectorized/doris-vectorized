@@ -628,4 +628,12 @@ public class BinaryPredicate extends Predicate implements Writable {
     public int hashCode() {
         return 31 * super.hashCode() + Objects.hashCode(op);
     }
+
+    @Override
+    public boolean isNullable() {
+        if (op == Operator.EQ_FOR_NULL) {
+            return false;
+        }
+        return hasNullableChild();
+    }
 }

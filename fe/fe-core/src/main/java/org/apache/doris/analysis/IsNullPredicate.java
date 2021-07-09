@@ -128,4 +128,8 @@ public class IsNullPredicate extends Predicate {
         return new IsNullPredicate(getChild(0), !isNotNull);
     }
 
+    @Override
+    public boolean isNullable() {
+        return false;
+    }
 }

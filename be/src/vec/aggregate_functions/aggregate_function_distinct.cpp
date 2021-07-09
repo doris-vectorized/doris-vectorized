@@ -41,7 +41,8 @@ public:
 
     AggregateFunctionPtr transform_aggregate_function(const AggregateFunctionPtr& nested_function,
                                                       const DataTypes& arguments,
-                                                      const Array& params) const override {
+                                                      const Array& params,
+                                                      const bool result_is_nullable) const override {
         AggregateFunctionPtr res;
         if (arguments.size() == 1) {
             res.reset(create_with_numeric_type<AggregateFunctionDistinct,
@@ -70,7 +71,7 @@ const std::string DISTINCT_FUNCTION_PREFIX = "multi_distinct_";
 
 void register_aggregate_function_combinator_distinct(AggregateFunctionSimpleFactory& factory) {
     AggregateFunctionCreator creator = [&](const std::string& name, const DataTypes& types,
-                                           const Array& params) {
+                                           const Array& params, const bool result_is_nullable) {
         // 1. we should get not nullable types;
         DataTypes nested_types(types.size());
         std::transform(types.begin(), types.end(), nested_types.begin(),
@@ -82,7 +83,7 @@ void register_aggregate_function_combinator_distinct(AggregateFunctionSimpleFact
         }
         auto nested_function_name = name.substr(DISTINCT_FUNCTION_PREFIX.size());
         auto nested_function = factory.get(nested_function_name, transform_arguments, params);
-        return function_combinator->transform_aggregate_function(nested_function, types, params);
+        return function_combinator->transform_aggregate_function(nested_function, types, params, result_is_nullable);
     };
     factory.register_distinct_function_combinator(creator, DISTINCT_FUNCTION_PREFIX);
 }

@@ -37,7 +37,8 @@ using AggregateFuncAvg = typename Avg<T>::Function;
 
 AggregateFunctionPtr create_aggregate_function_avg(const std::string& name,
                                                    const DataTypes& argument_types,
-                                                   const Array& parameters) {
+                                                   const Array& parameters,
+                                                   const bool result_is_nullable) {
     assert_no_parameters(name, parameters);
     assert_unary(name, argument_types);
 

@@ -31,7 +31,8 @@ namespace doris::vectorized {
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
 using AggregateFunctionCreator =
-        std::function<AggregateFunctionPtr(const std::string&, const DataTypes&, const Array&)>;
+        std::function<AggregateFunctionPtr(const std::string&, const DataTypes&,
+                                           const Array&,  const bool)>;
 
 class AggregateFunctionSimpleFactory {
 public:
@@ -74,7 +75,7 @@ public:
     }
 
     AggregateFunctionPtr get(const std::string& name, const DataTypes& argument_types,
-                             const Array& parameters) {
+                             const Array& parameters, const bool result_is_nullable = false) {
         bool nullable = false;
         for (const auto& type : argument_types) {
             if (type->is_nullable()) {
@@ -84,11 +85,11 @@ public:
         if (nullable) {
             return nullable_aggregate_functions[name] == nullptr
                            ? nullptr
-                           : nullable_aggregate_functions[name](name, argument_types, parameters);
+                           : nullable_aggregate_functions[name](name, argument_types, parameters, result_is_nullable);
         } else {
             return aggregate_functions[name] == nullptr
                            ? nullptr
-                           : aggregate_functions[name](name, argument_types, parameters);
+                           : aggregate_functions[name](name, argument_types, parameters, result_is_nullable);
         }
     }
 

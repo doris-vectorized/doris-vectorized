@@ -62,7 +62,8 @@ using AggregateFunctionSumKahan =
 template <template <typename> class Function>
 AggregateFunctionPtr create_aggregate_function_sum(const std::string& name,
                                                    const DataTypes& argument_types,
-                                                   const Array& parameters) {
+                                                   const Array& parameters,
+                                                   const bool result_is_nullable) {
     // assert_no_parameters(name, parameters);
     // assert_unary(name, argument_types);
 
