@@ -22,6 +22,14 @@
 #include "common/logging.h"
 #include "vec/columns/column.h"
 #include "vec/columns/column_const.h"
+#include "vec/data_types/data_type_bitmap.h"
+#include "vec/data_types/data_type_date.h"
+#include "vec/data_types/data_type_date_time.h"
+#include "vec/data_types/data_type_decimal.h"
+#include "vec/data_types/data_type_nothing.h"
+#include "vec/data_types/data_type_number.h"
+#include "vec/data_types/data_type_string.h"
+#include "vec/data_types/data_type_nullable.h"
 
 namespace doris::vectorized {
 
@@ -81,6 +89,67 @@ std::string IDataType::to_string(const IColumn& column, size_t row_num) const {
 
 void IDataType::insert_default_into(IColumn& column) const {
     column.insert_default();
+}
+
+DataTypePtr IDataType::from_thrift(const doris::PrimitiveType& type, const bool is_nullable){
+    DataTypePtr result;
+    switch (type) {
+        case TYPE_BOOLEAN:
+        case TYPE_TINYINT:
+            result = std::make_shared<DataTypeInt8>();
+            break;
+        case TYPE_SMALLINT:
+            result = std::make_shared<DataTypeInt16>();
+            break;
+        case TYPE_INT:
+            result = std::make_shared<DataTypeInt32>();
+            break;
+        case TYPE_FLOAT:
+            result = std::make_shared<DataTypeFloat32>();
+            break;
+        case TYPE_BIGINT:
+            result = std::make_shared<DataTypeInt64>();
+            break;
+        case TYPE_LARGEINT:
+            result = std::make_shared<DataTypeInt128>();
+            break;
+        case TYPE_DATE:
+            result = std::make_shared<DataTypeDate>();
+            break;
+        case TYPE_DATETIME:
+            result = std::make_shared<DataTypeDateTime>();
+            break;
+        case TYPE_TIME:
+        case TYPE_DOUBLE:
+            result = std::make_shared<DataTypeFloat64>();
+            break;
+        case TYPE_CHAR:
+        case TYPE_VARCHAR:
+        case TYPE_HLL:
+            result = std::make_shared<DataTypeString>();
+            break;
+        case TYPE_OBJECT:
+            result = std::make_shared<DataTypeBitMap>();
+            break;
+        case TYPE_DECIMALV2:
+        case TYPE_DECIMAL:
+            result = std::make_shared<DataTypeDecimal<Decimal128>>(27, 9);
+            break;
+        case TYPE_NULL:
+            result = std::make_shared<DataTypeNothing>();
+            break;
+        case INVALID_TYPE:
+        default:
+            DCHECK(false);
+            result = nullptr;
+            break;
+    }
+    if (is_nullable) {
+        result = std::make_shared<DataTypeNullable>(result);
+    }
+
+    // For llvm complain
+    return result;
 }
 
 } // namespace doris::vectorized

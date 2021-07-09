@@ -90,7 +90,9 @@ public class Function implements Writable {
         // depend on input content
         ALWAYS_NULLABLE,
         // like 'count', the output column is always not nullable
-        ALWAYS_NOT_NULLABLE
+        ALWAYS_NOT_NULLABLE,
+        // Whether output column is nullable is depend on custom algorithm by @Expr.isNullable()
+        CUSTOM
     }
 
     public static final long UNIQUE_FUNCTION_ID = 0;
@@ -115,7 +117,7 @@ public class Function implements Writable {
     private HdfsURI location;
     private TFunctionBinaryType binaryType;
 
-    private NullableMode nullableMode = NullableMode.DEPEND_ON_ARGUMENT;
+    protected NullableMode nullableMode = NullableMode.DEPEND_ON_ARGUMENT;
 
     private boolean vectorized;
 

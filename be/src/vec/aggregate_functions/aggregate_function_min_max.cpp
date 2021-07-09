@@ -47,7 +47,8 @@ static IAggregateFunction* create_aggregate_function_single_value(const String& 
 
 AggregateFunctionPtr create_aggregate_function_max(const std::string& name,
                                                    const DataTypes& argument_types,
-                                                   const Array& parameters) {
+                                                   const Array& parameters,
+                                                   const bool result_is_nullable) {
     return AggregateFunctionPtr(
             create_aggregate_function_single_value<AggregateFunctionsSingleValue,
                                                    AggregateFunctionMaxData>(name, argument_types,
@@ -56,7 +57,8 @@ AggregateFunctionPtr create_aggregate_function_max(const std::string& name,
 
 AggregateFunctionPtr create_aggregate_function_min(const std::string& name,
                                                    const DataTypes& argument_types,
-                                                   const Array& parameters) {
+                                                   const Array& parameters,
+                                                   const bool result_is_nullable) {
     return AggregateFunctionPtr(
             create_aggregate_function_single_value<AggregateFunctionsSingleValue,
                                                    AggregateFunctionMinData>(name, argument_types,

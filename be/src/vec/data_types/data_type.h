@@ -20,6 +20,7 @@
 #include <boost/noncopyable.hpp>
 #include <memory>
 
+#include "runtime/primitive_type.h"
 #include "vec/common/cow.h"
 #include "vec/common/string_buffer.hpp"
 #include "vec/core/types.h"
@@ -229,6 +230,8 @@ public:
 
     virtual size_t serialize(const IColumn& column, PColumn* pcolumn) const = 0;
     virtual void deserialize(const PColumn& pcolumn, IColumn* column) const = 0;
+
+    static DataTypePtr from_thrift(const doris::PrimitiveType& type, const bool is_nullable = true);
 
 private:
     friend class DataTypeFactory;

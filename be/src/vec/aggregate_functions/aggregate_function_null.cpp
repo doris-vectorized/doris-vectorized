@@ -42,44 +42,27 @@ public:
 
     AggregateFunctionPtr transform_aggregate_function(const AggregateFunctionPtr& nested_function,
                                                       const DataTypes& arguments,
-                                                      const Array& params) const override {
-        bool has_nullable_types = false;
+                                                      const Array& params,
+                                                      const bool result_is_nullable) const override {
         bool has_null_types = false;
         for (const auto& arg_type : arguments) {
-            if (arg_type->is_nullable()) {
-                has_nullable_types = true;
-                if (arg_type->only_null()) {
-                    has_null_types = true;
-                    break;
-                }
+            if (arg_type->only_null()) {
+                has_null_types = true;
+                break;
             }
         }
 
-        if (!has_nullable_types) {
-            LOG(WARNING) << fmt::format(
-                    "Aggregate function combinator 'Null' requires at least one argument to be "
-                    "Nullable");
-            return nullptr;
-        }
-
-        /// Special case for 'count' function. It could be called with Nullable arguments
-        /// - that means - count number of calls, when all arguments are not NULL.
-        if (nested_function && nested_function->get_name() == "count")
-            return std::make_shared<AggregateFunctionCountNotNullUnary>(arguments[0], params);
-
         if (has_null_types) return std::make_shared<AggregateFunctionNothing>(arguments, params);
 
-        bool return_type_is_nullable = nested_function->get_return_type()->can_be_inside_nullable();
-
         if (arguments.size() == 1) {
-            if (return_type_is_nullable)
+            if (result_is_nullable)
                 return std::make_shared<AggregateFunctionNullUnary<true>>(nested_function,
                                                                           arguments, params);
             else
                 return std::make_shared<AggregateFunctionNullUnary<false>>(nested_function,
                                                                            arguments, params);
         } else {
-            if (return_type_is_nullable)
+            if (result_is_nullable)
                 return std::make_shared<AggregateFunctionNullVariadic<true>>(nested_function,
                                                                              arguments, params);
             else
@@ -92,11 +75,11 @@ public:
 void register_aggregate_function_combinator_null(AggregateFunctionSimpleFactory& factory) {
     // factory.registerCombinator(std::make_shared<AggregateFunctionCombinatorNull>());
     AggregateFunctionCreator creator = [&](const std::string& name, const DataTypes& types,
-                                           const Array& params) {
+                                           const Array& params, const bool result_is_nullable) {
         auto function_combinator = std::make_shared<AggregateFunctionCombinatorNull>();
         auto transform_arguments = function_combinator->transform_arguments(types);
         auto nested_function = factory.get(name, transform_arguments, params);
-        return function_combinator->transform_aggregate_function(nested_function, types, params);
+        return function_combinator->transform_aggregate_function(nested_function, types, params, result_is_nullable);
     };
     factory.registerNullableFunctionCombinator(creator);
 }
