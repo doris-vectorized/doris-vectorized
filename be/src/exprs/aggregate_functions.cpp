@@ -889,7 +889,7 @@ void AggregateFunctions::string_concat_update(FunctionContext* ctx, const String
         return;
     }
     const StringVal* sep = separator.is_null ? &DEFAULT_STRING_CONCAT_DELIM : &separator;
-    if (result->is_null) {
+    if (result->is_null || !result->ptr) {
         // Header of the intermediate state holds the length of the first separator.
         const auto header_len = sizeof(StringConcatHeader);
         DCHECK(header_len == sizeof(sep->len));
@@ -905,7 +905,7 @@ void AggregateFunctions::string_concat_merge(FunctionContext* ctx, const StringV
         return;
     }
     const auto header_len = sizeof(StringConcatHeader);
-    if (result->is_null) {
+    if (result->is_null || !result->ptr) {
         // Copy the header from the first intermediate value.
         *result = StringVal(ctx->allocate(header_len), header_len);
         if (result->is_null) {
