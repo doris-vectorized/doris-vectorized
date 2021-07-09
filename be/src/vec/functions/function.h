@@ -258,6 +258,7 @@ using FunctionBuilderPtr = std::shared_ptr<IFunctionBuilder>;
 class FunctionBuilderImpl : public IFunctionBuilder {
 public:
     FunctionBasePtr build(const ColumnsWithTypeAndName& arguments, const DataTypePtr& return_type) const final {
+        DCHECK_EQ(return_type, get_return_type(arguments));
         return build_impl(arguments, return_type);
     }
 
