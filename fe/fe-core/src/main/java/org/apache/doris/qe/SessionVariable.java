@@ -358,7 +358,7 @@ public class SessionVariable implements Serializable, Writable {
     private int runtimeFilterMaxInNum = 1024;
 
     @VariableMgr.VarAttr(name = ENABLE_VECTORIZED_ENGINE)
-    private boolean enableVectorizedEngine = false;
+    public boolean enableVectorizedEngine = false;
 
     public long getMaxExecMemByte() {
         return maxExecMemByte;
