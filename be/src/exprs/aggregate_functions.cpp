@@ -59,18 +59,36 @@ void AggregateFunctions::init_null(FunctionContext*, AnyVal* dst) {
 }
 
 template <typename T>
-void AggregateFunctions::init_zero(FunctionContext*, T* dst) {
+void AggregateFunctions::init_zero_not_null(FunctionContext*, T* dst) {
     dst->is_null = false;
     dst->val = 0;
 }
 
 template <>
-void AggregateFunctions::init_zero(FunctionContext*, DecimalVal* dst) {
+void AggregateFunctions::init_zero_not_null(FunctionContext*, DecimalVal* dst) {
     dst->set_to_zero();
 }
 
 template <>
-void AggregateFunctions::init_zero(FunctionContext*, DecimalV2Val* dst) {
+void AggregateFunctions::init_zero_not_null(FunctionContext*, DecimalV2Val* dst) {
+    dst->set_to_zero();
+}
+
+template <typename T>
+void AggregateFunctions::init_zero_null(FunctionContext*, T* dst) {
+    dst->is_null = true;
+    dst->val = 0;
+}
+
+template <>
+void AggregateFunctions::init_zero_null(FunctionContext*, DecimalVal* dst) {
+    dst->is_null = true;
+    dst->set_to_zero();
+}
+
+template <>
+void AggregateFunctions::init_zero_null(FunctionContext*, DecimalV2Val* dst) {
+    dst->is_null = true;
     dst->set_to_zero();
 }
 
@@ -88,7 +106,7 @@ void AggregateFunctions::sum_remove(FunctionContext* ctx, const SRC_VAL& src, DS
         return;
     }
     if (dst->is_null) {
-        init_zero<DST_VAL>(ctx, dst);
+        init_zero_null<DST_VAL>(ctx, dst);
     }
     dst->val -= src.val;
 }
@@ -103,7 +121,7 @@ void AggregateFunctions::sum_remove(FunctionContext* ctx, const DecimalVal& src,
         return;
     }
     if (dst->is_null) {
-        init_zero<DecimalVal>(ctx, dst);
+        init_zero_null<DecimalVal>(ctx, dst);
     }
 
     DecimalValue new_src = DecimalValue::from_decimal_val(src);
@@ -123,7 +141,7 @@ void AggregateFunctions::sum_remove(FunctionContext* ctx, const DecimalV2Val& sr
         return;
     }
     if (dst->is_null) {
-        init_zero<DecimalV2Val>(ctx, dst);
+        init_zero_null<DecimalV2Val>(ctx, dst);
     }
 
     DecimalV2Value new_src = DecimalV2Value::from_decimal_val(src);
@@ -591,10 +609,7 @@ void AggregateFunctions::sum(FunctionContext* ctx, const SRC_VAL& src, DST_VAL* 
         return;
     }
 
-    if (dst->is_null) {
-        init_zero<DST_VAL>(ctx, dst);
-    }
-
+    dst->is_null = false;
     dst->val += src.val;
 }
 
@@ -621,11 +636,7 @@ void AggregateFunctions::sum(FunctionContext* ctx, const DecimalV2Val& src, Deci
         return;
     }
 
-    if (dst->is_null) {
-        dst->is_null = false;
-        dst->set_to_zero();
-    }
-
+    dst->is_null = false;
     DecimalV2Value new_src = DecimalV2Value::from_decimal_val(src);
     DecimalV2Value new_dst = DecimalV2Value::from_decimal_val(*dst);
     new_dst = new_dst + new_src;
@@ -637,12 +648,7 @@ void AggregateFunctions::sum(FunctionContext* ctx, const LargeIntVal& src, Large
     if (src.is_null) {
         return;
     }
-
-    if (dst->is_null) {
-        dst->is_null = false;
-        dst->val = 0;
-    }
-
+    dst->is_null = false;
     dst->val += src.val;
 }
 
@@ -2515,7 +2521,12 @@ void AggregateFunctions::offset_fn_update(FunctionContext* ctx, const IntVal& sr
 }
 
 // Stamp out the templates for the types we need.
-template void AggregateFunctions::init_zero<BigIntVal>(FunctionContext*, BigIntVal* dst);
+template void AggregateFunctions::init_zero_null<BigIntVal>(FunctionContext*, BigIntVal* dst);
+template void AggregateFunctions::init_zero_null<LargeIntVal>(FunctionContext*, LargeIntVal* dst);
+template void AggregateFunctions::init_zero_null<DoubleVal>(FunctionContext*, DoubleVal* dst);
+template void AggregateFunctions::init_zero_null<DecimalV2Val>(FunctionContext*, DecimalV2Val* dst);
+
+template void AggregateFunctions::init_zero_not_null<BigIntVal>(FunctionContext*, BigIntVal* dst);
 
 template void AggregateFunctions::sum_remove<BooleanVal, BigIntVal>(FunctionContext*,
                                                                     const BooleanVal& src,
