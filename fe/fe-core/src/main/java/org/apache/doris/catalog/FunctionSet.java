@@ -76,18 +76,6 @@ public class FunctionSet<min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionCo
         InPredicate.initBuiltins(this);
     }
 
-    public void buildNonNullResultWithNullParamFunction(Set<String> funcNames) {
-        ImmutableSet.Builder<String> setBuilder = new ImmutableSet.Builder<String>();
-        for (String funcName : funcNames) {
-            setBuilder.add(funcName);
-        }
-        this.nonNullResultWithNullParamFunctions = setBuilder.build();
-    }
-
-    public boolean isNonNullResultWithNullParamFunctions(String funcName) {
-        return nonNullResultWithNullParamFunctions.contains(funcName);
-    }
-
     private static final Map<Type, String> MIN_INIT_SYMBOL =
             ImmutableMap.<Type, String>builder()
                     .put(Type.BOOLEAN,
