@@ -136,8 +136,15 @@ def generate_fe_registry_init(filename):
 
     java_registry_file.write("\n")
 
+    # add non_null_result_with_null_param_functions
+    java_registry_file.write("        Set<String> funcNames = Sets.newHashSet();\n")
+    for entry in doris_builtins_functions.null_result_with_one_null_param_functions:
+        java_registry_file.write("        funcNames.add(\"%s\");\n" % entry)
+    java_registry_file.write("        functionSet.buildNullResultWithOneNullParamFunction(funcNames);\n");
+
     java_registry_file.write(java_registry_epilogue)
     java_registry_file.close()
+
 
 # Read the function metadata inputs
 for function in doris_builtins_functions.visible_functions:

@@ -960,10 +960,10 @@ visible_functions = [
 
     [['to_bitmap'], 'BITMAP', ['VARCHAR'],
         '_ZN5doris15BitmapFunctions9to_bitmapEPN9doris_udf15FunctionContextERKNS1_9StringValE',
-        '', '', 'vec', 'ALWAYS_NOT_NULLABLE'],
+        '', '', 'vec', ''],
     [['bitmap_hash'], 'BITMAP', ['VARCHAR'],
         '_ZN5doris15BitmapFunctions11bitmap_hashEPN9doris_udf15FunctionContextERKNS1_9StringValE',
-        '', '', 'vec', 'ALWAYS_NOT_NULLABLE'],
+        '', '', 'vec', ''],
     [['bitmap_count'], 'BIGINT', ['BITMAP'],
         '_ZN5doris15BitmapFunctions12bitmap_countEPN9doris_udf15FunctionContextERKNS1_9StringValE',
         '', '', 'vec', 'ALWAYS_NOT_NULLABLE'],
@@ -1064,7 +1064,7 @@ visible_functions = [
         '', ''],
 
     [['ST_Contains'], 'BOOLEAN', ['VARCHAR', 'VARCHAR'],
-        '_ZN5doris12GeoFunctions11st_cdate_formatontainsEPN9doris_udf15FunctionContextERKNS1_9StringValES6_',
+        '_ZN5doris12GeoFunctions11st_containsEPN9doris_udf15FunctionContextERKNS1_9StringValES6_',
         '_ZN5doris12GeoFunctions19st_contains_prepareEPN9doris_udf15FunctionContextENS2_18FunctionStateScopeE',
         '_ZN5doris12GeoFunctions17st_contains_closeEPN9doris_udf15FunctionContextENS2_18FunctionStateScopeE',
         '', 'ALWAYS_NULLABLE'],
@@ -1075,6 +1075,32 @@ visible_functions = [
     [['grouping'], 'BIGINT', ['BIGINT'],
         '_ZN5doris21GroupingSetsFunctions8groupingEPN9doris_udf15FunctionContextERKNS1_9BigIntValE',
         '' ,'', '', 'ALWAYS_NOT_NULLABLE'],
+]
+
+# This is the subset of ALWAYS_NULLABLE
+# The function belongs to @null_result_with_one_null_param_functions,
+# as long as one parameter is null, the function must return null.
+null_result_with_one_null_param_functions = [
+    'unix_timestamp',
+    'str_to_date',
+    'convert_tz',
+    'pi',
+    'e',
+    'divide',
+    'int_divide',
+    'pmod',
+    'mod',
+    'fmod',
+    'substr',
+    'substring',
+    'append_trailing_char_if_absent',
+    'ST_X',
+    'ST_Y',
+    'ST_AsText',
+    'ST_GeometryFromText',
+    'ST_LineFromText',
+    'ST_Polygon',
+    'ST_Contains'
 ]
 
 invisible_functions = [
