@@ -229,7 +229,7 @@ void NewAggFnEvaluator::Close(const vector<NewAggFnEvaluator*>& evals, RuntimeSt
 
 void NewAggFnEvaluator::SetDstSlot(const AnyVal* src, const SlotDescriptor& dst_slot_desc,
                                    Tuple* dst) {
-    if (src->is_null) {
+    if (src->is_null && dst_slot_desc.is_nullable()) {
         dst->set_null(dst_slot_desc.null_indicator_offset());
         return;
     }
