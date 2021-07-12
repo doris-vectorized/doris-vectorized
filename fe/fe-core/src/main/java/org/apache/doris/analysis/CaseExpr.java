@@ -388,7 +388,7 @@ public class CaseExpr extends Expr {
             --loopEnd;
         }
         for (int i = loopStart; i < loopEnd; i += 2) {
-            Expr thenExpr = children.get(i + 1);
+            Expr thenExpr = children.get(i);
             if (thenExpr.isNullable()) {
                 return true;
             }
