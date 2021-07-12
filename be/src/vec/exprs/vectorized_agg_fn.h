@@ -67,9 +67,12 @@ public:
     const AggregateFunctionPtr& function() { return _function; }
     static std::string debug_string(const std::vector<AggFnEvaluator*>& exprs);
     std::string debug_string() const;
+    bool is_merge() const { return _is_merge; }
 
 private:
     const TFunction _fn;
+
+    const bool _is_merge;
 
     AggFnEvaluator(const TExprNode& desc);
 
