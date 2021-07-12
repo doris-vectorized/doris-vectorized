@@ -5736,6 +5736,10 @@ public class Catalog {
         return functionSet.isNondeterministicFunction(funcName);
     }
 
+    public boolean isNullResultWithOneNullParamFunction(String funcName) {
+        return functionSet.isNullResultWithOneNullParamFunctions(funcName);
+    }
+
     /**
      * create cluster
      *
