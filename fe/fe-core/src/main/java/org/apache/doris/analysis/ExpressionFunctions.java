@@ -17,6 +17,7 @@
 
 package org.apache.doris.analysis;
 
+import org.apache.doris.catalog.Catalog;
 import org.apache.doris.catalog.Function;
 import org.apache.doris.catalog.PrimitiveType;
 import org.apache.doris.catalog.ScalarType;
@@ -75,7 +76,8 @@ public enum ExpressionFunctions {
             // 1. Not UDF
             // 2. Not in NonNullResultWithNullParamFunctions
             // 3. Has null parameter
-            if (fn.getNullableMode() == Function.NullableMode.DEPEND_ON_ARGUMENT
+            if ((fn.getNullableMode() == Function.NullableMode.DEPEND_ON_ARGUMENT
+                    || Catalog.getCurrentCatalog().isNullResultWithOneNullParamFunction(fn.getFunctionName().getFunction()))
                     && !fn.isUdf()) {
                 for (Expr e : constExpr.getChildren()) {
                     if (e instanceof NullLiteral) {

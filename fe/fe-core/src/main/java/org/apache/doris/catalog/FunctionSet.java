@@ -28,6 +28,7 @@ import org.apache.doris.analysis.LikePredicate;
 import org.apache.doris.builtins.ScalarBuiltins;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -38,6 +39,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class FunctionSet<min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionContextEPT_> {
     private static final Logger LOG = LogManager.getLogger(FunctionSet.class);
@@ -61,6 +63,8 @@ public class FunctionSet<min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionCo
 
     // Including now(), curdate(), etc..
     private ImmutableSet<String> nondeterministicFunctions;
+
+    private ImmutableSet<String> nullResultWithOneNullParamFunctions;
 
     public FunctionSet() {
         functions = Maps.newHashMap();
@@ -106,6 +110,14 @@ public class FunctionSet<min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionCo
 
     public boolean isNondeterministicFunction(String funcName) {
         return nondeterministicFunctions.contains(funcName);
+    }
+
+    public void buildNullResultWithOneNullParamFunction(Set<String> funcNames) {
+        this.nullResultWithOneNullParamFunctions = setBuilder.build();
+    }
+
+    public boolean isNullResultWithOneNullParamFunctions(String funcName) {
+        return nullResultWithOneNullParamFunctions.contains(funcName);
     }
 
     private static final Map<Type, String> MIN_INIT_SYMBOL =
