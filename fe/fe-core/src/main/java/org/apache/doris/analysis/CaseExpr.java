@@ -397,6 +397,8 @@ public class CaseExpr extends Expr {
             if (children.get(children.size() - 1).isNullable()) {
                 return true;
             }
+        } else {
+            return true;
         }
         return false;
     }

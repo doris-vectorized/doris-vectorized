@@ -28,6 +28,7 @@ import org.apache.doris.analysis.LikePredicate;
 import org.apache.doris.builtins.ScalarBuiltins;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -38,6 +39,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class FunctionSet<min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionContextEPT_> {
     private static final Logger LOG = LogManager.getLogger(FunctionSet.class);
@@ -55,6 +57,8 @@ public class FunctionSet<min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionCo
     // replace the result with NullLiteral when function finished. It leaves to be realized.
     // Functions in this set is defined in `gensrc/script/doris_builtins_functions.py`,
     // and will be built automatically.
+
+    private ImmutableSet<String> nullResultWithOneNullParamFunctions;
 
     public FunctionSet() {
         functions = Maps.newHashMap();
@@ -74,6 +78,18 @@ public class FunctionSet<min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionCo
         ScalarBuiltins.initBuiltins(this);
         LikePredicate.initBuiltins(this);
         InPredicate.initBuiltins(this);
+    }
+
+    public void buildNullResultWithOneNullParamFunction(Set<String> funcNames) {
+        ImmutableSet.Builder<String> setBuilder = new ImmutableSet.Builder<String>();
+        for (String funcName : funcNames) {
+            setBuilder.add(funcName);
+        }
+        this.nullResultWithOneNullParamFunctions = setBuilder.build();
+    }
+
+    public boolean isNullResultWithOneNullParamFunctions(String funcName) {
+        return nullResultWithOneNullParamFunctions.contains(funcName);
     }
 
     private static final Map<Type, String> MIN_INIT_SYMBOL =
