@@ -95,6 +95,8 @@ DataTypePtr IDataType::from_thrift(const doris::PrimitiveType& type, const bool 
     DataTypePtr result;
     switch (type) {
         case TYPE_BOOLEAN:
+            result = std::make_shared<DataTypeUInt8>();
+            break;
         case TYPE_TINYINT:
             result = std::make_shared<DataTypeInt8>();
             break;
