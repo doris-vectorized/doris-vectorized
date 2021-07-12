@@ -17,10 +17,10 @@
 
 #pragma once
 
+#include <type_traits>
+
 #include "vec/common/uint128.h"
 #include "vec/core/types.h"
-
-#include <type_traits>
 
 /** Hash functions that are better than the trivial function std::hash.
   *
@@ -105,9 +105,9 @@ inline size_t hash_crc32(T key) {
     return int_hash_crc32(u.out);
 }
 
-#define DEFINE_HASH(T)                                               \
-    template <>                                                      \
-    struct HashCRC32<T> {                                            \
+#define DEFINE_HASH(T)                                                \
+    template <>                                                       \
+    struct HashCRC32<T> {                                             \
         size_t operator()(T key) const { return hash_crc32<T>(key); } \
     };
 
@@ -120,6 +120,7 @@ DEFINE_HASH(doris::vectorized::Int8)
 DEFINE_HASH(doris::vectorized::Int16)
 DEFINE_HASH(doris::vectorized::Int32)
 DEFINE_HASH(doris::vectorized::Int64)
+DEFINE_HASH(doris::vectorized::Int128)
 DEFINE_HASH(doris::vectorized::Float32)
 DEFINE_HASH(doris::vectorized::Float64)
 
