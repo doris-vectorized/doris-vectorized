@@ -1077,5 +1077,29 @@ visible_functions = [
         '' ,'', '', 'ALWAYS_NOT_NULLABLE'],
 ]
 
+# This is the subset of ALWAYS_NULLABLE
+# The function belongs to @null_result_with_one_null_param_functions,
+# as long as one parameter is null, the function must return null.
+null_result_with_one_null_param_functions = [
+    'unix_timestamp',
+    'str_to_date',
+    'convert_tz',
+    'pi',
+    'e',
+    'pmod',
+    'mod',
+    'fmod',
+    'substr',
+    'substring',
+    'append_trailing_char_if_absent',
+    'ST_X',
+    'ST_Y',
+    'ST_AsText',
+    'ST_GeometryFromText',
+    'ST_LineFromText',
+    'ST_Polygon',
+    'ST_Contains'
+]
+
 invisible_functions = [
 ]
