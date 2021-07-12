@@ -30,6 +30,7 @@ namespace doris::vectorized {
 
 AggFnEvaluator::AggFnEvaluator(const TExprNode& desc)
         : _fn(desc.fn),
+          _is_merge(desc.agg_expr.is_merge_agg),
           _return_type(TypeDescriptor::from_thrift(desc.fn.ret_type)),
           _intermediate_type(TypeDescriptor::from_thrift(desc.fn.aggregate_fn.intermediate_type)),
           _intermediate_slot_desc(nullptr),
@@ -80,8 +81,6 @@ Status AggFnEvaluator::prepare(RuntimeState* state, const RowDescriptor& desc, M
     doris::vectorized::Array params;
     // prepare for argument
     for (int i = 0; i < _input_exprs_ctxs.size(); ++i) {
-        // Now, For correctness. We have to treat each AggFn argument as nullable. which will cause execute slowly
-        // TODO: RECHCK THE BEHAVIOR
         auto data_type = _input_exprs_ctxs[i]->root()->data_type();
         argument_types.emplace_back(data_type);
         child_expr_name.emplace_back(_input_exprs_ctxs[i]->root()->expr_name());

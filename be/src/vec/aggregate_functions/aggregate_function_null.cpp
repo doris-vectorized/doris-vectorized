@@ -81,7 +81,7 @@ void register_aggregate_function_combinator_null(AggregateFunctionSimpleFactory&
         auto nested_function = factory.get(name, transform_arguments, params);
         return function_combinator->transform_aggregate_function(nested_function, types, params, result_is_nullable);
     };
-    factory.registerNullableFunctionCombinator(creator);
+    factory.register_nullable_function_combinator(creator);
 }
 
 } // namespace doris::vectorized
