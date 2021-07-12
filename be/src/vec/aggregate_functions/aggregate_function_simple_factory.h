@@ -45,32 +45,24 @@ private:
     AggregateFunctions nullable_aggregate_functions;
 
 public:
-    void registerNullableFunctionCombinator(Creator creator) {
+    void register_nullable_function_combinator(const Creator& creator) {
         for (const auto& entity : aggregate_functions) {
-            if (nullable_aggregate_functions[entity.first] == nullptr) {
+            if (nullable_aggregate_functions.find(entity.first) == nullable_aggregate_functions.end()) {
                 nullable_aggregate_functions[entity.first] = creator;
             }
         }
     }
 
-    void register_distinct_function_combinator(Creator creator, const std::string& prefix) {
+    void register_distinct_function_combinator(const Creator& creator, const std::string& prefix) {
         std::vector<std::string> need_insert;
-        for (auto entity : aggregate_functions) {
+        for (const auto& entity : aggregate_functions) {
             std::string target_value = prefix + entity.first;
-            if (aggregate_functions[target_value] == nullptr) {
+            if (aggregate_functions.find(target_value) == aggregate_functions.end()) {
                 need_insert.emplace_back(std::move(target_value));
             }
         }
         for (const auto& function_name : need_insert) {
             aggregate_functions[function_name] = creator;
-        }
-    }
-
-    void register_function(const std::string& name, Creator creator, bool nullable = false) {
-        if (nullable) {
-            nullable_aggregate_functions[name] = creator;
-        } else {
-            aggregate_functions[name] = creator;
         }
     }
 
@@ -83,13 +75,21 @@ public:
             }
         }
         if (nullable) {
-            return nullable_aggregate_functions[name] == nullptr
+            return nullable_aggregate_functions.find(name) == nullable_aggregate_functions.end()
                            ? nullptr
                            : nullable_aggregate_functions[name](name, argument_types, parameters, result_is_nullable);
         } else {
-            return aggregate_functions[name] == nullptr
+            return aggregate_functions.find(name) == aggregate_functions.end()
                            ? nullptr
                            : aggregate_functions[name](name, argument_types, parameters, result_is_nullable);
+        }
+    }
+
+    void register_function(const std::string& name, const Creator& creator, bool nullable = false) {
+        if (nullable) {
+            nullable_aggregate_functions[name] = creator;
+        } else {
+            aggregate_functions[name] = creator;
         }
     }
 
