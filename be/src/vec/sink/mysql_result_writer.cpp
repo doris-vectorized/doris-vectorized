@@ -87,8 +87,14 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
             }
         }
 
+        if constexpr (type == TYPE_BOOLEAN) {
+            //todo here need to using uint after MysqlRowBuffer support it
+            buf_ret = _vec_buffers[i]->push_tinyint(
+                assert_cast<const ColumnVector<UInt8>&>(*column).get_data()[i]);
+        }
         if constexpr (type == TYPE_TINYINT) {
-            buf_ret = _vec_buffers[i]->push_tinyint(static_cast<int8_t>(column->get_int(i)));
+            buf_ret = _vec_buffers[i]->push_tinyint(
+                assert_cast<const ColumnVector<Int8>&>(*column).get_data()[i]);
         }
         if constexpr (type == TYPE_SMALLINT) {
             buf_ret = _vec_buffers[i]->push_smallint(
@@ -205,6 +211,12 @@ Status MysqlResultWriter::append_block(Block& block) {
 
         switch (_output_vexpr_ctxs[i]->root()->result_type()) {
         case TYPE_BOOLEAN:
+            if (type_ptr->is_nullable()) {
+                status = _add_one_column<PrimitiveType::TYPE_BOOLEAN, true>(column_ptr);
+            } else {
+                status = _add_one_column<PrimitiveType::TYPE_BOOLEAN, false>(column_ptr);
+            }
+            break;
         case TYPE_TINYINT: {
             if (type_ptr->is_nullable()) {
                 status = _add_one_column<PrimitiveType::TYPE_TINYINT, true>(column_ptr);
