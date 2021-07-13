@@ -64,11 +64,6 @@ void AggregateFunctions::init_zero_not_null(FunctionContext*, T* dst) {
 }
 
 template <>
-void AggregateFunctions::init_zero_not_null(FunctionContext*, DecimalVal* dst) {
-    dst->set_to_zero();
-}
-
-template <>
 void AggregateFunctions::init_zero_not_null(FunctionContext*, DecimalV2Val* dst) {
     dst->set_to_zero();
 }
@@ -77,12 +72,6 @@ template <typename T>
 void AggregateFunctions::init_zero_null(FunctionContext*, T* dst) {
     dst->is_null = true;
     dst->val = 0;
-}
-
-template <>
-void AggregateFunctions::init_zero_null(FunctionContext*, DecimalVal* dst) {
-    dst->is_null = true;
-    dst->set_to_zero();
 }
 
 template <>

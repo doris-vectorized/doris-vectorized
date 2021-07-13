@@ -660,7 +660,7 @@ public class Function implements Writable {
         if (hasChecksum) {
             checksum = Text.readString(input);
         }
-        if (Catalog.getCurrentCatalogJournalVersion() >= FeMetaVersion.VERSION_100) {
+        if (Catalog.getCurrentCatalogJournalVersion() >= FeMetaVersion.VERSION_101) {
             vectorized = input.readBoolean();
         }
     }

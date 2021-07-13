@@ -134,7 +134,6 @@ DataTypePtr IDataType::from_thrift(const doris::PrimitiveType& type, const bool 
             result = std::make_shared<DataTypeBitMap>();
             break;
         case TYPE_DECIMALV2:
-        case TYPE_DECIMAL:
             result = std::make_shared<DataTypeDecimal<Decimal128>>(27, 9);
             break;
         case TYPE_NULL:

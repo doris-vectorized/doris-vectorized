@@ -109,7 +109,7 @@ protected:
     // Update profile that need to be reported in realtime.
     void _update_realtime_counter();
 
-private:
+protected:
     RuntimeState* _runtime_state;
     OlapScanNode* _parent;
     const TupleDescriptor* _tuple_desc; /**< tuple descriptor */

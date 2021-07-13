@@ -287,6 +287,7 @@ void PInternalServiceImpl<T>::apply_filter(::google::protobuf::RpcController* co
     st.to_protobuf(response->mutable_status());
 }
 
+template <typename T>
 void PInternalServiceImpl<T>::transmit_block(google::protobuf::RpcController* cntl_base,
                                              const PTransmitDataParams* request,
                                              PTransmitDataResult* response,

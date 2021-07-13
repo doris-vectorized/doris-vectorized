@@ -38,7 +38,7 @@ public class FunctionSetTest {
     @Test
     public void testGetLagFunction() {
         Type[] argTypes1 = {ScalarType.DECIMALV2, ScalarType.TINYINT, ScalarType.TINYINT};
-        Function lagDesc1 = new Function(new FunctionName("lag"), argTypes1, (Type) ScalarType.INVALID, false);
+        Function lagDesc1 = new Function(new FunctionName("lag"), Arrays.asList(argTypes1), (Type) ScalarType.INVALID, false);
         Function newFunction = functionSet.getFunction(lagDesc1, Function.CompareMode.IS_SUPERTYPE_OF);
         Type[] newArgTypes = newFunction.getArgs();
         Assert.assertTrue(newArgTypes[0].matchesType(newArgTypes[2]));
