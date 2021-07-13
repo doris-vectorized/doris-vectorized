@@ -104,14 +104,6 @@ VLiteral::VLiteral(const TExprNode& node) : VExpr(node) {
                 field = node.string_literal.value;
                 break;
             }
-            case TYPE_DECIMAL: {
-                DCHECK_EQ(node.node_type, TExprNodeType::DECIMAL_LITERAL);
-                DCHECK(node.__isset.decimal_literal);
-                DecimalValue value(node.decimal_literal.value);
-                // TODO: fix here
-                DCHECK(false) << "not support decimal V1";
-                break;
-            }
             case TYPE_DECIMALV2: {
                 DCHECK_EQ(node.node_type, TExprNodeType::DECIMAL_LITERAL);
                 DCHECK(node.__isset.decimal_literal);

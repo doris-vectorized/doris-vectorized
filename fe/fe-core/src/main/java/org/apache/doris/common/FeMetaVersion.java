@@ -211,12 +211,13 @@ public final class FeMetaVersion {
     // add audit steam load and change the serialization backend method to json
     public static final int VERSION_99 = 99;
     // for max query instance
-    // add vectorized to function
     public static final int VERSION_100 = 100;
     // add errorRowsAfterResumed to distinguish totalErrorRows and currentErrorRows even if the job is paused.
     public static final int VERSION_101 = 101;
     // add data encrypt
     public static final int VERSION_102 = 102;
+    // add vectorized to function
+    public static final int VERSION_103 = 103;
     // note: when increment meta version, should assign the latest version to VERSION_CURRENT
-    public static final int VERSION_CURRENT = VERSION_102;
+    public static final int VERSION_CURRENT = VERSION_103;
 }

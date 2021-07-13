@@ -237,10 +237,6 @@ public class ScalarFunction extends Function {
                 case DATETIME:
                     beFn.append("_datetime_val");
                     break;
-                case DECIMAL:
-                    beFn.append("_decimal_val");
-                    usesDecimal = true;
-                    break;
                 case DECIMALV2:
                     beFn.append("_decimalv2_val");
                     usesDecimalV2 = true;

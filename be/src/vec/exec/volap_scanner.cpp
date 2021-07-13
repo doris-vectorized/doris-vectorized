@@ -203,13 +203,6 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
             }
             break;
         }
-        case TYPE_DECIMAL: {
-            int64_t int_value = *(int64_t*)(ptr);
-            int32_t frac_value = *(int32_t*)(ptr + sizeof(int64_t));
-            DecimalValue data(int_value, frac_value);
-            (*columns)[i]->insert_data(reinterpret_cast<char*>(&data), slot_desc->slot_size());
-            break;
-        }
         case TYPE_DECIMALV2: {
             int64_t int_value = *(int64_t*)(ptr);
             int32_t frac_value = *(int32_t*)(ptr + sizeof(int64_t));
