@@ -44,7 +44,7 @@ public class CaseExprTest {
                 result = false;
             }
         };
-        Assert.assertFalse(caseExpr1.isNullable());
+        Assert.assertTrue(caseExpr1.isNullable());
         // with case without else
         CaseExpr caseExpr2 = new CaseExpr(caseExpr, caseWhenClauseList, null);
         new Expectations() {
@@ -53,7 +53,7 @@ public class CaseExprTest {
                 result = false;
             }
         };
-        Assert.assertFalse(caseExpr2.isNullable());
+        Assert.assertTrue(caseExpr2.isNullable());
         // with case with else
         CaseExpr caseExpr3 = new CaseExpr(caseExpr, caseWhenClauseList, elseExpr);
         new Expectations() {
