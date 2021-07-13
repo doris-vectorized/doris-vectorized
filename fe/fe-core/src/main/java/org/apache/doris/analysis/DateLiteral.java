@@ -39,7 +39,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.text.SimpleDateFormat;
 import java.time.Year;
 import java.util.Date;
 import java.util.List;
@@ -294,10 +293,6 @@ public class DateLiteral extends LiteralExpr {
             hour = dateTime.getHourOfDay();
             minute = dateTime.getMinuteOfHour();
             second = dateTime.getSecondOfMinute();
-            // check valid date
-            SimpleDateFormat sd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            sd.setLenient(false);
-            sd.parse(year + "-" + month + "-" + day + " " + hour + ":" + minute + ":" + second);
             this.type = type;
         } catch (Exception ex) {
             throw new AnalysisException("date literal [" + s + "] is invalid");

@@ -960,7 +960,7 @@ visible_functions = [
         '', '', 'vec', ''],
     [['bitmap_count'], 'BIGINT', ['BITMAP'],
         '_ZN5doris15BitmapFunctions12bitmap_countEPN9doris_udf15FunctionContextERKNS1_9StringValE',
-        '', '', 'vec', 'ALWAYS_NOT_NULLABLE'],
+        '', '', 'vec', ''],
     [['bitmap_empty'], 'BITMAP', [],
         '_ZN5doris15BitmapFunctions12bitmap_emptyEPN9doris_udf15FunctionContextE',
         '', '', 'vec', 'ALWAYS_NOT_NULLABLE'],
