@@ -218,6 +218,8 @@ public:
             : _columns(std::move(columns)), _data_types(std::move(data_types)) {}
     MutableBlock(Block* block)
             : _columns(block->mutate_columns()), _data_types(block->get_data_types()) {}
+    MutableBlock(Block&& block)
+            : _columns(block.mutate_columns()), _data_types(block.get_data_types()) {}
 
     size_t rows() const;
     size_t columns() const { return _columns.size(); }

@@ -32,7 +32,7 @@ class IFunction;
 
 /// Methods, that helps dispatching over real column types.
 
-template <typename ... Type>
+template <typename... Type>
 bool check_data_type(const IDataType* data_type) {
     return ((typeid_cast<const Type*>(data_type)) || ...);
 }
@@ -68,7 +68,7 @@ bool check_column_const(const IColumn* column) {
 }
 
 /// Returns non-nullptr if column is ColumnConst with ColumnString or ColumnFixedString inside.
-const ColumnConst* check_and_get_column_constStringOrFixedString(const IColumn* column);
+const ColumnConst* check_and_get_column_const_string_or_fixedstring(const IColumn* column);
 
 /// Transform anything to Field.
 template <typename T>
@@ -89,12 +89,13 @@ Columns convert_const_tuple_to_constant_elements(const ColumnConst& column);
 Block create_block_with_nested_columns(const Block& block, const ColumnNumbers& args);
 
 /// Similar function as above. Additionally transform the result type if needed.
-Block create_block_with_nested_columns(const Block& block, const ColumnNumbers& args, size_t result);
+Block create_block_with_nested_columns(const Block& block, const ColumnNumbers& args,
+                                       size_t result);
 
 /// Checks argument type at specified index with predicate.
 /// throws if there is no argument at specified index or if predicate returns false.
-void validate_argument_type(const IFunction& func, const DataTypes& arguments, size_t argument_index,
-                            bool (*validator_func)(const IDataType&),
+void validate_argument_type(const IFunction& func, const DataTypes& arguments,
+                            size_t argument_index, bool (*validator_func)(const IDataType&),
                             const char* expected_type_description);
 
 } // namespace doris::vectorized

@@ -63,7 +63,7 @@ struct Construct<false, false, 4> {
 };
 template <>
 struct Construct<false, false, 8> {
-    using Type = Int128;
+    using Type = UInt64;
 };
 template <>
 struct Construct<false, false, 16> {
@@ -132,14 +132,14 @@ template <typename A, typename B>
 struct ResultOfAdditionMultiplication {
     using Type = typename Construct<std::is_signed_v<A> || std::is_signed_v<B>,
                                     std::is_floating_point_v<A> || std::is_floating_point_v<B>,
-            next_size(max(sizeof(A), sizeof(B)))>::Type;
+                                    next_size(max(sizeof(A), sizeof(B)))>::Type;
 };
 
 template <typename A, typename B>
 struct ResultOfSubtraction {
     using Type =
             typename Construct<true, std::is_floating_point_v<A> || std::is_floating_point_v<B>,
-                    next_size(max(sizeof(A), sizeof(B)))>::Type;
+                               next_size(max(sizeof(A), sizeof(B)))>::Type;
 };
 
 /** When dividing, you always get a floating-point number.
@@ -168,7 +168,7 @@ struct ResultOfModulo {
 template <typename A>
 struct ResultOfNegate {
     using Type = typename Construct<true, std::is_floating_point_v<A>,
-            std::is_signed_v<A> ? sizeof(A) : next_size(sizeof(A))>::Type;
+                                    std::is_signed_v<A> ? sizeof(A) : next_size(sizeof(A))>::Type;
 };
 
 template <typename A>

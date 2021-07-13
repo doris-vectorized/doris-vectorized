@@ -62,6 +62,7 @@
 #include "util/debug_util.h"
 #include "util/runtime_profile.h"
 #include "vec/core/block.h"
+#include "vec/exec/join/vhash_join_node.h"
 #include "vec/exec/vaggregation_node.h"
 #include "vec/exec/vcross_join_node.h"
 #include "vec/exec/vexchange_node.h"
@@ -409,7 +410,11 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         return Status::OK();
 
     case TPlanNodeType::HASH_JOIN_NODE:
-        *node = pool->add(new HashJoinNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new vectorized::HashJoinNode(pool, tnode, descs));
+        } else {
+            *node = pool->add(new HashJoinNode(pool, tnode, descs));
+        }
         return Status::OK();
 
     case TPlanNodeType::CROSS_JOIN_NODE:

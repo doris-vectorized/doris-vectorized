@@ -48,6 +48,8 @@ public:
 
     TypeDescriptor type() { return _type; }
 
+    bool is_slot_ref() const { return _node_type == TExprNodeType::SLOT_REF; }
+
     void add_child(VExpr* expr) { _children.push_back(expr); }
 
     static Status create_expr_tree(ObjectPool* pool, const TExpr& texpr, VExprContext** ctx);
