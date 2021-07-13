@@ -138,7 +138,7 @@ TEST_F(VDataStreamTest, BasicTest) {
         data.push_back(i);
     }
     vectorized::DataTypePtr data_type(std::make_shared<vectorized::DataTypeInt32>());
-    vectorized::ColumnWithTypeAndName type_and_name(vec->getPtr(), data_type, "test_int");
+    vectorized::ColumnWithTypeAndName type_and_name(vec->get_ptr(), data_type, "test_int");
     vectorized::Block block({type_and_name});
     sender.send(&runtime_stat, &block);
 

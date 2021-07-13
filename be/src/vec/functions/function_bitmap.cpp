@@ -19,6 +19,7 @@
 #include "vec/functions/function_totype.h"
 #include "vec/functions/function_const.h"
 #include "vec/functions/simple_function_factory.h"
+#include "gutil/strings/numbers.h"
 #include "gutil/strings/split.h"
 
 namespace doris::vectorized {

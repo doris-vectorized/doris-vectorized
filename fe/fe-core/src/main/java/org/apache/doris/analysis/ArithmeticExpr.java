@@ -109,10 +109,6 @@ public class ArithmeticExpr extends Expr {
                 Type.DOUBLE, Function.NullableMode.ALWAYS_NULLABLE));
         functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
                 Operator.DIVIDE.getName(),
-                Lists.<Type>newArrayList(Type.DECIMAL, Type.DECIMAL),
-                Type.DECIMAL, Function.NullableMode.ALWAYS_NULLABLE));
-        functionSet.addBuiltin(ScalarFunction.createBuiltinOperator(
-                Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DECIMALV2, Type.DECIMALV2),
                 Type.DECIMALV2, Function.NullableMode.ALWAYS_NULLABLE));
 
@@ -146,10 +142,6 @@ public class ArithmeticExpr extends Expr {
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DOUBLE, Type.DOUBLE),
                 Type.DOUBLE, Function.NullableMode.ALWAYS_NULLABLE));
-        functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
-                Operator.DIVIDE.getName(),
-                Lists.<Type>newArrayList(Type.DECIMAL, Type.DECIMAL),
-                Type.DECIMAL, Function.NullableMode.ALWAYS_NULLABLE));
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DECIMALV2, Type.DECIMALV2),

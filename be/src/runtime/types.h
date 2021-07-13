@@ -78,7 +78,7 @@ struct TypeDescriptor {
         DCHECK_NE(type, TYPE_ARRAY);
         DCHECK_NE(type, TYPE_MAP);
 #endif
-        if (type == TYPE_DECIMAL || type == TYPE_DECIMALV2) {
+        if (type == TYPE_DECIMALV2) {
             precision = 27;
             scale = 9;
         }
@@ -304,7 +304,6 @@ struct TypeDescriptor {
             return std::make_shared<vectorized::DataTypeBitMap>();
 
         case TYPE_DECIMALV2:
-        case TYPE_DECIMAL:
             return std::make_shared<vectorized::DataTypeDecimal<vectorized::Decimal128>>(27, 9);
 
         case INVALID_TYPE:
