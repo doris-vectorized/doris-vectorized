@@ -64,21 +64,22 @@ TEST(ABSTest, ABSTest) {
     auto block = row_batch.convert_to_vec_block();
     // 1. build arguments
     vectorized::ColumnNumbers arguments;
-    arguments.emplace_back(block.getPositionByName("k1"));
+    arguments.emplace_back(block.get_position_by_name("k1"));
 
-    doris::vectorized::ColumnsWithTypeAndName ctn = { block.getByPosition(block.getPositionByName("k1")) };
+    doris::vectorized::ColumnsWithTypeAndName ctn = { block.get_by_position(block.get_position_by_name("k1")) };
     auto abs_function_ptr =
-        doris::vectorized::SimpleFunctionFactory::instance().get_function("abs", ctn);
+        doris::vectorized::SimpleFunctionFactory::instance().get_function("abs", ctn,
+                std::make_shared<vectorized::DataTypeInt32>());
 
     // 2. build result column
     size_t num_columns_without_result = block.columns();
-    block.insert({nullptr, block.getByPosition(0).type, "abs(k1)"});
+    block.insert({nullptr, block.get_by_position(0).type, "abs(k1)"});
 
     abs_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
 
     k1 = -100;
     for (int i = 0; i < 1024; ++i) {
-        vectorized::ColumnPtr column = block.getColumns()[3];
+        vectorized::ColumnPtr column = block.get_columns()[3];
         ASSERT_EQ(column->get_int(i), std::abs(k1++));
     }
 }

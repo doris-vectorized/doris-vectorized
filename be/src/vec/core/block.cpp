@@ -738,7 +738,7 @@ Block MutableBlock::to_block() {
     }
     return {columns_with_schema};
 }
-std::string MutableBlock::dumpData(size_t row_limit) const {
+std::string MutableBlock::dump_data(size_t row_limit) const {
     if (rows() == 0) {
         return "empty block.";
     }
