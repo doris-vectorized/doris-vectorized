@@ -10,16 +10,16 @@
 
 namespace doris::vectorized {
 // declare function
-void registerAggregateFunctionSum(AggregateFunctionSimpleFactory& factory);
+void register_aggregate_function_sum(AggregateFunctionSimpleFactory& factory);
 
 TEST(AggTest, basic_test) {
     auto column_vector_int32 = ColumnVector<Int32>::create();
     for (int i = 0; i < 4096; i++) {
-        column_vector_int32->insert(castToNearestFieldType(i));
+        column_vector_int32->insert(cast_to_nearest_field_type(i));
     }
     // test implement interface
     AggregateFunctionSimpleFactory factory;
-    registerAggregateFunctionSum(factory);
+    register_aggregate_function_sum(factory);
     DataTypePtr data_type(std::make_shared<DataTypeInt32>());
     DataTypes data_types = {data_type};
     Array array;
