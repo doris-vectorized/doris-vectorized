@@ -40,8 +40,9 @@ TEST(ColumnComplexTest, BasicTest) {
     ASSERT_EQ((*reinterpret_cast<const std::string*>(ref.data)), val1);
 }
 
+// Test the compile failed
 TEST(ColumnComplexType, DataTypeBitmapTest) {
-    std::make_shared<DatatTypeBitmap>();
+    std::make_shared<DataTypeBitMap>();
 }
 } // namespace doris::vectorized
 

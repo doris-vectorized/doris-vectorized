@@ -9,7 +9,7 @@
 namespace doris {
 namespace vectorized {
 class VDataStreamRecvr;
-// TODO: sort merge
+
 class VExchangeNode : public ExecNode {
 public:
     VExchangeNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs);
