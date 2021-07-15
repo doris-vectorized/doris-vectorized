@@ -15,8 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//#include <IO/WriteHelpers.h>
-
 #include "vec/columns/column_const.h"
 
 #include "vec/columns/columns_common.h"

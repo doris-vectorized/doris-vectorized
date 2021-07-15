@@ -274,7 +274,7 @@ public:
     Block to_block();
 
     void add_row(const Block* block, int row);
-    std::string dumpData(size_t row_limit = 100) const;
+    std::string dump_data(size_t row_limit = 100) const;
 
     void clear() {
         _columns.clear();
