@@ -26,6 +26,10 @@
 
 namespace doris {
 
+namespace vectorized {
+class Block;
+}
+
 class RowCursor;
 class RowBlockV2;
 class Schema;
@@ -100,6 +104,8 @@ public:
     // If there is no data to read, will return Status::EndOfFile.
     // If other error happens, other error code will be returned.
     virtual Status next_batch(RowBlockV2* block) = 0;
+
+    virtual Status next_batch(vectorized::Block* block) = 0;
 
     // return schema for this Iterator
     virtual const Schema& schema() const = 0;

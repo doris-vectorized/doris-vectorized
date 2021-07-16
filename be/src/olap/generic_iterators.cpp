@@ -49,6 +49,10 @@ public:
     Status init(const StorageReadOptions& opts) override;
     Status next_batch(RowBlockV2* block) override;
 
+    Status next_batch(vectorized::Block* block) override {
+        return Status::OK();
+    }
+
     const Schema& schema() const override { return _schema; }
 
 private:
@@ -218,6 +222,7 @@ public:
     }
     Status init(const StorageReadOptions& opts) override;
     Status next_batch(RowBlockV2* block) override;
+    Status next_batch(vectorized::Block* row_block) override;
 
     const Schema& schema() const override { return *_schema; }
 
@@ -297,6 +302,10 @@ Status MergeIterator::next_batch(RowBlockV2* block) {
     }
 }
 
+Status MergeIterator::next_batch(vectorized::Block* block) {
+    return Status::EndOfFile("no more data in segment");
+}
+
 // UnionIterator will read data from input iterator one by one.
 class UnionIterator : public RowwiseIterator {
 public:
@@ -315,6 +324,7 @@ public:
     }
     Status init(const StorageReadOptions& opts) override;
     Status next_batch(RowBlockV2* block) override;
+    Status next_batch(vectorized::Block* block) override;
 
     const Schema& schema() const override { return *_schema; }
 
@@ -353,6 +363,25 @@ Status UnionIterator::next_batch(RowBlockV2* block) {
     }
     return Status::EndOfFile("End of UnionIterator");
 }
+
+Status UnionIterator::next_batch(vectorized::Block* block) {
+    while (_cur_iter != nullptr) {
+        auto st = _cur_iter->next_batch(block);
+        if (st.is_end_of_file()) {
+            delete _cur_iter;
+            _cur_iter = nullptr;
+            _origin_iters.pop_front();
+            if (!_origin_iters.empty()) {
+                _cur_iter = *(_origin_iters.begin());
+            }
+        } else {
+            return st;
+        }
+    }
+    return Status::EndOfFile("End of UnionIterator");
+}
+
+
 
 RowwiseIterator* new_merge_iterator(std::list<RowwiseIterator*> inputs, std::shared_ptr<MemTracker> parent) {
     if (inputs.size() == 1) {

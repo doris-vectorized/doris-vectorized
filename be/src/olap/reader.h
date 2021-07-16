@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "exprs/bloomfilter_predicate.h"
+#include "olap/collect_iterator.h"
 #include "olap/column_predicate.h"
 #include "olap/delete_handler.h"
 #include "olap/olap_cond.h"
@@ -45,7 +46,7 @@ namespace doris {
 class Tablet;
 class RowCursor;
 class RowBlock;
-class CollectIterator;
+//class CollectIterator;
 class RuntimeState;
 
 // Params for Reader,
@@ -100,6 +101,16 @@ public:
     OLAPStatus next_row_with_aggregation(RowCursor* row_cursor, MemPool* mem_pool,
                                          ObjectPool* agg_pool, bool* eof) {
         return (this->*_next_row_func)(row_cursor, mem_pool, agg_pool, eof);
+    }
+
+    OLAPStatus next_block_with_aggregation(vectorized::Block* block, MemPool* mem_pool,
+                                         ObjectPool* agg_pool, bool* eof) {
+        auto res = _collect_iter->next(block);
+        if (UNLIKELY(res != OLAP_SUCCESS && res != OLAP_ERR_DATA_EOF)) {
+            return res;
+        }
+        *eof = res == OLAP_ERR_DATA_EOF;
+        return OLAP_SUCCESS;
     }
 
     uint64_t merged_rows() const { return _merged_rows; }

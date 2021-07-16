@@ -23,6 +23,10 @@
 
 namespace doris {
 
+namespace vectorized {
+class Block;
+}
+
 class Reader;
 class RowCursor;
 
@@ -47,6 +51,8 @@ public:
     //      Others when error happens
     OLAPStatus next(const RowCursor** row, bool* delete_flag);
 
+    OLAPStatus next(vectorized::Block* block);
+
 private:
     // This interface is the actual implementation of the new version of iterator.
     // It currently contains two implementations, one is Level0Iterator,
@@ -65,6 +71,8 @@ private:
         virtual int64_t version() const = 0;
 
         virtual OLAPStatus next(const RowCursor** row, bool* delete_flag) = 0;
+
+        virtual OLAPStatus next(vectorized::Block* block) = 0;
         virtual ~LevelIterator() = 0;
     };
 
@@ -97,6 +105,8 @@ private:
 
         OLAPStatus next(const RowCursor** row, bool* delete_flag) override;
 
+        OLAPStatus next(vectorized::Block *block) override;
+
         ~Level0Iterator();
 
     private:
@@ -128,11 +138,16 @@ private:
 
         OLAPStatus next(const RowCursor** row, bool* delete_flag) override;
 
+        OLAPStatus next(vectorized::Block *block) override;
+
         ~Level1Iterator();
 
     private:
         inline OLAPStatus _merge_next(const RowCursor** row, bool* delete_flag);
         inline OLAPStatus _normal_next(const RowCursor** row, bool* delete_flag);
+
+        inline OLAPStatus _merge_next(vectorized::Block* block);
+        inline OLAPStatus _normal_next(vectorized::Block* block);
 
         // Each LevelIterator corresponds to a rowset reader,
         // it will be cleared after '_heap' has been initilized when '_merge == true'.

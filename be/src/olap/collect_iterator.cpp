@@ -136,6 +136,14 @@ OLAPStatus CollectIterator::next(const RowCursor** row, bool* delete_flag) {
     }
 }
 
+doris::OLAPStatus CollectIterator::next(vectorized::Block* block) {
+    if (LIKELY(_inner_iter)) {
+        return _inner_iter->next(block);
+    } else {
+        return OLAP_ERR_DATA_EOF;
+    }
+}
+
 CollectIterator::Level0Iterator::Level0Iterator(RowsetReaderSharedPtr rs_reader, Reader* reader)
         : _rs_reader(rs_reader), _is_delete(rs_reader->delete_flag()), _reader(reader) {
     auto* ans = dynamic_cast<BetaRowsetReader*>(rs_reader.get());
@@ -226,6 +234,11 @@ OLAPStatus CollectIterator::Level0Iterator::next(const RowCursor** row, bool* de
     return res;
 }
 
+OLAPStatus CollectIterator::Level0Iterator::next(vectorized::Block* block) {
+    auto res = _rs_reader->next_block(block);
+    return res;
+}
+
 CollectIterator::Level1Iterator::Level1Iterator(
         const std::list<CollectIterator::LevelIterator*>& children, bool merge, bool reverse)
         : _children(children), _merge(merge), _reverse(reverse) {}
@@ -254,6 +267,17 @@ OLAPStatus CollectIterator::Level1Iterator::next(const RowCursor** row, bool* de
         return _merge_next(row, delete_flag);
     } else {
         return _normal_next(row, delete_flag);
+    }
+}
+
+OLAPStatus CollectIterator::Level1Iterator::next(vectorized::Block* block) {
+    if (UNLIKELY(_cur_child == nullptr)) {
+        return OLAP_ERR_DATA_EOF;
+    }
+    if (_merge) {
+        return _merge_next(block);
+    } else {
+        return _normal_next(block);
     }
 }
 
@@ -327,6 +351,31 @@ inline OLAPStatus CollectIterator::Level1Iterator::_merge_next(const RowCursor**
     }
     *row = _cur_child->current_row(delete_flag);
     return OLAP_SUCCESS;
+}
+
+inline OLAPStatus CollectIterator::Level1Iterator::_merge_next(vectorized::Block* block) {
+    return OLAP_SUCCESS;
+}
+
+inline OLAPStatus CollectIterator::Level1Iterator::_normal_next(vectorized::Block* block) {
+    auto res = _cur_child->next(block);
+    if (LIKELY(res == OLAP_SUCCESS)) {
+        return OLAP_SUCCESS;
+    } else if (res == OLAP_ERR_DATA_EOF) {
+        // current child has been read, to read next
+        delete _cur_child;
+        _children.pop_front();
+        if (!_children.empty()) {
+            return _normal_next(block);
+        } else {
+            _cur_child = nullptr;
+            return OLAP_ERR_DATA_EOF;
+        }
+    } else {
+        _cur_child = nullptr;
+        LOG(WARNING) << "failed to get next from child, res=" << res;
+        return res;
+    }
 }
 
 inline OLAPStatus CollectIterator::Level1Iterator::_normal_next(const RowCursor** row,

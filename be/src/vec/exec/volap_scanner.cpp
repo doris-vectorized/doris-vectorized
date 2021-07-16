@@ -46,25 +46,25 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
     std::unique_ptr<MemPool> mem_pool(new MemPool(tracker.get()));
     int64_t raw_rows_threshold = raw_rows_read() + config::doris_scanner_row_num;
     auto agg_object_pool = std::make_unique<ObjectPool>();
-
-    auto column_size = get_query_slots().size();
-    std::vector<vectorized::MutableColumnPtr> columns(column_size);
-
-    do {
-        block->clear();
-        for (auto i = 0; i < column_size; i++) {
-            columns[i] = get_query_slots()[i]->get_empty_mutable_column();
-            columns[i]->reserve(state->batch_size());
-        }
-
-        while (true) {
-            // block is full, break
-            if (state->batch_size() <= columns[0]->size()) {
-                _update_realtime_counter();
-                break;
-            }
-            // Read one row from reader
-            auto res = _reader->next_row_with_aggregation(&_read_row_cursor, mem_pool.get(),
+//
+//    auto column_size = get_query_slots().size();
+//    std::vector<vectorized::MutableColumnPtr> columns(column_size);
+//
+//    do {
+//        block->clear();
+//        for (auto i = 0; i < column_size; i++) {
+//            columns[i] = get_query_slots()[i]->get_empty_mutable_column();
+//            columns[i]->reserve(state->batch_size());
+//        }
+//
+//        while (true) {
+//            // block is full, break
+//            if (state->batch_size() <= columns[0]->size()) {
+//                _update_realtime_counter();
+//                break;
+//            }
+//            // Read one row from reader
+            auto res = _reader->next_block_with_aggregation(block, mem_pool.get(),
                                                           agg_object_pool.get(), eof);
             if (res != OLAP_SUCCESS) {
                 std::stringstream ss;
@@ -73,34 +73,34 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
                    << ", backend=" << BackendOptions::get_localhost();
                 return Status::InternalError(ss.str());
             }
-            // If we reach end of this scanner, break
-            if (UNLIKELY(*eof)) {
-                break;
-            }
-
-            _num_rows_read++;
-
-            _convert_row_to_block(&columns);
-            VLOG_ROW << "VOlapScanner input row: " << _read_row_cursor.to_string();
-
-            if (raw_rows_read() >= raw_rows_threshold) {
-                break;
-            }
-        }
-        auto n_columns = 0;
-        for (const auto slot_desc : _tuple_desc->slots()) {
-            block->insert(ColumnWithTypeAndName(columns[n_columns++]->get_ptr(),
-                                                slot_desc->get_data_type_ptr(),
-                                                slot_desc->col_name()));
-        }
-        VLOG_ROW << "VOlapScanner output rows: " << block->rows();
-
-        if (_vconjunct_ctx != nullptr) {
-            int result_column_id = -1;
-            _vconjunct_ctx->execute(block, &result_column_id);
-            Block::filter_block(block, result_column_id, _tuple_desc->slots().size());
-        }
-    } while (block->rows() == 0 && !(*eof) && raw_rows_read() < raw_rows_threshold);
+//            // If we reach end of this scanner, break
+//            if (UNLIKELY(*eof)) {
+//                break;
+//            }
+//
+//            _num_rows_read++;
+//
+//            _convert_row_to_block(&columns);
+//            VLOG_ROW << "VOlapScanner input row: " << _read_row_cursor.to_string();
+//
+//            if (raw_rows_read() >= raw_rows_threshold) {
+//                break;
+//            }
+//        }
+//        auto n_columns = 0;
+//        for (const auto slot_desc : _tuple_desc->slots()) {
+//            block->insert(ColumnWithTypeAndName(columns[n_columns++]->get_ptr(),
+//                                                slot_desc->get_data_type_ptr(),
+//                                                slot_desc->col_name()));
+//        }
+//        VLOG_ROW << "VOlapScanner output rows: " << block->rows();
+//
+//        if (_vconjunct_ctx != nullptr) {
+//            int result_column_id = -1;
+//            _vconjunct_ctx->execute(block, &result_column_id);
+//            Block::filter_block(block, result_column_id, _tuple_desc->slots().size());
+//        }
+//    } while (block->rows() == 0 && !(*eof) && raw_rows_read() < raw_rows_threshold);
 
     return Status::OK();
 }
