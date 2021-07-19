@@ -106,6 +106,10 @@ public:
 
     Status next_batch(size_t* n, ColumnBlockView* dst) override;
 
+    Status next_batch(size_t* n, vectorized::MutableColumnPtr &dst) override {
+        return Status::OK();
+    };
+
     size_t count() const override { return _data_page_decoder->count(); }
 
     size_t current_index() const override { return _data_page_decoder->current_index(); }

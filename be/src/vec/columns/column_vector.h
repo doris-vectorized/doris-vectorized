@@ -133,6 +133,12 @@ public:
         data.push_back(unaligned_load<T>(pos));
     }
 
+    void insert_many_data(const char* pos, size_t length) override {
+        data.reserve(data.size() + length);
+        memcpy(data.c_end, pos, sizeof(T) * length);
+        data.c_end += sizeof(T) * length;
+    }
+
     void insert_default() override { data.push_back(T()); }
 
     void pop_back(size_t n) override { data.resize_assume_reserved(data.size() - n); }

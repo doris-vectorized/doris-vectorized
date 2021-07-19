@@ -60,7 +60,6 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
 //        while (true) {
 //            // block is full, break
 //            if (state->batch_size() <= columns[0]->size()) {
-//                _update_realtime_counter();
 //                break;
 //            }
 //            // Read one row from reader
@@ -78,7 +77,8 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
 //                break;
 //            }
 //
-//            _num_rows_read++;
+            _update_realtime_counter();
+            _num_rows_read += block->rows();
 //
 //            _convert_row_to_block(&columns);
 //            VLOG_ROW << "VOlapScanner input row: " << _read_row_cursor.to_string();

@@ -227,6 +227,10 @@ public:
         return Status::OK();
     }
 
+    Status next_batch(size_t* n, vectorized::MutableColumnPtr &dst) override {
+        return Status::OK();
+    };
+
     size_t count() const override {
         DCHECK(_parsed);
         return _num_elems;

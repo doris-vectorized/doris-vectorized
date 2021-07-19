@@ -170,7 +170,7 @@ OLAPStatus BetaRowsetReader::next_block(vectorized::Block* block) {
 //    // read next input block
 //    _input_block->clear();
     {
-        auto s = _iterator->next_batch(_input_block.get());
+        auto s = _iterator->next_batch(block);
         if (!s.ok()) {
             if (s.is_end_of_file()) {
                 return OLAP_ERR_DATA_EOF;

@@ -51,9 +51,7 @@ public:
     ~SegmentIterator() override;
     Status init(const StorageReadOptions& opts) override;
     Status next_batch(RowBlockV2* row_block) override;
-    Status next_batch(vectorized::Block *block) override {
-        return Status::OK();
-    }
+    Status next_batch(vectorized::Block *block) override;
     const Schema& schema() const override { return _schema; }
     bool is_lazy_materialization_read() const override { return _lazy_materialization_read; }
     uint64_t data_id() const { return _segment->id(); }
@@ -84,6 +82,9 @@ private:
     Status _seek_columns(const std::vector<ColumnId>& column_ids, rowid_t pos);
     // read `nrows` of columns specified by `column_ids` into `block` at `row_offset`.
     Status _read_columns(const std::vector<ColumnId>& column_ids, RowBlockV2* block,
+                         size_t row_offset, size_t nrows);
+
+    Status _read_columns(const std::vector<ColumnId>& column_ids, vectorized::MutableColumns& block,
                          size_t row_offset, size_t nrows);
 
 private:

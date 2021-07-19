@@ -40,9 +40,9 @@ void CollectIterator::init(Reader* reader) {
 OLAPStatus CollectIterator::add_child(RowsetReaderSharedPtr rs_reader) {
     std::unique_ptr<LevelIterator> child(new Level0Iterator(rs_reader, _reader));
     RETURN_NOT_OK(child->init());
-    if (child->current_row() == nullptr) {
-        return OLAP_ERR_DATA_EOF;
-    }
+//    if (child->current_row() == nullptr) {
+//        return OLAP_ERR_DATA_EOF;
+//    }
 
     _children.push_back(child.release());
     return OLAP_SUCCESS;
@@ -162,7 +162,7 @@ OLAPStatus CollectIterator::Level0Iterator::init() {
         LOG(WARNING) << "failed to init row cursor, res=" << res;
         return res;
     }
-    RETURN_NOT_OK((this->*_refresh_current_row)());
+//    RETURN_NOT_OK((this->*_refresh_current_row)());
     return OLAP_SUCCESS;
 }
 
@@ -366,6 +366,7 @@ inline OLAPStatus CollectIterator::Level1Iterator::_normal_next(vectorized::Bloc
         delete _cur_child;
         _children.pop_front();
         if (!_children.empty()) {
+            _cur_child = *(_children.begin());
             return _normal_next(block);
         } else {
             _cur_child = nullptr;

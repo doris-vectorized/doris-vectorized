@@ -414,7 +414,7 @@ OLAPStatus Reader::_capture_rs_readers(const ReaderParams& read_params,
         }
     }
     _collect_iter->build_heap(*valid_rs_readers);
-    _next_key = _collect_iter->current_row(&_next_delete_flag);
+//    _next_key = _collect_iter->current_row(&_next_delete_flag);
     return OLAP_SUCCESS;
 }
 

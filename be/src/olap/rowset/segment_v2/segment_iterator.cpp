@@ -31,6 +31,8 @@
 #include "olap/short_key_index.h"
 #include "util/doris_metrics.h"
 
+#include "vec/core/block.h"
+
 using strings::Substitute;
 
 namespace doris {
@@ -476,6 +478,19 @@ Status SegmentIterator::_read_columns(const std::vector<ColumnId>& column_ids, R
     return Status::OK();
 }
 
+Status SegmentIterator::_read_columns(const std::vector<ColumnId>& column_ids, vectorized::MutableColumns& block,
+                                      size_t row_offset, size_t nrows) {
+    for (auto cid : column_ids) {
+        auto& column = block[cid];
+//        ColumnBlockView dst(&column_block, row_offset);
+        size_t rows_read = nrows;
+        RETURN_IF_ERROR(_column_iterators[cid]->next_batch(&rows_read, column));
+//        block->set_delete_state(column_block.delete_state());
+        DCHECK_EQ(nrows, rows_read);
+    }
+    return Status::OK();
+}
+
 Status SegmentIterator::next_batch(RowBlockV2* block) {
     SCOPED_RAW_TIMER(&_opts.stats->block_load_ns);
     if (UNLIKELY(!_inited)) {
@@ -568,6 +583,117 @@ Status SegmentIterator::next_batch(RowBlockV2* block) {
             RETURN_IF_ERROR(_seek_columns(_non_predicate_columns, _block_rowids[sv[i]]));
             RETURN_IF_ERROR(_read_columns(_non_predicate_columns, block, sv[i], range_size));
             i += range_size;
+        }
+    }
+    return Status::OK();
+}
+
+
+Status SegmentIterator::next_batch(vectorized::Block* block) {
+    SCOPED_RAW_TIMER(&_opts.stats->block_load_ns);
+    if (!_inited) {
+        RETURN_IF_ERROR(_init());
+        _inited = true;
+    }
+
+    uint32_t nrows_read = 0;
+    uint32_t nrows_read_limit = 4096;
+    _block_rowids.resize(nrows_read_limit);
+    const auto &read_columns =
+            _lazy_materialization_read ? _predicate_columns : _schema.column_ids();
+
+    vectorized::MutableColumns mutable_columns;
+    for (auto &column_desc : _schema.columns()) {
+        if (column_desc != nullptr) {
+            auto data_type = Schema::get_data_type_ptr(column_desc->type());
+            mutable_columns.emplace_back(data_type->create_column());
+        }
+    }
+
+    // phase 1: read rows selected by various index (indicated by _row_bitmap) into block
+    // when using lazy-materialization-read, only columns with predicates are read
+    do {
+        uint32_t range_from;
+        uint32_t range_to;
+        bool has_next_range =
+                _range_iter->next_range(nrows_read_limit - nrows_read, &range_from, &range_to);
+        if (!has_next_range) {
+            break;
+        }
+        if (_cur_rowid == 0 || _cur_rowid != range_from) {
+            _cur_rowid = range_from;
+            RETURN_IF_ERROR(_seek_columns(read_columns, _cur_rowid));
+        }
+        size_t rows_to_read = range_to - range_from;
+        RETURN_IF_ERROR(_read_columns(read_columns, mutable_columns, nrows_read, rows_to_read));
+        _cur_rowid += rows_to_read;
+        if (_lazy_materialization_read) {
+            for (uint32_t rid = range_from; rid < range_to; rid++) {
+                _block_rowids[nrows_read++] = rid;
+            }
+        } else {
+            nrows_read += rows_to_read;
+        }
+    } while (nrows_read < nrows_read_limit);
+
+    if (nrows_read == 0) {
+        return Status::EndOfFile("no more data in segment");
+    }
+    _opts.stats->raw_rows_read += nrows_read;
+    _opts.stats->blocks_load += 1;
+
+    // phase 2: run vectorized evaluation on remaining predicates to prune rows.
+    // block's selection vector will be set to indicate which rows have passed predicates.
+    // TODO(hkp): optimize column predicate to check column block once for one column
+    if (!_col_predicates.empty() || _opts.delete_condition_predicates.get() != nullptr) {
+//        // init selection position index
+//        uint16_t selected_size = block->selected_size();
+//        uint16_t original_size = selected_size;
+//
+//        SCOPED_RAW_TIMER(&_opts.stats->vec_cond_ns);
+//        for (auto column_predicate : _col_predicates) {
+//            auto column_id = column_predicate->column_id();
+//            auto column_block = block->column_block(column_id);
+//            column_predicate->evaluate(&column_block, block->selection_vector(), &selected_size);
+//        }
+//        _opts.stats->rows_vec_cond_filtered += original_size - selected_size;
+//
+//        // set original_size again to check delete condition predicates
+//        // filter how many data
+//        original_size = selected_size;
+//        _opts.delete_condition_predicates->evaluate(block, &selected_size);
+//        _opts.stats->rows_vec_del_cond_filtered += original_size - selected_size;
+//
+//        block->set_selected_size(selected_size);
+//        block->set_num_rows(selected_size);
+    }
+
+    // phase 3: read non-predicate columns of rows that have passed predicates
+    if (_lazy_materialization_read) {
+//        uint16_t i = 0;
+//        const uint16_t* sv = block->selection_vector();
+//        const uint16_t sv_size = block->selected_size();
+//        while (i < sv_size) {
+//            // i: start offset the current range
+//            // j: past the last offset of the current range
+//            uint16_t j = i + 1;
+//            while (j < sv_size && _block_rowids[sv[j]] == _block_rowids[sv[j - 1]] + 1) {
+//                ++j;
+//            }
+//            uint16_t range_size = j - i;
+//            RETURN_IF_ERROR(_seek_columns(_non_predicate_columns, _block_rowids[sv[i]]));
+//            RETURN_IF_ERROR(_read_columns(_non_predicate_columns, block, sv[i], range_size));
+//            i += range_size;
+//        }
+    }
+
+    for (int j = 0; j < _schema.num_columns(); ++j) {
+        auto column_desc =  _schema.column(j);
+        if (column_desc != nullptr) {
+            auto &column = mutable_columns[j];
+            auto data_type = Schema::get_data_type_ptr(column_desc->type());
+            block->insert(vectorized::ColumnWithTypeAndName(std::move(column),
+                                                            data_type, column_desc->name()));
         }
     }
     return Status::OK();

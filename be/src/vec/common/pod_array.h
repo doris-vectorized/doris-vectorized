@@ -84,7 +84,8 @@ template <size_t ELEMENT_SIZE, size_t initial_bytes, typename TAllocator, size_t
 class PODArrayBase : private boost::noncopyable,
                      private TAllocator /// empty base optimization
 {
-protected:
+//protected:
+public:
     /// Round padding up to an whole number of elements to simplify arithmetic.
     static constexpr size_t pad_right = integerRoundUp(pad_right_, ELEMENT_SIZE);
     /// pad_left is also rounded up to 16 bytes to maintain alignment of allocated memory.

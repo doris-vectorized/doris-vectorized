@@ -230,6 +230,10 @@ public:
         return Status::OK();
     }
 
+    Status next_batch(size_t* n, vectorized::MutableColumnPtr &dst) override {
+        return Status::OK();
+    };
+
     size_t count() const override { return _num_elements; }
 
     size_t current_index() const override { return _cur_index; }
