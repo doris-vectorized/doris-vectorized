@@ -1,20 +1,3 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
 #include "vec/runtime/vdata_stream_recvr.h"
 
 #include "gen_cpp/data.pb.h"
@@ -82,7 +65,6 @@ Status VDataStreamRecvr::SenderQueue::get_batch(Block** next_block) {
         closure_pair.second.stop();
         _recvr->_buffer_full_total_timer->update(closure_pair.second.elapsed_time());
     }
-
     return Status::OK();
 }
 
@@ -136,6 +118,37 @@ void VDataStreamRecvr::SenderQueue::add_batch(const PBlock& pblock, int be_numbe
     }
     _recvr->_num_buffered_bytes += block_byte_size;
     _data_arrival_cv.notify_one();
+}
+void VDataStreamRecvr::SenderQueue::add_batch(Block* block, bool use_move){
+    std::unique_lock<std::mutex> l(_lock);
+    if (_is_cancelled) {
+        return;
+    }
+    Block* nblock = new Block(block->get_columns_with_type_and_name());
+    if(use_move){
+        nblock->swap(*block);    
+        block->clear();
+    }else{
+        nblock->swap(*block);
+    }
+    size_t block_size=nblock->bytes();
+    _block_queue.emplace_back(block_size,nblock);
+    _data_arrival_cv.notify_one();
+    
+    if (_recvr->exceeds_limit(block_size)) {
+        std::thread::id tid = std::this_thread::get_id();
+        MonotonicStopWatch monotonicStopWatch;
+        monotonicStopWatch.start();
+        auto iter = _local_closure.find(tid);
+        if(iter == _local_closure.end()){
+            _local_closure.emplace(tid,new ThreadClosure);
+            iter = _local_closure.find(tid);
+        }
+        _pending_closures.emplace_back(iter->second.get(), monotonicStopWatch);
+        iter->second->wait(l);
+    }
+
+    _recvr->_num_buffered_bytes += block_size;
 }
 
 void VDataStreamRecvr::SenderQueue::decrement_senders(int be_number) {
@@ -219,7 +232,6 @@ VDataStreamRecvr::VDataStreamRecvr(
           _sub_plan_query_statistics_recvr(sub_plan_query_statistics_recvr) {
     _mem_tracker = MemTracker::CreateTracker(
             _profile, -1, "VDataStreamRecvr:" + print_id(_fragment_instance_id), parent_tracker);
-
     // Create one queue per sender if is_merging is true.
     int num_queues = is_merging ? num_senders : 1;
     _sender_queues.reserve(num_queues);
@@ -262,6 +274,11 @@ void VDataStreamRecvr::add_batch(const PBlock& pblock, int sender_id, int be_num
                                  int64_t packet_seq, ::google::protobuf::Closure** done) {
     int use_sender_id = _is_merging ? sender_id : 0;
     _sender_queues[use_sender_id]->add_batch(pblock, be_number, packet_seq, done);
+}
+
+void VDataStreamRecvr::add_block(Block* block, int sender_id, bool use_move){
+    int use_sender_id = _is_merging ? sender_id : 0;
+    _sender_queues[use_sender_id]->add_batch(block,use_move);
 }
 
 Status VDataStreamRecvr::get_next(Block* block, bool* eos) {

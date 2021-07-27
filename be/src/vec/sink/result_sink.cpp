@@ -57,7 +57,7 @@ Status ResultSink::prepare_exprs(RuntimeState* state) {
 Status ResultSink::prepare(RuntimeState* state) {
     RETURN_IF_ERROR(DataSink::prepare(state));
     auto fragment_instance_id = state->fragment_instance_id();
-    auto title = fmt::format("DataBufferSender (dst_fragment_instance_id={:x}-{:x})",
+    auto title = fmt::format("VDataBufferSender (dst_fragment_instance_id={:x}-{:x})",
                              fragment_instance_id.hi, fragment_instance_id.lo);
     // create profile
     _profile = state->obj_pool()->add(new RuntimeProfile(title));

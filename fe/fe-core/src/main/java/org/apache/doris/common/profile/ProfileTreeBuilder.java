@@ -37,6 +37,7 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+
 /**
  * This class is used to build a tree from the query runtime profile
  * It will build tree for the entire query, and also tree for each instance,
@@ -49,7 +50,9 @@ public class ProfileTreeBuilder {
     private static final String PROFILE_NAME_QUERY = "Query";
     private static final String PROFILE_NAME_EXECUTION = "Execution Profile";
     private static final String PROFILE_NAME_DATA_STREAM_SENDER = "DataStreamSender";
+    private static final String PROFILE_NAME_VDATA_STREAM_SENDER = "VDataStreamSender";
     private static final String PROFILE_NAME_DATA_BUFFER_SENDER = "DataBufferSender";
+    private static final String PROFILE_NAME_VDATA_BUFFER_SENDER = "VDataBufferSender";
     private static final String PROFILE_NAME_BLOCK_MGR = "BlockMgr";
     private static final String PROFILE_NAME_BUFFER_POOL = "Buffer pool";
     private static final String PROFILE_NAME_EXCHANGE_NODE = "EXCHANGE_NODE";
@@ -206,6 +209,8 @@ public class ProfileTreeBuilder {
         for (Pair<RuntimeProfile, Boolean> pair : instanceChildren) {
             RuntimeProfile profile = pair.first;
             if (profile.getName().startsWith(PROFILE_NAME_DATA_STREAM_SENDER)
+                    || profile.getName().startsWith(PROFILE_NAME_VDATA_STREAM_SENDER)
+                    || profile.getName().startsWith(PROFILE_NAME_VDATA_BUFFER_SENDER)
                     || profile.getName().startsWith(PROFILE_NAME_DATA_BUFFER_SENDER)) {
                 senderNode = buildTreeNode(profile, null, fragmentId, instanceId);
                 if (instanceId == null) {
@@ -240,10 +245,11 @@ public class ProfileTreeBuilder {
             return null;
         }
         boolean isDataBufferSender = name.startsWith(PROFILE_NAME_DATA_BUFFER_SENDER);
+        boolean isVDataBufferSender = name.startsWith(PROFILE_NAME_VDATA_BUFFER_SENDER);
         Matcher m = EXEC_NODE_NAME_ID_PATTERN.matcher(name);
         String extractName;
         String extractId;
-        if ((!m.find() && !isDataBufferSender) || m.groupCount() != 2) {
+        if ((!m.find() && !isDataBufferSender && !isVDataBufferSender) || m.groupCount() != 2) {
             // DataStreamBuffer name like: "DataBufferSender (dst_fragment_instance_id=d95356f9219b4831-986b4602b41683ca):"
             // So it has no id.
             // Other profile should has id like:
@@ -252,8 +258,13 @@ public class ProfileTreeBuilder {
             extractName = name;
             extractId = UNKNOWN_ID;
         } else {
-            extractName = isDataBufferSender ? PROFILE_NAME_DATA_BUFFER_SENDER : m.group(1);
-            extractId = isDataBufferSender ? DATA_BUFFER_SENDER_ID : m.group(2);
+            if (isDataBufferSender || isVDataBufferSender){
+                extractName = isDataBufferSender ? PROFILE_NAME_DATA_BUFFER_SENDER : PROFILE_NAME_VDATA_BUFFER_SENDER;
+                extractId = DATA_BUFFER_SENDER_ID;
+            }else{
+                extractName = m.group(1);
+                extractId = m.group(2);
+            }
         }
         Counter activeCounter = profile.getCounterTotalTime();
         ExecNodeNode node = new ExecNodeNode(extractName, extractId);

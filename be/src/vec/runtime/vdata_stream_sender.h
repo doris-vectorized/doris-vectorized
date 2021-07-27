@@ -51,7 +51,7 @@ public:
 
     RuntimeState* state() { return _state; }
 
-    Status serialize_block(Block* src, PBlock* dest, int num_receivers);
+    Status serialize_block(Block* src, PBlock* dest, int num_receivers=1);
 
 private:
     class Channel;
@@ -103,7 +103,7 @@ private:
 
     // Throughput per total time spent in sender
     RuntimeProfile::Counter* _overall_throughput;
-
+    RuntimeProfile::Counter* _local_bytes_send_counter;
     // Identifier of the destination plan node.
     PlanNodeId _dest_node_id;
 };
@@ -130,7 +130,14 @@ public:
               _need_close(false),
               _brpc_dest_addr(brpc_dest),
               _is_transfer_chain(is_transfer_chain),
-              _send_query_statistics_with_every_batch(send_query_statistics_with_every_batch) {}
+              _send_query_statistics_with_every_batch(send_query_statistics_with_every_batch) {         
+                  std::string localhost = BackendOptions::get_localhost();
+                  _is_local = (_brpc_dest_addr.hostname == localhost) && (_brpc_dest_addr.port == config::brpc_port);
+                  if(_is_local){
+                      LOG(INFO) << "will use local Exchange, dest_node_id is : "<<_dest_node_id;
+                  }
+
+              }
 
     virtual ~Channel() {
         if (_closure != nullptr && _closure->unref()) {
@@ -159,6 +166,8 @@ public:
 
     Status send_current_block(bool eos = false);
 
+    Status send_local_block(bool eos = false);
+    Status send_local_block(Block* block, bool use_move);
     // Flush buffered rows and close channel. This function don't wait the response
     // of close operation, client should call close_wait() to finish channel's close.
     // We split one close operation into two phases in order to make multiple channels
@@ -178,7 +187,7 @@ public:
     }
 
     TUniqueId get_fragment_instance_id() { return _fragment_instance_id; }
-
+    bool is_local() { return _is_local; }
 private:
     inline Status _wait_last_brpc() {
         if (_closure == nullptr) return Status::OK();
@@ -233,6 +242,7 @@ private:
     bool _send_query_statistics_with_every_batch;
 
     size_t _capacity;
+    bool _is_local;
 };
 } // namespace vectorized
 } // namespace doris

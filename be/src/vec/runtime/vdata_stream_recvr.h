@@ -1,25 +1,9 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
 #pragma once
 
 #include <atomic>
 #include <condition_variable>
 #include <list>
+#include <thread>
 
 #include "common/global_types.h"
 #include "common/object_pool.h"
@@ -38,7 +22,7 @@ class Closure;
 namespace doris {
 class MemTracker;
 class RuntimeProfile;
-class PBlock;
+class PBlock; 
 
 namespace vectorized {
 class Block;
@@ -61,6 +45,8 @@ public:
 
     void add_batch(const PBlock& pblock, int sender_id, int be_number, int64_t packet_seq,
                    ::google::protobuf::Closure** done);
+
+    void add_block(Block* block, int sender_id, bool use_move);
 
     Status get_next(Block* block, bool* eos);
 
@@ -127,6 +113,15 @@ private:
     std::shared_ptr<QueryStatisticsRecvr> _sub_plan_query_statistics_recvr;
 };
 
+class ThreadClosure : public google::protobuf::Closure {
+public:
+    void Run() { _cv.notify_one(); }
+    void wait(std::unique_lock<std::mutex>& lock) { _cv.wait(lock); }
+
+private:
+    std::condition_variable _cv;
+}; 
+
 class VDataStreamRecvr::SenderQueue {
 public:
     SenderQueue(VDataStreamRecvr* parent_recvr, int num_senders, RuntimeProfile* profile);
@@ -138,6 +133,7 @@ public:
     void add_batch(const PBlock& pblock, int be_number, int64_t packet_seq,
                    ::google::protobuf::Closure** done);
 
+    void add_batch(Block* block, bool use_move);
     void decrement_senders(int sender_id);
 
     void cancel();
@@ -165,6 +161,8 @@ private:
     // be_number => packet_seq
     std::unordered_map<int, int64_t> _packet_seq_map;
     std::deque<std::pair<google::protobuf::Closure*, MonotonicStopWatch>> _pending_closures;
+
+    std::unordered_map<std::thread::id, std::unique_ptr<ThreadClosure>> _local_closure;
 };
 } // namespace vectorized
 } // namespace doris
