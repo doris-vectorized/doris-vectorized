@@ -9,9 +9,9 @@
 #include "runtime/mem_tracker.h"
 #include "runtime/runtime_state.h"
 #include "vec/common/sip_hash.h"
-#include "vec/runtime/vpartition_info.h"
-#include "vec/runtime/vdata_stream_recvr.h"
 #include "vec/runtime/vdata_stream_mgr.h"
+#include "vec/runtime/vdata_stream_recvr.h"
+#include "vec/runtime/vpartition_info.h"
 namespace doris::vectorized {
 
 Status VDataStreamSender::Channel::init(RuntimeState* state) {
@@ -36,10 +36,10 @@ Status VDataStreamSender::Channel::init(RuntimeState* state) {
 
     _brpc_timeout_ms = std::min(3600, state->query_options().query_timeout) * 1000;
 
-
-    if(_brpc_dest_addr.hostname == BackendOptions::get_localhost()){
-        _brpc_stub = state->exec_env()->brpc_stub_cache()->get_stub("127.0.0.1",_brpc_dest_addr.port);
-    }else{
+    if (_brpc_dest_addr.hostname == BackendOptions::get_localhost()) {
+        _brpc_stub =
+                state->exec_env()->brpc_stub_cache()->get_stub("127.0.0.1", _brpc_dest_addr.port);
+    } else {
         _brpc_stub = state->exec_env()->brpc_stub_cache()->get_stub(_brpc_dest_addr);
     }
 
@@ -51,7 +51,7 @@ Status VDataStreamSender::Channel::init(RuntimeState* state) {
 }
 
 Status VDataStreamSender::Channel::send_current_block(bool eos) {
-    if( is_local() ){
+    if (is_local()) {
         return send_local_block(eos);
     }
     {
@@ -69,24 +69,28 @@ Status VDataStreamSender::Channel::send_current_block(bool eos) {
 }
 
 Status VDataStreamSender::Channel::send_local_block(bool eos) {
-    std::shared_ptr<VDataStreamRecvr> recvr = _parent->state()->exec_env()->vstream_mgr()->find_recvr(_fragment_instance_id,_dest_node_id);
-    if(recvr != nullptr){
-        Block block=_mutable_block->to_block();
-        recvr->add_block(&block, _parent->_sender_id, true);  
-        if(eos){
+    std::shared_ptr<VDataStreamRecvr> recvr =
+            _parent->state()->exec_env()->vstream_mgr()->find_recvr(_fragment_instance_id,
+                                                                    _dest_node_id);
+    if (recvr != nullptr) {
+        Block block = _mutable_block->to_block();
+        recvr->add_block(&block, _parent->_sender_id, true);
+        if (eos) {
             recvr->remove_sender(_parent->_sender_id, _be_number);
         }
-        COUNTER_UPDATE(_parent->_local_bytes_send_counter,block.bytes());
+        COUNTER_UPDATE(_parent->_local_bytes_send_counter, block.bytes());
     }
     _mutable_block.reset();
     return Status::OK();
 }
 
 Status VDataStreamSender::Channel::send_local_block(Block* block, bool use_move) {
-    std::shared_ptr<VDataStreamRecvr> recvr = _parent->state()->exec_env()->vstream_mgr()->find_recvr(_fragment_instance_id,_dest_node_id);
-    if(recvr != nullptr){
+    std::shared_ptr<VDataStreamRecvr> recvr =
+            _parent->state()->exec_env()->vstream_mgr()->find_recvr(_fragment_instance_id,
+                                                                    _dest_node_id);
+    if (recvr != nullptr) {
         recvr->add_block(block, _parent->_sender_id, use_move);
-        COUNTER_UPDATE(_parent->_local_bytes_send_counter,block->bytes());
+        COUNTER_UPDATE(_parent->_local_bytes_send_counter, block->bytes());
     }
     return Status::OK();
 }
@@ -298,7 +302,7 @@ Status VDataStreamSender::prepare(RuntimeState* state) {
             boost::bind<int64_t>(&RuntimeProfile::units_per_second, _bytes_sent_counter,
                                  profile()->total_time_counter()),
             "");
-    _local_bytes_send_counter = ADD_COUNTER(profile(),"LocalBytesSent",TUnit::BYTES);
+    _local_bytes_send_counter = ADD_COUNTER(profile(), "LocalBytesSent", TUnit::BYTES);
     for (int i = 0; i < _channels.size(); ++i) {
         RETURN_IF_ERROR(_channels[i]->init(state));
     }
@@ -327,39 +331,38 @@ Status VDataStreamSender::send(RuntimeState* state, Block* block) {
         /*return handle_unpartitioned(block);*/
 
         int local_size = 0;
-        for (auto channel : _channels){
-            if(channel->is_local())
-                local_size++;
+        for (auto channel : _channels) {
+            if (channel->is_local()) local_size++;
         }
-        if(local_size == _channels.size()){
-            for(auto channel : _channels){
-                RETURN_IF_ERROR(channel->send_local_block(block,false));
+        if (local_size == _channels.size()) {
+            for (auto channel : _channels) {
+                RETURN_IF_ERROR(channel->send_local_block(block, false));
             }
-        }else{
+        } else {
             RETURN_IF_ERROR(serialize_block(block, _current_pb_block, _channels.size()));
-            for(auto channel : _channels){
-                if(channel->is_local()){
-                    RETURN_IF_ERROR(channel->send_local_block(block,false));
-                }else{
+            for (auto channel : _channels) {
+                if (channel->is_local()) {
+                    RETURN_IF_ERROR(channel->send_local_block(block, false));
+                } else {
                     RETURN_IF_ERROR(channel->send_block(_current_pb_block));
                 }
             }
-            _current_pb_block = (_current_pb_block == &_pb_block1 ? &_pb_block2 : &_pb_block1);  //???
+            _current_pb_block = (_current_pb_block == &_pb_block1 ? &_pb_block2 : &_pb_block1);
             //VLOG_ROW << "send rows:" << block->rows();
         }
     } else if (_part_type == TPartitionType::RANDOM) {
         // 1. select channel
         Channel* current_channel = _channels[_current_channel_idx];
         // 2. serialize
-        if(current_channel->is_local()){
-            RETURN_IF_ERROR(current_channel->send_local_block(block,false));
-        }else{
-            RETURN_IF_ERROR(serialize_block(block,current_channel->pb_block()));
+        if (current_channel->is_local()) {
+            RETURN_IF_ERROR(current_channel->send_local_block(block, false));
+        } else {
+            RETURN_IF_ERROR(serialize_block(block, current_channel->pb_block()));
             RETURN_IF_ERROR(current_channel->send_block(current_channel->pb_block()));
         }
         // 3. send batch
         // 4. switch proto
-        _current_channel_idx = (_current_channel_idx +1 )% _channels.size();
+        _current_channel_idx = (_current_channel_idx + 1) % _channels.size();
     } else if (_part_type == TPartitionType::HASH_PARTITIONED) {
         // TODO: use vectorized hash caculate
         int num_channels = _channels.size();
