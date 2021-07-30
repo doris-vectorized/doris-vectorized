@@ -112,6 +112,10 @@ public class FunctionSet<min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionCo
     }
 
     public void buildNullResultWithOneNullParamFunction(Set<String> funcNames) {
+        ImmutableSet.Builder<String> setBuilder = new ImmutableSet.Builder<String>();
+        for (String funcName : funcNames) {
+            setBuilder.add(funcName);
+        }
         this.nullResultWithOneNullParamFunctions = setBuilder.build();
     }
 

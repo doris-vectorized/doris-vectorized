@@ -390,6 +390,7 @@ Status PInternalServiceImpl<T>::_fold_constant_expr(const std::string& ser_reque
     return mgr.fold_constant_expr(t_request, response);
 }
 
+template <typename T>
 void PInternalServiceImpl<T>::transmit_block(google::protobuf::RpcController* cntl_base,
                                              const PTransmitDataParams* request,
                                              PTransmitDataResult* response,
