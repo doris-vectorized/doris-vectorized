@@ -50,13 +50,13 @@ public class ProfileTreeBuilder {
     private static final String PROFILE_NAME_QUERY = "Query";
     private static final String PROFILE_NAME_EXECUTION = "Execution Profile";
     private static final String PROFILE_NAME_DATA_STREAM_SENDER = "DataStreamSender";
-    private static final String PROFILE_NAME_VDATA_STREAM_SENDER = "V" + PROFILE_NAME_DATA_STREAM_SENDER;
+    private static final String PROFILE_NAME_VDATA_STREAM_SENDER = "VDataStreamSender";
     private static final String PROFILE_NAME_DATA_BUFFER_SENDER = "DataBufferSender";
-    private static final String PROFILE_NAME_VDATA_BUFFER_SENDER = "V" + PROFILE_NAME_DATA_BUFFER_SENDER;
+    private static final String PROFILE_NAME_VDATA_BUFFER_SENDER = "VDataBufferSender";
     private static final String PROFILE_NAME_BLOCK_MGR = "BlockMgr";
     private static final String PROFILE_NAME_BUFFER_POOL = "Buffer pool";
     private static final String PROFILE_NAME_EXCHANGE_NODE = "EXCHANGE_NODE";
-    private static final String PROFILE_NAME_VEXCHANGE_NODE = "V" + PROFILE_NAME_EXCHANGE_NODE;
+    private static final String PROFILE_NAME_VEXCHANGE_NODE = "VEXCHANGE_NODE";
     public static final String DATA_BUFFER_SENDER_ID = "-1";
     public static final String UNKNOWN_ID = "-2";
 

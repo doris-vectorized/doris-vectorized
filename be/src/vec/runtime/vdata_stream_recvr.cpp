@@ -141,11 +141,9 @@ void VDataStreamRecvr::SenderQueue::add_batch(Block* block, bool use_move) {
         return;
     }
     Block* nblock = new Block(block->get_columns_with_type_and_name());
+    nblock->info = block->info;
     if (use_move) {
-        nblock->swap(*block);
         block->clear();
-    } else {
-        nblock->info = block->info;
     }
     size_t block_size = nblock->bytes();
     _block_queue.emplace_back(block_size, nblock);
