@@ -72,6 +72,7 @@ set(VEC_FILES
   exec/vunion_node.cpp
   exec/vblocking_join_node.cpp
   exec/vcross_join_node.cpp
+  exec/join/vhash_join_node.cpp
   exprs/vectorized_agg_fn.cpp
   exprs/vectorized_fn_call.cpp
   exprs/vexpr.cpp
@@ -88,6 +89,7 @@ set(VEC_FILES
   functions/comparison_greater.cpp
   functions/function.cpp
   functions/function_helpers.cpp
+  functions/function_hash.cpp
   functions/functions_logical.cpp
   functions/function_cast.cpp
   functions/function_string.cpp

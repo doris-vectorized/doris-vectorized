@@ -21,8 +21,8 @@
 #include <boost/shared_ptr.hpp>
 
 #include "runtime/descriptors.h"
-#include "vec/core/block.h"
 #include "vec/columns/column_nullable.h"
+#include "vec/core/block.h"
 
 namespace doris::vectorized {
 class VectorizedUtils {
@@ -47,6 +47,16 @@ public:
         size_t size = dst.size();
         for (size_t i = 0; i < size; ++i)
             if (src[i]) dst[i] = 1;
+    }
+
+    static DataTypes get_data_types(const RowDescriptor& row_desc) {
+        DataTypes data_types;
+        for (const auto& tuple_desc : row_desc.tuple_descriptors()) {
+            for (const auto& slot_desc : tuple_desc->slots()) {
+                data_types.push_back(slot_desc->get_data_type_ptr());
+            }
+        }
+        return data_types;
     }
 };
 } // namespace doris::vectorized
