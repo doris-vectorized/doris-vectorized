@@ -94,6 +94,8 @@ private:
 
     Block _probe_block;
     ColumnRawPtrs _probe_columns;
+    ColumnUInt8::MutablePtr _null_map_column;
+    bool _probe_has_null = false;
     int _probe_index;
 
 private:

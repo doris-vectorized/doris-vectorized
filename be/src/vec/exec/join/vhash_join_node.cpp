@@ -2,6 +2,7 @@
 
 #include "gen_cpp/PlanNodes_types.h"
 #include "util/defer_op.h"
+#include "vec/core/materialize_block.h"
 #include "vec/exprs/vexpr.h"
 #include "vec/exprs/vexpr_context.h"
 #include "vec/functions/simple_function_factory.h"
@@ -33,11 +34,6 @@ Status HashJoinNode::init(const TPlanNode& tnode, RuntimeState* state) {
         } else {
             _is_null_safe_eq_join.push_back(false);
         }
-    }
-    bool has_eq_for_null = std::find(_is_null_safe_eq_join.begin(), _is_null_safe_eq_join.end(),
-                                     true) != _is_null_safe_eq_join.end();
-    if (has_eq_for_null) {
-        return Status::NotSupported("Not Implemented VHashJoin Node join condition: eq_for_null");
     }
 
     RETURN_IF_ERROR(VExpr::create_expr_trees(_pool, tnode.hash_join_node.other_join_conjuncts,
@@ -136,6 +132,33 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
             DCHECK_GE(result_id, 0);
             _probe_columns[i] = _probe_block.get_by_position(result_id).column.get();
         }
+
+        if (_null_map_column == nullptr) {
+            _null_map_column = ColumnUInt8::create();
+        }
+        _null_map_column->get_data().assign(probe_rows, (uint8_t)0);
+
+        for (size_t i = 0; i < probe_expr_ctxs_sz; ++i) {
+            int result_id = -1;
+            RETURN_IF_ERROR(_probe_expr_ctxs[i]->execute(&_probe_block, &result_id));
+            DCHECK_GE(result_id, 0);
+
+            if (_is_null_safe_eq_join[i]) {
+                _probe_columns[i] = _probe_block.get_by_position(result_id).column.get();
+            } else {
+                auto column = _probe_block.get_by_position(result_id).column.get();
+                if (auto* nullable = check_and_get_column<ColumnNullable>(*column)) {
+                    auto& col0 = nullable->get_nested_column();
+                    auto& nullmap = nullable->get_null_map_data();
+                    auto& null_map_val = _null_map_column->get_data();
+                    VectorizedUtils::update_null_map(null_map_val, nullmap);
+                    _probe_columns[i] = &col0;
+                    _probe_has_null = true;
+                } else {
+                    _probe_columns[i] = column;
+                }
+            }
+        }
     }
 
     std::visit(
@@ -159,15 +182,23 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
                     int right_col_idx = _left_table_data_types.size();
                     int current_offset = 0;
 
-                    for (; _probe_index < probe_rows; ++_probe_index) {
+                    for (; _probe_index < probe_rows;) {
+                        // TODO make this as constexpr
+                        if (_probe_has_null) {
+                            if (_null_map_column->get_data()[_probe_index]) {
+                                _probe_index++;
+                                continue;
+                            }
+                        }
+
                         auto find_result =
                                 key_getter.find_key(arg.hash_table, _probe_index, _arena);
                         if (find_result.is_found()) {
                             auto& mapped = find_result.get_mapped();
 
                             for (auto it = mapped.begin(); it.ok(); ++it) {
-                                for (size_t j = 0, size = _right_table_data_types.size(); j < size;
-                                     ++j) {
+                                int size = _right_table_data_types.size();
+                                for (size_t j = 0; j < size; ++j) {
                                     auto& column = *it->block->get_by_position(j).column;
                                     mcol[j + right_col_idx]->insert_from(column, it->row_num);
                                 }
@@ -175,7 +206,7 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
                             }
                         }
 
-                        offset_data[_probe_index] = current_offset;
+                        offset_data[_probe_index++] = current_offset;
                         if (current_offset >= state->batch_size()) {
                             break;
                         }
@@ -241,11 +272,32 @@ Status HashJoinNode::_process_build_block(Block& block) {
         return Status::OK();
     }
     auto& acquired_block = _acquire_list.acquire(std::move(block));
-    ColumnRawPtrs raw_ptrs(1);
+
+    materialize_block_inplace(acquired_block);
+
+    ColumnRawPtrs raw_ptrs(_build_expr_ctxs.size());
+
+    NullMap null_map_val(rows);
+    null_map_val.assign(rows, (uint8_t)0);
+    bool has_null = false;
+
     for (size_t i = 0; i < _build_expr_ctxs.size(); ++i) {
         int result_col_id = -1;
         RETURN_IF_ERROR(_build_expr_ctxs[i]->execute(&acquired_block, &result_col_id));
-        raw_ptrs[i] = acquired_block.get_by_position(result_col_id).column.get();
+        if (_is_null_safe_eq_join[i]) {
+            raw_ptrs[i] = acquired_block.get_by_position(result_col_id).column.get();
+        } else {
+            auto column = acquired_block.get_by_position(result_col_id).column.get();
+            if (auto* nullable = check_and_get_column<ColumnNullable>(*column)) {
+                auto& col0 = nullable->get_nested_column();
+                auto& nullmap = nullable->get_null_map_data();
+                VectorizedUtils::update_null_map(null_map_val, nullmap);
+                raw_ptrs[i] = &col0;
+                has_null = true;
+            } else {
+                raw_ptrs[i] = column;
+            }
+        }
     }
 
     std::visit(
@@ -260,10 +312,17 @@ Status HashJoinNode::_process_build_block(Block& block) {
                     // get_buffer_size_in_cells
                     Defer defer {[&]() {
                         int64_t bucket_size = arg.hash_table.get_buffer_size_in_cells();
-                        COUNTER_SET(_build_buckets_counter, (int64_t)bucket_size);
+                        COUNTER_SET(_build_buckets_counter, bucket_size);
                     }};
                     SCOPED_TIMER(_build_table_insert_timer);
                     for (size_t k = 0; k < rows; ++k) {
+                        // TODO: make this as constexpr
+                        if (has_null) {
+                            if (null_map_val[k]) {
+                                continue;
+                            }
+                        }
+
                         auto emplace_result = key_getter.emplace_key(arg.hash_table, k, _arena);
                         if (emplace_result.is_inserted()) {
                             new (&emplace_result.get_mapped()) Mapped({&acquired_block, k});
