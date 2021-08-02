@@ -67,7 +67,7 @@ public:
 
     [[noreturn]] virtual Field get_default() const {
         LOG(FATAL) << "Method get_default() is not implemented for data type " << get_name();
-        return Field();
+        __builtin_unreachable();
     }
 
     static void serialize_as_stream(const BitmapValue& value, BufferWritable& buf);

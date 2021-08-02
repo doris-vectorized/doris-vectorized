@@ -83,4 +83,14 @@ void validate_argument_type(const IFunction& func, const DataTypes& arguments,
     }
 }
 
+const ColumnConst* check_and_get_column_const_string_or_fixedstring(const IColumn* column) {
+    if (!is_column_const(*column)) return {};
+
+    const ColumnConst* res = assert_cast<const ColumnConst*>(column);
+
+    if (check_column<ColumnString>(&res->get_data_column())) return res;
+
+    return {};
+}
+
 } // namespace doris::vectorized
