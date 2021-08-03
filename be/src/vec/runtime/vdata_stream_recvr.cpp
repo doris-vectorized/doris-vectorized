@@ -20,7 +20,6 @@
 #include "gen_cpp/data.pb.h"
 #include "runtime/mem_tracker.h"
 #include "util/uid_util.h"
-
 #include "vec/core/block.h"
 #include "vec/core/sort_cursor.h"
 #include "vec/runtime/vdata_stream_mgr.h"
@@ -138,6 +137,36 @@ void VDataStreamRecvr::SenderQueue::add_batch(const PBlock& pblock, int be_numbe
     _data_arrival_cv.notify_one();
 }
 
+void VDataStreamRecvr::SenderQueue::add_batch(Block* block, bool use_move) {
+    std::unique_lock<std::mutex> l(_lock);
+    if (_is_cancelled) {
+        return;
+    }
+    Block* nblock = new Block(block->get_columns_with_type_and_name());
+    nblock->info = block->info;
+    if (use_move) {
+        block->clear();
+    }
+    size_t block_size = nblock->bytes();
+    _block_queue.emplace_back(block_size, nblock);
+    _data_arrival_cv.notify_one();
+
+    if (_recvr->exceeds_limit(block_size)) {
+        std::thread::id tid = std::this_thread::get_id();
+        MonotonicStopWatch monotonicStopWatch;
+        monotonicStopWatch.start();
+        auto iter = _local_closure.find(tid);
+        if (iter == _local_closure.end()) {
+            _local_closure.emplace(tid, new ThreadClosure);
+            iter = _local_closure.find(tid);
+        }
+        _pending_closures.emplace_back(iter->second.get(), monotonicStopWatch);
+        iter->second->wait(l);
+    }
+
+    _recvr->_num_buffered_bytes += block_size;
+}
+
 void VDataStreamRecvr::SenderQueue::decrement_senders(int be_number) {
     std::lock_guard<std::mutex> l(_lock);
     if (_sender_eos_set.end() != _sender_eos_set.find(be_number)) {
@@ -243,16 +272,19 @@ VDataStreamRecvr::~VDataStreamRecvr() {
     DCHECK(_mgr == nullptr) << "Must call close()";
 }
 
-Status VDataStreamRecvr::create_merger(const std::vector<VExprContext*>& ordering_expr, const std::vector<bool>& is_asc_order,
-            const std::vector<bool>& nulls_first, size_t batch_size, int64_t limit, size_t offset) {
+Status VDataStreamRecvr::create_merger(const std::vector<VExprContext*>& ordering_expr,
+                                       const std::vector<bool>& is_asc_order,
+                                       const std::vector<bool>& nulls_first, size_t batch_size,
+                                       int64_t limit, size_t offset) {
     DCHECK(_is_merging);
     std::vector<BlockSupplier> child_block_suppliers;
     // Create the merger that will a single stream of sorted rows.
-    _merger.reset(new VSortedRunMerger(ordering_expr, is_asc_order, nulls_first, batch_size, limit, offset, _profile));
+    _merger.reset(new VSortedRunMerger(ordering_expr, is_asc_order, nulls_first, batch_size, limit,
+                                       offset, _profile));
 
     for (int i = 0; i < _sender_queues.size(); ++i) {
-        child_block_suppliers.emplace_back(
-                std::bind(std::mem_fn(&SenderQueue::get_batch), _sender_queues[i], std::placeholders::_1));
+        child_block_suppliers.emplace_back(std::bind(std::mem_fn(&SenderQueue::get_batch),
+                                                     _sender_queues[i], std::placeholders::_1));
     }
     RETURN_IF_ERROR(_merger->prepare(child_block_suppliers));
     return Status::OK();
@@ -262,6 +294,11 @@ void VDataStreamRecvr::add_batch(const PBlock& pblock, int sender_id, int be_num
                                  int64_t packet_seq, ::google::protobuf::Closure** done) {
     int use_sender_id = _is_merging ? sender_id : 0;
     _sender_queues[use_sender_id]->add_batch(pblock, be_number, packet_seq, done);
+}
+
+void VDataStreamRecvr::add_block(Block* block, int sender_id, bool use_move) {
+    int use_sender_id = _is_merging ? sender_id : 0;
+    _sender_queues[use_sender_id]->add_batch(block, use_move);
 }
 
 Status VDataStreamRecvr::get_next(Block* block, bool* eos) {
@@ -308,7 +345,7 @@ void VDataStreamRecvr::close() {
     _mgr->deregister_recvr(fragment_instance_id(), dest_node_id());
     _mgr = nullptr;
 
-     _merger.reset();
+    _merger.reset();
     // TODO: Maybe shared tracker doesn't need to be reset manually
     _mem_tracker.reset();
 }

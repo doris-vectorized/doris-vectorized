@@ -115,7 +115,7 @@ set(VEC_FILES
   functions/function_datetime_string_to_string.cpp
   sink/mysql_result_writer.cpp
   sink/result_sink.cpp
-  sink/vdata_stream_sender.cpp
+  runtime/vdata_stream_sender.cpp
   runtime/vdata_stream_recvr.cpp
   runtime/vdata_stream_mgr.cpp
   runtime/vpartition_info.cpp
