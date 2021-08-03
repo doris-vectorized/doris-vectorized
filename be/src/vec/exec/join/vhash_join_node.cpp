@@ -9,6 +9,154 @@
 #include "vec/utils/util.hpp"
 
 namespace doris::vectorized {
+
+using ProfileCounter = RuntimeProfile::Counter;
+template <class HashTableContext, bool has_null_map>
+struct ProcessHashTableBuild {
+    ProcessHashTableBuild(int rows, Block& acquired_block, ColumnRawPtrs& build_raw_ptrs,
+                          Arena& arena, ProfileCounter* build_buckets_counter,
+                          ProfileCounter* build_table_insert_timer)
+            : _rows(rows),
+              _acquired_block(acquired_block),
+              _build_raw_ptrs(build_raw_ptrs),
+              _arena(arena),
+              _build_buckets_counter(build_buckets_counter),
+              _build_table_insert_timer(build_table_insert_timer) {}
+
+    Status operator()(HashTableContext& hash_table_ctx, ConstNullMapPtr null_map) {
+        using KeyGetter = typename HashTableContext::State;
+        using Mapped = typename HashTableContext::Mapped;
+
+        Defer defer {[&]() {
+            int64_t bucket_size = hash_table_ctx.hash_table.get_buffer_size_in_cells();
+            COUNTER_SET(_build_buckets_counter, bucket_size);
+        }};
+
+        Sizes sizes(_build_raw_ptrs.size());
+        KeyGetter key_getter(_build_raw_ptrs, sizes, nullptr);
+
+        SCOPED_TIMER(_build_table_insert_timer);
+        for (size_t k = 0; k < _rows; ++k) {
+            // TODO: make this as constexpr
+            if constexpr (has_null_map) {
+                if ((*null_map)[k]) {
+                    continue;
+                }
+            }
+
+            auto emplace_result = key_getter.emplace_key(hash_table_ctx.hash_table, k, _arena);
+            if (emplace_result.is_inserted()) {
+                new (&emplace_result.get_mapped()) Mapped({&_acquired_block, k});
+            } else {
+                /// The first element of the list is stored in the value of the hash table, the rest in the pool.
+                emplace_result.get_mapped().insert({&_acquired_block, k}, _arena);
+            }
+        }
+
+        return Status::OK();
+    }
+
+private:
+    const int _rows;
+    Block& _acquired_block;
+    ColumnRawPtrs& _build_raw_ptrs;
+    Arena& _arena;
+    ProfileCounter* _build_buckets_counter;
+    ProfileCounter* _build_table_insert_timer;
+};
+
+template <class HashTableContext, bool has_null_map>
+struct ProcessHashTableProbe {
+    ProcessHashTableProbe(DataTypes& left_table_data_types, DataTypes& right_table_data_types,
+                          int batch_size, int probe_rows, Block& probe_block, int& probe_index,
+                          int64_t& num_rows_returned, ColumnRawPtrs& probe_raw_ptrs, Arena& arena,
+                          ProfileCounter* rows_returned_counter)
+            : _left_table_data_types(left_table_data_types),
+              _right_table_data_types(right_table_data_types),
+              _batch_size(batch_size),
+              _probe_rows(probe_rows),
+              _probe_block(probe_block),
+              _probe_index(probe_index),
+              _num_rows_returned(num_rows_returned),
+              _probe_raw_ptrs(probe_raw_ptrs),
+              _arena(arena),
+              _rows_returned_counter(rows_returned_counter) {}
+
+    Status operator()(HashTableContext& hash_table_ctx, ConstNullMapPtr null_map,
+                      MutableBlock& mutable_block, Block* output_block) {
+        using KeyGetter = typename HashTableContext::State;
+        using Mapped = typename HashTableContext::Mapped;
+
+        Sizes sizes(_probe_raw_ptrs.size());
+        KeyGetter key_getter(_probe_raw_ptrs, sizes, nullptr);
+
+        IColumn::Offsets offset_data;
+        auto& mcol = mutable_block.mutable_columns();
+        offset_data.assign(_probe_rows, (uint32_t)0);
+
+        int right_col_idx = _left_table_data_types.size();
+        int current_offset = 0;
+
+        for (; _probe_index < _probe_rows;) {
+            // ignore null rows
+            if constexpr (has_null_map) {
+                if ((*null_map)[_probe_index]) {
+                    _probe_index++;
+                    continue;
+                }
+            }
+            auto find_result = key_getter.find_key(hash_table_ctx.hash_table, _probe_index, _arena);
+
+            if (find_result.is_found()) {
+                auto& mapped = find_result.get_mapped();
+                for (auto it = mapped.begin(); it.ok(); ++it) {
+                    int size = _right_table_data_types.size();
+                    for (size_t j = 0; j < size; ++j) {
+                        auto& column = *it->block->get_by_position(j).column;
+                        mcol[j + right_col_idx]->insert_from(column, it->row_num);
+                    }
+                    ++current_offset;
+                }
+            }
+
+            offset_data[_probe_index++] = current_offset;
+
+            if (current_offset >= _batch_size) {
+                break;
+            }
+        }
+
+        for (int i = _probe_index; i < _probe_rows; ++i) {
+            offset_data[i] = current_offset;
+        }
+
+        output_block->swap(mutable_block.to_block());
+        for (int i = 0; i < right_col_idx; ++i) {
+            auto& column = _probe_block.get_by_position(i).column;
+            output_block->get_by_position(i).column = column->replicate(offset_data);
+        }
+
+        int64_t m = output_block->rows();
+        COUNTER_UPDATE(_rows_returned_counter, m);
+        _num_rows_returned += m;
+
+        return Status::OK();
+    }
+
+private:
+    const DataTypes& _left_table_data_types;
+    const DataTypes& _right_table_data_types;
+    const int _batch_size;
+    const size_t _probe_rows;
+    const Block& _probe_block;
+    int& _probe_index;
+    int64_t& _num_rows_returned;
+    ColumnRawPtrs& _probe_raw_ptrs;
+    Arena& _arena;
+
+    ProfileCounter* _rows_returned_counter;
+};
+
 // now we only support inner join
 HashJoinNode::HashJoinNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
         : ExecNode(pool, tnode, descs),
@@ -161,77 +309,39 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
         }
     }
 
+    MutableBlock mutable_block(VectorizedUtils::create_empty_columnswithtypename(row_desc()));
+    output_block->clear();
+
+    Status st;
+
     std::visit(
             [&](auto&& arg) {
                 using HashTableCtxType = std::decay_t<decltype(arg)>;
                 if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
-                    using KeyGetter = typename HashTableCtxType::State;
-                    using Mapped = typename HashTableCtxType::Mapped;
+                    if (_probe_has_null) {
+                        ProcessHashTableProbe<HashTableCtxType, true> process_hashtable_ctx(
+                                _left_table_data_types, _right_table_data_types,
+                                state->batch_size(), probe_rows, _probe_block, _probe_index,
+                                _num_rows_returned, _probe_columns, _arena, _rows_returned_counter);
 
-                    Sizes sizes(1);
-                    KeyGetter key_getter(_probe_columns, sizes, nullptr);
+                        st = process_hashtable_ctx(arg, &_null_map_column->get_data(),
+                                                   mutable_block, output_block);
+                    } else {
+                        ProcessHashTableProbe<HashTableCtxType, false> process_hashtable_ctx(
+                                _left_table_data_types, _right_table_data_types,
+                                state->batch_size(), probe_rows, _probe_block, _probe_index,
+                                _num_rows_returned, _probe_columns, _arena, _rows_returned_counter);
 
-                    MutableBlock mutable_block(
-                            VectorizedUtils::create_empty_columnswithtypename(row_desc()));
-                    output_block->clear();
-
-                    IColumn::Offsets offset_data;
-                    auto& mcol = mutable_block.mutable_columns();
-                    offset_data.assign(probe_rows, (uint32_t)0);
-
-                    int right_col_idx = _left_table_data_types.size();
-                    int current_offset = 0;
-
-                    for (; _probe_index < probe_rows;) {
-                        // TODO make this as constexpr
-                        if (_probe_has_null) {
-                            if (_null_map_column->get_data()[_probe_index]) {
-                                _probe_index++;
-                                continue;
-                            }
-                        }
-
-                        auto find_result =
-                                key_getter.find_key(arg.hash_table, _probe_index, _arena);
-                        if (find_result.is_found()) {
-                            auto& mapped = find_result.get_mapped();
-
-                            for (auto it = mapped.begin(); it.ok(); ++it) {
-                                int size = _right_table_data_types.size();
-                                for (size_t j = 0; j < size; ++j) {
-                                    auto& column = *it->block->get_by_position(j).column;
-                                    mcol[j + right_col_idx]->insert_from(column, it->row_num);
-                                }
-                                ++current_offset;
-                            }
-                        }
-
-                        offset_data[_probe_index++] = current_offset;
-                        if (current_offset >= state->batch_size()) {
-                            break;
-                        }
+                        st = process_hashtable_ctx(arg, &_null_map_column->get_data(),
+                                                   mutable_block, output_block);
                     }
-
-                    for (int i = _probe_index; i < probe_rows; ++i) {
-                        offset_data[i] = current_offset;
-                    }
-
-                    output_block->swap(mutable_block.to_block());
-                    for (int i = 0; i < right_col_idx; ++i) {
-                        auto& column = _probe_block.get_by_position(i).column;
-                        output_block->get_by_position(i).column = column->replicate(offset_data);
-                    }
-
-                    int64_t m = output_block->rows();
-                    COUNTER_UPDATE(_rows_returned_counter, m);
-                    _num_rows_returned += m;
                 } else {
                     LOG(FATAL) << "FATAL: uninited hash table";
                 }
             },
             _hash_table_variants);
 
-    return Status::OK();
+    return st;
 }
 
 Status HashJoinNode::open(RuntimeState* state) {
@@ -300,36 +410,22 @@ Status HashJoinNode::_process_build_block(Block& block) {
         }
     }
 
+    Status st;
+
     std::visit(
             [&](auto&& arg) {
                 using HashTableCtxType = std::decay_t<decltype(arg)>;
                 if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
-                    using KeyGetter = typename HashTableCtxType::State;
-                    using Mapped = typename HashTableCtxType::Mapped;
-
-                    Sizes sizes(1);
-                    KeyGetter key_getter(raw_ptrs, sizes, nullptr);
-                    // get_buffer_size_in_cells
-                    Defer defer {[&]() {
-                        int64_t bucket_size = arg.hash_table.get_buffer_size_in_cells();
-                        COUNTER_SET(_build_buckets_counter, bucket_size);
-                    }};
-                    SCOPED_TIMER(_build_table_insert_timer);
-                    for (size_t k = 0; k < rows; ++k) {
-                        // TODO: make this as constexpr
-                        if (has_null) {
-                            if (null_map_val[k]) {
-                                continue;
-                            }
-                        }
-
-                        auto emplace_result = key_getter.emplace_key(arg.hash_table, k, _arena);
-                        if (emplace_result.is_inserted()) {
-                            new (&emplace_result.get_mapped()) Mapped({&acquired_block, k});
-                        } else {
-                            /// The first element of the list is stored in the value of the hash table, the rest in the pool.
-                            emplace_result.get_mapped().insert({&acquired_block, k}, _arena);
-                        }
+                    if (has_null) {
+                        ProcessHashTableBuild<HashTableCtxType, true> hash_table_build_process(
+                                rows, acquired_block, raw_ptrs, _arena, _build_buckets_counter,
+                                _build_table_insert_timer);
+                        st = hash_table_build_process(arg, &null_map_val);
+                    } else {
+                        ProcessHashTableBuild<HashTableCtxType, false> hash_table_build_process(
+                                rows, acquired_block, raw_ptrs, _arena, _build_buckets_counter,
+                                _build_table_insert_timer);
+                        st = hash_table_build_process(arg, &null_map_val);
                     }
                 } else {
                     LOG(FATAL) << "FATAL: uninited hash table";
@@ -337,7 +433,7 @@ Status HashJoinNode::_process_build_block(Block& block) {
             },
             _hash_table_variants);
 
-    return Status::OK();
+    return st;
 }
 
 } // namespace doris::vectorized
