@@ -93,7 +93,7 @@ struct HashMethodString : public columns_hashing_impl::HashMethodBase<
         StringRef key(chars + offsets[row - 1], offsets[row] - offsets[row - 1] - 1);
 
         if constexpr (place_string_to_arena) {
-            return ArenaKeyHolder{key, pool};
+            return ArenaKeyHolder {key, pool};
         } else {
             return key;
         }
@@ -126,8 +126,8 @@ protected:
     friend class columns_hashing_impl::HashMethodBase<Self, Value, Mapped, false>;
 
     ALWAYS_INLINE SerializedKeyHolder get_key_holder(size_t row, Arena& pool) const {
-        return SerializedKeyHolder{serialize_keys_to_pool_contiguous(row, keys_size, key_columns, pool),
-                                   pool};
+        return SerializedKeyHolder {
+                serialize_keys_to_pool_contiguous(row, keys_size, key_columns, pool), pool};
     }
 };
 
@@ -147,6 +147,35 @@ struct HashMethodHashed
 
     ALWAYS_INLINE Key get_key_holder(size_t row, Arena&) const {
         return hash128(row, key_columns.size(), key_columns);
+    }
+};
+
+/// For the case when all keys are of fixed length, and they fit in N (for example, 128) bits.
+template <typename Value, typename Key, typename Mapped, bool has_nullable_keys_ = false,
+          bool use_cache = true>
+struct HashMethodKeysFixed
+        : private columns_hashing_impl::BaseStateKeysFixed<Key, has_nullable_keys_>,
+          public columns_hashing_impl::HashMethodBase<
+                  HashMethodKeysFixed<Value, Key, Mapped, has_nullable_keys_, use_cache>, Value,
+                  Mapped, use_cache> {
+    using Self = HashMethodKeysFixed<Value, Key, Mapped, has_nullable_keys_, use_cache>;
+    using BaseHashed = columns_hashing_impl::HashMethodBase<Self, Value, Mapped, use_cache>;
+    using Base = columns_hashing_impl::BaseStateKeysFixed<Key, has_nullable_keys_>;
+
+    Sizes key_sizes;
+    size_t keys_size;
+
+    HashMethodKeysFixed(const ColumnRawPtrs& key_columns, const Sizes& key_sizes_,
+                        const HashMethodContextPtr&)
+            : Base(key_columns), key_sizes(std::move(key_sizes_)), keys_size(key_columns.size()) {}
+
+    ALWAYS_INLINE Key get_key_holder(size_t row, Arena&) const {
+        if constexpr (has_nullable_keys_) {
+            auto bitmap = Base::create_bitmap(row);
+            return pack_fixed<Key>(row, keys_size, Base::get_actual_columns(), key_sizes, bitmap);
+        } else {
+            return pack_fixed<Key>(row, keys_size, Base::get_actual_columns(), key_sizes);
+        }
     }
 };
 

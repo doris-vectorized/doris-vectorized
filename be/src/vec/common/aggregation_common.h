@@ -52,17 +52,17 @@ using Sizes = std::vector<size_t>;
 ///
 
 namespace {
-
+// clang-format off
 template <typename T>
 constexpr auto get_bitmap_size() {
     return (sizeof(T) == 32)
-                   ? 4
-                   : (sizeof(T) == 16)
-                             ? 2
-                             : ((sizeof(T) == 8)
-                                        ? 1
-                                        : ((sizeof(T) == 4) ? 1 : ((sizeof(T) == 2) ? 1 : 0)));
+            ? 4: (sizeof(T) == 16)
+            ? 2: ((sizeof(T) == 8)
+            ? 1: ((sizeof(T) == 4) 
+            ? 1: ((sizeof(T) == 2) 
+            ? 1: 0)));
 }
+// clang-format on
 
 } // namespace
 
