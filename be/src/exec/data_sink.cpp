@@ -36,7 +36,7 @@
 #include "runtime/runtime_state.h"
 #include "util/logging.h"
 #include "vec/sink/result_sink.h"
-#include "vec/runtime/vdata_stream_sender.h"
+#include "vec/sink/vdata_stream_sender.h"
 
 namespace doris {
 

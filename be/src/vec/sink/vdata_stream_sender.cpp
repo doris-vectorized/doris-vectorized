@@ -1,4 +1,4 @@
-#include "vec/runtime/vdata_stream_sender.h"
+#include "vec/sink/vdata_stream_sender.h"
 
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -329,8 +329,8 @@ Status VDataStreamSender::send(RuntimeState* state, RowBatch* batch) {
 Status VDataStreamSender::send(RuntimeState* state, Block* block) {
     SCOPED_TIMER(_profile->total_time_counter());
     if (_part_type == TPartitionType::UNPARTITIONED || _channels.size() == 1) {
-        // 1. serialize
-        // 2. send batch
+        // 1. serialize depends on it is not local exchange
+        // 2. send block
         // 3. switch proto
         //return handle_unpartitioned(block);
         int local_size = 0;
@@ -363,7 +363,7 @@ Status VDataStreamSender::send(RuntimeState* state, Block* block) {
             RETURN_IF_ERROR(serialize_block(block, current_channel->pb_block()));
             RETURN_IF_ERROR(current_channel->send_block(current_channel->pb_block()));
         }
-        // 3. send batch
+        // 3. send block
         // 4. switch proto
         _current_channel_idx = (_current_channel_idx + 1) % _channels.size();
     } else if (_part_type == TPartitionType::HASH_PARTITIONED) {

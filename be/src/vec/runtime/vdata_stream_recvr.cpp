@@ -85,7 +85,7 @@ Status VDataStreamRecvr::SenderQueue::get_batch(Block** next_block) {
     return Status::OK();
 }
 
-void VDataStreamRecvr::SenderQueue::add_batch(const PBlock& pblock, int be_number,
+void VDataStreamRecvr::SenderQueue::add_block(const PBlock& pblock, int be_number,
                                               int64_t packet_seq,
                                               ::google::protobuf::Closure** done) {
     std::unique_lock<std::mutex> l(_lock);
@@ -137,7 +137,7 @@ void VDataStreamRecvr::SenderQueue::add_batch(const PBlock& pblock, int be_numbe
     _data_arrival_cv.notify_one();
 }
 
-void VDataStreamRecvr::SenderQueue::add_batch(Block* block, bool use_move) {
+void VDataStreamRecvr::SenderQueue::add_block(Block* block, bool use_move) {
     std::unique_lock<std::mutex> l(_lock);
     if (_is_cancelled) {
         return;
@@ -290,15 +290,15 @@ Status VDataStreamRecvr::create_merger(const std::vector<VExprContext*>& orderin
     return Status::OK();
 }
 
-void VDataStreamRecvr::add_batch(const PBlock& pblock, int sender_id, int be_number,
+void VDataStreamRecvr::add_block(const PBlock& pblock, int sender_id, int be_number,
                                  int64_t packet_seq, ::google::protobuf::Closure** done) {
     int use_sender_id = _is_merging ? sender_id : 0;
-    _sender_queues[use_sender_id]->add_batch(pblock, be_number, packet_seq, done);
+    _sender_queues[use_sender_id]->add_block(pblock, be_number, packet_seq, done);
 }
 
 void VDataStreamRecvr::add_block(Block* block, int sender_id, bool use_move) {
     int use_sender_id = _is_merging ? sender_id : 0;
-    _sender_queues[use_sender_id]->add_batch(block, use_move);
+    _sender_queues[use_sender_id]->add_block(block, use_move);
 }
 
 Status VDataStreamRecvr::get_next(Block* block, bool* eos) {

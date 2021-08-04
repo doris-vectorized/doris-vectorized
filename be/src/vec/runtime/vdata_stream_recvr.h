@@ -62,7 +62,7 @@ public:
                          const std::vector<bool>& nulls_first, size_t batch_size, int64_t limit,
                          size_t offset);
 
-    void add_batch(const PBlock& pblock, int sender_id, int be_number, int64_t packet_seq,
+    void add_block(const PBlock& pblock, int sender_id, int be_number, int64_t packet_seq,
                    ::google::protobuf::Closure** done);
 
     void add_block(Block* block, int sender_id, bool use_move);
@@ -149,10 +149,10 @@ public:
 
     Status get_batch(Block** next_block);
 
-    void add_batch(const PBlock& pblock, int be_number, int64_t packet_seq,
+    void add_block(const PBlock& pblock, int be_number, int64_t packet_seq,
                    ::google::protobuf::Closure** done);
 
-    void add_batch(Block* block, bool use_move);
+    void add_block(Block* block, bool use_move);
 
     void decrement_senders(int sender_id);
 

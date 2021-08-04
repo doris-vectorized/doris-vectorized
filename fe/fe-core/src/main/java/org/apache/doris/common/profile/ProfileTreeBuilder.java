@@ -284,9 +284,9 @@ public class ProfileTreeBuilder {
             return PROFILE_NAME_DATA_BUFFER_SENDER;
         } else if (name.startsWith(PROFILE_NAME_OLAP_TABLE_SINK)) {
             return PROFILE_NAME_OLAP_TABLE_SINK;
-        } else if (name.startsWith(PROFILE_NAME_VDATA_BUFFER_SENDER)){
+        } else if (name.startsWith(PROFILE_NAME_VDATA_BUFFER_SENDER)) {
             return PROFILE_NAME_VDATA_BUFFER_SENDER;
-        }else {
+        } else {
             return null;
         }
     }
