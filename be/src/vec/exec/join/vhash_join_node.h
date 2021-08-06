@@ -58,24 +58,40 @@ using I16HashTableContext = PrimaryTypeHashTableContext<UInt16>;
 using I32HashTableContext = PrimaryTypeHashTableContext<UInt32>;
 using I64HashTableContext = PrimaryTypeHashTableContext<UInt64>;
 
-template <bool has_null>
+template <class T>
+struct HashTableFunc;
+
+template <>
+struct HashTableFunc<UInt64> {
+    using Func = HashCRC32<UInt64>;
+};
+
+template <>
+struct HashTableFunc<UInt128> {
+    using Func = UInt128HashCRC32;
+};
+
+template <class T, bool has_null>
 struct FixedKeyHashTableContext {
     using Mapped = RowRefList;
-    // using HashTable = HashMap<UInt128, Mapped, UInt128HashCRC32>;
-    using HashTable = HashMap<UInt64, Mapped, HashCRC32<UInt64>>;
-    // using State = ColumnsHashing::HashMethodKeysFixed<typename HashTable::value_type, UInt128,
-    //                                                   Mapped, has_null, false>;
-
-    using State = ColumnsHashing::HashMethodKeysFixed<typename HashTable::value_type, UInt64,
-                                                      Mapped, has_null, false>;
+    using HashTable = HashMap<T, Mapped, typename HashTableFunc<T>::Func>;
+    using State = ColumnsHashing::HashMethodKeysFixed<typename HashTable::value_type, T, Mapped,
+                                                      has_null, false>;
     static constexpr auto could_handle_asymmetric_null = true;
     HashTable hash_table;
 };
 
+template <bool has_null>
+using I64FixedKeyHashTableContext = FixedKeyHashTableContext<UInt64, has_null>;
+
+template <bool has_null>
+using I128FixedKeyHashTableContext = FixedKeyHashTableContext<UInt128, has_null>;
+
 using HashTableVariants =
         std::variant<std::monostate, SerializedHashTableContext, I8HashTableContext,
                      I16HashTableContext, I32HashTableContext, I64HashTableContext,
-                     FixedKeyHashTableContext<true>, FixedKeyHashTableContext<false>>;
+                     I64FixedKeyHashTableContext<true>, I64FixedKeyHashTableContext<false>,
+                     I128FixedKeyHashTableContext<true>, I128FixedKeyHashTableContext<false>>;
 
 class VExprContext;
 

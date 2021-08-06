@@ -508,18 +508,32 @@ void HashJoinNode::_hash_table_init() {
 
         key_byte_size += _build_key_sz[i];
 
-        if (has_variable_type(result_type) || key_byte_size > sizeof(UInt64)) {
+        if (has_variable_type(result_type)) {
             use_fixed_key = false;
             break;
         }
     }
 
+    if (key_byte_size > sizeof(UInt128)) {
+        use_fixed_key = false;
+    }
+
     if (use_fixed_key) {
-        if (has_null) {
-            _hash_table_variants.emplace<FixedKeyHashTableContext<true>>();
+        if (key_byte_size <= sizeof(UInt64)) {
+            if (has_null) {
+                _hash_table_variants.emplace<I64FixedKeyHashTableContext<true>>();
+            } else {
+                _hash_table_variants.emplace<I64FixedKeyHashTableContext<false>>();
+            }
         } else {
-            _hash_table_variants.emplace<FixedKeyHashTableContext<false>>();
+            DCHECK_LE(key_byte_size, sizeof(UInt128));
+            if (has_null) {
+                _hash_table_variants.emplace<I128FixedKeyHashTableContext<true>>();
+            } else {
+                _hash_table_variants.emplace<I128FixedKeyHashTableContext<false>>();
+            }
         }
+
     } else {
         _hash_table_variants.emplace<SerializedHashTableContext>();
     }
