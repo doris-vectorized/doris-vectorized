@@ -59,6 +59,9 @@ struct ProcessHashTableBuild {
 
             auto emplace_result =
                     key_getter.emplace_key(hash_table_ctx.hash_table, k, _join_node->_arena);
+            if (k + 1 < _rows) {
+                key_getter.prefetch(hash_table_ctx.hash_table, k + 1, _join_node->_arena);
+            }
 
             if (emplace_result.is_inserted()) {
                 new (&emplace_result.get_mapped()) Mapped({&_acquired_block, k});
@@ -116,6 +119,10 @@ struct ProcessHashTableProbe {
                 }
             }
             auto find_result = key_getter.find_key(hash_table_ctx.hash_table, _probe_index, _arena);
+
+            if (_probe_index + 1 < _probe_rows) {
+                key_getter.prefetch(hash_table_ctx.hash_table, _probe_index + 1, _arena);
+            }
 
             if (find_result.is_found()) {
                 auto& mapped = find_result.get_mapped();
