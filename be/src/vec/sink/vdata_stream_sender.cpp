@@ -10,6 +10,8 @@
 #include "runtime/runtime_state.h"
 #include "vec/common/sip_hash.h"
 #include "vec/runtime/vpartition_info.h"
+#include "vec/runtime/vdata_stream_mgr.h"
+#include "vec/runtime/vdata_stream_recvr.h"
 
 namespace doris::vectorized {
 
@@ -37,6 +39,13 @@ Status VDataStreamSender::Channel::init(RuntimeState* state) {
     _brpc_timeout_ms = std::min(3600, state->query_options().query_timeout) * 1000;
     _brpc_stub = state->exec_env()->brpc_stub_cache()->get_stub(_brpc_dest_addr);
 
+    if (_brpc_dest_addr.hostname == BackendOptions::get_localhost()) {
+        _brpc_stub =
+                state->exec_env()->brpc_stub_cache()->get_stub("127.0.0.1", _brpc_dest_addr.port);
+    } else {
+        _brpc_stub = state->exec_env()->brpc_stub_cache()->get_stub(_brpc_dest_addr);
+    }
+
     // In bucket shuffle join will set fragment_instance_id (-1, -1)
     // to build a camouflaged empty channel. the ip and port is '0.0.0.0:0"
     // so the empty channel not need call function close_internal()
@@ -45,6 +54,9 @@ Status VDataStreamSender::Channel::init(RuntimeState* state) {
 }
 
 Status VDataStreamSender::Channel::send_current_block(bool eos) {
+    if (is_local()) {
+        return send_local_block(eos);
+    }
     {
         SCOPED_TIMER(_parent->_serialize_batch_timer);
         _pb_block.Clear();
@@ -56,6 +68,33 @@ Status VDataStreamSender::Channel::send_current_block(bool eos) {
         COUNTER_UPDATE(_parent->_uncompressed_bytes_counter, uncompressed_bytes);
     }
     RETURN_IF_ERROR(send_block(&_pb_block, eos));
+    return Status::OK();
+}
+
+Status VDataStreamSender::Channel::send_local_block(bool eos) {
+    std::shared_ptr<VDataStreamRecvr> recvr =
+            _parent->state()->exec_env()->vstream_mgr()->find_recvr(_fragment_instance_id,
+                                                                    _dest_node_id);
+    if (recvr != nullptr) {
+        Block block = _mutable_block->to_block();
+        recvr->add_block(&block, _parent->_sender_id, true);
+        if (eos) {
+            recvr->remove_sender(_parent->_sender_id, _be_number);
+        }
+        COUNTER_UPDATE(_parent->_local_bytes_send_counter, block.bytes());
+    }
+    _mutable_block.reset();
+    return Status::OK();
+}
+
+Status VDataStreamSender::Channel::send_local_block(Block* block, bool use_move) {
+    std::shared_ptr<VDataStreamRecvr> recvr =
+            _parent->state()->exec_env()->vstream_mgr()->find_recvr(_fragment_instance_id,
+                                                                    _dest_node_id);
+    if (recvr != nullptr) {
+        recvr->add_block(block, _parent->_sender_id, use_move);
+        COUNTER_UPDATE(_parent->_local_bytes_send_counter, block->bytes());
+    }
     return Status::OK();
 }
 
@@ -158,6 +197,7 @@ VDataStreamSender::VDataStreamSender(ObjectPool* pool, int sender_id, const RowD
           _profile(nullptr),
           _serialize_batch_timer(nullptr),
           _bytes_sent_counter(nullptr),
+          _local_bytes_send_counter(nullptr),
           _dest_node_id(sink.dest_node_id) {
     DCHECK_GT(destinations.size(), 0);
     DCHECK(sink.output_partition.type == TPartitionType::UNPARTITIONED ||
@@ -235,12 +275,12 @@ Status VDataStreamSender::prepare(RuntimeState* state) {
     for (const auto& channel : _channels) {
         instances.emplace_back(channel->get_fragment_instance_id_str());
     }
-    std::string title = fmt::format("DataStreamSender (dst_id={}, dst_fragments=[{}])",
+    std::string title = fmt::format("VDataStreamSender (dst_id={}, dst_fragments=[{}])",
                                     _dest_node_id, instances);
     _profile = _pool->add(new RuntimeProfile(std::move(title)));
     SCOPED_TIMER(_profile->total_time_counter());
     _mem_tracker = MemTracker::CreateTracker(
-            _profile, -1, "DataStreamSender:" + print_id(state->fragment_instance_id()),
+            _profile, -1, "VDataStreamSender:" + print_id(state->fragment_instance_id()),
             state->instance_mem_tracker());
 
     if (_part_type == TPartitionType::UNPARTITIONED || _part_type == TPartitionType::RANDOM) {
@@ -266,7 +306,7 @@ Status VDataStreamSender::prepare(RuntimeState* state) {
             boost::bind<int64_t>(&RuntimeProfile::units_per_second, _bytes_sent_counter,
                                  profile()->total_time_counter()),
             "");
-
+    _local_bytes_send_counter = ADD_COUNTER(profile(), "LocalBytesSent", TUnit::BYTES);
     for (int i = 0; i < _channels.size(); ++i) {
         RETURN_IF_ERROR(_channels[i]->init(state));
     }
@@ -289,16 +329,43 @@ Status VDataStreamSender::send(RuntimeState* state, RowBatch* batch) {
 Status VDataStreamSender::send(RuntimeState* state, Block* block) {
     SCOPED_TIMER(_profile->total_time_counter());
     if (_part_type == TPartitionType::UNPARTITIONED || _channels.size() == 1) {
-        // 1. serialize
-        // 2. send batch
+        // 1. serialize depends on it is not local exchange
+        // 2. send block
         // 3. switch proto
-        return handle_unpartitioned(block);
+        //return handle_unpartitioned(block);
+        int local_size = 0;
+        for (auto channel : _channels) {
+            if (channel->is_local()) local_size++;
+        }
+        if (local_size == _channels.size()) {
+            for (auto channel : _channels) {
+                RETURN_IF_ERROR(channel->send_local_block(block, false));
+            }
+        } else {
+            RETURN_IF_ERROR(serialize_block(block, _current_pb_block, _channels.size()));
+            for (auto channel : _channels) {
+                if (channel->is_local()) {
+                    RETURN_IF_ERROR(channel->send_local_block(block, false));
+                } else {
+                    RETURN_IF_ERROR(channel->send_block(_current_pb_block));
+                }
+            }
+            _current_pb_block = (_current_pb_block == &_pb_block1 ? &_pb_block2 : &_pb_block1);
+            //VLOG_ROW << "send rows:" << block->rows();
+        }
     } else if (_part_type == TPartitionType::RANDOM) {
         // 1. select channel
         Channel* current_channel = _channels[_current_channel_idx];
         // 2. serialize
-        // 3. send batch
+        if (current_channel->is_local()) {
+            RETURN_IF_ERROR(current_channel->send_local_block(block, false));
+        } else {
+            RETURN_IF_ERROR(serialize_block(block, current_channel->pb_block()));
+            RETURN_IF_ERROR(current_channel->send_block(current_channel->pb_block()));
+        }
+        // 3. send block
         // 4. switch proto
+        _current_channel_idx = (_current_channel_idx + 1) % _channels.size();
     } else if (_part_type == TPartitionType::HASH_PARTITIONED) {
         // TODO: use vectorized hash caculate
         int num_channels = _channels.size();

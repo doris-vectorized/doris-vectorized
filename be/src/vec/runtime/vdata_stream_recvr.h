@@ -20,6 +20,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <list>
+#include <thread>
 
 #include "common/global_types.h"
 #include "common/object_pool.h"
@@ -56,11 +57,15 @@ public:
 
     ~VDataStreamRecvr();
 
-    Status create_merger(const std::vector<VExprContext*>& ordering_expr, const std::vector<bool>& is_asc_order,
-            const std::vector<bool>& nulls_first, size_t batch_size, int64_t limit, size_t offset);
+    Status create_merger(const std::vector<VExprContext*>& ordering_expr,
+                         const std::vector<bool>& is_asc_order,
+                         const std::vector<bool>& nulls_first, size_t batch_size, int64_t limit,
+                         size_t offset);
 
-    void add_batch(const PBlock& pblock, int sender_id, int be_number, int64_t packet_seq,
+    void add_block(const PBlock& pblock, int sender_id, int be_number, int64_t packet_seq,
                    ::google::protobuf::Closure** done);
+
+    void add_block(Block* block, int sender_id, bool use_move);
 
     Status get_next(Block* block, bool* eos);
 
@@ -127,6 +132,15 @@ private:
     std::shared_ptr<QueryStatisticsRecvr> _sub_plan_query_statistics_recvr;
 };
 
+class ThreadClosure : public google::protobuf::Closure {
+public:
+    void Run() { _cv.notify_one(); }
+    void wait(std::unique_lock<std::mutex>& lock) { _cv.wait(lock); }
+
+private:
+    std::condition_variable _cv;
+}; 
+
 class VDataStreamRecvr::SenderQueue {
 public:
     SenderQueue(VDataStreamRecvr* parent_recvr, int num_senders, RuntimeProfile* profile);
@@ -135,8 +149,10 @@ public:
 
     Status get_batch(Block** next_block);
 
-    void add_batch(const PBlock& pblock, int be_number, int64_t packet_seq,
+    void add_block(const PBlock& pblock, int be_number, int64_t packet_seq,
                    ::google::protobuf::Closure** done);
+
+    void add_block(Block* block, bool use_move);
 
     void decrement_senders(int sender_id);
 
@@ -165,6 +181,7 @@ private:
     // be_number => packet_seq
     std::unordered_map<int, int64_t> _packet_seq_map;
     std::deque<std::pair<google::protobuf::Closure*, MonotonicStopWatch>> _pending_closures;
+    std::unordered_map<std::thread::id, std::unique_ptr<ThreadClosure>> _local_closure;
 };
 } // namespace vectorized
 } // namespace doris
