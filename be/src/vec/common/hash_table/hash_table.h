@@ -197,7 +197,9 @@ struct HashTableCell {
     void set_mapped(const value_type& /*value*/) {}
 
     /// Serialization, in binary and text form.
-    void write(doris::vectorized::BufferWritable& wb) const { doris::vectorized::write_binary(key, wb); }
+    void write(doris::vectorized::BufferWritable& wb) const {
+        doris::vectorized::write_binary(key, wb);
+    }
 
     /// Deserialization, in binary and text form.
     void read(doris::vectorized::BufferReadable& rb) { doris::vectorized::read_binary(key, rb); }
@@ -713,6 +715,14 @@ public:
         if (res.second) insert_set_mapped(lookup_result_get_mapped(res.first), x);
 
         return res;
+    }
+
+    template <typename KeyHolder>
+    void ALWAYS_INLINE prefetch(KeyHolder& key_holder) {
+        const auto& key = key_holder_get_key(key_holder);
+        auto hash_value = hash(key);
+        auto place_value = grower.place(hash_value);
+        __builtin_prefetch(&buf[place_value]);
     }
 
     /// Reinsert node pointed to by iterator

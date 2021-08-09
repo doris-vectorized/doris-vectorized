@@ -92,9 +92,13 @@ inline bool is_enumeration_type(PrimitiveType type) {
 //     return type == TYPE_DATETIME || type == TYPE_DATE;
 // }
 //
-// inline bool is_string_type(PrimitiveType type) {
+//inline bool is_string_type(PrimitiveType type) {
 //     return type == TYPE_CHAR || type == TYPE_VARCHAR;
-// }
+//}
+
+inline bool has_variable_type(PrimitiveType type) {
+    return type == TYPE_CHAR || type == TYPE_VARCHAR || type == TYPE_OBJECT;
+}
 
 // Returns the byte size of 'type'  Returns 0 for variable length types.
 inline int get_byte_size(PrimitiveType type) {

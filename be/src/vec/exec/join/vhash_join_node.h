@@ -1,3 +1,20 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
 #include <variant>
 
@@ -17,18 +34,64 @@ struct SerializedHashTableContext {
     using Mapped = RowRefList;
     using HashTable = HashMap<StringRef, Mapped>;
     using State = ColumnsHashing::HashMethodSerialized<typename HashTable::value_type, Mapped>;
-    HashTable hash_table;
-};
-struct I32HashTableContext {
-    using Mapped = RowRefList;
-    using HashTable = HashMap<UInt32, Mapped, HashCRC32<UInt32>>;
-    using State = ColumnsHashing::HashMethodOneNumber<typename HashTable::value_type, Mapped,
-                                                      UInt32, false>;
+
+    static constexpr auto could_handle_asymmetric_null = false;
     HashTable hash_table;
 };
 
+// T should be UInt32 UInt64 UInt128
+template <class T>
+struct PrimaryTypeHashTableContext {
+    using Mapped = RowRefList;
+    using HashTable = HashMap<T, Mapped, HashCRC32<T>>;
+    using State =
+            ColumnsHashing::HashMethodOneNumber<typename HashTable::value_type, Mapped, T, false>;
+    static constexpr auto could_handle_asymmetric_null = false;
+
+    HashTable hash_table;
+};
+
+// TODO: use FixedHashTable instead of HashTable
+using I8HashTableContext = PrimaryTypeHashTableContext<UInt8>;
+using I16HashTableContext = PrimaryTypeHashTableContext<UInt16>;
+
+using I32HashTableContext = PrimaryTypeHashTableContext<UInt32>;
+using I64HashTableContext = PrimaryTypeHashTableContext<UInt64>;
+
+template <class T>
+struct HashTableFunc;
+
+template <>
+struct HashTableFunc<UInt64> {
+    using Func = HashCRC32<UInt64>;
+};
+
+template <>
+struct HashTableFunc<UInt128> {
+    using Func = UInt128HashCRC32;
+};
+
+template <class T, bool has_null>
+struct FixedKeyHashTableContext {
+    using Mapped = RowRefList;
+    using HashTable = HashMap<T, Mapped, typename HashTableFunc<T>::Func>;
+    using State = ColumnsHashing::HashMethodKeysFixed<typename HashTable::value_type, T, Mapped,
+                                                      has_null, false>;
+    static constexpr auto could_handle_asymmetric_null = true;
+    HashTable hash_table;
+};
+
+template <bool has_null>
+using I64FixedKeyHashTableContext = FixedKeyHashTableContext<UInt64, has_null>;
+
+template <bool has_null>
+using I128FixedKeyHashTableContext = FixedKeyHashTableContext<UInt128, has_null>;
+
 using HashTableVariants =
-        std::variant<std::monostate, SerializedHashTableContext, I32HashTableContext>;
+        std::variant<std::monostate, SerializedHashTableContext, I8HashTableContext,
+                     I16HashTableContext, I32HashTableContext, I64HashTableContext,
+                     I64FixedKeyHashTableContext<true>, I64FixedKeyHashTableContext<false>,
+                     I128FixedKeyHashTableContext<true>, I128FixedKeyHashTableContext<false>>;
 
 class VExprContext;
 
@@ -94,11 +157,28 @@ private:
 
     Block _probe_block;
     ColumnRawPtrs _probe_columns;
-    int _probe_index;
+    ColumnUInt8::MutablePtr _null_map_column;
+    bool _probe_has_null = false;
+    int _probe_index = -1;
+
+    Sizes _probe_key_sz;
+    Sizes _build_key_sz;
 
 private:
     Status _hash_table_build(RuntimeState* state);
     Status _process_build_block(Block& block);
+
+    template <bool asymmetric_null>
+    Status extract_eq_join_column(VExprContexts& exprs, Block& block, NullMap& null_map,
+                                  ColumnRawPtrs& raw_ptrs, bool& hash_null);
+
+    void _hash_table_init();
+
+    template <class HashTableContext, bool has_null_map>
+    friend class ProcessHashTableBuild;
+
+    template <class HashTableContext, bool has_null_map>
+    friend class ProcessHashTableProbe;
 };
 } // namespace vectorized
 } // namespace doris
