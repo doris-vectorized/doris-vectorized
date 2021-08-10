@@ -109,11 +109,9 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
                     assert_cast<const ColumnVector<Int64>&>(*column).get_data()[i]);
         }
         if constexpr (type == TYPE_LARGEINT) {
-            char buf[48];
-            int len = 48;
-            char* v = LargeIntValue::to_string(
-                    assert_cast<const ColumnVector<Int128>&>(*column).get_data()[i], buf, &len);
-            buf_ret = _vec_buffers[i]->push_string(v, len);
+            auto v = LargeIntValue::to_string(
+                    assert_cast<const ColumnVector<Int128>&>(*column).get_data()[i]);
+            buf_ret = _vec_buffers[i]->push_string(v.c_str(), v.size());
         }
         if constexpr (type == TYPE_FLOAT) {
             buf_ret = _vec_buffers[i]->push_float(

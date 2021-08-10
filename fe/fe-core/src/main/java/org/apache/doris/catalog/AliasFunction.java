@@ -41,6 +41,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -64,7 +65,7 @@ public class AliasFunction extends Function {
     }
 
     public AliasFunction(FunctionName fnName, Type[] argTypes, Type retType, boolean hasVarArgs) {
-        super(fnName, argTypes, retType, hasVarArgs);
+        super(fnName, Arrays.asList(argTypes), retType, hasVarArgs);
     }
 
     public AliasFunction(FunctionName fnName, ArrayList<Type> argTypes, Type retType, boolean hasVarArgs) {

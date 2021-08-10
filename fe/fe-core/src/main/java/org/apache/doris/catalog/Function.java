@@ -21,7 +21,6 @@ import static org.apache.doris.common.io.IOUtils.writeOptionString;
 
 import org.apache.doris.analysis.FunctionName;
 import org.apache.doris.analysis.HdfsURI;
-import org.apache.doris.common.FeMetaVersion;
 import org.apache.doris.common.io.Text;
 import org.apache.doris.common.io.Writable;
 import org.apache.doris.thrift.TFunction;
@@ -638,7 +637,6 @@ public class Function implements Writable {
         }
         writeOptionString(output, libUrl);
         writeOptionString(output, checksum);
-        output.writeBoolean(vectorized);
     }
 
     @Override
@@ -666,9 +664,6 @@ public class Function implements Writable {
         boolean hasChecksum = input.readBoolean();
         if (hasChecksum) {
             checksum = Text.readString(input);
-        }
-        if (Catalog.getCurrentCatalogJournalVersion() >= FeMetaVersion.VERSION_103) {
-            vectorized = input.readBoolean();
         }
     }
 
