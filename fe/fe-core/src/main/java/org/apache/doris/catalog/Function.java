@@ -638,7 +638,6 @@ public class Function implements Writable {
         }
         writeOptionString(output, libUrl);
         writeOptionString(output, checksum);
-        output.writeBoolean(vectorized);
     }
 
     @Override
@@ -666,9 +665,6 @@ public class Function implements Writable {
         boolean hasChecksum = input.readBoolean();
         if (hasChecksum) {
             checksum = Text.readString(input);
-        }
-        if (Catalog.getCurrentCatalogJournalVersion() >= FeMetaVersion.VERSION_103) {
-            vectorized = input.readBoolean();
         }
     }
 
