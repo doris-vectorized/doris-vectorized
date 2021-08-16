@@ -144,11 +144,21 @@ void VDataStreamRecvr::SenderQueue::add_block(Block* block, bool use_move) {
     }
     Block* nblock = new Block(block->get_columns_with_type_and_name());
     nblock->info = block->info;
+
+    // local exchange should copy the block contented if use move == false
     if (use_move) {
         block->clear();
+    } else {
+        auto rows = block->rows();
+        for (int i = 0; i < nblock->columns(); ++i) {
+            nblock->get_by_position(i).column =
+                    nblock->get_by_position(i).column->clone_resized(rows);
+        }
     }
+
     size_t block_size = nblock->bytes();
     _block_queue.emplace_back(block_size, nblock);
+    _recvr->_mem_tracker->Consume(nblock->allocated_bytes());
     _data_arrival_cv.notify_one();
 
     if (_recvr->exceeds_limit(block_size)) {
@@ -302,16 +312,14 @@ void VDataStreamRecvr::add_block(Block* block, int sender_id, bool use_move) {
 }
 
 Status VDataStreamRecvr::get_next(Block* block, bool* eos) {
-    // TODO: use merge
-    block->clear();
-    Block* res = nullptr;
-
     if (!_is_merging) {
+        Block* res = nullptr;
         RETURN_IF_ERROR(_sender_queues[0]->get_batch(&res));
         if (res != nullptr) {
-            *block = *res;
+            block->swap(*res);
         } else {
             *eos = true;
+            return Status::OK();
         }
     } else {
         RETURN_IF_ERROR(_merger->get_next(block, eos));

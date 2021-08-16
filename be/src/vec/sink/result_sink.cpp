@@ -44,7 +44,7 @@ ResultSink::ResultSink(const RowDescriptor& row_desc, const std::vector<TExpr>& 
     _name = "ResultSink";
 }
 
-ResultSink::~ResultSink() {}
+ResultSink::~ResultSink() = default;
 
 Status ResultSink::prepare_exprs(RuntimeState* state) {
     // From the thrift expressions create the real exprs.

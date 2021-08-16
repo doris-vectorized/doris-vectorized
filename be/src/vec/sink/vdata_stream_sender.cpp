@@ -77,23 +77,23 @@ Status VDataStreamSender::Channel::send_local_block(bool eos) {
                                                                     _dest_node_id);
     if (recvr != nullptr) {
         Block block = _mutable_block->to_block();
+        COUNTER_UPDATE(_parent->_local_bytes_send_counter, block.bytes());
         recvr->add_block(&block, _parent->_sender_id, true);
         if (eos) {
             recvr->remove_sender(_parent->_sender_id, _be_number);
         }
-        COUNTER_UPDATE(_parent->_local_bytes_send_counter, block.bytes());
     }
     _mutable_block.reset();
     return Status::OK();
 }
 
-Status VDataStreamSender::Channel::send_local_block(Block* block, bool use_move) {
+Status VDataStreamSender::Channel::send_local_block(Block* block) {
     std::shared_ptr<VDataStreamRecvr> recvr =
             _parent->state()->exec_env()->vstream_mgr()->find_recvr(_fragment_instance_id,
                                                                     _dest_node_id);
     if (recvr != nullptr) {
-        recvr->add_block(block, _parent->_sender_id, use_move);
         COUNTER_UPDATE(_parent->_local_bytes_send_counter, block->bytes());
+        recvr->add_block(block, _parent->_sender_id, false);
     }
     return Status::OK();
 }
@@ -339,13 +339,13 @@ Status VDataStreamSender::send(RuntimeState* state, Block* block) {
         }
         if (local_size == _channels.size()) {
             for (auto channel : _channels) {
-                RETURN_IF_ERROR(channel->send_local_block(block, false));
+                RETURN_IF_ERROR(channel->send_local_block(block));
             }
         } else {
             RETURN_IF_ERROR(serialize_block(block, _current_pb_block, _channels.size()));
             for (auto channel : _channels) {
                 if (channel->is_local()) {
-                    RETURN_IF_ERROR(channel->send_local_block(block, false));
+                    RETURN_IF_ERROR(channel->send_local_block(block));
                 } else {
                     RETURN_IF_ERROR(channel->send_block(_current_pb_block));
                 }
@@ -358,7 +358,7 @@ Status VDataStreamSender::send(RuntimeState* state, Block* block) {
         Channel* current_channel = _channels[_current_channel_idx];
         // 2. serialize
         if (current_channel->is_local()) {
-            RETURN_IF_ERROR(current_channel->send_local_block(block, false));
+            RETURN_IF_ERROR(current_channel->send_local_block(block));
         } else {
             RETURN_IF_ERROR(serialize_block(block, current_channel->pb_block()));
             RETURN_IF_ERROR(current_channel->send_block(current_channel->pb_block()));
@@ -401,7 +401,6 @@ Status VDataStreamSender::send(RuntimeState* state, Block* block) {
         // 1. caculate range
         // 2. dispatch rows to channel
     }
-    DCHECK(false);
     return Status::OK();
 }
 
