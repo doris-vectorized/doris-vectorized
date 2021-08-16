@@ -77,11 +77,11 @@ Status VDataStreamSender::Channel::send_local_block(bool eos) {
                                                                     _dest_node_id);
     if (recvr != nullptr) {
         Block block = _mutable_block->to_block();
-        recvr->add_block(&block, _parent->_sender_id);
+        COUNTER_UPDATE(_parent->_local_bytes_send_counter, block.bytes());
+        recvr->add_block(&block, _parent->_sender_id, true);
         if (eos) {
             recvr->remove_sender(_parent->_sender_id, _be_number);
         }
-        COUNTER_UPDATE(_parent->_local_bytes_send_counter, block.bytes());
     }
     _mutable_block.reset();
     return Status::OK();
@@ -93,7 +93,7 @@ Status VDataStreamSender::Channel::send_local_block(Block* block) {
                                                                     _dest_node_id);
     if (recvr != nullptr) {
         COUNTER_UPDATE(_parent->_local_bytes_send_counter, block->bytes());
-        recvr->add_block(block, _parent->_sender_id);
+        recvr->add_block(block, _parent->_sender_id, false);
     }
     return Status::OK();
 }

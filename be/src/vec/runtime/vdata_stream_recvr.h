@@ -65,7 +65,7 @@ public:
     void add_block(const PBlock& pblock, int sender_id, int be_number, int64_t packet_seq,
                    ::google::protobuf::Closure** done);
 
-    void add_block(Block* block, int sender_id);
+    void add_block(Block* block, int sender_id, bool use_move);
 
     Status get_next(Block* block, bool* eos);
 
@@ -152,7 +152,7 @@ public:
     void add_block(const PBlock& pblock, int be_number, int64_t packet_seq,
                    ::google::protobuf::Closure** done);
 
-    void add_block(Block* block);
+    void add_block(Block* block, bool use_move);
 
     void decrement_senders(int sender_id);
 

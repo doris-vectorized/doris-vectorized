@@ -137,19 +137,23 @@ void VDataStreamRecvr::SenderQueue::add_block(const PBlock& pblock, int be_numbe
     _data_arrival_cv.notify_one();
 }
 
-void VDataStreamRecvr::SenderQueue::add_block(Block* block) {
+void VDataStreamRecvr::SenderQueue::add_block(Block* block, bool use_move) {
     std::unique_lock<std::mutex> l(_lock);
     if (_is_cancelled) {
         return;
     }
     Block* nblock = new Block(block->get_columns_with_type_and_name());
     nblock->info = block->info;
-    auto rows = block->rows();
 
-    // local exchange should copy the block contented
-    for (int i = 0; i < nblock->columns(); ++i) {
-        nblock->get_by_position(i).column =
-                nblock->get_by_position(i).column->clone_resized(rows);
+    // local exchange should copy the block contented if use move == false
+    if (use_move) {
+        block->clear();
+    } else {
+        auto rows = block->rows();
+        for (int i = 0; i < nblock->columns(); ++i) {
+            nblock->get_by_position(i).column =
+                    nblock->get_by_position(i).column->clone_resized(rows);
+        }
     }
 
     size_t block_size = nblock->bytes();
@@ -302,9 +306,9 @@ void VDataStreamRecvr::add_block(const PBlock& pblock, int sender_id, int be_num
     _sender_queues[use_sender_id]->add_block(pblock, be_number, packet_seq, done);
 }
 
-void VDataStreamRecvr::add_block(Block* block, int sender_id) {
+void VDataStreamRecvr::add_block(Block* block, int sender_id, bool use_move) {
     int use_sender_id = _is_merging ? sender_id : 0;
-    _sender_queues[use_sender_id]->add_block(block);
+    _sender_queues[use_sender_id]->add_block(block, use_move);
 }
 
 Status VDataStreamRecvr::get_next(Block* block, bool* eos) {
