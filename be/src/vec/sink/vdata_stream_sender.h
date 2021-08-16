@@ -28,7 +28,6 @@ class VExprContext;
 class VPartitionInfo;
 
 // TODO: support Partition Range
-// TODO: support Local Exechange
 class VDataStreamSender final : public VDataSink {
 public:
     VDataStreamSender(ObjectPool* pool, int sender_id, const RowDescriptor& row_desc,
@@ -168,7 +167,7 @@ public:
 
     Status send_local_block(bool eos = false);
 
-    Status send_local_block(Block* block, bool use_move);
+    Status send_local_block(Block* block);
     // Flush buffered rows and close channel. This function don't wait the response
     // of close operation, client should call close_wait() to finish channel's close.
     // We split one close operation into two phases in order to make multiple channels
@@ -225,8 +224,6 @@ private:
     int64_t _packet_seq;
 
     // we're accumulating rows into this batch
-    //boost::scoped_ptr<RowBatch> _batch;
-    // std::unique_ptr<Block> _block;
     std::unique_ptr<MutableBlock> _mutable_block;
 
     bool _need_close;
