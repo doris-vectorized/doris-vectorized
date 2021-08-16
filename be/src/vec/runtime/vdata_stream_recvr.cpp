@@ -144,8 +144,13 @@ void VDataStreamRecvr::SenderQueue::add_block(Block* block) {
     }
     Block* nblock = new Block(block->get_columns_with_type_and_name());
     nblock->info = block->info;
-    // in block, should always use move
-    block->clear();
+    auto rows = block->rows();
+
+    // local exchange should copy the block contented
+    for (int i = 0; i < nblock->columns(); ++i) {
+        nblock->get_by_position(i).column =
+                nblock->get_by_position(i).column->clone_resized(rows);
+    }
 
     size_t block_size = nblock->bytes();
     _block_queue.emplace_back(block_size, nblock);
