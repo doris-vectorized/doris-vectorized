@@ -155,6 +155,10 @@ public:
               _cur_index(0),
               _bit_width(0) {}
 
+    ~RlePageDecoder() {
+        delete _current_value;
+    }
+
     Status init() override {
         CHECK(!_parsed);
 
@@ -162,6 +166,7 @@ public:
             return Status::Corruption("not enough bytes for header in RleBitMapBlockDecoder");
         }
         _num_elements = decode_fixed32_le((const uint8_t*)&_data[0]);
+        _current_value = new CppType;
 
         _parsed = true;
 
@@ -230,6 +235,28 @@ public:
         return Status::OK();
     }
 
+    Status next_batch(size_t* n, vectorized::MutableColumnPtr &dst) override {
+        DCHECK(_parsed);
+        if (PREDICT_FALSE(*n == 0 || _cur_index >= _num_elements)) {
+            *n = 0;
+            return Status::OK();
+        }
+
+        size_t to_fetch = std::min(*n, static_cast<size_t>(_num_elements - _cur_index));
+        size_t remaining = to_fetch;
+        bool result = false;
+        while (remaining > 0) {
+            result = _rle_decoder.Get(_current_value);
+            DCHECK(result);
+            dst->insert_data(reinterpret_cast<const char*>(_current_value), SIZE_OF_TYPE);
+            remaining--;
+        }
+
+        _cur_index += to_fetch;
+        *n = to_fetch;
+        return Status::OK();
+    };
+
     size_t count() const override { return _num_elements; }
 
     size_t current_index() const override { return _cur_index; }
@@ -245,6 +272,7 @@ private:
     size_t _cur_index;
     int _bit_width;
     RleDecoder<CppType> _rle_decoder;
+    CppType* _current_value;
 };
 
 } // namespace segment_v2
