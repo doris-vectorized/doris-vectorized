@@ -128,6 +128,7 @@ Status AggregationNode::prepare(RuntimeState* state) {
     _exec_timer = ADD_TIMER(runtime_profile(), "ExecTime");
     _merge_timer = ADD_TIMER(runtime_profile(), "MergeTime");
     _expr_timer = ADD_TIMER(runtime_profile(), "ExprTime");
+    _get_results_timer = ADD_TIMER(runtime_profile(), "GetResultsTime");
 
     SCOPED_TIMER(_runtime_profile->total_time_counter());
     _intermediate_tuple_desc = state->desc_tbl().get_tuple_descriptor(_intermediate_tuple_id);
@@ -257,9 +258,10 @@ Status AggregationNode::open(RuntimeState* state) {
     if (_is_streaming_preagg) return Status::OK();
 
     bool eos = false;
+    Block block;
     while (!eos) {
-        Block block;
         RETURN_IF_CANCELLED(state);
+        block.clear_column_data();
         RETURN_IF_ERROR(_children[0]->get_next(state, &block, &eos));
         if (block.rows() == 0) {
             continue;
@@ -278,19 +280,18 @@ Status AggregationNode::get_next(RuntimeState* state, RowBatch* row_batch, bool*
 
 Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     SCOPED_TIMER(_runtime_profile->total_time_counter());
-    block->clear();
 
     if (_is_streaming_preagg) {
         bool child_eos = false;
 
-        Block in_block;
         RETURN_IF_CANCELLED(state);
         do {
-            RETURN_IF_ERROR(_children[0]->get_next(state, &in_block, &child_eos));
-        } while (in_block.rows() == 0 && !child_eos);
+            _preagg_block.clear_column_data();
+            RETURN_IF_ERROR(_children[0]->get_next(state, &_preagg_block, &child_eos));
+        } while (_preagg_block.rows() == 0 && !child_eos);
 
-        if (in_block.rows() != 0) {
-            RETURN_IF_ERROR(_executor.pre_agg(&in_block, block));
+        if (!child_eos) {
+            RETURN_IF_ERROR(_executor.pre_agg(&_preagg_block, block));
         } else {
             RETURN_IF_ERROR(_executor.get_result(state, block, eos));
         }
@@ -335,9 +336,9 @@ Status AggregationNode::_destory_agg_status(AggregateDataPtr data) {
 
 Status AggregationNode::_get_without_key_result(RuntimeState* state, Block* block, bool* eos) {
     DCHECK(_agg_data.without_key != nullptr);
+    block->clear();
 
     *block = VectorizedUtils::create_empty_columnswithtypename(row_desc());
-
     int agg_size = _aggregate_evaluators.size();
 
     MutableColumns columns(agg_size);
@@ -384,6 +385,7 @@ Status AggregationNode::_serialize_without_key(RuntimeState* state, Block* block
         *eos = true;
         return Status::OK();
     }
+    block->clear();
 
     DCHECK(_agg_data.without_key != nullptr);
     int agg_size = _aggregate_evaluators.size();
@@ -430,6 +432,7 @@ Status AggregationNode::_execute_without_key(Block* block) {
 }
 
 Status AggregationNode::_merge_without_key(Block* block) {
+    SCOPED_TIMER(_merge_timer);
     DCHECK(_agg_data.without_key != nullptr);
     std::unique_ptr<char[]> deserialize_buffer(new char[_total_size_of_aggregate_states]);
     int rows = block->rows();
@@ -524,7 +527,6 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
     SCOPED_TIMER(_build_timer);
     DCHECK(!_probe_expr_ctxs.empty());
     // now we only support serialized key
-    // TODO:
     DCHECK(_agg_data.serialized != nullptr);
 
     using Method = AggregationMethodSerialized<AggregatedDataWithStringKey>;
@@ -572,33 +574,49 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
                         in_block, _offsets_of_aggregate_states[i], places.data(), &_agg_arena_pool);
             }
 
-            out_block->clear();
-            auto column_withschema = VectorizedUtils::create_columns_with_type_and_name(row_desc());
-
+            // will serialize value data to string column
+            std::vector<VectorBufferWriter> value_buffer_writers;
+            bool mem_reuse = out_block->mem_reuse();
+            auto serialize_string_type = std::make_shared<DataTypeString>();
             MutableColumns value_columns;
-            for (int i = key_size; i < column_withschema.size(); ++i) {
-                value_columns.emplace_back(column_withschema[i].type->create_column());
+            for (int i = 0; i <  _aggregate_evaluators.size(); ++i) {
+                if (mem_reuse) {
+                    value_columns.emplace_back(
+                            std::move(*out_block->get_by_position(i).column).mutate());
+                } else {
+                    // slot type of value it should always be string type
+                    value_columns.emplace_back(serialize_string_type->create_column());
+                }
+                value_buffer_writers.emplace_back(*reinterpret_cast<ColumnString*>(value_columns[i].get()));
             }
+
             aggregate_data = _streaming_pre_agg_buffer;
             for (size_t j = 0; j < rows; ++j) {
                 for (size_t i = 0; i < _aggregate_evaluators.size(); ++i) {
-                    _aggregate_evaluators[i]->insert_result_info(
-                            aggregate_data + _offsets_of_aggregate_states[i],
-                            value_columns[i].get());
+                    _aggregate_evaluators[i]->function()->serialize(
+                    aggregate_data + _offsets_of_aggregate_states[i], value_buffer_writers[i]);
+                    value_buffer_writers[i].commit();
                 }
                 aggregate_data += _total_size_of_aggregate_states;
             }
 
-            *out_block = column_withschema;
-            MutableColumns columns(out_block->columns());
-            for (int i = 0; i < out_block->columns(); ++i) {
-                if (i < key_size) {
-                    columns[i] = std::move(*key_columns[i]).mutate();
-                } else {
-                    columns[i] = std::move(value_columns[i - key_size]);
+            if (!mem_reuse) {
+                ColumnsWithTypeAndName columns_with_schema;
+                for (int i = 0; i < key_size; ++i) {
+                    columns_with_schema.emplace_back(key_columns[i]->clone_resized(rows),
+                                             _probe_expr_ctxs[i]->root()->data_type(), "");
+                }
+                for (int i = 0; i < value_columns.size(); ++i) {
+                    columns_with_schema.emplace_back(std::move(value_columns[i]), serialize_string_type, "");
+                }
+                *out_block = Block(columns_with_schema);
+            } else {
+                for (int i = 0; i < key_size; ++i) {
+                    std::move(*out_block->get_by_position(i).column).mutate()
+                        ->insert_range_from(*key_columns[i], 0, rows);
                 }
             }
-            out_block->set_columns(std::move(columns));
+
             return Status::OK();
         }
     }
@@ -637,7 +655,6 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
 Status AggregationNode::_execute_with_serialized_key(Block* block) {
     SCOPED_TIMER(_build_timer);
     DCHECK(!_probe_expr_ctxs.empty());
-    SCOPED_TIMER(_build_timer);
     // now we only support serialized key
     // TODO:
     DCHECK(_agg_data.serialized != nullptr);
@@ -706,20 +723,29 @@ Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Blo
     auto& data = _agg_data.serialized->data;
     auto& iter = _agg_data.serialized->iterator;
 
-    block->clear();
+    bool mem_reuse = block->mem_reuse();
     auto column_withschema = VectorizedUtils::create_columns_with_type_and_name(row_desc());
-
     int key_size = _probe_expr_ctxs.size();
 
     MutableColumns key_columns;
     for (int i = 0; i < key_size; ++i) {
-        key_columns.emplace_back(column_withschema[i].type->create_column());
+        if (!mem_reuse) {
+            key_columns.emplace_back(column_withschema[i].type->create_column());
+        } else {
+            key_columns.emplace_back(
+                    std::move(*block->get_by_position(i).column).mutate());
+        }
     }
     MutableColumns value_columns;
     for (int i = key_size; i < column_withschema.size(); ++i) {
-        value_columns.emplace_back(column_withschema[i].type->create_column());
+        if (!mem_reuse) {
+            value_columns.emplace_back(column_withschema[i].type->create_column());
+        } else {
+            value_columns.emplace_back(std::move(*block->get_by_position(i).column).mutate());
+        }
     }
 
+    SCOPED_TIMER(_get_results_timer);
     while (iter != data.end() && key_columns[0]->size() < state->batch_size()) {
         const auto& key = iter->get_first();
         auto& mapped = iter->get_second();
@@ -731,16 +757,19 @@ Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Blo
         ++iter;
     }
 
-    *block = column_withschema;
-    MutableColumns columns(block->columns());
-    for (int i = 0; i < block->columns(); ++i) {
-        if (i < key_size) {
-            columns[i] = std::move(key_columns[i]);
-        } else {
-            columns[i] = std::move(value_columns[i - key_size]);
+    if (!mem_reuse) {
+        *block = column_withschema;
+        MutableColumns columns(block->columns());
+        for (int i = 0; i < block->columns(); ++i) {
+            if (i < key_size) {
+                columns[i] = std::move(key_columns[i]);
+            } else {
+                columns[i] = std::move(value_columns[i - key_size]);
+            }
         }
+        block->set_columns(std::move(columns));
     }
-    block->set_columns(std::move(columns));
+
     if (iter == data.end()) {
         *eos = true;
     }
@@ -764,9 +793,15 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
     MutableColumns value_columns(agg_size);
     DataTypes value_data_types(agg_size);
 
+    bool mem_reuse = block->mem_reuse();
+
     MutableColumns key_columns;
     for (int i = 0; i < key_size; ++i) {
-        key_columns.emplace_back(_probe_expr_ctxs[i]->root()->data_type()->create_column());
+        if (mem_reuse) {
+            key_columns.emplace_back(std::move(*block->get_by_position(i).column).mutate());
+        } else {
+            key_columns.emplace_back(_probe_expr_ctxs[i]->root()->data_type()->create_column());
+        }
     }
 
     // will serialize data to string column
@@ -774,7 +809,11 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
     auto serialize_string_type = std::make_shared<DataTypeString>();
     for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
         value_data_types[i] = serialize_string_type;
-        value_columns[i] = serialize_string_type->create_column();
+        if (mem_reuse) {
+            value_columns[i] = std::move(*block->get_by_position(i + key_size).column).mutate();
+        } else {
+            value_columns[i] = serialize_string_type->create_column();
+        }
         value_buffer_writers.emplace_back(*reinterpret_cast<ColumnString*>(value_columns[i].get()));
     }
 
@@ -793,17 +832,18 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
         ++iter;
     }
 
-    ColumnsWithTypeAndName columns_with_schema;
-    for (int i = 0; i < key_size; ++i) {
-        columns_with_schema.emplace_back(std::move(key_columns[i]),
-                                         _probe_expr_ctxs[i]->root()->data_type(), "");
+    if (!mem_reuse) {
+        ColumnsWithTypeAndName columns_with_schema;
+        for (int i = 0; i < key_size; ++i) {
+            columns_with_schema.emplace_back(std::move(key_columns[i]),
+                                             _probe_expr_ctxs[i]->root()->data_type(), "");
+        }
+        for (int i = 0; i < agg_size; ++i) {
+            columns_with_schema.emplace_back(std::move(value_columns[i]), value_data_types[i], "");
+        }
+        *block = Block(columns_with_schema);
     }
 
-    for (int i = 0; i < agg_size; ++i) {
-        columns_with_schema.emplace_back(std::move(value_columns[i]), value_data_types[i], "");
-    }
-
-    *block = Block(columns_with_schema);
     if (iter == data.end()) {
         *eos = true;
     }
@@ -811,6 +851,7 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
 }
 
 Status AggregationNode::_merge_with_serialized_key(Block* block) {
+    SCOPED_TIMER(_merge_timer);
     DCHECK(!_probe_expr_ctxs.empty());
     // now we only support serialized key
     // TODO:

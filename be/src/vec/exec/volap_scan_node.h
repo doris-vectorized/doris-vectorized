@@ -46,13 +46,16 @@ public:
 
 private:
     std::list<Block*> _scan_blocks;
-    std::list<Block*> _materialized_blocks;
+    std::vector<Block*> _materialized_blocks;
     std::mutex _blocks_lock;
     std::condition_variable _block_added_cv;
     std::condition_variable _block_consumed_cv;
 
     std::mutex _scan_blocks_lock;
     std::condition_variable _scan_block_added_cv;
+
+    std::vector<Block*> _free_blocks;
+    std::mutex _free_blocks_lock;
 
     std::list<VOlapScanner*> _volap_scanners;
 

@@ -72,14 +72,17 @@ Status VUnionNode::get_next_materialized(RuntimeState* state, Block* block) {
     // Fetch from children, evaluate corresponding exprs and materialize.
     DCHECK(!reached_limit());
     DCHECK_LT(_child_idx, _children.size());
-    MutableBlock mblock;
+
+    bool mem_reuse = block->mem_reuse();
+    MutableBlock mblock = MutableBlock::build_mutable_block(mem_reuse ? block : nullptr);
+
+    Block child_block;
     while (has_more_materialized() && mblock.rows() <= state->batch_size()) {
         // The loop runs until we are either done iterating over the children that require
         // materialization, or the row batch is at capacity.
         DCHECK(!is_child_passthrough(_child_idx));
         // Child row batch was either never set or we're moving on to a different child.
         DCHECK_LT(_child_idx, _children.size());
-        Block child_block;
         // open the current child unless it's the first child, which was already opened in
         // VUnionNode::open().
         if (_child_eos) {
@@ -87,6 +90,7 @@ Status VUnionNode::get_next_materialized(RuntimeState* state, Block* block) {
             _child_eos = false;
             _child_row_idx = 0;
         }
+        child_block.clear_column_data();
         // The first batch from each child is always fetched here.
         RETURN_IF_ERROR(child(_child_idx)->get_next(state, &child_block, &_child_eos));
         SCOPED_TIMER(_materialize_exprs_evaluate_timer);
@@ -105,7 +109,10 @@ Status VUnionNode::get_next_materialized(RuntimeState* state, Block* block) {
             ++_child_idx;
         }
     }
-    block->swap(mblock.to_block());
+
+    if (!mem_reuse) {
+        block->swap(mblock.to_block());
+    }
 
     DCHECK_LE(_child_idx, _children.size());
     return Status::OK();
@@ -114,7 +121,9 @@ Status VUnionNode::get_next_materialized(RuntimeState* state, Block* block) {
 Status VUnionNode::get_next_const(RuntimeState* state, Block* block) {
     DCHECK_EQ(state->per_fragment_instance_idx(), 0);
     DCHECK_LT(_const_expr_list_idx, _const_expr_lists.size());
-    MutableBlock mblock;
+
+    bool mem_reuse = block->mem_reuse();
+    MutableBlock mblock = MutableBlock::build_mutable_block(mem_reuse ? block : nullptr);
     for (; _const_expr_list_idx < _const_expr_lists.size(); ++_const_expr_list_idx) {
         Block tmp_block;
         int const_expr_lists_size = _const_expr_lists[_const_expr_list_idx].size();
@@ -125,7 +134,10 @@ Status VUnionNode::get_next_const(RuntimeState* state, Block* block) {
         tmp_block.erase_not_in(result_list);
         mblock.merge(tmp_block);
     }
-    block->swap(mblock.to_block());
+
+    if (!mem_reuse) {
+        block->swap(mblock.to_block());
+    }
     return Status::OK();
 }
 
@@ -189,6 +201,7 @@ void VUnionNode::debug_string(int indentation_level, std::stringstream* out) con
     ExecNode::debug_string(indentation_level, out);
     *out << ")" << std::endl;
 }
+
 Block VUnionNode::materialize_block(Block* src_block) {
     const std::vector<VExprContext*>& child_exprs = _child_expr_lists[_child_idx];
     ColumnsWithTypeAndName colunms;

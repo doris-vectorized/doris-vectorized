@@ -54,6 +54,8 @@ public:
 
     void insert_default() override { data.push_back(T()); }
 
+    void clear() override { data.clear(); }
+
     // TODO: value_type is not a pod type, so we also need to
     // calculate the memory requested by value_type
     size_t byte_size() const override { return data.size() * sizeof(data[0]); }

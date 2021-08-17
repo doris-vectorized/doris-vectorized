@@ -173,6 +173,8 @@ public:
 
     Float64 get_float64(size_t n) const override;
 
+    void clear() override { data.clear(); }
+
     UInt64 get_uint(size_t n) const override { return UInt64(data[n]); }
 
     bool get_bool(size_t n) const override { return bool(data[n]); }

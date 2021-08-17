@@ -232,7 +232,6 @@ void insert_set_mapped(MappedType* dest, const ValueType& src) {
 template <size_t initial_size_degree = 8>
 struct HashTableGrower {
     /// The state of this structure is enough to get the buffer size of the hash table.
-
     doris::vectorized::UInt8 size_degree = initial_size_degree;
 
     /// The size of the hash table in the cells.

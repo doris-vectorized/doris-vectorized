@@ -171,6 +171,11 @@ public:
     void clear();
     void swap(Block& other) noexcept;
     void swap(Block&& other) noexcept;
+    void clear_column_data() noexcept;
+
+    bool mem_reuse() {
+        return !data.empty();
+    }
 
     /** Updates SipHash of the Block, using update method of columns.
       * Returns hash for block, that could be used to differentiate blocks
@@ -202,6 +207,9 @@ private:
     DataTypes _data_types;
 
 public:
+    static MutableBlock build_mutable_block(Block* block) {
+        return block == nullptr ? MutableBlock() : MutableBlock(block);
+    }
     MutableBlock() = default;
     ~MutableBlock() = default;
 

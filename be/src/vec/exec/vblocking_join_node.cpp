@@ -46,8 +46,6 @@ Status VBlockingJoinNode::prepare(RuntimeState* state) {
     _build_row_counter = ADD_COUNTER(runtime_profile(), "BuildRows", TUnit::UNIT);
     _left_child_row_counter = ADD_COUNTER(runtime_profile(), "LeftChildRows", TUnit::UNIT);
 
-    _result_tuple_row_size = _row_descriptor.tuple_descriptors().size() * sizeof(Tuple*);
-
     // pre-compute the tuple index of build tuples in the output row
     int num_left_tuples = child(0)->row_desc().tuple_descriptors().size();
     int num_build_tuples = child(1)->row_desc().tuple_descriptors().size();
@@ -59,9 +57,6 @@ Status VBlockingJoinNode::prepare(RuntimeState* state) {
         TupleDescriptor* build_tuple_desc = child(1)->row_desc().tuple_descriptors()[i];
         _build_tuple_idx.push_back(_row_descriptor.get_tuple_idx(build_tuple_desc->id()));
     }
-
-    _probe_tuple_row_size = num_left_tuples * sizeof(Tuple*);
-    _build_tuple_row_size = num_build_tuples * sizeof(Tuple*);
 
     return Status::OK();
 }
@@ -85,8 +80,6 @@ Status VBlockingJoinNode::open(RuntimeState* state) {
     SCOPED_TIMER(_runtime_profile->total_time_counter());
 
     RETURN_IF_CANCELLED(state);
-    // TODO(zhaochun)
-    // RETURN_IF_ERROR(state->check_query_state());
 
     _eos = false;
 
@@ -119,7 +112,7 @@ Status VBlockingJoinNode::open(RuntimeState* state) {
 
     // Seed left child in preparation for get_next().
     while (true) {
-        _left_block.clear();
+        _left_block.clear_column_data();
         RETURN_IF_ERROR(child(0)->get_next(state, &_left_block, &_left_side_eos));
         COUNTER_UPDATE(_left_child_row_counter, _left_block.rows());
         _left_block_pos = 0;

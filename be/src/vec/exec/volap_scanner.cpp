@@ -49,12 +49,17 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
 
     auto column_size = get_query_slots().size();
     std::vector<vectorized::MutableColumnPtr> columns(column_size);
+    bool mem_reuse = block->mem_reuse();
+    // only empty block should be here
+    DCHECK(block->rows() == 0);
 
     do {
-        block->clear();
         for (auto i = 0; i < column_size; i++) {
-            columns[i] = get_query_slots()[i]->get_empty_mutable_column();
-            columns[i]->reserve(state->batch_size());
+            if (mem_reuse) {
+                columns[i] = std::move(*block->get_by_position(i).column).mutate();
+            } else {
+                columns[i] = get_query_slots()[i]->get_empty_mutable_column();
+            }
         }
 
         while (true) {
@@ -88,10 +93,13 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
             }
         }
         auto n_columns = 0;
-        for (const auto slot_desc : _tuple_desc->slots()) {
-            block->insert(ColumnWithTypeAndName(columns[n_columns++]->get_ptr(),
-                                                slot_desc->get_data_type_ptr(),
-                                                slot_desc->col_name()));
+
+        if (!mem_reuse) {
+            for (const auto slot_desc : _tuple_desc->slots()) {
+                block->insert(ColumnWithTypeAndName(columns[n_columns++]->get_ptr(),
+                                                    slot_desc->get_data_type_ptr(),
+                                                    slot_desc->col_name()));
+            }
         }
         VLOG_ROW << "VOlapScanner output rows: " << block->rows();
 

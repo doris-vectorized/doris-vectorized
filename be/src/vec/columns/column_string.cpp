@@ -176,11 +176,6 @@ const char* ColumnString::deserialize_and_insert_from_arena(const char* pos) {
     return pos + string_size;
 }
 
-//ColumnPtr ColumnString::index(const IColumn & indexes, size_t limit) const
-//{
-//    return select_index_impl(*this, indexes, limit);
-//}
-
 template <typename Type>
 ColumnPtr ColumnString::index_impl(const PaddedPODArray<Type>& indexes, size_t limit) const {
     if (limit == 0) return ColumnString::create();

@@ -150,8 +150,10 @@ private:
     RuntimeProfile::Counter* _exec_timer;
     RuntimeProfile::Counter* _merge_timer;
     RuntimeProfile::Counter* _expr_timer;
+    RuntimeProfile::Counter* _get_results_timer;
 
     bool _is_streaming_preagg;
+    Block _preagg_block = Block();
     bool _should_expand_hash_table = true;
     char* _streaming_pre_agg_buffer = nullptr;
     size_t _max_size_of_stream_pre_agg_buffer = 0;

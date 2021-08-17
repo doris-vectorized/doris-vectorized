@@ -78,11 +78,6 @@ private:
     std::vector<int> _build_tuple_idx;
     int _build_tuple_size;
 
-    // Size of the TupleRow (just the Tuple ptrs) from the build (right) and probe (left)
-    // sides.
-    int _probe_tuple_row_size;
-    int _build_tuple_row_size;
-
     // byte size of result tuple row (sum of the tuple ptrs, not the tuple data).
     // This should be the same size as the left child tuple row.
     int _result_tuple_row_size;

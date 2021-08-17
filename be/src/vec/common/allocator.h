@@ -156,7 +156,6 @@ public:
             buf = new_buf;
         } else {
             /// Big allocs that requires a copy. MemoryTracker is called inside 'alloc', 'free' methods.
-
             void* new_buf = alloc(new_size, alignment);
             memcpy(new_buf, buf, std::min(old_size, new_size));
             free(buf, old_size);
