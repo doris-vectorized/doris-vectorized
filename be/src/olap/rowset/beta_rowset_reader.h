@@ -40,6 +40,8 @@ public:
     // It's ok, because we only get ref here, the block's owner is this reader.
     OLAPStatus next_block(RowBlock** block) override;
 
+    OLAPStatus next_block(vectorized::Block *block) override;
+
     bool delete_flag() override { return _rowset->delete_flag(); }
 
     Version version() override { return _rowset->version(); }
