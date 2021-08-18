@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "memory_pool.h"
 
+/*
 using namespace doris;
 
 int main()
@@ -31,4 +32,4 @@ int main()
 
     return 0;
 }
-
+*/
