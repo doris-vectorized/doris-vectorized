@@ -27,6 +27,8 @@
 #include "util/bit_util.h"
 #include "util/doris_metrics.h"
 
+#ifndef NEW_MEM_POOL
+
 namespace doris {
 
 #define MEM_POOL_POISON (0x66aa77bb)
@@ -253,3 +255,5 @@ bool MemPool::check_integrity(bool check_current_chunk_empty) {
 }
 
 } // namespace doris
+
+#endif

@@ -25,43 +25,94 @@
 
 namespace doris {
 
-class MemoryPool {
+class MemTracker;
+
+class MemPool {
 
     typedef unsigned char byte_t;
 
-    enum { 
-        DEFAULT_ALIGNMENT = 16,
-        DEFAULT_POOL_SIZE = (16 * 1024),
+    struct alignas(64) DataBlock {
+        DataBlock *next;                    //the link field
+        byte_t *pos;                        //pointer to the memory for next alloc
+        byte_t *end;                        //the end of this DataBlock
+        uint32_t failed;                    //the alloc failed count of this DataBlock
+
+        size_t reserved_size() const {
+            return (this->end - (byte_t*)this) - sizeof(DataBlock);
+        }
+
+        size_t allocated_size() const {
+            return (this->pos - (byte_t*)this) - sizeof(DataBlock);
+        }
     };
 
-    struct DataBlock {
-        DataBlock *next;                    //指向下一个DataBlock
-        byte_t *pos;                        //下一次分配的位置
-        byte_t *end;                        //结束位置
-        uint32_t failed;                    //分配失败计次
-    };
+    DataBlock *_head = nullptr;             //pointer to the first DataBlock
+    DataBlock *_current = nullptr;          //alloc start from this DataBlock
 
-    struct LargeChunk {
-        LargeChunk *next;
-        void *p;                            //pointer to the large chunk
-    };
+    size_t _block_size = 0;                 //the size of each DataBlock
+    size_t _block_num = 0;                  //the number of DataBlock
 
-    DataBlock *_head = nullptr;             //头结点指针
-    DataBlock *_current = nullptr;          //从本current开始尝试分配内存
-    struct LargeChunk *_large = nullptr;    //pointer to the head of large chunk linked list
-    size_t _max = 0;                        //threshold value
-    size_t _block_size = 0;                 //单个block大小
-    size_t _total_allocated_bytes = 0;      //总分配字节数
+    size_t _total_allocated_bytes = 0;
+    size_t _total_reserved_bytes = 0;
+    size_t _peak_allocated_bytes = 0;
+
+    MemTracker *_mem_tracker = nullptr;
+
+    MemPool(const MemPool&) = delete;
+    MemPool(MemPool&&) = delete;
+    MemPool& operator=(const MemPool&) = delete;
+    MemPool& operator=(MemPool&&) = delete;
 
 public:
+    enum { 
+        DEFAULT_ALIGNMENT = 8,
+        BLOCK_ALIGNMENT = 64,
+        DEFAULT_POOL_SIZE = (64 * 1024),
+    };
+
+    MemPool(MemTracker* mt) : _mem_tracker(mt) {
+        init();
+    }
+
+    ~MemPool() {
+        release();
+    }
+
+    std::string debug_string() const {
+        std::stringstream out;
+        char str[16];
+        out << "MemPool(#chunks=" << _block_num << " [";
+
+        auto p = _head;
+        bool first = true;
+        while (p) {
+            sprintf(str, "0x%lx=", reinterpret_cast<size_t>(p));
+            out << (first ? "" : " ") << str << " " << p->reserved_size() 
+                << "/" << p->allocated_size();
+            first = false;
+            p = p->next;
+        }
+
+        out << "] current=" << (size_t)_current
+            << " total_sizes=" << _total_reserved_bytes
+            << " total_alloc=" << _total_allocated_bytes << ")";
+
+        return out.str();
+    }
+
     bool init(size_t size = DEFAULT_POOL_SIZE) {
+        if (_head) {
+            return false;
+        }
+
         assert(size > sizeof(DataBlock));
-        byte_t *p = (byte_t*)aligned_alloc(DEFAULT_ALIGNMENT, size);
+        byte_t *p = (byte_t*)aligned_alloc(BLOCK_ALIGNMENT, size);
         if (p == nullptr) {
             return false;
         }
 
         _block_size = size;
+        _block_num = 1;
 
         _head = _current = (DataBlock*)p;
         _head->pos = p + sizeof(DataBlock);
@@ -69,16 +120,14 @@ public:
         _head->next = nullptr;
         _head->failed = 0;
 
-        size -= sizeof(DataBlock);
-        _max= (size < max_alloc_from_pool() ? size : max_alloc_from_pool());
+        _total_allocated_bytes = 0;
+        _total_reserved_bytes = size - sizeof(DataBlock);
+        _peak_allocated_bytes = std::max(_total_allocated_bytes, _peak_allocated_bytes);
+
         return true;
     }
 
     void release() {
-        for (auto l = _large; l; l = l->next) {
-            free(l->p);
-        }
-
         for (auto p = _head; p;) {
             auto x = p;
             p = p->next;
@@ -87,160 +136,173 @@ public:
 
         _head = nullptr;
         _current = nullptr;
-        _large = nullptr;
-        _max = _block_size = 0;
+        _block_size = 0;
+        _block_num = 0;
         _total_allocated_bytes = 0;
+        _total_reserved_bytes = 0;
+        _peak_allocated_bytes = 0;
     }
 
-    void reset() {
-        for (auto l = _large; l; l = l->next) {
-            free(l->p);
-        }
-
+    void clear() {
+        _total_reserved_bytes = 0;
         for (auto p = _head; p; p = p->next) {
             p->pos = (byte_t*)p + sizeof(DataBlock);
             p->failed = 0;
+            _total_reserved_bytes += (p->end - p->pos);
         }
 
         _current = _head;
-        _large = nullptr;
         _total_allocated_bytes = 0;
+        //_peak_allocated_bytes = 0;
     }
 
-    void *alloc(size_t size) {
-        if (size <= _max) {
-            return alloc_small(size, true);
+    byte_t *allocate(size_t size, int alignment=DEFAULT_ALIGNMENT) {
+        return alloc(size, alignment);
+    }
+
+    OLAPStatus allocate_safely(int64_t size, uint8_t*& ret) {
+        byte_t* result = allocate(size);
+        if (result == nullptr) {
+            return OLAP_ERR_MALLOC_ERROR;
         }
-        return alloc_large(size);
+        ret = result;
+        return OLAP_SUCCESS;
     }
 
-    void *alloc_noalign(size_t size) {
-        if (size <= _max) {
-            return alloc_small(size, false);
-        }
-        return alloc_large(size);
+    byte_t *try_allocate(size_t size) { 
+        return allocate(size);
     }
 
-    void *calloc(size_t size) {
-        void *p = this->alloc(size);
+    byte_t *try_allocate_aligned(size_t size, int alignment) {
+        return allocate(size, alignment);
+    }
+
+    byte_t *try_allocate_unaligned(size_t size) {
+        return allocate(size, 1);
+    }
+
+    byte_t *calloc(size_t size) {
+        byte_t *p = this->allocate(size);
         memset(p, 0, size);
         return p;
     }
 
-    bool free_large(void *p) {
-        for (auto l = _large; l; l = l->next) {
-            if (l->p == p) {
-                //printf("free large %p\n", p);
-                //不减少_total_allocated_bytes，该值仅用于调试
-                free(p);
-                l->p = nullptr;
-                return true;
-            }
-        }
-        return false;
+    void free_all() {
+        release();
     }
 
-    size_t total_allocated_bytes() const {
+    bool acquire_data(MemPool* src, bool keep_current) {
+        /*ignore keep_current, acquire all*/
+        auto tail = _head;
+        while (tail->next) {
+            tail = tail->next;
+        }
+        tail->next = src->_head;
+
+        _current = src->_current;
+        _block_size = std::max(_block_size, src->_block_size);
+        _block_num += src->_block_num;
+        _total_reserved_bytes += src->_total_reserved_bytes;
+        _total_allocated_bytes += src->_total_allocated_bytes;
+        _peak_allocated_bytes = std::max(_total_allocated_bytes, _peak_allocated_bytes);
+
+        src->_head = nullptr;
+        src->free_all();
+
+        return true;
+    }
+
+    void exchange_data(MemPool* other) {
+        std::swap(_head, other->_head);
+        std::swap(_current, other->_current);
+        std::swap(_block_size, other->_block_size);
+        std::swap(_block_num, other->_block_num);
+        std::swap(_total_allocated_bytes, other->_total_allocated_bytes);
+        std::swap(_total_reserved_bytes, other->_total_reserved_bytes);
+        std::swap(_peak_allocated_bytes, other->_peak_allocated_bytes);
+    }
+
+    MemTracker* mem_tracker() { 
+        return _mem_tracker; 
+    }
+
+    int64_t total_allocated_bytes() const {
         return _total_allocated_bytes;
+    }
+
+    int64_t total_reserved_bytes() const { 
+        return _total_reserved_bytes; 
+    }
+
+    int64_t peak_allocated_bytes() const { 
+        return _peak_allocated_bytes; 
     }
 
 private:
     static void *align_ptr(void* p, int a)
     {
+        assert((a > 0) && ((a & (a - 1)) == 0));
         return (void*) (((uintptr_t)(p) + ((uintptr_t)a - 1)) & ~((uintptr_t)a - 1));
     }
 
-    static size_t max_alloc_from_pool()
-    {
-        return getpagesize() - 1;
-    }
-
-    void *alloc_small(size_t size, bool align) {
-        //printf("alloc small %u\n", (uint32_t)size);
+    byte_t *alloc(size_t size, int alignment) {
+        //printf("alloc %u %d\n", (uint32_t)size, alignment);
         DataBlock *c = _current;
-        byte_t *m;
 
         do {
-            if (align) {
-                m = (byte_t*)align_ptr(c->pos, DEFAULT_ALIGNMENT);
-            } else {
-                m = c->pos;
-            }
+            byte_t *pos = c->pos;
+            byte_t *ret = (byte_t*)align_ptr(c->pos, alignment);
 
-            if (m + size <= c->end) {
-                c->pos = m + size;
-                _total_allocated_bytes += size;
-                return m;
+            if (ret + size <= c->end) {
+                c->pos = ret + size;
+                auto padding = ret - pos;
+                _total_allocated_bytes += (size + padding);
+                _peak_allocated_bytes = std::max(_total_allocated_bytes, _peak_allocated_bytes);
+                return ret;
             }
             c = c->next;
         } while (c);
 
-        //分配新的block
-        return alloc_block(size);
+        return alloc_block(size, alignment);
     }
 
-     void *alloc_block(size_t size) {
-        //printf("alloc block %u\n", (uint32_t)size);
-        byte_t *p = (byte_t*)aligned_alloc(DEFAULT_ALIGNMENT, _block_size);
+    size_t calc_block_size(size_t size, int alignment) const {
+        void* p = (void*)(sizeof(DataBlock) + size);
+        return std::max(_block_size, (size_t)align_ptr(p, alignment));
+    }
+
+    byte_t *alloc_block(size_t size, int alignment) {
+        auto block_size = calc_block_size(size, alignment);
+        byte_t *p = (byte_t*)aligned_alloc(BLOCK_ALIGNMENT, block_size);
         if (p == nullptr) {
             return nullptr;
         }
 
-        byte_t *m = p + sizeof(DataBlock);
-        m = (byte_t*)align_ptr(m, DEFAULT_ALIGNMENT);
+        byte_t *pos = p + sizeof(DataBlock);
+        byte_t *ret = (byte_t*)align_ptr(pos, alignment);
 
         DataBlock *d = (DataBlock*)p;
-        d->pos = m + size;
-        d->end = p + _block_size;
+        d->pos = ret + size;
+        d->end = p + block_size;
         d->next = NULL;
         d->failed = 0;
 
-        //移动_current
+        //inc failed count & moving current pointer
         auto c = _current;
         for (; c->next; c = c->next) {
             if (c->failed++ > 4) {
                 _current = c->next;
             }
         }
-
         c->next = d;
-        _total_allocated_bytes += size;
-        return m;
 
-     }
+        auto padding = ret - pos;
+        _total_allocated_bytes += (size + padding);
+        _total_reserved_bytes += (block_size - sizeof(DataBlock));
+        _peak_allocated_bytes = std::max(_total_allocated_bytes, _peak_allocated_bytes);
+        _block_num++;
 
-    void *alloc_large(size_t size) {
-        //void *p = aligned_alloc(DEFAULT_ALIGNMENT, size);
-        void *p = malloc(size);
-        //printf("alloc large %u %p\n", (uint32_t)size, p);
-        if (p == nullptr) {
-            return nullptr;
-        }
-
-        int n = 0;
-        for (auto l = _large; l; l = l->next) {
-            if (l->p == nullptr) {
-                l->p = p;
-                _total_allocated_bytes += size;
-                return p;
-            }
-
-            if (n++ > 3) {
-                break;
-            }
-        }
-
-        LargeChunk *l = (LargeChunk*)alloc_small(sizeof(*l), true);
-        if (l == nullptr) {
-            free(p);
-            return nullptr;
-        }
-    
-        l->p = p;
-        l->next = _large;
-        _large = l;
-        _total_allocated_bytes += size;
-        return p;
+        return ret;
     }
 };
 
