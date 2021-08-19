@@ -1,35 +1,19 @@
-#include <stdio.h>
-#include "memory_pool.h"
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
 
-/*
-using namespace doris;
+//#include "memory_pool.h"
 
-int main()
-{
-    MemoryPool pool;
-    pool.init();
-
-    void* p1 = pool.alloc(sizeof(int));
-    void* p2 = pool.alloc(1024);
-    void* p3 = pool.alloc(1024);
-    void* p4 = pool.alloc(1024);
-    void* p5 = pool.alloc(1000);
-    void* p6 = pool.alloc(1000);
-    void* p7 = pool.alloc(10);
-    void* p8 = pool.alloc(1000);
-    void* p9 = pool.alloc(1000);
-    void* p10 = pool.alloc(1000);
-    void* p11 = pool.alloc(10*1024);
-    void* p12 = pool.calloc(24);
-
-    pool.free_large(p11);
-
-    pool.reset();
-
-    p12 = pool.calloc(1024);
-
-    pool.release();
-
-    return 0;
-}
-*/
