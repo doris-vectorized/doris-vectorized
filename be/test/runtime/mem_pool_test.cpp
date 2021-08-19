@@ -30,14 +30,26 @@ TEST(MemPoolTest, Basic) {
 #if 1
     MemTracker tracker(-1);
     MemPool p(&tracker);
-    for (int i = 0; i < 768; ++i) {
+    MemPool p2(&tracker);
+
+    for (int i = 0; i < 1024; ++i) {
         // pads to 32 bytes
         p.allocate(25);
     }
-    // we handed back 24K, (4, 8 16) first allocate don't need padding
-    //EXPECT_EQ(24 * 1024 - 3 * 7, p.total_allocated_bytes()); // 32 * 768 == 24 * 1024
-    // .. and allocated 28K of chunks (4, 8, 16)
-    //EXPECT_EQ(28 * 1024, p.total_reserved_bytes());
+
+    printf("total_allocated_bytes=%lu\n", (unsigned long)p.total_allocated_bytes());
+    printf("total_reserved_bytes=%lu\n", (unsigned long)p.total_reserved_bytes());
+    printf("%s\n", p.debug_string().c_str());
+
+    EXPECT_GT(32 * 1024, p.total_allocated_bytes());
+
+    p2.acquire_data(&p, false);
+    EXPECT_EQ(0, p.total_allocated_bytes());
+    EXPECT_GT(32 * 1024, p2.total_allocated_bytes());
+
+    p.exchange_data(&p2);
+    printf("%s\n", p.debug_string().c_str());
+    
 #else
     MemTracker tracker(-1);
     MemPool p(&tracker);

@@ -86,16 +86,17 @@ public:
         auto p = _head;
         bool first = true;
         while (p) {
-            sprintf(str, "0x%lx=", reinterpret_cast<size_t>(p));
-            out << (first ? "" : " ") << str << " " << p->reserved_size() 
+            sprintf(str, "%p ", p);
+            out << (first ? "" : " ") << str << p->reserved_size() 
                 << "/" << p->allocated_size();
             first = false;
             p = p->next;
         }
 
-        out << "] current=" << (size_t)_current
-            << " total_sizes=" << _total_reserved_bytes
-            << " total_alloc=" << _total_allocated_bytes << ")";
+        sprintf(str, "%p", _current);
+        out << "] current=" << str
+            << " total_reserved_bytes=" << _total_reserved_bytes
+            << " total_allocated_bytes=" << _total_allocated_bytes << ")";
 
         return out.str();
     }
@@ -199,7 +200,7 @@ public:
         }
         tail->next = src->_head;
 
-        _current = src->_current;
+        //_current = src->_current;
         _block_size = std::max(_block_size, src->_block_size);
         _block_num += src->_block_num;
         _total_reserved_bytes += src->_total_reserved_bytes;
@@ -290,7 +291,7 @@ private:
         //inc failed count & moving current pointer
         auto c = _current;
         for (; c->next; c = c->next) {
-            if (c->failed++ > 4) {
+            if (c->failed++ >= 2) {
                 _current = c->next;
             }
         }
