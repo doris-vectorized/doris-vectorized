@@ -97,7 +97,13 @@ protected:
                   "Left Padding exceeds EmptyPODArraySize. Is the element size too large?");
 
     char* c_start = null; /// Does not include pad_left.
+
+// todo(wb) referenced by column_vector.insert_many_data
+// need refactor here
+public:    
     char* c_end = null;
+ 
+ protected:   
     char* c_end_of_storage = null; /// Does not include pad_right.
 
     /// The amount of memory occupied by the num_elements of the elements.
