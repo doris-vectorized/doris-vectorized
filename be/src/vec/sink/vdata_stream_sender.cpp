@@ -83,7 +83,7 @@ Status VDataStreamSender::Channel::send_local_block(bool eos) {
             recvr->remove_sender(_parent->_sender_id, _be_number);
         }
     }
-    _mutable_block.reset();
+    _mutable_block->clear();
     return Status::OK();
 }
 

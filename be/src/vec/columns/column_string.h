@@ -238,6 +238,11 @@ public:
 
     Offsets& get_offsets() { return offsets; }
     const Offsets& get_offsets() const { return offsets; }
+
+    void clear() override {
+        chars.clear();
+        offsets.clear();
+    }
 };
 
 } // namespace doris::vectorized

@@ -122,6 +122,10 @@ public:
     UInt64 get64(size_t n) const override;
     bool is_default_at(size_t n) const override { return data[n] == 0; }
 
+    void clear() override {
+        data.clear();
+    }
+
     ColumnPtr filter(const IColumn::Filter& filt, ssize_t result_size_hint) const override;
     ColumnPtr permute(const IColumn::Permutation& perm, size_t limit) const override;
     //    ColumnPtr index(const IColumn & indexes, size_t limit) const override;

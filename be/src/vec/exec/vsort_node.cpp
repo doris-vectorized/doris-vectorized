@@ -211,8 +211,9 @@ void VSortNode::build_merge_tree() {
 Status VSortNode::merge_sort_read(doris::RuntimeState *state, doris::vectorized::Block *block, bool *eos) {
     size_t num_columns = _sorted_blocks[0].columns();
 
-    MutableColumns merged_columns = _sorted_blocks[0].clone_empty_columns();
-    /// TODO: reserve (in each column)
+    bool mem_reuse = block->mem_reuse();
+    MutableColumns merged_columns =
+            mem_reuse ? block->mutate_columns() : _sorted_blocks[0].clone_empty_columns();
 
     /// Take rows from queue in right order and push to 'merged'.
     size_t merged_rows = 0;
@@ -239,12 +240,16 @@ Status VSortNode::merge_sort_read(doris::RuntimeState *state, doris::vectorized:
     }
 
     _num_rows_returned += merged_columns[0]->size();
-    Block merge_block = _sorted_blocks[0].clone_with_columns(std::move(merged_columns));
+
+    if (!mem_reuse) {
+        Block merge_block = _sorted_blocks[0].clone_with_columns(std::move(merged_columns));
+        merge_block.swap(*block);
+    }
+
     if (reached_limit()) {
-        merge_block.set_num_rows(merge_block.rows() - (_num_rows_returned - _limit));
+        block->set_num_rows(block->rows() - (_num_rows_returned - _limit));
         *eos = true;
     }
-    merge_block.swap(*block);
 
     return Status::OK();
 }

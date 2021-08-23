@@ -87,6 +87,11 @@ public:
 
     void insert_from(const IColumn&, size_t) override { ++s; }
 
+    void clear() override {
+        data->clear();
+        s = 0;
+    }
+
     void insert_default() override { ++s; }
 
     void pop_back(size_t n) override { s -= n; }

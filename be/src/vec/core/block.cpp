@@ -615,6 +615,12 @@ void Block::clear() {
     index_by_name.clear();
 }
 
+void Block::clear_column_data() noexcept {
+    for (auto& d : data) {
+        (*std::move(d.column)).mutate()->clear();
+    }
+}
+
 void Block::swap(Block& other) noexcept {
     std::swap(info, other.info);
     data.swap(other.data);
@@ -635,19 +641,18 @@ void Block::update_hash(SipHash& hash) const {
     }
 }
 
-void filter_block_internal(Block* block, const IColumn::Filter& filter, int column_to_keep) {
+void filter_block_internal(Block* block, const IColumn::Filter& filter, uint32_t column_to_keep) {
     auto count = count_bytes_in_filter(filter);
     if (count == 0) {
-        block->get_by_position(0).column = block->get_by_position(0).column->clone_empty();
+        for (size_t i = 0; i < column_to_keep; ++i) {
+            std::move(*block->get_by_position(i).column).mutate()->clear();
+        }
     } else {
         if (count != block->rows()) {
             for (size_t i = 0; i < column_to_keep; ++i) {
                 block->get_by_position(i).column =
                         block->get_by_position(i).column->filter(filter, 0);
             }
-        }
-        for (size_t i = column_to_keep; i < block->columns(); ++i) {
-            block->erase(i);
         }
     }
 }
@@ -675,18 +680,20 @@ Status Block::filter_block(Block* block, int filter_column_id, int column_to_kee
         filter_block_internal(block, filter, column_to_keep);
     } else if (auto* const_column = check_and_get_column<ColumnConst>(*filter_column)) {
         bool ret = const_column->get_bool(0);
-        if (ret) {
-            for (size_t i = column_to_keep; i < block->columns(); ++i) {
-                block->erase(i);
+        if (!ret) {
+            for (size_t i = 0; i < column_to_keep; ++i) {
+                std::move(*block->get_by_position(i).column).mutate()->clear();
             }
-        } else {
-            block->get_by_position(0).column = block->get_by_position(0).column->clone_empty();
         }
     } else {
         const IColumn::Filter& filter =
                 assert_cast<const doris::vectorized::ColumnVector<UInt8>&>(*filter_column)
                         .get_data();
         filter_block_internal(block, filter, column_to_keep);
+    }
+
+    for (size_t i = column_to_keep; i < block->columns(); ++i) {
+        block->erase(i);
     }
     return Status::OK();
 }
@@ -738,6 +745,7 @@ Block MutableBlock::to_block() {
     }
     return {columns_with_schema};
 }
+
 std::string MutableBlock::dump_data(size_t row_limit) const {
     if (rows() == 0) {
         return "empty block.";

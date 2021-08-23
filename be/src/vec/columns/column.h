@@ -322,6 +322,9 @@ public:
     /// It's a special kind of column, that contain single value, but is not a ColumnConst.
     virtual bool is_dummy() const { return false; }
 
+    /// Clear data of column, just like vector clear
+    virtual void clear() {};
+
     /** Memory layout properties.
       *
       * Each value of a column can be placed in memory contiguously or not.

@@ -347,7 +347,7 @@ Status PlanFragmentExecutor::get_vectorized_internal(::doris::vectorized::Block*
     }
 
     while (!_done) {
-        _block->clear();
+        _block->clear_column_data();
         SCOPED_TIMER(profile()->total_time_counter());
         auto vexec_node = static_cast<doris::ExecNode*>(_plan);
         RETURN_IF_ERROR(vexec_node->get_next(_runtime_state.get(), _block.get(), &_done));

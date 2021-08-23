@@ -143,6 +143,11 @@ public:
         return assert_cast<const ColumnUInt8&>(*null_map);
     }
 
+    void clear() override {
+        null_map->clear();
+        nested_column->clear();
+    }
+
     NullMap& get_null_map_data() { return get_null_map_column().get_data(); }
     const NullMap& get_null_map_data() const { return get_null_map_column().get_data(); }
 

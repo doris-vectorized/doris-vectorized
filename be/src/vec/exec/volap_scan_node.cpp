@@ -28,7 +28,10 @@
 namespace doris::vectorized {
 VOlapScanNode::VOlapScanNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
         : OlapScanNode(pool, tnode, descs),
-          _max_materialized_blocks(config::doris_scanner_queue_size) {}
+          _max_materialized_blocks(config::doris_scanner_queue_size) {
+    _materialized_blocks.reserve(_max_materialized_blocks);
+    _free_blocks.reserve(_max_materialized_blocks);
+}
 
 VOlapScanNode::~VOlapScanNode() {}
 
@@ -213,7 +216,17 @@ void VOlapScanNode::scanner_thread(VOlapScanner* scanner) {
             LOG(INFO) << "Scan thread cancelled, cause query done, maybe reach limit.";
             break;
         }
-        Block* block = new Block();
+
+        Block* block = nullptr;
+        {
+            std::lock_guard<std::mutex> l(_free_blocks_lock);
+            if (!_free_blocks.empty()) {
+                block = _free_blocks.back();
+                _free_blocks.pop_back();
+            }
+        }
+
+        block = block == nullptr ? new Block() : block;
         status = scanner->get_block(_runtime_state, block, &eos);
         VLOG_ROW << "VOlapScanNode input rows: " << block->rows();
         if (!status.ok()) {
@@ -410,8 +423,11 @@ Status VOlapScanNode::close(RuntimeState* state) {
     for (auto block : _scan_blocks) {
         delete block;
     }
-
     _scan_blocks.clear();
+
+    for (auto block : _free_blocks) {
+        delete block;
+    }
 
     // OlapScanNode terminate by exception
     // so that initiative close the Scanner
@@ -473,9 +489,9 @@ Status VOlapScanNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         }
 
         if (!_materialized_blocks.empty()) {
-            materialized_block = _materialized_blocks.front();
+            materialized_block = _materialized_blocks.back();
             DCHECK(materialized_block != NULL);
-            _materialized_blocks.pop_front();
+            _materialized_blocks.pop_back();
         }
     }
 
@@ -519,7 +535,11 @@ Status VOlapScanNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         // }
         __sync_fetch_and_sub(&_buffered_bytes, block->allocated_bytes());
 
-        delete materialized_block;
+        {
+            // ReThink whether the SpinLock Better
+            std::lock_guard<std::mutex> l(_free_blocks_lock);
+            _free_blocks.emplace_back(materialized_block);
+        }
         return Status::OK();
     }
 

@@ -98,8 +98,9 @@ Status VSortedRunMerger::get_next(Block* output_block, bool* eos) {
         }
     } else {
         size_t num_columns = _empty_block.columns();
-        MutableColumns merged_columns = _empty_block.clone_empty_columns();
-        /// TODO: reserve (in each column)
+        bool mem_reuse = output_block->mem_reuse();
+        MutableColumns merged_columns = mem_reuse ?
+                output_block->mutate_columns() : _empty_block.clone_empty_columns();
 
         /// Take rows from queue in right order and push to 'merged'.
         size_t merged_rows = 0;
@@ -124,8 +125,10 @@ Status VSortedRunMerger::get_next(Block* output_block, bool* eos) {
             return Status::OK();
         }
 
-        Block merge_block = _empty_block.clone_with_columns(std::move(merged_columns));
-        merge_block.swap(*output_block);
+        if (!mem_reuse) {
+            Block merge_block = _empty_block.clone_with_columns(std::move(merged_columns));
+            merge_block.swap(*output_block);
+        }
     }
 
     _num_rows_returned += output_block->rows();
