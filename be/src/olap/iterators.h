@@ -23,6 +23,7 @@
 #include "olap/olap_common.h"
 #include "olap/column_predicate.h"
 #include "olap/block_column_predicate.h"
+#include "vec/core/block.h"
 
 namespace doris {
 
@@ -80,6 +81,8 @@ public:
     // REQUIRED (null is not allowed)
     OlapReaderStatistics* stats = nullptr;
     bool use_page_cache = false;
+    // use vectorized scan
+    bool use_v_scan = false;
 };
 
 // Used to read data in RowBlockV2 one by one
@@ -100,6 +103,8 @@ public:
     // If there is no data to read, will return Status::EndOfFile.
     // If other error happens, other error code will be returned.
     virtual Status next_batch(RowBlockV2* block) = 0;
+
+    virtual Status next_batch(vectorized::Block* block) = 0;
 
     // return schema for this Iterator
     virtual const Schema& schema() const = 0;

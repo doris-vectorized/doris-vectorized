@@ -98,7 +98,8 @@ OLAPStatus BetaRowsetReader::init(RowsetReaderContext* read_context) {
         }
         seg_iterators.push_back(std::move(iter));
     }
-    std::list<RowwiseIterator*> iterators;
+
+    std::vector<RowwiseIterator*> iterators;
     for (auto& owned_it : seg_iterators) {
         // transfer ownership of segment iterator to `_iterator`
         iterators.push_back(owned_it.release());
@@ -160,6 +161,23 @@ OLAPStatus BetaRowsetReader::next_block(RowBlock** block) {
         _input_block->convert_to_row_block(_row.get(), _output_block.get());
     }
     *block = _output_block.get();
+    return OLAP_SUCCESS;
+}
+
+OLAPStatus BetaRowsetReader::next_block(vectorized::Block* block) {
+    SCOPED_RAW_TIMER(&_stats->block_fetch_ns);
+
+    {
+        auto s = _iterator->next_batch(block);
+        if (!s.ok()) {
+            if (s.is_end_of_file()) {
+                return OLAP_ERR_DATA_EOF;
+            }
+            LOG(WARNING) << "failed to read next block: " << s.to_string();
+            return OLAP_ERR_ROWSET_READ_FAILED;
+        }
+    }
+
     return OLAP_SUCCESS;
 }
 
