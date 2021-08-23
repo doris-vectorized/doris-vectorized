@@ -47,6 +47,8 @@ AggregateFunctionPtr create_aggregate_function_uniq(const std::string& name,
         // TODO: DateType
         if (res)
             return res;
+        else if (which.is_decimal())
+            return std::make_shared<AggregateFunctionUniq<Decimal128, Data<Int128>>>(argument_types);
         else if (which.is_string_or_fixed_string())
             return std::make_shared<AggregateFunctionUniq<String, Data<String>>>(argument_types);
     }
