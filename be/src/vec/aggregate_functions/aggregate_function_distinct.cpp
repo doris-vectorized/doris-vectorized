@@ -43,6 +43,9 @@ public:
                                                       const DataTypes& arguments,
                                                       const Array& params,
                                                       const bool result_is_nullable) const override {
+        DCHECK(nested_function != nullptr);
+        if (nested_function == nullptr) return nullptr;
+        
         AggregateFunctionPtr res;
         if (arguments.size() == 1) {
             res.reset(create_with_numeric_type<AggregateFunctionDistinct,
