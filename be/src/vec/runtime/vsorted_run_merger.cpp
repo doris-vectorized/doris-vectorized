@@ -45,8 +45,8 @@ Status VSortedRunMerger::prepare(const vector<BlockSupplier>& input_runs, bool p
         _cursors.emplace_back(supplier, _ordering_expr, _is_asc_order, _nulls_first);
     }
 
-    for (size_t i = 0; i < _cursors.size(); ++i) {
-        _priority_queue.push(SortCursor(&_cursors[i]));
+    for (auto& _cursor : _cursors) {
+        if (!_cursor._is_eof) _priority_queue.push(SortCursor(&_cursor));
     }
 
     for (const auto& cursor : _cursors) {

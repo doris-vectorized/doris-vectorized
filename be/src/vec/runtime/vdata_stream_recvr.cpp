@@ -121,7 +121,7 @@ void VDataStreamRecvr::SenderQueue::add_block(const PBlock& pblock, int be_numbe
         SCOPED_TIMER(_recvr->_deserialize_row_batch_timer);
         block = new Block(pblock);
     }
-    _recvr->_mem_tracker->Consume(block->allocated_bytes());
+    _recvr->_mem_tracker->Consume(block->bytes());
 
     VLOG_ROW << "added #rows=" << block->rows() << " batch_size=" << block_byte_size << "\n";
     _block_queue.emplace_back(block_byte_size, block);
@@ -158,7 +158,7 @@ void VDataStreamRecvr::SenderQueue::add_block(Block* block, bool use_move) {
 
     size_t block_size = nblock->bytes();
     _block_queue.emplace_back(block_size, nblock);
-    _recvr->_mem_tracker->Consume(nblock->allocated_bytes());
+    _recvr->_mem_tracker->Consume(nblock->bytes());
     _data_arrival_cv.notify_one();
 
     if (_recvr->exceeds_limit(block_size)) {
@@ -325,7 +325,7 @@ Status VDataStreamRecvr::get_next(Block* block, bool* eos) {
         RETURN_IF_ERROR(_merger->get_next(block, eos));
     }
 
-    _mem_tracker->Release(block->allocated_bytes());
+    _mem_tracker->Release(block->bytes());
     return Status::OK();
 }
 

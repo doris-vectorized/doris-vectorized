@@ -181,7 +181,7 @@ struct SortCursor {
     }
 
     bool greater(const SortCursor& rhs) const {
-        return greater_at(rhs, impl->pos, rhs.impl->pos) > 0;
+        return !impl->empty() && greater_at(rhs, impl->pos, rhs.impl->pos) > 0;
     }
 
     /// Inverted so that the priority queue elements are removed in ascending order.

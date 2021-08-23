@@ -20,7 +20,9 @@
 #include <type_traits>
 
 #include "gutil/hash/city.h"
+
 #include "vec/aggregate_functions/aggregate_function.h"
+#include "vec/columns/column_decimal.h"
 #include "vec/common/aggregation_common.h"
 #include "vec/common/assert_cast.h"
 #include "vec/common/bit_cast.h"
@@ -67,19 +69,19 @@ namespace detail {
 template <typename T, typename Data>
 struct OneAdder {
     static void ALWAYS_INLINE add(Data& data, const IColumn& column, size_t row_num) {
-        if constexpr (std::is_same_v<Data, AggregateFunctionUniqExactData<T>>) {
-            if constexpr (!std::is_same_v<T, String>) {
-                data.set.insert(assert_cast<const ColumnVector<T>&>(column).get_data()[row_num]);
-            } else {
-                StringRef value = column.get_data_at(row_num);
+        if constexpr (std::is_same_v<T, String>) {
+            StringRef value = column.get_data_at(row_num);
 
-                UInt128 key;
-                SipHash hash;
-                hash.update(value.data, value.size);
-                hash.get128(key.low, key.high);
+            UInt128 key;
+            SipHash hash;
+            hash.update(value.data, value.size);
+            hash.get128(key.low, key.high);
 
-                data.set.insert(key);
-            }
+            data.set.insert(key);
+        } else if constexpr(std::is_same_v<T, Decimal128>) {
+            data.set.insert(assert_cast<const ColumnDecimal<Decimal128>&>(column).get_data()[row_num]);
+        } else {
+            data.set.insert(assert_cast<const ColumnVector<T>&>(column).get_data()[row_num]);
         }
     }
 };
