@@ -165,7 +165,7 @@ public:
     virtual void insert_data(const char* pos, size_t length) = 0;
 
     virtual void insert_many_data(const char* pos, size_t length) {
-      return;
+        return;
     };
 
     /// Appends "default value".

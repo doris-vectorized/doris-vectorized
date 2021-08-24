@@ -222,10 +222,8 @@ Status BinaryDictPageDecoder::init() {
 }
 
 BinaryDictPageDecoder::~BinaryDictPageDecoder() {
-    if (_start_offset_array != nullptr) {
-        delete[] _start_offset_array;
-        delete[] _len_array;
-    }
+    delete[] _start_offset_array;
+    delete[] _len_array;
 }
 
 Status BinaryDictPageDecoder::seek_to_position_in_page(size_t pos) {

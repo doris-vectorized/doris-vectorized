@@ -133,11 +133,11 @@ public:
         data.push_back(unaligned_load<T>(pos));
     }
 
-    void insert_many_data(const char* pos, size_t length) override {
-        data.reserve(data.size() + length);
+    void insert_many_data(const char* pos, size_t elem_num) override {
+        data.reserve(data.size() + elem_num);
         // todo(wb) here need to refactor, data.c_end should not be public
-        memcpy(data.c_end, pos, sizeof(T) * length);
-        data.c_end += sizeof(T) * length;
+        memcpy(data.c_end, pos, sizeof(T) * elem_num);
+        data.c_end += sizeof(T) * elem_num;
     }
 
     void insert_default() override { data.push_back(T()); }
