@@ -168,6 +168,40 @@ OLAPStatus BetaRowsetReader::next_block(RowBlock** block) {
 
 OLAPStatus BetaRowsetReader::next_block(vectorized::Block* block) {
     SCOPED_RAW_TIMER(&_stats->block_fetch_ns);
+#if 0
+    bool is_first = true;
+
+    do {
+        // read next input block
+        {
+            _input_block->clear();
+            {
+                auto s = _iterator->next_batch(_input_block.get());
+                if (!s.ok()) {
+                    if (s.is_end_of_file()) {
+                        if (is_first) {
+                            block->clear();
+                            return OLAP_ERR_DATA_EOF;
+                        } else {
+                            break;
+                        }
+                    } else {
+                        LOG(WARNING) << "failed to read next block: " << s.to_string();
+                        return OLAP_ERR_ROWSET_READ_FAILED;
+                    }
+                } else if (_input_block->selected_size() == 0) {
+                    continue;
+                }
+            }
+        }
+
+        {
+            SCOPED_RAW_TIMER(&_stats->block_convert_ns);
+            _input_block->convert_to_vec_block(block, is_first);
+        }
+        is_first = false;
+    } while (block->rows() <= _input_block->capacity() / 2); // here we should keep block.rows() < batch_size
+#endif
 
     {
         auto s = _iterator->next_batch(block);
@@ -179,7 +213,6 @@ OLAPStatus BetaRowsetReader::next_block(vectorized::Block* block) {
             return OLAP_ERR_ROWSET_READ_FAILED;
         }
     }
-
     return OLAP_SUCCESS;
 }
 

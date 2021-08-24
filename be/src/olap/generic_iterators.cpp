@@ -50,7 +50,7 @@ public:
     Status next_batch(RowBlockV2* block) override;
 
     Status next_batch(vectorized::Block* block) override {
-        return Status::OK();
+        return Status::NotSupported("to be implemented. (TODO)");
     }
 
     const Schema& schema() const override { return _schema; }
@@ -70,9 +70,9 @@ Status AutoIncrementIterator::next_batch(RowBlockV2* block) {
     while (row_idx < block->capacity() && _rows_returned < _num_rows) {
         RowBlockRow row = block->row(row_idx);
 
-        for (int i = 0; i < _schema.columns().size(); ++i) {
+        for (int i = 0; i < _schema.num_columns(); ++i) {
             row.set_is_null(i, false);
-            auto& col_schema = _schema.columns()[i];
+            const auto* col_schema = _schema.column(i);
             switch (col_schema->type()) {
             case OLAP_FIELD_TYPE_SMALLINT:
                 *(int16_t*)row.cell_ptr(i) = _rows_returned + i;
@@ -446,11 +446,6 @@ Status MergeIterator::next_batch(vectorized::Block* block) {
         // copy current row to block
         ctx->copy_row_to(block);
 
-        // TODO(hkp): refactor conditions and filter rows here with delete conditions
-        if (ctx->is_partial_delete()) {
-            //TODO zuo
-            //block->set_delete_state(DEL_PARTIAL_SATISFIED);
-        }
         RETURN_IF_ERROR(ctx->v_advance());
         if (ctx->v_valid()) {
             _v_merge_heap.push(ctx);
