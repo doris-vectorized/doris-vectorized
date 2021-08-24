@@ -44,6 +44,10 @@ class MemPool {
         size_t allocated_size() const {
             return (this->pos - (byte_t*)this) - sizeof(DataBlock);
         }
+
+        size_t block_size() const {
+            return (this->end - (byte_t*)this);
+        }
     };
 
     DataBlock *_head = nullptr;             //pointer to the first DataBlock
@@ -122,9 +126,10 @@ public:
         _head->failed = 0;
 
         _total_allocated_bytes = 0;
-        _total_reserved_bytes = size - sizeof(DataBlock);
+        _total_reserved_bytes = _head->reserved_size();
         _peak_allocated_bytes = std::max(_total_allocated_bytes, _peak_allocated_bytes);
 
+        assert(_block_size - sizeof(DataBlock) == _head->reserved_size());
         return true;
     }
 
@@ -189,7 +194,27 @@ public:
     }
 
     void free_all() {
-        release();
+        // keep the head DataBlock for reallocate
+        auto p = _head->next;
+        while (p) {
+            auto x = p;
+            p = p->next;
+            free(x);
+        }
+
+        _head->next = nullptr;
+        _head->pos = (byte_t*)_head + sizeof(DataBlock);
+        _head->failed = 0;
+
+        _current = _head;
+
+        _block_num = 1;
+        _total_allocated_bytes = 0;
+        _total_reserved_bytes = _head->reserved_size();
+        //_peak_allocated_bytes = 0;
+
+        assert(_block_size == _head->block_size());
+        assert(_block_size - sizeof(DataBlock) == _head->reserved_size());
     }
 
     bool acquire_data(MemPool* src, bool keep_current) {
@@ -208,7 +233,7 @@ public:
         _peak_allocated_bytes = std::max(_total_allocated_bytes, _peak_allocated_bytes);
 
         src->_head = nullptr;
-        src->free_all();
+        src->reset();
 
         return true;
     }
@@ -245,6 +270,12 @@ private:
         assert((a > 0) && ((a & (a - 1)) == 0));
         return (void*) (((uintptr_t)(p) + ((uintptr_t)a - 1)) & ~((uintptr_t)a - 1));
     }
+
+    void reset() {
+        release();
+        init();
+    }
+
 
     byte_t *alloc(size_t size, int alignment) {
         //printf("alloc %u %d\n", (uint32_t)size, alignment);
