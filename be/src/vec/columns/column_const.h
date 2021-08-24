@@ -118,7 +118,9 @@ public:
     void get_permutation(bool reverse, size_t limit, int nan_direction_hint,
                          Permutation& res) const override;
 
-    size_t byte_size() const override { return data->byte_size() + sizeof(s); }
+    size_t byte_size() const override {
+        return data->byte_size() + sizeof(s) * (s > 0 ? 1 : 0);
+    }
 
     size_t allocated_bytes() const override { return data->allocated_bytes() + sizeof(s); }
 

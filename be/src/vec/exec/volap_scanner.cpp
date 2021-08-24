@@ -133,6 +133,10 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
 
         char* ptr = (char*)_read_row_cursor.cell_ptr(cid);
         switch (slot_desc->type().type) {
+        case TYPE_BOOLEAN: {
+            assert_cast<ColumnVector<UInt8>*>(column_ptr)->insert_data(ptr, 0);
+            break;
+        }
         case TYPE_TINYINT: {
             assert_cast<ColumnVector<Int8>*>(column_ptr)->insert_data(ptr, 0);
             break;

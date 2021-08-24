@@ -115,7 +115,7 @@ struct ReceiveQueueSortCursorImpl : public SortCursorImpl {
         desc.resize(ordering_expr.size());
         for (int i = 0; i < desc.size(); i++) {
             desc[i].direction = is_asc_order[i] ? 1 : -1;
-            desc[i].nulls_direction = nulls_first[i] ? 1 : -1;
+            desc[i].nulls_direction = nulls_first[i] ? -1 : 1;
         }
         _is_eof = !has_next_block();
     }

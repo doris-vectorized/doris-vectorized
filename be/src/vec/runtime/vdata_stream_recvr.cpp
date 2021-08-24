@@ -354,8 +354,7 @@ void VDataStreamRecvr::close() {
     _mgr = nullptr;
 
     _merger.reset();
-    // TODO: Maybe shared tracker doesn't need to be reset manually
-    _mem_tracker.reset();
+    _mem_tracker->Release(_mem_tracker->consumption());
 }
 
 } // namespace doris::vectorized

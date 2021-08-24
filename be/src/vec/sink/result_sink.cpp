@@ -76,10 +76,11 @@ Status ResultSink::prepare(RuntimeState* state) {
         break;
     case TResultSinkType::FILE:
         CHECK(_file_opts.get() != nullptr);
+        return Status::InternalError("Unsupport vfile result sink type");
         // TODO:
         /*      _writer.reset(new (std::nothrow) FileResultWriter(_file_opts.get(), _output_expr_ctxs,*/
         /*_profile, _sender.get()));*/
-        break;
+//        break;
     default:
         return Status::InternalError("Unknown result sink type");
     }
