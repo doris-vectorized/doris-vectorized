@@ -134,7 +134,34 @@ public:
     Status init(const StorageReadOptions& opts);
     Status v_init(const StorageReadOptions& opts);
 
-    bool compare(const MergeIteratorContext &rhs) const {
+    bool is_null(vectorized::ColumnPtr cp) const {
+        return cp->is_nullable() && cp->is_null_at(_v_index_in_block);
+    }
+
+    int compare_cell(vectorized::ColumnPtr l_cp, vectorized::ColumnPtr r_cp) const {
+        bool l_null = this->is_null(l_cp);
+        bool r_null = this->is_null(r_cp);
+
+        if (l_null != r_null) {
+            return l_null ? -1 : 1;
+        }
+
+        if (l_null) {
+            return 0;
+        }
+
+        vectorized::Field l_field = (*l_cp)[_v_index_in_block];
+        vectorized::Field r_field = (*r_cp)[_v_index_in_block];
+
+        if (l_field < r_field)
+            return -1;
+        else if (r_field < l_field)
+            return 1;
+        else
+            return 0;
+    }
+
+    int compare_row(const MergeIteratorContext &rhs) const {
         const Schema& schema = _iter->schema();
         int num = schema.num_key_columns();
         for (uint32_t cid = 0; cid < num; ++cid) {
@@ -142,17 +169,19 @@ public:
             vectorized::ColumnWithTypeAndName l_col = _v_block.get_by_name(name);
             vectorized::ColumnWithTypeAndName r_col = rhs._v_block.get_by_name(name);
 
-            vectorized::ColumnPtr l_cp = l_col.column;
-            vectorized::ColumnPtr r_cp = r_col.column;
-
-            vectorized::Field l_field = (*l_cp)[_v_index_in_block];
-            vectorized::Field r_field = (*r_cp)[_v_index_in_block];
-
-            if (l_field != r_field) {
-                return (l_field < r_field) ? false : true;
+            auto res = this->compare_cell(l_col.column, r_col.column);
+            if (res) {
+                return res;
             }
         }
+        return 0;
+    }
 
+    bool compare(const MergeIteratorContext &rhs) const {
+        int cmp_res = this->compare_row(rhs);
+        if (cmp_res != 0) {
+            return cmp_res > 0;
+        }
         return this->data_id() < rhs.data_id();
     }
 
