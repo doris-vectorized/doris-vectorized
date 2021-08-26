@@ -155,10 +155,6 @@ public:
               _cur_index(0),
               _bit_width(0) {}
 
-    ~RlePageDecoder() {
-        delete _current_value;
-    }
-
     Status init() override {
         CHECK(!_parsed);
 
@@ -166,7 +162,6 @@ public:
             return Status::Corruption("not enough bytes for header in RleBitMapBlockDecoder");
         }
         _num_elements = decode_fixed32_le((const uint8_t*)&_data[0]);
-        _current_value = new CppType;
 
         _parsed = true;
 
@@ -246,9 +241,9 @@ public:
         size_t remaining = to_fetch;
         bool result = false;
         while (remaining > 0) {
-            result = _rle_decoder.Get(_current_value);
+            result = _rle_decoder.Get(&_current_value);
             DCHECK(result);
-            dst->insert_data(reinterpret_cast<const char*>(_current_value), SIZE_OF_TYPE);
+            dst->insert_data((char*)(&_current_value), SIZE_OF_TYPE);
             remaining--;
         }
 
@@ -272,7 +267,7 @@ private:
     size_t _cur_index;
     int _bit_width;
     RleDecoder<CppType> _rle_decoder;
-    CppType* _current_value;
+    CppType _current_value;
 };
 
 } // namespace segment_v2
