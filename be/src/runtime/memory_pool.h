@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
+#include "runtime/memory/chunk_allocator.h"
 
 namespace doris {
 
@@ -33,6 +34,7 @@ class MemPool {
 
     struct alignas(64) DataBlock {
         DataBlock *next;                    //the link field
+        Chunk chunk;                        //used for ChunkAllocator::free()，struct chunk remember core id & size will be used by ChunkAllocator
         byte_t *pos;                        //pointer to the memory for next alloc
         byte_t *end;                        //the end of this DataBlock
         uint32_t failed;                    //the alloc failed count of this DataBlock
@@ -111,7 +113,7 @@ public:
         }
 
         assert(size > sizeof(DataBlock));
-        byte_t *p = (byte_t*)aligned_alloc(BLOCK_ALIGNMENT, size);
+        byte_t *p = chunk_alloc(size);
         if (p == nullptr) {
             return false;
         }
@@ -137,7 +139,7 @@ public:
         for (auto p = _head; p;) {
             auto x = p;
             p = p->next;
-            free(x);
+            ChunkAllocator::instance()->free(x->chunk);
         }
 
         _head = nullptr;
@@ -199,7 +201,7 @@ public:
         while (p) {
             auto x = p;
             p = p->next;
-            free(x);
+            ChunkAllocator::instance()->free(x->chunk);
         }
 
         _head->next = nullptr;
@@ -276,6 +278,15 @@ private:
         init();
     }
 
+    byte_t *chunk_alloc(size_t size) {
+        Chunk chunk;
+        if (!ChunkAllocator::instance()->allocate(size, &chunk)) {
+            return nullptr;
+        }
+        DataBlock *d = (DataBlock*)chunk.data;
+        d->chunk = chunk;
+        return (byte_t*)chunk.data;
+    }
 
     byte_t *alloc(size_t size, int alignment) {
         //printf("alloc %u %d\n", (uint32_t)size, alignment);
@@ -305,7 +316,7 @@ private:
 
     byte_t *alloc_block(size_t size, int alignment) {
         auto block_size = calc_block_size(size, alignment);
-        byte_t *p = (byte_t*)aligned_alloc(BLOCK_ALIGNMENT, block_size);
+        byte_t *p = chunk_alloc(block_size);
         if (p == nullptr) {
             return nullptr;
         }
