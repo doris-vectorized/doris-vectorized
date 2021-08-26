@@ -55,7 +55,7 @@ class MemPool {
     DataBlock *_head = nullptr;             //pointer to the first DataBlock
     DataBlock *_current = nullptr;          //alloc start from this DataBlock
 
-    size_t _block_size = 0;                 //the size of each DataBlock
+    size_t _next_block_size = INIT_BLOCK_SIZE;
     size_t _block_num = 0;                  //the number of DataBlock
 
     size_t _total_allocated_bytes = 0;
@@ -73,7 +73,8 @@ public:
     enum { 
         DEFAULT_ALIGNMENT = 8,
         BLOCK_ALIGNMENT = 64,
-        DEFAULT_POOL_SIZE = (64 * 1024),
+        INIT_BLOCK_SIZE = 8 * 1024,
+        MAX_BLOCK_SIZE = 512 * 1024,
     };
 
     MemPool(MemTracker* mt) : _mem_tracker(mt) {
@@ -107,23 +108,25 @@ public:
         return out.str();
     }
 
-    bool init(size_t size = DEFAULT_POOL_SIZE) {
+    bool init(size_t size = INIT_BLOCK_SIZE) {
         if (_head) {
             return false;
         }
 
+        _next_block_size = INIT_BLOCK_SIZE;
+
         assert(size > sizeof(DataBlock));
-        byte_t *p = chunk_alloc(size);
+        auto block_size = calc_block_size(size - sizeof(DataBlock), DEFAULT_ALIGNMENT);
+        byte_t *p = chunk_alloc(block_size);
         if (p == nullptr) {
             return false;
         }
 
-        _block_size = size;
         _block_num = 1;
 
         _head = _current = (DataBlock*)p;
         _head->pos = p + sizeof(DataBlock);
-        _head->end = p + _block_size;
+        _head->end = p + block_size;
         _head->next = nullptr;
         _head->failed = 0;
 
@@ -131,7 +134,7 @@ public:
         _total_reserved_bytes = _head->reserved_size();
         _peak_allocated_bytes = std::max(_total_allocated_bytes, _peak_allocated_bytes);
 
-        assert(_block_size - sizeof(DataBlock) == _head->reserved_size());
+        assert(block_size - sizeof(DataBlock) == _head->reserved_size());
         return true;
     }
 
@@ -144,7 +147,7 @@ public:
 
         _head = nullptr;
         _current = nullptr;
-        _block_size = 0;
+        _next_block_size = INIT_BLOCK_SIZE;
         _block_num = 0;
         _total_allocated_bytes = 0;
         _total_reserved_bytes = 0;
@@ -214,9 +217,6 @@ public:
         _total_allocated_bytes = 0;
         _total_reserved_bytes = _head->reserved_size();
         //_peak_allocated_bytes = 0;
-
-        assert(_block_size == _head->block_size());
-        assert(_block_size - sizeof(DataBlock) == _head->reserved_size());
     }
 
     bool acquire_data(MemPool* src, bool keep_current) {
@@ -228,7 +228,7 @@ public:
         tail->next = src->_head;
 
         //_current = src->_current;
-        _block_size = std::max(_block_size, src->_block_size);
+        _next_block_size = std::max(_next_block_size, src->_next_block_size);
         _block_num += src->_block_num;
         _total_reserved_bytes += src->_total_reserved_bytes;
         _total_allocated_bytes += src->_total_allocated_bytes;
@@ -243,7 +243,7 @@ public:
     void exchange_data(MemPool* other) {
         std::swap(_head, other->_head);
         std::swap(_current, other->_current);
-        std::swap(_block_size, other->_block_size);
+        std::swap(_next_block_size, other->_next_block_size);
         std::swap(_block_num, other->_block_num);
         std::swap(_total_allocated_bytes, other->_total_allocated_bytes);
         std::swap(_total_reserved_bytes, other->_total_reserved_bytes);
@@ -309,9 +309,13 @@ private:
         return alloc_block(size, alignment);
     }
 
-    size_t calc_block_size(size_t size, int alignment) const {
+    size_t calc_block_size(size_t size, int alignment) {
         void* p = (void*)(sizeof(DataBlock) + size);
-        return std::max(_block_size, (size_t)align_ptr(p, alignment));
+        size_t size1 = (size_t)align_ptr(p, alignment);
+        size_t size2 = _next_block_size;
+        size_t max_size = std::max<size_t>(size1, size2);
+        _next_block_size = std::min<size_t>(max_size * 2, MAX_BLOCK_SIZE);
+        return max_size;
     }
 
     byte_t *alloc_block(size_t size, int alignment) {
