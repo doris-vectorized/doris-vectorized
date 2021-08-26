@@ -11,6 +11,8 @@ VExchangeNode::VExchangeNode(ObjectPool* pool, const TPlanNode& tnode, const Des
           _num_senders(0),
           _is_merging(tnode.exchange_node.__isset.sort_info),
           _stream_recvr(nullptr),
+          _input_row_desc(descs, tnode.exchange_node.input_row_tuples,std::vector<bool>(tnode.nullable_tuples.begin(),
+                  tnode.nullable_tuples.begin() + tnode.exchange_node.input_row_tuples.size())),
           _offset(tnode.exchange_node.__isset.offset ? tnode.exchange_node.offset : 0) {}
 
 Status VExchangeNode::init(const TPlanNode& tnode, RuntimeState* state) {

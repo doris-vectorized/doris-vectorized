@@ -108,12 +108,13 @@ Status VCrossJoinNode::get_next(RuntimeState* state, Block* block, bool* eos) {
             if (_left_side_eos) {
                 *eos = _eos = true;
             } else {
-                _left_block.clear_column_data();
-                timer.stop();
-                RETURN_IF_ERROR(child(0)->get_next(state, &_left_block, &_left_side_eos));
-                timer.start();
+                do {
+                    _left_block.clear_column_data();
+                    timer.stop();
+                    RETURN_IF_ERROR(child(0)->get_next(state, &_left_block, &_left_side_eos));
+                    timer.start();
+                } while (_left_block.rows() == 0 && !_left_side_eos);
                 COUNTER_UPDATE(_left_child_row_counter, _left_block.rows());
-
                 *eos = _eos = _left_side_eos;
             }
         }
@@ -159,14 +160,12 @@ int VCrossJoinNode::process_left_child_block(Block* block, const Block& now_proc
     for (size_t i = 0; i < _num_existing_columns; ++i) {
         const ColumnWithTypeAndName & src_column = _left_block.get_by_position(i);
         if (mem_reuse) {
-            std::move(*block->get_by_position(i).column).mutate();
+            dst_columns[i] = std::move(*block->get_by_position(i).column).mutate();
         } else {
-            auto const_ptr = src_column.type->create_column_const(max_added_rows,
-                    src_column.column->operator[](_left_block_pos));
-            auto real_ptr = const_ptr->convert_to_full_column_if_const();
-            dst_columns[i] = real_ptr->assume_mutable();
+            dst_columns[i] = src_column.type->create_column();
             block->insert(src_column);
         }
+        dst_columns[i]->insert_many_from(*src_column.column, _left_block_pos, max_added_rows);
     }
 
     for (size_t i = 0; i < _num_columns_to_add; ++i) {
@@ -181,7 +180,10 @@ int VCrossJoinNode::process_left_child_block(Block* block, const Block& now_proc
         dst_columns[_num_existing_columns + i]->insert_range_from(*src_column.column.get(), 0, max_added_rows);
     }
 
-    if (!mem_reuse) *block = block->clone_with_columns(std::move(dst_columns));
+    if (!mem_reuse) {
+        *block = block->clone_with_columns(std::move(dst_columns));
+    }
+    dst_columns.clear();
 
     if (_vconjunct_ctx_ptr) {
         int result_column_id = -1;

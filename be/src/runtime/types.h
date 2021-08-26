@@ -271,6 +271,8 @@ struct TypeDescriptor {
     inline doris::vectorized::DataTypePtr get_data_type_ptr() const {
         switch (type) {
         case TYPE_BOOLEAN:
+            return std::make_shared<vectorized::DataTypeUInt8>();
+
         case TYPE_TINYINT:
             return std::make_shared<vectorized::DataTypeInt8>();
 

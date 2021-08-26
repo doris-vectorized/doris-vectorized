@@ -281,7 +281,10 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
     if (probe_rows == 0 || _probe_index == probe_rows) {
         _probe_index = 0;
         _probe_block.clear();
-        RETURN_IF_ERROR(child(0)->get_next(state, &_probe_block, eos));
+
+        do {
+            RETURN_IF_ERROR(child(0)->get_next(state, &_probe_block, eos));
+        } while (_probe_block.rows() == 0 && !(*eos));
 
         probe_rows = _probe_block.rows();
         if (probe_rows == 0) {
