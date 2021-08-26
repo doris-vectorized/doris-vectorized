@@ -128,13 +128,13 @@ public class ArithmeticExpr extends Expr {
 
                 functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                         Operator.MULTIPLY.getName(), Lists.newArrayList(t1, t2),
-                        Type.getAssignmentCompatibleType(t1, t2, false)));
+                        Type.getNextNumType(Type.getAssignmentCompatibleType(t1, t2, false))));
                 functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                         Operator.ADD.getName(), Lists.newArrayList(t1, t2),
-                        Type.getAssignmentCompatibleType(t1, t2, false)));
+                        Type.getNextNumType(Type.getAssignmentCompatibleType(t1, t2, false))));
                 functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                         Operator.SUBTRACT.getName(), Lists.newArrayList(t1, t2),
-                        Type.getAssignmentCompatibleType(t1, t2, false)));
+                        Type.getNextNumType(Type.getAssignmentCompatibleType(t1, t2, false))));
             }
         }
 
@@ -268,6 +268,7 @@ public class ArithmeticExpr extends Expr {
                 case SUBTRACT:
                 case MOD:
                 case INT_DIVIDE:
+                    if (t1.isDecimalV2() || t2.isDecimalV2()) castBinaryOp(findCommonType(t1, t2));
                     fn = getBuiltinFunction(analyzer, op.name, collectChildReturnTypes(),
                             Function.CompareMode.IS_IDENTICAL);
                     break;

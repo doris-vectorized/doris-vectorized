@@ -307,6 +307,9 @@ struct TypeDescriptor {
 
         case TYPE_DECIMALV2:
             return std::make_shared<vectorized::DataTypeDecimal<vectorized::Decimal128>>(27, 9);
+        // Just Mock A NULL Type in Vec Exec Engine
+        case TYPE_NULL:
+            return std::make_shared<vectorized::DataTypeUInt8>();
 
         case INVALID_TYPE:
         default:

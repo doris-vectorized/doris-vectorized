@@ -299,10 +299,10 @@ public:
         return false;
     }
 
-    MutablePtr mutate(int target_use_count = 1) const&& {
-        MutablePtr res = shallow_mutate(target_use_count);
+    MutablePtr mutate() const&& {
+        MutablePtr res = shallow_mutate();
         res->for_each_subcolumn(
-                [target_use_count](WrappedPtr& subcolumn) { subcolumn = std::move(*subcolumn).mutate(target_use_count + 1); });
+                [](WrappedPtr& subcolumn) { subcolumn = std::move(*subcolumn).mutate(); });
         return res;
     }
 

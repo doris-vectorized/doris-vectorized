@@ -182,8 +182,9 @@ int VCrossJoinNode::process_left_child_block(Block* block, const Block& now_proc
 
     if (!mem_reuse) {
         *block = block->clone_with_columns(std::move(dst_columns));
+    } else {
+        dst_columns.clear();
     }
-    dst_columns.clear();
 
     if (_vconjunct_ctx_ptr) {
         int result_column_id = -1;

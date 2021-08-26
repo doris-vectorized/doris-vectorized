@@ -25,6 +25,7 @@
 #include "vec/data_types/data_type_decimal.h"
 #include "vec/data_types/data_type_nothing.h"
 #include "vec/data_types/data_type_number.h"
+#include "vec/data_types/data_type_nullable.h"
 #include "vec/data_types/data_type_string.h"
 
 namespace doris::vectorized {
@@ -60,8 +61,10 @@ public:
     }
     DataTypePtr get(const std::string& name) { return _data_type_map[name]; }
     const std::string& get(const DataTypePtr& data_type) const {
+        auto type_ptr = data_type->is_nullable() ?
+                        ((DataTypeNullable*)(data_type.get()))->get_nested_type() : data_type;
         for (const auto& entity : _invert_data_type_map) {
-            if (entity.first->equals(*data_type)) {
+            if (entity.first->equals(*type_ptr)) {
                 return entity.second;
             }
         }
