@@ -17,10 +17,10 @@
 
 #include "vec/functions/function_string.h"
 
-#include <re2/re2.h>
-
+#include "boost/algorithm/hex.hpp"
 #include <cstddef>
 #include <cstdlib>
+#include <re2/re2.h>
 #include <string_view>
 
 #include "runtime/string_search.hpp"
@@ -241,6 +241,95 @@ struct StringFunctionImpl {
     }
 };
 
+struct NameHex{
+    static constexpr auto name = "hex";
+};
+struct HexImpl{
+    static Status vector(const ColumnString::Chars& data,const ColumnString::Offsets& offsets,
+                         ColumnString::Chars& res_data,ColumnString::Offsets& res_offsets){
+
+        size_t data_length = data.size();
+        //allocate memory
+        res_data.resize(data_length);
+
+        auto offset_size = offsets.size();
+        //allocate memory
+        res_offsets.resize(offset_size);
+
+        auto pre_offset = offsets[0];
+        //for loop to handle a batch of string
+        //every time hex() a single string
+        for (int i = 0; i < offset_size; ++i) {
+            const char* l_raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+
+            char* r_raw_str = reinterpret_cast<char*>(&res_data[res_offsets[i - 1]]);
+            //use boost::algorithm
+            //after boost's function hex, res_data[i] will change
+            boost::algorithm::hex(l_raw_str,r_raw_str);
+
+            //sum use to get count of every char size of r_raw_str
+            auto sum=0;
+            // traverse after algorithm::hex string
+            for (size_t j = 0, char_size = 0; j < strlen(r_raw_str); j += char_size) {
+                char_size = get_utf8_byte_length((unsigned)(r_raw_str)[j]);
+                sum+=char_size;
+            }
+            //change res_offsets
+            res_offsets[i-1]=pre_offset;
+            res_offsets[i]=res_offsets[i-1]+sum+1;
+            pre_offset=res_offsets[i];
+        }
+        return Status::OK();
+    }
+};
+
+struct NameunHex{
+    static constexpr auto name = "unhex";
+};
+
+struct unHexImpl{
+    static Status vector(const ColumnString::Chars& data,const ColumnString::Offsets& offsets,
+                         ColumnString::Chars& res_data,ColumnString::Offsets& res_offsets){
+
+        size_t data_length = data.size();
+        //allocate memory
+        res_data.resize(data_length);
+
+        auto offset_size = offsets.size();
+        //allocate memory
+        res_offsets.resize(offset_size);
+        //initial res_offset[]
+        for (int i = 0; i < offset_size; ++i) {
+            res_offsets[i] = offsets[i];
+        }
+
+        auto pre_offset = offsets[0];
+        //handle a batch of string
+        for (int i = 0; i < offset_size; ++i) {
+            const char* l_raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+
+            char* r_raw_str = reinterpret_cast<char*>(&res_data[res_offsets[i - 1]]);
+            //use boost::algorithm unhex
+            //unhex by a single string
+            //after boost's function unhex, res_data[i] will change
+            boost::algorithm::unhex(l_raw_str,r_raw_str);
+
+            //sum use to get count of every char size of r_raw_str
+            auto sum=0;
+            // traverse after algorithm::unhex string
+            for (size_t j = 0, char_size = 0; j < strlen(r_raw_str); j += char_size) {
+                char_size = get_utf8_byte_length((unsigned)(r_raw_str)[j]);
+                sum+=char_size;
+            }
+            //change res_offsets
+            res_offsets[i-1]=pre_offset;
+            res_offsets[i]=res_offsets[i-1]+sum+1;
+            pre_offset=res_offsets[i];
+        }
+        return Status::OK();
+    }
+};
+
 struct NameReverse {
     static constexpr auto name = "reverse";
 };
@@ -248,27 +337,37 @@ struct NameReverse {
 struct ReverseImpl {
     static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
                          ColumnString::Chars& res_data, ColumnString::Offsets& res_offsets) {
-        auto size = offsets.size();
-        res_offsets.resize(size);
-        for (int i = 0; i < size; ++i) {
+        auto offset_size = offsets.size();
+        res_offsets.resize(offset_size);
+        for (int i = 0; i < offset_size; ++i) {
             res_offsets[i] = offsets[i];
         }
 
         size_t data_length = data.size();
         res_data.resize(data_length);
-        for (int i = 0; i < size; ++i) {
+        auto pre_offset = offsets[0];
+        for (int i = 0; i < offset_size; ++i) {
             const char* l_raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
             int l_str_size = offsets[i] - offsets[i - 1] - 1;
 
             char* r_raw_str = reinterpret_cast<char*>(&res_data[res_offsets[i - 1]]);
-            memcpy(r_raw_str, l_raw_str, l_str_size);
+            //test l_str_size + 1 ;there is still char can not be seen
+            //the reason is not change res_offset
+            memcpy(r_raw_str, l_raw_str, l_str_size+1);
 
             // reserve
+            auto sum=0;
             for (size_t j = 0, char_size = 0; j < l_str_size; j += char_size) {
                 char_size = get_utf8_byte_length((unsigned)(r_raw_str)[j]);
                 std::copy(l_raw_str + j, l_raw_str + j + char_size,
                           r_raw_str + l_str_size - j - char_size);
+                sum+=char_size;
             }
+            //change res_offset
+            res_offsets[i-1]=pre_offset;
+            res_offsets[i]=res_offsets[i-1]+sum+1;
+            pre_offset=res_offsets[i];
+
         }
         return Status::OK();
     }
@@ -454,6 +553,10 @@ using FunctionStringLocate =
 using FunctionStringFindInSet =
         FunctionBinaryToType<DataTypeString, DataTypeString, StringFindInSetImpl, NameFindInSet>;
 
+using FunctionHex = FunctionStringToString<HexImpl,NameHex>;
+
+using FunctionunHex = FunctionStringToString<unHexImpl,NameunHex>;
+
 using FunctionReverse = FunctionStringToString<ReverseImpl, NameReverse>;
 
 using FunctionToLower = FunctionStringToString<TransferImpl<::tolower>, NameToLower>;
@@ -483,6 +586,8 @@ void register_function_string(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStringInstr>();
     factory.register_function<FunctionStringFindInSet>();
     factory.register_function<FunctionStringLocate>();
+    factory.register_function<FunctionHex>();
+    factory.register_function<FunctionunHex>();
     factory.register_function<FunctionReverse>();
     factory.register_function<FunctionToLower>();
     factory.register_function<FunctionToUpper>();
@@ -504,6 +609,10 @@ void register_function_string(SimpleFunctionFactory& factory) {
     factory.register_alias(FunctionRight::name, "strright");
     factory.register_alias(FunctionSubstring::name, "substr");
     factory.register_alias(FunctionToLower::name, "lcase");
+
+    //test if alias works
+    factory.register_alias(FunctionHex::name,"zbt_Hex");
+    factory.register_alias(FunctionunHex::name,"zbt_unHex");
 }
 
 } // namespace doris::vectorized

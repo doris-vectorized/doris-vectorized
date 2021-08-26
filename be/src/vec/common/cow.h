@@ -284,7 +284,7 @@ public:
   * ConcreteColumn
   *  COWHelper<IColumn, ConcreteColumn>
   *   IColumn
-  *    CowPtr<IColumn>
+  *    Cow<IColumn>
   *     boost::intrusive_ref_counter<IColumn>
   *
   * See example in "cow_columns.cpp".

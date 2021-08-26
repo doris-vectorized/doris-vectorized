@@ -599,11 +599,11 @@ visible_functions = [
     [['bin'], 'VARCHAR', ['BIGINT'],
             '_ZN5doris13MathFunctions3binEPN9doris_udf15FunctionContextERKNS1_9BigIntValE', '', '', '', ''],
     [['hex'], 'VARCHAR', ['BIGINT'],
-            '_ZN5doris13MathFunctions7hex_intEPN9doris_udf15FunctionContextERKNS1_9BigIntValE', '', '', '', ''],
+            '_ZN5doris13MathFunctions7hex_intEPN9doris_udf15FunctionContextERKNS1_9BigIntValE', '', '', 'vec', ''],
     [['hex'], 'VARCHAR', ['VARCHAR'],
-            '_ZN5doris13MathFunctions10hex_stringEPN9doris_udf15FunctionContextERKNS1_9StringValE', '', '', '', ''],
+            '_ZN5doris13MathFunctions10hex_stringEPN9doris_udf15FunctionContextERKNS1_9StringValE', '', '', 'vec', ''],
     [['unhex'], 'VARCHAR', ['VARCHAR'],
-            '_ZN5doris13MathFunctions5unhexEPN9doris_udf15FunctionContextERKNS1_9StringValE', '', '', '', ''],
+            '_ZN5doris13MathFunctions5unhexEPN9doris_udf15FunctionContextERKNS1_9StringValE', '', '', 'vec', ''],
 
     [['conv'], 'VARCHAR', ['BIGINT', 'TINYINT', 'TINYINT'],
             '_ZN5doris13MathFunctions8conv_intEPN9doris_udf'
