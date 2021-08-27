@@ -240,10 +240,11 @@ public:
         size_t to_fetch = std::min(*n, static_cast<size_t>(_num_elements - _cur_index));
         size_t remaining = to_fetch;
         bool result = false;
+        CppType value;
         while (remaining > 0) {
-            result = _rle_decoder.Get(&_current_value);
+            result = _rle_decoder.Get(&value);
             DCHECK(result);
-            dst->insert_data((char*)(&_current_value), SIZE_OF_TYPE);
+            dst->insert_data((char*)(&value), SIZE_OF_TYPE);
             remaining--;
         }
 
@@ -267,7 +268,6 @@ private:
     size_t _cur_index;
     int _bit_width;
     RleDecoder<CppType> _rle_decoder;
-    CppType _current_value;
 };
 
 } // namespace segment_v2
