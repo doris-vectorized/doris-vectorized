@@ -325,7 +325,11 @@ Status VDataStreamRecvr::get_next(Block* block, bool* eos) {
         RETURN_IF_ERROR(_merger->get_next(block, eos));
     }
 
-    _mem_tracker->Release(block->bytes());
+    if (LIKELY(_mem_tracker->consumption() >= block->bytes())) {
+        _mem_tracker->Release(block->bytes());
+    } else {
+        _mem_tracker->Release(_mem_tracker->consumption());
+    }
     return Status::OK();
 }
 

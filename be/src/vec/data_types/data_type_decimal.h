@@ -43,7 +43,7 @@ constexpr size_t max_decimal_precision<Decimal64>() {
 }
 template <>
 constexpr size_t max_decimal_precision<Decimal128>() {
-    return 38;
+    return 27;
 }
 
 DataTypePtr create_decimal(UInt64 precision, UInt64 scale);
@@ -100,6 +100,12 @@ public:
         if (UNLIKELY(scale < 0 || static_cast<UInt32>(scale) > max_precision())) {
             LOG(FATAL) << fmt::format("Scale {} is out of bounds", scale);
         }
+
+        // Now, Doris only support precision:27, scale: 9
+        DCHECK(precision_ == 27);
+        DCHECK(scale_ == 9);
+        precision_ = 27;
+        scale_ = 9;
     }
 
     const char* get_family_name() const override { return "Decimal"; }
@@ -185,36 +191,26 @@ template <typename T, typename U>
 typename std::enable_if_t<(sizeof(T) >= sizeof(U)), const DataTypeDecimal<T>> decimal_result_type(
         const DataTypeDecimal<T>& tx, const DataTypeDecimal<U>& ty, bool is_multiply,
         bool is_divide) {
-    UInt32 scale = (tx.get_scale() > ty.get_scale() ? tx.get_scale() : ty.get_scale());
-    if (is_multiply)
-        scale = tx.get_scale() + ty.get_scale();
-    else if (is_divide)
-        scale = tx.get_scale();
-    return DataTypeDecimal<T>(max_decimal_precision<T>(), scale);
+    return DataTypeDecimal<T>(max_decimal_precision<T>(), 9);
 }
 
 template <typename T, typename U>
 typename std::enable_if_t<(sizeof(T) < sizeof(U)), const DataTypeDecimal<U>> decimal_result_type(
         const DataTypeDecimal<T>& tx, const DataTypeDecimal<U>& ty, bool is_multiply,
         bool is_divide) {
-    UInt32 scale = (tx.get_scale() > ty.get_scale() ? tx.get_scale() : ty.get_scale());
-    if (is_multiply)
-        scale = tx.get_scale() * ty.get_scale();
-    else if (is_divide)
-        scale = tx.get_scale();
-    return DataTypeDecimal<U>(max_decimal_precision<U>(), scale);
+    return DataTypeDecimal<U>(max_decimal_precision<U>(), 9);
 }
 
 template <typename T, typename U>
 const DataTypeDecimal<T> decimal_result_type(const DataTypeDecimal<T>& tx, const DataTypeNumber<U>&,
                                              bool, bool) {
-    return DataTypeDecimal<T>(max_decimal_precision<T>(), tx.get_scale());
+    return DataTypeDecimal<T>(max_decimal_precision<T>(), 9);
 }
 
 template <typename T, typename U>
 const DataTypeDecimal<U> decimal_result_type(const DataTypeNumber<T>&, const DataTypeDecimal<U>& ty,
                                              bool, bool) {
-    return DataTypeDecimal<U>(max_decimal_precision<U>(), ty.get_scale());
+    return DataTypeDecimal<U>(max_decimal_precision<U>(), 9);
 }
 
 template <typename T>

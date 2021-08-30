@@ -79,7 +79,7 @@ struct ConvertImpl {
                                             ColumnDecimal<ToFieldType>, ColumnVector<ToFieldType>>;
 
         if constexpr (IsDataTypeDecimal<FromDataType> || IsDataTypeDecimal<ToDataType>) {
-            if constexpr (!IsDataTypeDecimalOrNumber<FromDataType> ||
+            if constexpr (!(IsDataTypeDecimalOrNumber<FromDataType> || IsTimeType<FromDataType>) ||
                           !IsDataTypeDecimalOrNumber<ToDataType>)
                 return Status::RuntimeError(
                         fmt::format("Illegal column {} of first argument of function {}",
@@ -113,6 +113,10 @@ struct ConvertImpl {
                                        IsDataTypeDecimal<ToDataType>)
                         vec_to[i] = convert_to_decimal<FromDataType, ToDataType>(
                                 vec_from[i], vec_to.get_scale());
+                    else if constexpr (IsTimeType<FromDataType> && IsDataTypeDecimal<ToDataType>) {
+                        vec_to[i] = convert_to_decimal<DataTypeInt64, ToDataType>
+                                (reinterpret_cast<const DateTimeValue&>(vec_from[i]).to_int64(), vec_to.get_scale());
+                    }
                 } else if constexpr (IsTimeType<FromDataType>) {
                     if constexpr (IsTimeType<ToDataType>) {
                         vec_to[i] = static_cast<ToFieldType>(vec_from[i]);
@@ -181,8 +185,13 @@ struct ConvertImplToTimeType {
 
             for (size_t i = 0; i < size; ++i) {
                 auto& date_value = reinterpret_cast<DateTimeValue&>(vec_to[i]);
-                vec_null_map_to[i] = !date_value.from_date_int64(vec_from[i]);
-
+                if constexpr (IsDecimalNumber<FromFieldType>) {
+                    vec_null_map_to[i] = !date_value.from_date_int64(
+                            convert_from_decimal<FromDataType, DataTypeInt64>(
+                                vec_from[i], vec_from.get_scale()));
+                } else {
+                    vec_null_map_to[i] = !date_value.from_date_int64(vec_from[i]);
+                }
                 // DateType of DateTimeValue should cast to date
                 if constexpr (IsDateType<ToDataType>) {
                     date_value.cast_to_date();
@@ -964,7 +973,7 @@ private:
         UInt32 scale = to_type->get_scale();
 
         WhichDataType which(type_index);
-        bool ok = which.is_native_int() || which.is_native_uint() || which.is_decimal() ||
+        bool ok = which.is_int() || which.is_native_uint() || which.is_decimal() ||
                   which.is_float() || which.is_date_or_datetime() ||
                   which.is_string_or_fixed_string();
         if (!ok) {

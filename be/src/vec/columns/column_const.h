@@ -88,7 +88,6 @@ public:
     void insert_from(const IColumn&, size_t) override { ++s; }
 
     void clear() override {
-        data->clear();
         s = 0;
     }
 
@@ -119,7 +118,7 @@ public:
                          Permutation& res) const override;
 
     size_t byte_size() const override {
-        return data->byte_size() + sizeof(s) * (s > 0 ? 1 : 0);
+        return s > 0 ? data->byte_size() + sizeof(s) : 0;
     }
 
     size_t allocated_bytes() const override { return data->allocated_bytes() + sizeof(s); }

@@ -41,7 +41,7 @@ constexpr size_t min(size_t x, size_t y) {
 }
 
 constexpr size_t next_size(size_t size) {
-    return min(size * 2, 8);
+    return min(size * 2, 16);
 }
 
 template <bool is_signed, bool is_floating, size_t size>
@@ -119,6 +119,11 @@ struct Construct<true, true, 4> {
 };
 template <>
 struct Construct<true, true, 8> {
+    using Type = Float64;
+};
+
+template <>
+struct Construct<true, true, 16> {
     using Type = Float64;
 };
 

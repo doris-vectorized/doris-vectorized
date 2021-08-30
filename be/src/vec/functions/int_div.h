@@ -32,8 +32,9 @@ template <typename A, typename B>
 inline void throw_if_division_leads_to_fpe(A a, B b) {
     /// Is it better to use siglongjmp instead of checks?
 
+    // TODO: Support return NULL in the future
     if (UNLIKELY(b == 0)) {
-        throw Exception("Division by zero", TStatusCode::VEC_ILLEGAL_DIVISION);
+//        throw Exception("Division by zero", TStatusCode::VEC_ILLEGAL_DIVISION);
     }
 
     /// http://avva.livejournal.com/2548306.html
@@ -65,6 +66,7 @@ struct DivideIntegralImpl {
     static inline Result apply(A a, B b) {
         throw_if_division_leads_to_fpe(a, b);
 
+        if (UNLIKELY(b == 0)) return 0;
         /// Otherwise overflow may occur due to integer promotion. Example: int8_t(-1) / uint64_t(2).
         /// NOTE: overflow is still possible when dividing large signed number to large unsigned number or vice-versa. But it's less harmful.
         if constexpr (std::is_integral_v<A> && std::is_integral_v<B> &&

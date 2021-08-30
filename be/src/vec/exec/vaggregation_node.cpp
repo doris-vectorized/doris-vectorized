@@ -290,7 +290,7 @@ Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
             RETURN_IF_ERROR(_children[0]->get_next(state, &_preagg_block, &child_eos));
         } while (_preagg_block.rows() == 0 && !child_eos);
 
-        if (!child_eos) {
+        if (_preagg_block.rows() != 0) {
             RETURN_IF_ERROR(_executor.pre_agg(&_preagg_block, block));
         } else {
             RETURN_IF_ERROR(_executor.get_result(state, block, eos));
@@ -582,7 +582,7 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
             for (int i = 0; i <  _aggregate_evaluators.size(); ++i) {
                 if (mem_reuse) {
                     value_columns.emplace_back(
-                            std::move(*out_block->get_by_position(i).column).mutate());
+                            std::move(*out_block->get_by_position(i + key_size).column).mutate());
                 } else {
                     // slot type of value it should always be string type
                     value_columns.emplace_back(serialize_string_type->create_column());
@@ -609,7 +609,7 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
                 for (int i = 0; i < value_columns.size(); ++i) {
                     columns_with_schema.emplace_back(std::move(value_columns[i]), serialize_string_type, "");
                 }
-                *out_block = Block(columns_with_schema);
+                out_block->swap(Block(columns_with_schema));
             } else {
                 for (int i = 0; i < key_size; ++i) {
                     std::move(*out_block->get_by_position(i).column).mutate()

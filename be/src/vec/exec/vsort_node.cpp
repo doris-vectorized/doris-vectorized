@@ -150,6 +150,8 @@ Status VSortNode::sort_input(RuntimeState* state) {
                         _sorted_blocks.emplace_back(std::move(block));
                         _block_priority_queue.push(block_cursor);
                         _total_mem_usage += mem_usage;
+                    } else {
+                        continue;
                     }
                 }
             } else {

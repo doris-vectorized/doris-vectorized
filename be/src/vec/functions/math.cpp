@@ -24,7 +24,6 @@
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
-namespace {
 
 const double log_10[] = {
         1e000, 1e001, 1e002, 1e003, 1e004, 1e005, 1e006, 1e007, 1e008, 1e009, 1e010, 1e011, 1e012,
@@ -314,7 +313,6 @@ struct NameDegrees {
 
 using FunctionDegrees = FunctionUnaryArithmetic<DegreesImpl, NameDegrees, false>;
 
-} // namespace
 void register_function_math(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionAcos>();
     factory.register_function<FunctionAsin>();

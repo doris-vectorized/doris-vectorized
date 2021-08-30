@@ -102,7 +102,7 @@ Status VUnionNode::get_next_materialized(RuntimeState* state, Block* block) {
         // It shouldn't be the case that we reached the limit because we shouldn't have
         // incremented '_num_rows_returned' yet.
         DCHECK(!reached_limit());
-        if (_child_eos && _child_row_idx == mblock.rows()) {
+        if (_child_eos) {
             // Unless we are inside a subplan expecting to call open()/get_next() on the child
             // again, the child can be closed at this point.
             if (!is_in_subplan()) {
@@ -148,7 +148,6 @@ Status VUnionNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     SCOPED_TIMER(_runtime_profile->total_time_counter());
     RETURN_IF_ERROR(exec_debug_action(TExecNodePhase::GETNEXT));
     RETURN_IF_CANCELLED(state);
-    // TODO(zc)
     // RETURN_IF_ERROR(QueryMaintenance(state));
 
     if (_to_close_child_idx != -1) {
