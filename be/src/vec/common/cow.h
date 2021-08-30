@@ -199,8 +199,8 @@ public:
     MutablePtr get_ptr() { return static_cast<MutablePtr>(derived()); }
 
 protected:
-    MutablePtr shallow_mutate(int target_use_count) const {
-        if (this->use_count() > target_use_count)
+    MutablePtr shallow_mutate() const {
+        if (this->use_count() > 1)
             return derived()->clone();
         else
             return assume_mutable();

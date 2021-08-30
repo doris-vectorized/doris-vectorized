@@ -23,10 +23,12 @@
 #include <set>
 #include <vector>
 
+#include "vec/columns/column_nullable.h"
 #include "vec/core/block_info.h"
 #include "vec/core/column_with_type_and_name.h"
 #include "vec/core/columns_with_type_and_name.h"
 #include "vec/core/names.h"
+#include "vec/data_types/data_type_nullable.h"
 
 namespace doris {
 class Status;
@@ -38,8 +40,6 @@ namespace vectorized {
   *  (either original names from a table, or generated names during temporary calculations).
   * Allows to insert, remove columns in arbitrary position, to change order of columns.
   */
-
-class Context;
 
 class Block {
 private:
@@ -269,9 +269,19 @@ public:
             }
         } else {
             for (int i = 0; i < _columns.size(); ++i) {
-                _columns[i]->insert_range_from(
+                if (!_data_types[i]->equals(*block.get_by_position(i).type)) {
+                    DCHECK(_data_types[i]->is_nullable());
+                    DCHECK(((DataTypeNullable*)_data_types[i].get())->get_nested_type()
+                        ->equals(*block.get_by_position(i).type));
+                    DCHECK(!block.get_by_position(i).type->is_nullable());
+                    _columns[i]->insert_range_from(
+                        *make_nullable(block.get_by_position(i).column)->convert_to_full_column_if_const(),
+                        0, block.rows());
+                } else {
+                    _columns[i]->insert_range_from(
                         *block.get_by_position(i).column->convert_to_full_column_if_const().get(),
                         0, block.rows());
+                }
             }
         }
     }

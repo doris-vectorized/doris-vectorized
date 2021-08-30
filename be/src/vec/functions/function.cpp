@@ -58,7 +58,8 @@ ColumnPtr wrap_in_nullable(const ColumnPtr& src, const Block& block, const Colum
         if (auto* nullable = check_and_get_column<ColumnNullable>(*elem.column)) {
             const ColumnPtr& null_map_column = nullable->get_null_map_column_ptr();
             if (!result_null_map_column) {
-                result_null_map_column = null_map_column;
+                result_null_map_column =
+                        null_map_column->clone_resized(null_map_column->size());
             } else {
                 MutableColumnPtr mutable_result_null_map_column =
                         (*std::move(result_null_map_column)).mutate();

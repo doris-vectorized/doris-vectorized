@@ -94,12 +94,16 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
         }
         auto n_columns = 0;
 
+        // Before really use the Block, muse clear other ptr of column in block
+        // So here need do std::move and clear in `columns`
         if (!mem_reuse) {
             for (const auto slot_desc : _tuple_desc->slots()) {
-                block->insert(ColumnWithTypeAndName(columns[n_columns++]->get_ptr(),
+                block->insert(ColumnWithTypeAndName(std::move(columns[n_columns++]),
                                                     slot_desc->get_data_type_ptr(),
                                                     slot_desc->col_name()));
             }
+        } else {
+            columns.clear();
         }
         VLOG_ROW << "VOlapScanner output rows: " << block->rows();
 
