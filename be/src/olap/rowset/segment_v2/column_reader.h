@@ -219,10 +219,19 @@ public:
         return next_batch(n, dst, &has_null);
     }
 
+    Status next_batch(size_t* n, vectorized::MutableColumnPtr &dst) {
+        bool has_null;
+        return next_batch(n, dst, &has_null);
+    }
+
     // After one seek, we can call this function many times to read data
     // into ColumnBlockView. when read string type data, memory will allocated
     // from MemPool
     virtual Status next_batch(size_t* n, ColumnBlockView* dst, bool* has_null) = 0;
+
+    virtual Status next_batch(size_t* n, vectorized::MutableColumnPtr &dst, bool* has_null) {
+        return Status::NotSupported("not implement");
+    }
 
     virtual ordinal_t get_current_ordinal() const = 0;
 
@@ -409,6 +418,8 @@ public:
     }
 
     Status next_batch(size_t* n, ColumnBlockView* dst, bool* has_null) override;
+
+    Status next_batch(size_t* n, vectorized::MutableColumnPtr &dst, bool* has_null) override;
 
     ordinal_t get_current_ordinal() const override { return _current_rowid; }
 

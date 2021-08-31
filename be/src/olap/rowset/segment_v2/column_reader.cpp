@@ -673,7 +673,7 @@ Status DefaultValueColumnIterator::init(const ColumnIteratorOptions& opts) {
             if (_type_info->type() == OLAP_FIELD_TYPE_CHAR) {
                 int32_t length = _schema_length;
                 char* string_buffer = reinterpret_cast<char*>(_pool->allocate(length));
-                memset(string_buffer, 0, length);
+                //memset(string_buffer, 0, length);
                 memory_copy(string_buffer, _default_value.c_str(), _default_value.length());
                 ((Slice*)_mem_value)->size = length;
                 ((Slice*)_mem_value)->data = string_buffer;
@@ -720,6 +720,15 @@ Status DefaultValueColumnIterator::next_batch(size_t* n, ColumnBlockView* dst, b
             memcpy(dst->data(), _mem_value, _type_size);
             dst->advance(1);
         }
+    }
+    return Status::OK();
+}
+
+Status DefaultValueColumnIterator::next_batch(size_t* n, vectorized::MutableColumnPtr &dst, bool* has_null) {
+    *has_null = _is_default_value_null;
+    for (size_t i = 0; i < *n; ++i) {
+        char* pos = (_is_default_value_null ? nullptr : (char*)_mem_value);
+        dst->insert_data(pos, _type_size);
     }
     return Status::OK();
 }
