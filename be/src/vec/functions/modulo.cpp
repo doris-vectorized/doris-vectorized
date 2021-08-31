@@ -49,8 +49,12 @@ struct ModuloByConstantImpl : BinaryOperationImplBase<A, B, ModuloImpl<A, B>> {
     using ResultType = typename ModuloImpl<A, B>::ResultType;
 
     static void vector_constant(const PaddedPODArray<A>& a, B b, PaddedPODArray<ResultType>& c) {
-        if (UNLIKELY(b == 0))
-            throw Exception("Division by zero", TStatusCode::VEC_ILLEGAL_DIVISION);
+        // TODO: Support return NULL in the future
+        if (UNLIKELY(b == 0)) {
+//        throw Exception("Division by zero", TStatusCode::VEC_ILLEGAL_DIVISION);
+            memset(c.data(), 0, sizeof(ResultType) * c.size());
+            return;
+        }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"

@@ -329,6 +329,8 @@ template <>
 inline constexpr bool IsIntegral<DataTypeInt32> = true;
 template <>
 inline constexpr bool IsIntegral<DataTypeInt64> = true;
+template <>
+inline constexpr bool IsIntegral<DataTypeInt128> = true;
 
 template <typename DataType>
 constexpr bool IsFloatingPoint = false;
@@ -411,7 +413,7 @@ class FunctionBinaryArithmetic : public IFunction {
     template <typename F>
     static bool cast_type(const IDataType* type, F&& f) {
         return cast_type_to_either<DataTypeUInt8, DataTypeUInt16, DataTypeUInt32, DataTypeUInt64,
-                                   DataTypeInt8, DataTypeInt16, DataTypeInt32, DataTypeInt64,
+                                   DataTypeInt8, DataTypeInt16, DataTypeInt32, DataTypeInt64, DataTypeInt128,
                                    DataTypeFloat32, DataTypeFloat64,
                                    //            DataTypeDate,
                                    //            DataTypeDateTime,
@@ -486,6 +488,8 @@ public:
                         else if constexpr (IsDataTypeDecimal<RightDataType>)
                             type_res = std::make_shared<RightDataType>(right.get_precision(),
                                                                        right.get_scale());
+                        else if constexpr (IsDataTypeDecimal<ResultDataType>)
+                            type_res = std::make_shared<ResultDataType>(27, 9);
                         else
                             type_res = std::make_shared<ResultDataType>();
                         return true;

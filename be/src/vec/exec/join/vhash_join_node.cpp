@@ -114,7 +114,7 @@ struct ProcessHashTableProbe {
             // ignore null rows
             if constexpr (has_null_map) {
                 if ((*null_map)[_probe_index]) {
-                    _probe_index++;
+                    offset_data[_probe_index++] = current_offset;
                     continue;
                 }
             }
