@@ -90,18 +90,26 @@ public:
     // Initialize this context and will prepare data for current_row()
     Status init(const StorageReadOptions& opts);
 
-    int compare_row(const VMergeIteratorContext &rhs) const {
+    int compare_row(const VMergeIteratorContext& rhs) const {
         const Schema& schema = _iter->schema();
         int num = schema.num_key_columns();
         for (uint32_t cid = 0; cid < num; ++cid) {
+#if 0
             auto name = schema.column(cid)->name();
             auto l_col = this->_block.get_by_name(name);
             auto r_col = rhs._block.get_by_name(name);
 
+#else
+            //because the columns of block will be inserted by cid asc order
+            //so no need to get column by get_by_name()
+            auto l_col = this->_block.get_by_position(cid);
+            auto r_col = rhs._block.get_by_position(cid);
+#endif
+
             auto l_cp = l_col.column;
             auto r_cp = r_col.column;
 
-            auto res = l_cp->compare_at(_index_in_block, _index_in_block, *r_cp, -1);
+            auto res = l_cp->compare_at(_index_in_block, rhs._index_in_block, *r_cp, -1);
             if (res) {
                 return res;
             }
@@ -110,7 +118,7 @@ public:
         return 0;
     }
 
-    bool compare(const VMergeIteratorContext &rhs) const {
+    bool compare(const VMergeIteratorContext& rhs) const {
         int cmp_res = this->compare_row(rhs);
         if (cmp_res != 0) {
             return cmp_res > 0;
@@ -118,9 +126,9 @@ public:
         return this->data_id() < rhs.data_id();
     }
 
-    void copy_row_to(vectorized::Block *block) {
-        vectorized::Block &src = _block;
-        vectorized::Block &dst = *block;
+    void copy_row_to(vectorized::Block* block) {
+        vectorized::Block& src = _block;
+        vectorized::Block& dst = *block;
 
         auto columns = _iter->schema().columns();
         assert(columns.size() == src.columns());
@@ -134,8 +142,7 @@ public:
             vectorized::ColumnPtr d_cp = d_col.column;
 
             //copy a row to dst block column by column
-            vectorized::Field field = (*s_cp)[_index_in_block];
-            ((vectorized::IColumn&)(*d_cp)).insert(field);
+            ((vectorized::IColumn&)(*d_cp)).insert_range_from(*s_cp, _index_in_block, 1);
         }
     }
 
@@ -208,7 +215,7 @@ Status VMergeIteratorContext::_load_next_block() {
 class VMergeIterator : public RowwiseIterator {
 public:
     // VMergeIterator takes the ownership of input iterators
-    VMergeIterator(std::vector<RowwiseIterator*> &iters, std::shared_ptr<MemTracker> parent) : _origin_iters(std::move(iters)) {
+    VMergeIterator(std::vector<RowwiseIterator*>& iters, std::shared_ptr<MemTracker> parent) : _origin_iters(iters) {
         // use for count the mem use of Block use in Merge
         _mem_tracker = MemTracker::CreateTracker(-1, "VMergeIterator", parent, false);
     }
@@ -244,6 +251,8 @@ private:
                                         VMergeContextComparator>;
 
     VMergeHeap _merge_heap;
+
+    int block_row_max = 0;
 };
 
 Status VMergeIterator::init(const StorageReadOptions& opts) {
@@ -262,12 +271,13 @@ Status VMergeIterator::init(const StorageReadOptions& opts) {
     }
 
     _origin_iters.clear();
+
+    block_row_max = opts.block_row_max;
+
     return Status::OK();
 }
 
 Status VMergeIterator::next_batch(vectorized::Block* block) {
-    static const int block_row_max = 4096;
-
     while (block->rows() < block_row_max) {
         if (_merge_heap.empty())
             break;
@@ -296,7 +306,7 @@ public:
     // Iterators' ownership it transfered to this class.
     // This class will delete all iterators when destructs
     // Client should not use iterators any more.
-    VUnionIterator(std::vector<RowwiseIterator*> &v, std::shared_ptr<MemTracker> parent)
+    VUnionIterator(std::vector<RowwiseIterator*>& v, std::shared_ptr<MemTracker> parent)
             : _origin_iters(v.begin(), v.end()) {
         _mem_tracker = MemTracker::CreateTracker(-1, "VUnionIterator", parent, false);
     }
