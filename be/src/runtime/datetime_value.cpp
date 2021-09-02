@@ -396,19 +396,16 @@ char* DateTimeValue::to_datetime_string(char* to) const {
     to = append_date_string(to);
     *to++ = ' ';
     to = append_time_string(to);
-    *to++ = '\0';
     return to;
 }
 
 char* DateTimeValue::to_date_string(char* to) const {
     to = append_date_string(to);
-    *to++ = '\0';
     return to;
 }
 
 char* DateTimeValue::to_time_string(char* to) const {
     to = append_time_string(to);
-    *to++ = '\0';
     return to;
 }
 
@@ -424,7 +421,6 @@ char* DateTimeValue::to_string(char* to) const {
         to = to_datetime_string(to);
         break;
     default:
-        *to++ = '\0';
         break;
     }
     return to;
