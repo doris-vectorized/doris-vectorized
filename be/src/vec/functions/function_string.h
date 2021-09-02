@@ -146,7 +146,7 @@ private:
         std::vector<size_t> index;
 
         for (int i = 0; i < size; ++i) {
-            const char* raw_str = reinterpret_cast<const char*>(&chars[offsets[i - 1]]);
+            const unsigned char* raw_str = reinterpret_cast<const unsigned char*>(&chars[offsets[i - 1]]);
             int str_size = offsets[i] - offsets[i - 1] - 1;
             // return null if start > src.length
             if (start[i] > str_size) {
@@ -465,7 +465,7 @@ public:
             }
 
             int seq_size = seq_offsets[i] - seq_offsets[i - 1] - 1;
-            const char* seq_data = reinterpret_cast<const char*>(&seq_chars[seq_offsets[i - 1]]);
+            const unsigned char* seq_data = reinterpret_cast<const unsigned char*>(&seq_chars[seq_offsets[i - 1]]);
 
             std::string_view seq(seq_data, seq_size);
             buffer.clear();
@@ -475,8 +475,8 @@ public:
                 auto& current_chars = *chars_list[j];
                 auto& current_nullmap = *null_list[j];
                 int size = current_offsets[i] - current_offsets[i - 1] - 1;
-                const char* ptr =
-                        reinterpret_cast<const char*>(&current_chars[current_offsets[i - 1]]);
+                const unsigned char* ptr =
+                        reinterpret_cast<const unsigned char*>(&current_chars[current_offsets[i - 1]]);
                 if (!current_nullmap[i]) {
                     views.emplace_back(ptr, size);
                 }
@@ -535,7 +535,7 @@ public:
         res_offsets.resize(input_row_size);
         for (size_t i = 0; i < input_row_size; ++i) {
             buffer.clear();
-            const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            const unsigned char* raw_str = reinterpret_cast<const unsigned char*>(&data[offsets[i - 1]]);
             int size = offsets[i] - offsets[i - 1] - 1;
             int repeat = repeats[i];
             // assert size * repeat won't exceed
@@ -612,12 +612,12 @@ public:
                 StringOP::push_empty_string(i, res_chars, res_offsets);
             } else {
                 int str_len = strcol_offsets[i] - strcol_offsets[i - 1] - 1;
-                const char* str_data =
-                        reinterpret_cast<const char*>(&strcol_chars[strcol_offsets[i - 1]]);
+                const unsigned char* str_data =
+                        reinterpret_cast<const unsigned char*>(&strcol_chars[strcol_offsets[i - 1]]);
 
                 int pad_len = padcol_offsets[i] - padcol_offsets[i - 1] - 1;
-                const char* pad_data =
-                        reinterpret_cast<const char*>(&padcol_chars[padcol_offsets[i - 1]]);
+                const unsigned char* pad_data =
+                        reinterpret_cast<const unsigned char*>(&padcol_chars[padcol_offsets[i - 1]]);
 
                 size_t str_char_size =
                         get_char_len(std::string_view(str_data, str_len), &str_index);

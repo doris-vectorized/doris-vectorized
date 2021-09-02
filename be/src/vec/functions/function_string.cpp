@@ -45,7 +45,7 @@ struct StringASCII {
         auto size = offsets.size();
         res.resize(size);
         for (int i = 0; i < size; ++i) {
-            const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            const unsigned char* raw_str = reinterpret_cast<const unsigned char*>(&data[offsets[i - 1]]);
             // if strlen(raw_str) == 0, raw_str[0] is '\0'
             res[i] = raw_str[0];
         }
@@ -90,7 +90,7 @@ struct StringUtf8LengthImpl {
         auto size = offsets.size();
         res.resize(size);
         for (int i = 0; i < size; ++i) {
-            const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            const unsigned char* raw_str = reinterpret_cast<const unsigned char*>(&data[offsets[i - 1]]);
             int str_size = offsets[i] - offsets[i - 1] - 1;
 
             size_t char_len = 0;
@@ -114,8 +114,8 @@ struct StartsWithOp {
     using ResultPaddedPODArray = PaddedPODArray<Int8>;
 
     static void execute(const std::string_view& strl, const std::string_view& strr, int8_t& res) {
-        re2::StringPiece str_sp(const_cast<char*>(strl.data()), strl.length());
-        re2::StringPiece prefix_sp(const_cast<char*>(strr.data()), strr.length());
+        re2::StringPiece str_sp(const_cast<unsigned char*>(strl.data()), strl.length());
+        re2::StringPiece prefix_sp(const_cast<unsigned char*>(strr.data()), strr.length());
         res = str_sp.starts_with(prefix_sp);
     }
 };
@@ -129,8 +129,8 @@ struct EndsWithOp {
     using ResultPaddedPODArray = PaddedPODArray<Int8>;
 
     static void execute(const std::string_view& strl, const std::string_view& strr, int8_t& res) {
-        re2::StringPiece str_sp(const_cast<char*>(strl.data()), strl.length());
-        re2::StringPiece prefix_sp(const_cast<char*>(strr.data()), strr.length());
+        re2::StringPiece str_sp(const_cast<unsigned char*>(strl.data()), strl.length());
+        re2::StringPiece prefix_sp(const_cast<unsigned char*>(strr.data()), strr.length());
         res = str_sp.ends_with(prefix_sp);
     }
 };
@@ -192,8 +192,8 @@ struct InStrOP {
             return;
         }
 
-        StringValue str_sv(const_cast<char*>(strl.data()), strl.length());
-        StringValue substr_sv(const_cast<char*>(strr.data()), strr.length());
+        StringValue str_sv(const_cast<unsigned char*>(strl.data()), strl.length());
+        StringValue substr_sv(const_cast<unsigned char*>(strr.data()), strr.length());
         StringSearch search(&substr_sv);
         // Hive returns positions starting from 1.
         int loc = search.search(&str_sv);
@@ -225,10 +225,10 @@ struct StringFunctionImpl {
         auto size = loffsets.size();
         res.resize(size);
         for (int i = 0; i < size; ++i) {
-            const char* l_raw_str = reinterpret_cast<const char*>(&ldata[loffsets[i - 1]]);
+            const unsigned char* l_raw_str = reinterpret_cast<const unsigned char*>(&ldata[loffsets[i - 1]]);
             int l_str_size = loffsets[i] - loffsets[i - 1] - 1;
 
-            const char* r_raw_str = reinterpret_cast<const char*>(&rdata[roffsets[i - 1]]);
+            const unsigned char* r_raw_str = reinterpret_cast<const unsigned char*>(&rdata[roffsets[i - 1]]);
             int r_str_size = roffsets[i] - roffsets[i - 1] - 1;
 
             std::string_view lview(l_raw_str, l_str_size);
@@ -244,7 +244,8 @@ struct StringFunctionImpl {
 struct NameReverse {
     static constexpr auto name = "reverse";
 };
-
+//if conflict happens
+//use fixed-reverse
 struct ReverseImpl {
     static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
                          ColumnString::Chars& res_data, ColumnString::Offsets& res_offsets) {
@@ -323,7 +324,7 @@ struct TrimImpl {
         res_data.reserve(data.size());
 
         for (size_t i = 0; i < offset_size; ++i) {
-            const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            const unsigned char* raw_str = reinterpret_cast<const unsigned char*>(&data[offsets[i - 1]]);
             int str_size = offsets[i] - offsets[i - 1] - 1;
 
             int32_t begin = 0;
@@ -395,10 +396,10 @@ struct StringAppendTrailingCharIfAbsent {
         res_offsets.resize(input_rows_count);
         for (size_t i = 0; i < input_rows_count; ++i) {
             int l_size = loffsets[i] - loffsets[i - 1] - 1;
-            const auto l_raw = reinterpret_cast<const char*>(&ldata[loffsets[i - 1]]);
+            const auto l_raw = reinterpret_cast<const unsigned char*>(&ldata[loffsets[i - 1]]);
 
             int r_size = roffsets[i] - roffsets[i - 1] - 1;
-            const auto r_raw = reinterpret_cast<const char*>(&rdata[loffsets[i - 1]]);
+            const auto r_raw = reinterpret_cast<const unsigned char*>(&rdata[loffsets[i - 1]]);
 
             if (r_size == 0) {
                 StringOP::push_null_string(i, res_data, res_offsets, null_map_data);
