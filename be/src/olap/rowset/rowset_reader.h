@@ -23,6 +23,7 @@
 
 #include "olap/rowset/rowset.h"
 #include "olap/rowset/rowset_reader_context.h"
+#include "vec/core/block.h"
 
 namespace doris {
 

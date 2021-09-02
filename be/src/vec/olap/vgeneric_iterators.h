@@ -19,6 +19,8 @@
 
 namespace doris {
 
+namespace vectorized {
+
 // Create a merge iterator for input iterators. Merge iterator will merge
 // ordered input iterator to one ordered iterator. So client should ensure
 // that every input iterator is ordered, otherwise result is undefined.
@@ -39,5 +41,7 @@ RowwiseIterator* new_union_iterator(std::vector<RowwiseIterator*>& inputs, std::
 //
 // Client should delete returned iterator.
 RowwiseIterator* new_auto_increment_iterator(const Schema& schema, size_t num_rows);
+
+}
 
 } // namespace doris
