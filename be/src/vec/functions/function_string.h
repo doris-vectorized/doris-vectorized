@@ -642,13 +642,13 @@ public:
                     }
 
                     // Append given string.
-                    buffer.append(str_data, str_data + str_len);
+                    buffer.append(str_data, str_data + std::min(col_len_data[i],str_len));
                     StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i,
                                                 res_chars, res_offsets);
 
                 } else {
                     // is rpad
-                    buffer.append(str_data, str_data + str_len);
+                    buffer.append(str_data, str_data + std::min(col_len_data[i],str_len));
 
                     // Append chars of pad until desired length
                     int pad_idx = 0;
