@@ -186,8 +186,9 @@ private:
 
             if (byte_pos <= str_size && fixed_len > 0) {
                 // return StringVal(str.ptr + byte_pos, fixed_len);
-                StringOP::push_value_string(std::string_view{raw_str + byte_pos, (size_t)fixed_len},
-                                            i, res_chars, res_offsets);
+                StringOP::push_value_string(
+                        std::string_view {raw_str + byte_pos, (size_t)fixed_len}, i, res_chars,
+                        res_offsets);
             } else {
                 StringOP::push_empty_string(i, res_chars, res_offsets);
             }
@@ -624,6 +625,13 @@ public:
                 size_t pad_char_size =
                         get_char_len(std::string_view(pad_data, pad_len), &pad_index);
 
+                if (col_len_data[i] < str_char_size) {
+                    buffer.append(str_data, str_data + str_index[col_len_data[i]]);
+                    StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i,
+                                                res_chars, res_offsets);
+                    continue;
+                }
+
                 int32_t pad_byte_len = 0;
                 int32_t pad_times = (col_len_data[i] - str_char_size) / pad_char_size;
                 int32_t pad_remainder = (col_len_data[i] - str_char_size) % pad_char_size;
@@ -642,13 +650,13 @@ public:
                     }
 
                     // Append given string.
-                    buffer.append(str_data, str_data + std::min(col_len_data[i],str_len));
+                    buffer.append(str_data, str_data + str_len);
                     StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i,
                                                 res_chars, res_offsets);
 
                 } else {
                     // is rpad
-                    buffer.append(str_data, str_data + std::min(col_len_data[i],str_len));
+                    buffer.append(str_data, str_data + str_len);
 
                     // Append chars of pad until desired length
                     int pad_idx = 0;
