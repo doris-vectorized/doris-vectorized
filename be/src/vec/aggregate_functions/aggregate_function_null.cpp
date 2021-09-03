@@ -44,7 +44,6 @@ public:
                                                       const DataTypes& arguments,
                                                       const Array& params,
                                                       const bool result_is_nullable) const override {
-        DCHECK(nested_function != nullptr);
         if (nested_function == nullptr) return nullptr;
 
         bool has_null_types = false;

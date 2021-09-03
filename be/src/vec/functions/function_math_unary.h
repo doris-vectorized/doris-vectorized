@@ -41,7 +41,7 @@ private:
         if (!is_number(arg)) {
             return nullptr;
         }
-        return std::make_shared<DataTypeFloat64>();
+        return std::make_shared<typename Impl::Type>();
     }
 
     template <typename T, typename ReturnType>
@@ -124,7 +124,7 @@ private:
             using Types = std::decay_t<decltype(types)>;
             using Type = typename Types::RightType;
             using ReturnType = std::conditional_t<
-                    Impl::always_returns_float64 || !std::is_floating_point_v<Type>, Float64, Type>;
+                    Impl::always_returns_float64, Float64, Int64>;
             using ColVecType = std::conditional_t<IsDecimalNumber<Type>, ColumnDecimal<Type>,
                                                   ColumnVector<Type>>;
 
@@ -140,14 +140,15 @@ private:
     }
 };
 
-template <typename Name, Float64(Function)(Float64)>
+template <typename Name, Float64(Function)(Float64), typename ReturnType = DataTypeFloat64>
 struct UnaryFunctionPlain {
+    using Type = ReturnType;
     static constexpr auto name = Name::name;
     static constexpr auto rows_per_iteration = 1;
-    static constexpr bool always_returns_float64 = true;
+    static constexpr bool always_returns_float64 = std::is_same_v<Type, DataTypeFloat64>;
 
-    template <typename T>
-    static void execute(const T* src, Float64* dst) {
+    template <typename T, typename U>
+    static void execute(const T* src, U* dst) {
         dst[0] = static_cast<Float64>(Function(static_cast<Float64>(src[0])));
     }
 };

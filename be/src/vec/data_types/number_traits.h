@@ -41,7 +41,7 @@ constexpr size_t min(size_t x, size_t y) {
 }
 
 constexpr size_t next_size(size_t size) {
-    return min(size * 2, 16);
+    return size > 8 ? 16 : min(size * 2, 8);
 }
 
 template <bool is_signed, bool is_floating, size_t size>

@@ -50,7 +50,7 @@ struct FunctionUnaryArithmeticMonotonicity;
 template <typename>
 struct AbsImpl;
 template <typename>
-struct NegateImpl;
+struct NegativeImpl;
 
 /// Used to indicate undefined operation
 struct InvalidType;
@@ -58,7 +58,7 @@ struct InvalidType;
 template <template <typename> class Op, typename Name, bool is_injective>
 class FunctionUnaryArithmetic : public IFunction {
     static constexpr bool allow_decimal =
-            std::is_same_v<Op<Int8>, NegateImpl<Int8>> || std::is_same_v<Op<Int8>, AbsImpl<Int8>>;
+            std::is_same_v<Op<Int8>, NegativeImpl<Int8>> || std::is_same_v<Op<Int8>, AbsImpl<Int8>>;
 
     template <typename F>
     static bool cast_type(const IDataType* type, F&& f) {

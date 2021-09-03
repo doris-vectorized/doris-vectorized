@@ -294,7 +294,7 @@ visible_functions = [
         '_ZN5doris18TimestampFunctions14format_prepareEPN9doris_udf'
         '15FunctionContextENS2_18FunctionStateScopeE',
         '_ZN5doris18TimestampFunctions12format_closeEPN9doris_udf'
-        '15FunctionContextENS2_18FunctionStateScopeE', 'vec', ''],
+        '15FunctionContextENS2_18FunctionStateScopeE', 'vec', 'ALWAYS_NULLABLE'],
     [['date_format'], 'VARCHAR', ['DATE', 'VARCHAR'],
         '_ZN5doris18TimestampFunctions11date_formatEPN9doris_udf'
         '15FunctionContextERKNS1_11DateTimeValERKNS1_9StringValE',
@@ -620,22 +620,22 @@ visible_functions = [
             '15FunctionContextERKNS1_9DoubleValES6_', '', '', '', 'ALWAYS_NULLABLE'],
     [['mod'], 'TINYINT', ['TINYINT', 'TINYINT'],
             '_ZN5doris9Operators29mod_tiny_int_val_tiny_int_valEPN9doris_udf'
-            '15FunctionContextERKNS1_10TinyIntValES6_', '', '', '', 'ALWAYS_NULLABLE'],
+            '15FunctionContextERKNS1_10TinyIntValES6_', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['mod'], 'SMALLINT', ['SMALLINT', 'SMALLINT'],
             '_ZN5doris9Operators31mod_small_int_val_small_int_valEPN9doris_udf'
-            '15FunctionContextERKNS1_11SmallIntValES6_', '', '', '', 'ALWAYS_NULLABLE'],
+            '15FunctionContextERKNS1_11SmallIntValES6_', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['mod'], 'INT', ['INT', 'INT'],
             '_ZN5doris9Operators19mod_int_val_int_valEPN9doris_udf'
-            '15FunctionContextERKNS1_6IntValES6_', '', '', '', 'ALWAYS_NULLABLE'],
+            '15FunctionContextERKNS1_6IntValES6_', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['mod'], 'BIGINT', ['BIGINT', 'BIGINT'],
             '_ZN5doris9Operators27mod_big_int_val_big_int_valEPN9doris_udf'
-            '15FunctionContextERKNS1_9BigIntValES6_', '', '', '', 'ALWAYS_NULLABLE'],
+            '15FunctionContextERKNS1_9BigIntValES6_', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['mod'], 'LARGEINT', ['LARGEINT', 'LARGEINT'],
             '_ZN5doris9Operators31mod_large_int_val_large_int_valEPN9doris_udf'
-            '15FunctionContextERKNS1_11LargeIntValES6_', '', '', '', 'ALWAYS_NULLABLE'],
+            '15FunctionContextERKNS1_11LargeIntValES6_', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['mod'], 'DECIMALV2', ['DECIMALV2', 'DECIMALV2'],
             '_ZN5doris18DecimalV2Operators31mod_decimalv2_val_decimalv2_valEPN9doris_udf'
-            '15FunctionContextERKNS1_12DecimalV2ValES6_', '', '', '', 'ALWAYS_NULLABLE'],
+            '15FunctionContextERKNS1_12DecimalV2ValES6_', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['mod', 'fmod'], 'FLOAT', ['FLOAT', 'FLOAT'],
         '_ZN5doris13MathFunctions10fmod_floatEPN9doris_udf15FunctionContextERKNS1_8FloatValES6_',
         '', '', '', 'ALWAYS_NULLABLE'],
@@ -927,17 +927,17 @@ visible_functions = [
         '_ZN5doris13JsonFunctions12get_json_intEPN9doris_udf15FunctionContextERKNS1_9StringValES6_',
         '_ZN5doris13JsonFunctions17json_path_prepareEPN9doris_udf15FunctionContextENS2_18FunctionStateScopeE',
         '_ZN5doris13JsonFunctions15json_path_closeEPN9doris_udf15FunctionContextENS2_18FunctionStateScopeE',
-        'vec', ''],
+        'vec', 'ALWAYS_NULLABLE'],
     [['get_json_double'], 'DOUBLE', ['VARCHAR', 'VARCHAR'],
         '_ZN5doris13JsonFunctions15get_json_doubleEPN9doris_udf15FunctionContextERKNS1_9StringValES6_',
         '_ZN5doris13JsonFunctions17json_path_prepareEPN9doris_udf15FunctionContextENS2_18FunctionStateScopeE',
         '_ZN5doris13JsonFunctions15json_path_closeEPN9doris_udf15FunctionContextENS2_18FunctionStateScopeE',
-        'vec', ''],
+        'vec', 'ALWAYS_NULLABLE'],
     [['get_json_string'], 'VARCHAR', ['VARCHAR', 'VARCHAR'],
         '_ZN5doris13JsonFunctions15get_json_stringEPN9doris_udf15FunctionContextERKNS1_9StringValES6_',
         '_ZN5doris13JsonFunctions17json_path_prepareEPN9doris_udf15FunctionContextENS2_18FunctionStateScopeE',
         '_ZN5doris13JsonFunctions15json_path_closeEPN9doris_udf15FunctionContextENS2_18FunctionStateScopeE',
-        'vec', ''],
+        'vec', 'ALWAYS_NULLABLE'],
 
     #hll function
     [['hll_cardinality'], 'BIGINT', ['VARCHAR'],

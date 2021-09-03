@@ -359,6 +359,27 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
                              const DescriptorTbl& descs, ExecNode** node) {
     std::stringstream error_msg;
 
+    if (state->enable_vectorized_exec()) {
+        switch (tnode.node_type) {
+            case TPlanNodeType::OLAP_SCAN_NODE:
+            case TPlanNodeType::HASH_JOIN_NODE:
+            case TPlanNodeType::AGGREGATION_NODE:
+            case TPlanNodeType::UNION_NODE:
+            case TPlanNodeType::CROSS_JOIN_NODE:
+            case TPlanNodeType::SORT_NODE:
+            case TPlanNodeType::EXCHANGE_NODE:
+                break;
+            default : {
+                const auto& i = _TPlanNodeType_VALUES_TO_NAMES.find(tnode.node_type);
+                const char* str = "unknown node type";
+
+                if (i != _TPlanNodeType_VALUES_TO_NAMES.end()) { str = i->second; }
+                error_msg << "V" << str << " not implemented";
+                return Status::InternalError(error_msg.str());
+            }
+        }
+    }
+
     VLOG_CRITICAL << "tnode:\n" << apache::thrift::ThriftDebugString(tnode);
     switch (tnode.node_type) {
     case TPlanNodeType::CSV_SCAN_NODE:

@@ -31,6 +31,9 @@ struct MultiplyImpl {
         return static_cast<Result>(a) * b;
     }
 
+    static inline DecimalV2Value apply(DecimalV2Value a, DecimalV2Value b) {
+        return a * b;
+    }
     /// Apply operation and check overflow. It's used for Deciamal operations. @returns true if overflowed, false otherwise.
     template <typename Result = ResultType>
     static inline bool apply(A a, B b, Result& c) {
