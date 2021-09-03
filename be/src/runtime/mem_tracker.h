@@ -236,9 +236,9 @@ public:
             /// trackers since we can enforce that the reported memory usage is internally
             /// consistent.)
             if (tracker->consumption_metric_ == nullptr) {
-//                DCHECK_GE(tracker->consumption_->current_value(), 0)
-//                        << std::endl
-//                        << tracker->LogUsage(UNLIMITED_DEPTH);
+                DCHECK_GE(tracker->consumption_->current_value(), 0)
+                        << std::endl
+                        << tracker->LogUsage(UNLIMITED_DEPTH);
             }
         }
     }

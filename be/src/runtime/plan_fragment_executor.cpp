@@ -621,6 +621,7 @@ void PlanFragmentExecutor::cancel() {
     DCHECK(_prepared);
     _runtime_state->set_is_cancelled(true);
 
+    // must close stream_mgr to avoid dead lock in Exchange Node
     if (_runtime_state->enable_vectorized_exec()) {
         _runtime_state->exec_env()->vstream_mgr()->cancel(_runtime_state->fragment_instance_id());
     } else {

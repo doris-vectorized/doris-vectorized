@@ -40,6 +40,7 @@ constexpr size_t min(size_t x, size_t y) {
     return x < y ? x : y;
 }
 
+// only largeint as argument should return 16
 constexpr size_t next_size(size_t size) {
     return size > 8 ? 16 : min(size * 2, 8);
 }
