@@ -29,7 +29,8 @@
 namespace doris::vectorized {
 
 template <TimeUnit unit>
-inline Int128 date_time_add(const Int128& t, Int64 delta, bool& is_null) {
+inline Int128 date_time_add(const Int128& t, Int64 delta, uint8& is_null) {
+    // use uint8 to prevent implicit convert
     auto ts_value = binary_cast<Int128, doris::DateTimeValue>(t);
     TimeInterval interval(unit, delta, false);
     is_null = !ts_value.date_add_interval(interval, unit);
@@ -37,14 +38,14 @@ inline Int128 date_time_add(const Int128& t, Int64 delta, bool& is_null) {
     return binary_cast<doris::DateTimeValue, Int128>(ts_value);
 }
 
-#define ADD_TIME_FUNCTION_IMPL(CLASS, NAME, UNIT)                                   \
-    struct CLASS {                                                                  \
-        using ReturnType = DataTypeDateTime;                                        \
-        static constexpr auto name = #NAME;                                         \
-        static constexpr auto is_nullable = true;                                   \
-        static inline Int128 execute(const Int128& t, Int64 delta, bool& is_null) { \
-            return date_time_add<TimeUnit::UNIT>(t, delta, is_null);                \
-        }                                                                           \
+#define ADD_TIME_FUNCTION_IMPL(CLASS, NAME, UNIT)                                    \
+    struct CLASS {                                                                   \
+        using ReturnType = DataTypeDateTime;                                         \
+        static constexpr auto name = #NAME;                                          \
+        static constexpr auto is_nullable = true;                                    \
+        static inline Int128 execute(const Int128& t, Int64 delta, uint8& is_null) { \
+            return date_time_add<TimeUnit::UNIT>(t, delta, is_null);                 \
+        }                                                                            \
     }
 
 ADD_TIME_FUNCTION_IMPL(AddSecondsImpl, seconds_add, SECOND);
@@ -59,7 +60,7 @@ struct AddQuartersImpl {
     using ReturnType = DataTypeDateTime;
     static constexpr auto name = "quarters_add";
     static constexpr auto is_nullable = true;
-    static inline Int128 execute(const Int128& t, Int64 delta, bool& is_null) {
+    static inline Int128 execute(const Int128& t, Int64 delta, uint8& is_null) {
         return date_time_add<TimeUnit::MONTH>(t, delta * 3, is_null);
     }
 };
@@ -68,7 +69,7 @@ template <typename Transform>
 struct SubtractIntervalImpl {
     using ReturnType = DataTypeDateTime;
     static constexpr auto is_nullable = true;
-    static inline Int128 execute(const Int128& t, Int64 delta, bool& is_null) {
+    static inline Int128 execute(const Int128& t, Int64 delta, uint8& is_null) {
         return Transform::execute(t, -delta, is_null);
     }
 };
@@ -102,7 +103,7 @@ struct DateDiffImpl {
     using ReturnType = DataTypeInt32;
     static constexpr auto name = "datediff";
     static constexpr auto is_nullable = false;
-    static inline Int32 execute(const Int128& t0, const Int128& t1, bool& is_null) {
+    static inline Int32 execute(const Int128& t0, const Int128& t1, uint8& is_null) {
         const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0);
         const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1);
         is_null = false;
@@ -114,7 +115,7 @@ struct TimeDiffImpl {
     using ReturnType = DataTypeFloat64;
     static constexpr auto name = "timediff";
     static constexpr auto is_nullable = false;
-    static inline double execute(const Int128& t0, const Int128& t1, bool& is_null) {
+    static inline double execute(const Int128& t0, const Int128& t1, uint8& is_null) {
         const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0);
         const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1);
         is_null = false;
@@ -122,17 +123,17 @@ struct TimeDiffImpl {
     }
 };
 
-#define TIME_DIFF_FUNCTION_IMPL(CLASS, NAME, UNIT)                                         \
-    struct CLASS {                                                                         \
-        using ReturnType = DataTypeInt64;                                                  \
-        static constexpr auto name = #NAME;                                                \
-        static constexpr auto is_nullable = false;                                         \
-        static inline int64_t execute(const Int128& t0, const Int128& t1, bool& is_null) { \
-            const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0);           \
-            const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1);           \
-            is_null = false;                                                               \
-            return DateTimeValue::datetime_diff<TimeUnit::UNIT>(ts1, ts0);                 \
-        }                                                                                  \
+#define TIME_DIFF_FUNCTION_IMPL(CLASS, NAME, UNIT)                                          \
+    struct CLASS {                                                                          \
+        using ReturnType = DataTypeInt64;                                                   \
+        static constexpr auto name = #NAME;                                                 \
+        static constexpr auto is_nullable = false;                                          \
+        static inline int64_t execute(const Int128& t0, const Int128& t1, uint8& is_null) { \
+            const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0);            \
+            const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1);            \
+            is_null = false;                                                                \
+            return DateTimeValue::datetime_diff<TimeUnit::UNIT>(ts1, ts0);                  \
+        }                                                                                   \
     }
 
 TIME_DIFF_FUNCTION_IMPL(YearsDiffImpl, years_diff, YEAR);
@@ -148,7 +149,7 @@ struct DateTimeOp {
     // use for (DateTime, DateTime) -> other_type
     static void vector_vector(const PaddedPODArray<FromType>& vec_from0,
                               const PaddedPODArray<FromType>& vec_from1,
-                              PaddedPODArray<ToType>& vec_to, auto& null_map) {
+                              PaddedPODArray<ToType>& vec_to, NullMap& null_map) {
         size_t size = vec_from0.size();
         vec_to.resize(size);
         null_map.resize_fill(size, false);
@@ -160,7 +161,7 @@ struct DateTimeOp {
 
     // use for (DateTime, const DateTime) -> other_type
     static void vector_constant(const PaddedPODArray<FromType>& vec_from,
-                                PaddedPODArray<ToType>& vec_to, auto& null_map, Int128& delta) {
+                                PaddedPODArray<ToType>& vec_to, NullMap& null_map, Int128& delta) {
         size_t size = vec_from.size();
         vec_to.resize(size);
         null_map.resize_fill(size, false);
@@ -172,7 +173,7 @@ struct DateTimeOp {
 
     // use for (DateTime, const ColumnNumber) -> other_type
     static void vector_constant(const PaddedPODArray<FromType>& vec_from,
-                                PaddedPODArray<ToType>& vec_to, auto& null_map, Int64 delta) {
+                                PaddedPODArray<ToType>& vec_to, NullMap& null_map, Int64 delta) {
         size_t size = vec_from.size();
         vec_to.resize(size);
         null_map.resize_fill(size, false);
@@ -184,7 +185,7 @@ struct DateTimeOp {
 
     // use for (const DateTime, ColumnNumber) -> other_type
     static void constant_vector(const FromType& from, PaddedPODArray<ToType>& vec_to,
-                                auto& null_map, const IColumn& delta) {
+                                NullMap& null_map, const IColumn& delta) {
         size_t size = delta.size();
         vec_to.resize(size);
         null_map.resize_fill(size, false);
@@ -196,7 +197,7 @@ struct DateTimeOp {
 
     // use for (const DateTime, DateTime) -> other_type
     static void constant_vector(const FromType& from, PaddedPODArray<ToType>& vec_to,
-                                auto& null_map, const PaddedPODArray<Int128>& delta) {
+                                NullMap& null_map, const PaddedPODArray<Int128>& delta) {
         size_t size = delta.size();
         vec_to.resize(size);
         null_map.resize(size);
