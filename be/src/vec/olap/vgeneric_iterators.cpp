@@ -25,6 +25,8 @@
 
 namespace doris {
 
+namespace vectorized {
+
 // This iterator will generate ordered data. For example for schema
 // (int, int) this iterator will generator data like
 // (0, 1), (1, 2), (2, 3), (3, 4)...
@@ -131,8 +133,6 @@ public:
         vectorized::Block& dst = *block;
 
         auto columns = _iter->schema().columns();
-        assert(columns.size() == src.columns());
-        assert(src.size() == dst.columns());
 
         for (size_t i = 0; i < columns.size(); ++i) {
             vectorized::ColumnWithTypeAndName s_col = src.get_by_position(i);
@@ -375,6 +375,8 @@ RowwiseIterator* new_union_iterator(std::vector<RowwiseIterator*>& inputs, std::
 
 RowwiseIterator* new_auto_increment_iterator(const Schema& schema, size_t num_rows) {
     return new VAutoIncrementIterator(schema, num_rows);
+}
+
 }
 
 } // namespace doris
