@@ -610,6 +610,7 @@ public:
             pad_index.clear();
             buffer.clear();
             if (null_map_data[i] || col_len_data[i] < 0) {
+                // return NULL when input string is NULL or input length is invalid number
                 null_map_data[i] = true;
                 StringOP::push_empty_string(i, res_chars, res_offsets);
             } else {
@@ -627,6 +628,7 @@ public:
                         get_char_len(std::string_view(pad_data, pad_len), &pad_index);
 
                 if (col_len_data[i] <= str_char_size) {
+                    // truncate the input string
                     if (col_len_data[i] < str_char_size) {
                         buffer.append(str_data, str_data + str_index[col_len_data[i]]);
                     } else {
@@ -638,6 +640,7 @@ public:
                     continue;
                 }
                 if (pad_char_size == 0) {
+                    // return NULL when the string to be paded is missing
                     null_map_data[i] = true;
                     StringOP::push_empty_string(i, res_chars, res_offsets);
                     continue;
