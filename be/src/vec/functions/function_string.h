@@ -617,6 +617,8 @@ public:
             pad_index.clear();
             buffer.clear();
             if (null_map_data[i] || col_len_data[i] < 0) {
+                // return NULL when input string is NULL or input length is invalid number
+                null_map_data[i] = true;
                 StringOP::push_empty_string(i, res_chars, res_offsets);
             } else {
                 int str_len = strcol_offsets[i] - strcol_offsets[i - 1] - 1;
@@ -631,6 +633,25 @@ public:
                         get_char_len(std::string_view(str_data, str_len), &str_index);
                 size_t pad_char_size =
                         get_char_len(std::string_view(pad_data, pad_len), &pad_index);
+
+                if (col_len_data[i] <= str_char_size) {
+                    // truncate the input string
+                    if (col_len_data[i] < str_char_size) {
+                        buffer.append(str_data, str_data + str_index[col_len_data[i]]);
+                    } else {
+                        buffer.append(str_data, str_data + str_len);
+                    }
+
+                    StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i,
+                                                res_chars, res_offsets);
+                    continue;
+                }
+                if (pad_char_size == 0) {
+                    // return NULL when the string to be paded is missing
+                    null_map_data[i] = true;
+                    StringOP::push_empty_string(i, res_chars, res_offsets);
+                    continue;
+                }
 
                 int32_t pad_byte_len = 0;
                 int32_t pad_times = (col_len_data[i] - str_char_size) / pad_char_size;
