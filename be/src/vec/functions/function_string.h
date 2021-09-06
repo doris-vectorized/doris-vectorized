@@ -186,8 +186,9 @@ private:
 
             if (byte_pos <= str_size && fixed_len > 0) {
                 // return StringVal(str.ptr + byte_pos, fixed_len);
-                StringOP::push_value_string(std::string_view{raw_str + byte_pos, (size_t)fixed_len},
-                                            i, res_chars, res_offsets);
+                StringOP::push_value_string(
+                        std::string_view {raw_str + byte_pos, (size_t)fixed_len}, i, res_chars,
+                        res_offsets);
             } else {
                 StringOP::push_empty_string(i, res_chars, res_offsets);
             }
@@ -412,7 +413,11 @@ public:
     bool is_variadic() const override { return true; }
 
     DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
-        return make_nullable(std::make_shared<DataTypeString>());
+        const IDataType* first_type = arguments[0].get();
+        if (first_type->is_nullable())
+            return make_nullable(std::make_shared<DataTypeString>());
+        else
+            return std::make_shared<DataTypeString>();
     }
     bool use_default_implementation_for_nulls() const override { return false; }
     bool use_default_implementation_for_constants() const override { return true; }
@@ -424,13 +429,13 @@ public:
         // we create a zero column to simply implement
         auto const_null_map = ColumnUInt8::create(input_rows_count, 0);
         auto res = ColumnString::create();
-
+        bool is_null_type = block.get_by_position(arguments[0]).type.get()->is_nullable();
         size_t argument_size = arguments.size();
         std::vector<const ColumnString::Offsets*> offsets_list(argument_size);
         std::vector<const ColumnString::Chars*> chars_list(argument_size);
         std::vector<const ColumnUInt8::Container*> null_list(argument_size);
 
-        ColumnPtr argument_columns[3];
+        ColumnPtr argument_columns[argument_size];
 
         for (size_t i = 0; i < argument_size; ++i) {
             argument_columns[i] =
@@ -485,12 +490,15 @@ public:
             StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i, res_data,
                                         res_offset);
         }
-
-        block.get_by_position(result).column =
-                ColumnNullable::create(std::move(res), std::move(null_map));
+        if (is_null_type) {
+            block.get_by_position(result).column =
+                    ColumnNullable::create(std::move(res), std::move(null_map));
+        } else {
+            block.get_by_position(result).column = std::move(res);
+        }
         return Status::OK();
     }
-};
+}; // namespace doris::vectorized
 
 class FunctionStringRepeat : public IFunction {
 public:
