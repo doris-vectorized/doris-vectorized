@@ -148,61 +148,61 @@ struct DateTimeOp {
     // use for (DateTime, DateTime) -> other_type
     static void vector_vector(const PaddedPODArray<FromType>& vec_from0,
                               const PaddedPODArray<FromType>& vec_from1,
-                              PaddedPODArray<ToType>& vec_to, NullMap& null_map) {
+                              PaddedPODArray<ToType>& vec_to, auto& null_map) {
         size_t size = vec_from0.size();
         vec_to.resize(size);
+        null_map.resize_fill(size, false);
+
         for (size_t i = 0; i < size; ++i) {
-            bool is_null = false;
-            vec_to[i] = Transform::execute(vec_from0[i], vec_from1[i], is_null);
-            null_map.push_back(is_null);
+            vec_to[i] = Transform::execute(vec_from0[i], vec_from1[i], null_map[i]);
         }
     }
 
     // use for (DateTime, const DateTime) -> other_type
     static void vector_constant(const PaddedPODArray<FromType>& vec_from,
-                                PaddedPODArray<ToType>& vec_to, NullMap& null_map, Int128& delta) {
+                                PaddedPODArray<ToType>& vec_to, auto& null_map, Int128& delta) {
         size_t size = vec_from.size();
         vec_to.resize(size);
+        null_map.resize_fill(size, false);
+
         for (size_t i = 0; i < size; ++i) {
-            bool is_null = false;
-            vec_to[i] = Transform::execute(vec_from[i], delta, is_null);
-            null_map.push_back(is_null);
+            vec_to[i] = Transform::execute(vec_from[i], delta, null_map[i]);
         }
     }
 
     // use for (DateTime, const ColumnNumber) -> other_type
     static void vector_constant(const PaddedPODArray<FromType>& vec_from,
-                                PaddedPODArray<ToType>& vec_to, NullMap& null_map, Int64 delta) {
+                                PaddedPODArray<ToType>& vec_to, auto& null_map, Int64 delta) {
         size_t size = vec_from.size();
         vec_to.resize(size);
+        null_map.resize_fill(size, false);
+
         for (size_t i = 0; i < size; ++i) {
-            bool is_null = false;
-            vec_to[i] = Transform::execute(vec_from[i], delta, is_null);
-            null_map.push_back(is_null);
+            vec_to[i] = Transform::execute(vec_from[i], delta, null_map[i]);
         }
     }
 
     // use for (const DateTime, ColumnNumber) -> other_type
     static void constant_vector(const FromType& from, PaddedPODArray<ToType>& vec_to,
-                                NullMap& null_map, const IColumn& delta) {
+                                auto& null_map, const IColumn& delta) {
         size_t size = delta.size();
         vec_to.resize(size);
+        null_map.resize_fill(size, false);
+
         for (size_t i = 0; i < size; ++i) {
-            bool is_null = false;
-            vec_to[i] = Transform::execute(from, delta.get_int(i), is_null);
-            null_map.push_back(is_null);
+            vec_to[i] = Transform::execute(from, delta.get_int(i), null_map[i]);
         }
     }
 
     // use for (const DateTime, DateTime) -> other_type
     static void constant_vector(const FromType& from, PaddedPODArray<ToType>& vec_to,
-                                NullMap& null_map, const PaddedPODArray<Int128>& delta) {
+                                auto& null_map, const PaddedPODArray<Int128>& delta) {
         size_t size = delta.size();
         vec_to.resize(size);
+        null_map.resize(size);
+
         for (size_t i = 0; i < size; ++i) {
-            bool is_null = false;
-            vec_to[i] = Transform::execute(from, delta[i], is_null);
-            null_map.push_back(is_null);
+            vec_to[i] = Transform::execute(from, delta[i], null_map[i]);
         }
     }
 };
@@ -212,7 +212,6 @@ struct DateTimeAddIntervalImpl {
     static Status execute(Block& block, const ColumnNumbers& arguments, size_t result) {
         using ToType = typename Transform::ReturnType::FieldType;
         using Op = DateTimeOp<FromType, ToType, Transform>;
-        static constexpr auto is_nullable = Transform::is_nullable;
         //        const DateLUTImpl & time_zone = extractTimeZoneFromFunctionArguments(block, arguments, 2, 0);
 
         const ColumnPtr source_col = block.get_by_position(arguments[0]).column;
@@ -237,7 +236,8 @@ struct DateTimeAddIntervalImpl {
                 Op::vector_vector(sources->get_data(), delta_vec_column->get_data(),
                                   col_to->get_data(), null_map->get_data());
             }
-            if (!is_nullable)
+
+            if constexpr (!Transform::is_nullable)
                 block.replace_by_position(result, std::move(col_to));
             else
                 block.get_by_position(result).column =
@@ -257,7 +257,7 @@ struct DateTimeAddIntervalImpl {
                                     col_to->get_data(), null_map->get_data(),
                                     *block.get_by_position(arguments[1]).column);
             }
-            if (!is_nullable)
+            if constexpr (!Transform::is_nullable)
                 block.replace_by_position(result, std::move(col_to));
             else
                 block.get_by_position(result).column =
@@ -275,7 +275,6 @@ template <typename Transform>
 class FunctionDateOrDateTimeComputation : public IFunction {
 public:
     static constexpr auto name = Transform::name;
-    static constexpr auto is_nullable = Transform::is_nullable;
     static FunctionPtr create() { return std::make_shared<FunctionDateOrDateTimeComputation>(); }
 
     String get_name() const override { return name; }
@@ -309,9 +308,11 @@ public:
                         get_name());
             }
         }
-
-        return is_nullable ? make_nullable(std::make_shared<typename Transform::ReturnType>())
-                           : std::make_shared<typename Transform::ReturnType>();
+        if constexpr (Transform::is_nullable) {
+            return make_nullable(std::make_shared<typename Transform::ReturnType>());
+        } else {
+            return std::make_shared<typename Transform::ReturnType>();
+        }
     }
 
     bool use_default_implementation_for_constants() const override { return true; }
