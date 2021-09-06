@@ -47,7 +47,7 @@ struct StringASCII {
         for (int i = 0; i < size; ++i) {
             const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
             // if strlen(raw_str) == 0, raw_str[0] is '\0'
-            res[i] = raw_str[0];
+            res[i] = (strlen(raw_str) == 0) ? 0 : static_cast<uint8_t>(raw_str[0]);
         }
         return Status::OK();
     }
@@ -161,7 +161,7 @@ struct FindInSetOp {
                 ++end;
             }
 
-            if (strl == std::string_view{strr.data() + start, (size_t)end - start}) {
+            if (strl == std::string_view {strr.data() + start, (size_t)end - start}) {
                 res = token_index;
                 return;
             }
