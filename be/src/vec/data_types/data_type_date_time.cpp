@@ -30,7 +30,7 @@ std::string DataTypeDateTime::do_get_name() const {
 }
 
 bool DataTypeDateTime::equals(const IDataType& rhs) const {
-    return rhs.get_type_id() == TypeIndex::Date || rhs.get_type_id() == TypeIndex::DateTime;
+    return typeid(rhs) == typeid(*this);
 }
 
 std::string DataTypeDateTime::to_string(const IColumn& column, size_t row_num) const {

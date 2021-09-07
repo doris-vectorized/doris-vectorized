@@ -258,7 +258,9 @@ using FunctionBuilderPtr = std::shared_ptr<IFunctionBuilder>;
 class FunctionBuilderImpl : public IFunctionBuilder {
 public:
     FunctionBasePtr build(const ColumnsWithTypeAndName& arguments, const DataTypePtr& return_type) const final {
-        DCHECK(return_type->equals(*get_return_type(arguments)));
+        DCHECK(return_type->equals(*get_return_type(arguments)) ||
+                       (is_date_or_datetime(return_type->is_nullable() ? ((DataTypeNullable*)return_type.get())->get_nested_type() : return_type) &&
+                       is_date_or_datetime(get_return_type(arguments)->is_nullable() ? ((DataTypeNullable*)get_return_type(arguments).get())->get_nested_type() : get_return_type(arguments))));
         return build_impl(arguments, return_type);
     }
 

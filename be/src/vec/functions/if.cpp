@@ -402,7 +402,7 @@ public:
 
         if (auto * nullable = check_and_get_column<ColumnNullable>(*arg_cond.column)) {
 	        DCHECK(remove_nullable(arg_cond.type)->get_type_id() == TypeIndex::UInt8);
-            Block temporary_block
+	        Block temporary_block
             {
                 { nullable->get_nested_column_ptr(), remove_nullable(arg_cond.type), arg_cond.name },
                 arg_then,

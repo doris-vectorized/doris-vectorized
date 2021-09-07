@@ -168,8 +168,8 @@ struct DateTimeOp {
         null_map.resize_fill(size, false);
 
         for (size_t i = 0; i < size; ++i)
-            vec_to[i] =
-                    Transform::execute(vec_from[i], delta, reinterpret_cast<bool&>(null_map[i]));
+            vec_to[i] = Transform::execute(vec_from0[i], vec_from1[i],
+                    reinterpret_cast<bool&>(null_map[i]));
     }
 
     // use for (DateTime, const DateTime) -> other_type
