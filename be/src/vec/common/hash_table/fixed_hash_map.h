@@ -127,19 +127,19 @@ public:
         for (auto it = this->begin(), end = this->end(); it != end; ++it) {
             typename Self::LookupResult res_it;
             bool inserted;
-            that.emplace(it->getKey(), res_it, inserted, it.getHash());
-            func(res_it->getMapped(), it->getMapped(), inserted);
+            that.emplace(it->get_key(), res_it, inserted, it.get_hash());
+            func(res_it->get_mapped(), it->get_mapped(), inserted);
         }
     }
 
     template <typename Func>
     void ALWAYS_INLINE merge_to_via_find(Self & that, Func && func) {
         for (auto it = this->begin(), end = this->end(); it != end; ++it) {
-            auto res_it = that.find(it->getKey(), it.getHash());
+            auto res_it = that.find(it->get_key(), it.get_hash());
             if (!res_it)
-                func(it->getMapped(), it->getMapped(), false);
+                func(it->get_mapped(), it->get_mapped(), false);
             else
-                func(res_it->getMapped(), it->getMapped(), true);
+                func(res_it->get_mapped(), it->get_mapped(), true);
         }
     }
 

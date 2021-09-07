@@ -767,7 +767,7 @@ Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Blo
         while (iter != data.end() && key_columns[0]->size() < state->batch_size()) {
             const auto& key = iter->get_first();
             auto& mapped = iter->get_second();
-            agg_method.insertKeyIntoColumns(key, key_columns, {});
+            agg_method.insert_key_into_columns(key, key_columns, {});
             for (size_t i = 0; i < _aggregate_evaluators.size(); ++i)
                 _aggregate_evaluators[i]->insert_result_info(mapped + _offsets_of_aggregate_states[i],
                                                             value_columns[i].get());
@@ -836,7 +836,7 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
             const auto& key = iter->get_first();
             auto& mapped = iter->get_second();
             // insert keys
-            agg_method.insertKeyIntoColumns(key, key_columns, {});
+            agg_method.insert_key_into_columns(key, key_columns, {});
 
             // serialize values
             for (size_t i = 0; i < _aggregate_evaluators.size(); ++i) {

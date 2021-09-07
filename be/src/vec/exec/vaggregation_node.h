@@ -57,9 +57,7 @@ struct AggregationMethodSerialized {
 
     using State = ColumnsHashing::HashMethodSerialized<typename Data::value_type, Mapped>;
 
-    static const bool low_cardinality_optimization = false;
-
-    static void insertKeyIntoColumns(const StringRef& key, MutableColumns& key_columns,
+    static void insert_key_into_columns(const StringRef& key, MutableColumns& key_columns,
                                      const Sizes&) {
         auto pos = key.data;
         for (auto& column : key_columns) pos = column->deserialize_and_insert_from_arena(pos);
@@ -100,12 +98,8 @@ struct AggregationMethodOneNumber
     using State = ColumnsHashing::HashMethodOneNumber<typename Data::value_type,
         Mapped, FieldType, consecutive_keys_optimization>;
 
-    /// Use optimization for low cardinality.
-    static const bool low_cardinality_optimization = false;
-
     // Insert the key from the hash table into columns.
-    static void insertKeyIntoColumns(const Key & key, MutableColumns & key_columns, const Sizes & /*key_sizes*/)
-    {
+    static void insert_key_into_columns(const Key & key, MutableColumns & key_columns, const Sizes & /*key_sizes*/) {
         const auto * key_holder = reinterpret_cast<const char *>(&key);
         auto * column = static_cast<ColumnVectorHelper *>(key_columns[0].get());
         column->insert_raw_data<sizeof(FieldType)>(key_holder);
