@@ -20,4 +20,9 @@ set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/test/vec/function")
 
 ADD_BE_TEST(function_abs_test)
 ADD_BE_TEST(function_comparison_test)
-
+ADD_BE_TEST(function_string_upper_test)
+ADD_BE_TEST(function_string_lower_test)
+#ADD_BE_TEST(function_string_trim_test)
+ADD_BE_TEST(function_string_substr_test)
+ADD_BE_TEST(function_string_strright_test)
+ADD_BE_TEST(function_string_strleft_test)
