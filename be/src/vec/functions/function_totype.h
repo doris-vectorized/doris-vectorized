@@ -299,4 +299,53 @@ public:
         return Status::OK();
     }
 };
+
+// func(string) -> nullable(type)
+template<typename Impl>
+class FunctionStringOperateToNullType : public IFunction {
+public:
+    static constexpr auto name = Impl::name;
+
+    static FunctionPtr create() {
+        return std::make_shared<FunctionStringOperateToNullType>();
+    }
+
+    String get_name() const override { return name; }
+
+    size_t get_number_of_arguments() const override { return 1; }
+
+    DataTypePtr get_return_type_impl(const DataTypes &arguments) const override {
+        return make_nullable(std::make_shared<typename Impl::ReturnType>());
+    }
+
+    bool use_default_implementation_for_constants() const override { return true; }
+
+    bool use_default_implementation_for_nulls() const override { return false; }
+
+    Status execute_impl(Block &block, const ColumnNumbers &arguments, size_t result,
+                        size_t input_rows_count) override {
+
+        auto null_map = ColumnUInt8::create(input_rows_count, 0);
+
+        auto col_ptr = block.get_by_position(arguments[0]).column->convert_to_full_column_if_const();
+        if (auto *nullable = check_and_get_column<ColumnNullable>(*col_ptr.get())) {
+            col_ptr = nullable->get_nested_column_ptr();
+            VectorizedUtils::update_null_map(null_map->get_data(), nullable->get_null_map_data());
+        }
+
+        auto res = Impl::ColumnType::create();
+        if (const ColumnString *col = check_and_get_column<ColumnString>(col_ptr.get())) {
+            auto col_res = Impl::ColumnType::create();
+            Impl::vector(col->get_chars(), col->get_offsets(), col_res->get_chars(),
+                         col_res->get_offsets(), null_map->get_data());
+            block.replace_by_position(result, ColumnNullable::create(std::move(col_res), std::move(null_map)));
+        } else {
+            return Status::RuntimeError(fmt::format(
+                    "Illegal column {} of argument of function {}",
+                    block.get_by_position(arguments[0]).column->get_name(), get_name()));
+        }
+        return Status::OK();
+    }
+};
+
 } // namespace doris::vectorized

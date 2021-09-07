@@ -29,6 +29,8 @@
 #include "vec/functions/function_totype.h"
 #include "vec/functions/simple_function_factory.h"
 
+#include "util/url_coding.h"
+
 namespace doris::vectorized {
 struct NameStringASCII {
     static constexpr auto name = "ascii";
@@ -381,6 +383,83 @@ struct StringSpace {
     }
 };
 
+struct ToBase64Impl {
+    static constexpr auto name = "to_base64";
+    using ReturnType = DataTypeString;
+    using ColumnType = ColumnString;
+
+    static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
+                         ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets, NullMap& null_map) {
+        auto rows_count = offsets.size();
+        dst_offsets.resize(rows_count);
+
+        for (int i = 0; i < rows_count; ++i) {
+            if (null_map[i]) {
+                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
+                continue;
+            }
+
+            auto source = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            size_t srclen = offsets[i] - offsets[i - 1] - 1;
+
+            if (*source == '\0' && srclen == 0) {
+                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
+                continue;
+            }
+
+            int cipher_len = (int)(4.0 * ceil((double)srclen / 3.0));
+            char dst[cipher_len];
+            int outlen = base64_encode((const unsigned char*)source, srclen, (unsigned char*)dst);
+
+            if (outlen < 0) {
+                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
+            } else {
+                StringOP::push_value_string(std::string_view(dst, outlen), i, dst_data, dst_offsets);
+            }
+        }
+        return Status::OK();
+    }
+};
+
+struct FromBase64Impl {
+    static constexpr auto name = "from_base64";
+    using ReturnType = DataTypeString;
+    using ColumnType = ColumnString;
+
+    static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
+                         ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets, NullMap& null_map) {
+        auto rows_count = offsets.size();
+        dst_offsets.resize(rows_count);
+
+        for (int i = 0; i < rows_count; ++i) {
+            if (null_map[i]) {
+                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
+                continue;
+            }
+
+            auto source = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            size_t srclen = offsets[i] - offsets[i - 1] - 1;
+
+            if (*source == '\0' && srclen == 0) {
+                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
+                continue;
+            }
+
+            int cipher_len = srclen;
+            char dst[cipher_len];
+            int outlen = base64_decode(source, srclen, dst);
+
+            if (outlen < 0) {
+                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
+            } else {
+                StringOP::push_value_string(std::string_view(dst, outlen), i, dst_data, dst_offsets);
+            }
+        }
+
+        return Status::OK();
+    }
+};
+
 struct StringAppendTrailingCharIfAbsent {
     static constexpr auto name = "append_trailing_char_if_absent";
     using Chars = ColumnString::Chars;
@@ -472,6 +551,10 @@ using FunctionRTrim = FunctionStringToString<TrimImpl<false, true>, NameRTrim>;
 
 using FunctionTrim = FunctionStringToString<TrimImpl<true, true>, NameTrim>;
 
+using FunctionToBase64 = FunctionStringOperateToNullType<ToBase64Impl>;
+
+using FunctionFromBase64 = FunctionStringOperateToNullType<FromBase64Impl>;
+
 using FunctionStringAppendTrailingCharIfAbsent =
         FunctionBinaryStringOperateToNullType<StringAppendTrailingCharIfAbsent>;
 
@@ -505,6 +588,8 @@ void register_function_string(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStringRepeat>();
     factory.register_function<FunctionStringLPad>();
     factory.register_function<FunctionStringRPad>();
+    factory.register_function<FunctionToBase64>();
+    factory.register_function<FunctionFromBase64>();
 
     factory.register_alias(FunctionLeft::name, "strleft");
     factory.register_alias(FunctionRight::name, "strright");
