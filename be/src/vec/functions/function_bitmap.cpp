@@ -234,12 +234,12 @@ struct NameBitmapContains {
 
 template <typename LeftDataType, typename RightDataType>
 struct BitmapContains {
-    using ResultDataType = DataTypeInt8;
+    using ResultDataType = DataTypeUInt8;
     using T0 = typename LeftDataType::FieldType;
     using T1 = typename RightDataType::FieldType;
     using LTData = std::vector<BitmapValue>;
     using RTData = typename ColumnVector<T1>::Container;
-    using ResTData = typename ColumnVector<Int8>::Container;
+    using ResTData = typename ColumnVector<UInt8>::Container;
 
     static Status vector_vector(const LTData& lvec, const RTData& rvec, ResTData& res) {
         int size = lvec.size();
@@ -256,11 +256,11 @@ struct NameBitmapHasAny {
 
 template <typename LeftDataType, typename RightDataType>
 struct BitmapHasAny {
-    using ResultDataType = DataTypeInt8;
+    using ResultDataType = DataTypeUInt8;
     using T0 = typename LeftDataType::FieldType;
     using T1 = typename RightDataType::FieldType;
     using TData = std::vector<BitmapValue>;
-    using ResTData = typename ColumnVector<Int8>::Container;
+    using ResTData = typename ColumnVector<UInt8>::Container;
 
     static Status vector_vector(const TData& lvec, const TData& rvec, ResTData& res) {
         int size = lvec.size();

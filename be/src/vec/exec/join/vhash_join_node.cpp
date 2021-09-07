@@ -186,6 +186,9 @@ HashJoinNode::~HashJoinNode() {}
 Status HashJoinNode::init(const TPlanNode& tnode, RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::init(tnode, state));
     DCHECK(tnode.__isset.hash_join_node);
+    if (tnode.hash_join_node.join_op != TJoinOp::INNER_JOIN) {
+        return Status::InternalError("Do not support unless inner join");
+    }
     const std::vector<TEqJoinCondition>& eq_join_conjuncts = tnode.hash_join_node.eq_join_conjuncts;
 
     for (int i = 0; i < eq_join_conjuncts.size(); ++i) {

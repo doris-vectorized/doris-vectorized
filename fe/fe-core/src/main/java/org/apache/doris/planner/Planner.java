@@ -226,7 +226,7 @@ public class Planner {
 
         // Create runtime filters.
         if (!ConnectContext.get().getSessionVariable().getRuntimeFilterMode().toUpperCase()
-                .equals(TRuntimeFilterMode.OFF.name())) {
+                .equals(TRuntimeFilterMode.OFF.name()) && !VectorizedUtil.isVectorized()) {
             RuntimeFilterGenerator.generateRuntimeFilters(analyzer, rootFragment.getPlanRoot());
         }
 

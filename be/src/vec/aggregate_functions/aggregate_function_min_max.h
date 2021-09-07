@@ -143,7 +143,7 @@ private:
 
     Int32 size = -1;    /// -1 indicates that there is no value.
     Int32 capacity = 0; /// power of two or zero
-    char* large_data;
+    char* large_data = nullptr;
 
 public:
     static constexpr Int32 AUTOMATIC_STORAGE_SIZE = 64;
@@ -154,18 +154,115 @@ private:
     char small_data[MAX_SMALL_STRING_SIZE]; /// Including the terminating zero.
 
 public:
+    ~SingleValueDataString() {
+        delete large_data;
+    }
+
     bool has() const { return size >= 0; }
 
     const char* get_data() const { return size <= MAX_SMALL_STRING_SIZE ? small_data : large_data; }
 
+    void insert_result_into(IColumn& to) const {
+        if (has())
+            assert_cast<ColumnString &>(to).insert_data(get_data(), size);
+        else
+            assert_cast<ColumnString &>(to).insert_default();
+    }
+
+    void write(BufferWritable& buf) const {
+        write_binary(size, buf);
+        if (has()) buf.write(get_data(), size);
+    }
+
+    void read(BufferReadable& buf) {
+        Int32 rhs_size;
+        read_binary(rhs_size, buf);
+
+        if (rhs_size >= 0)
+        {
+            if (rhs_size <= MAX_SMALL_STRING_SIZE)
+            {
+                /// Don't free large_data here.
+
+                size = rhs_size;
+
+                if (size > 0)
+                    buf.read(small_data, size);
+            }
+            else
+            {
+                if (capacity < rhs_size)
+                {
+                    capacity = static_cast<UInt32>(round_up_to_power_of_two_or_zero(rhs_size));
+                    delete large_data;
+                    large_data = new char[capacity];
+                }
+
+                size = rhs_size;
+                buf.read(large_data, size);
+            }
+        }
+        else
+        {
+            /// Don't free large_data here.
+            size = rhs_size;
+        }
+    }
+
     StringRef get_string_ref() const { return StringRef(get_data(), size); }
 
     /// Assuming to.has()
-    void change_impl(StringRef value, Arena* arena) {}
+    void change_impl(StringRef value, Arena* arena) {
+        Int32 value_size = value.size;
 
-    void change(const IColumn& column, size_t row_num, Arena* arena) {}
+        if (value_size <= MAX_SMALL_STRING_SIZE)
+        {
+            /// Don't free large_data here.
+            size = value_size;
+
+            if (size > 0)
+                memcpy(small_data, value.data, size);
+        }
+        else
+        {
+            if (capacity < value_size)
+            {
+                /// Don't free large_data here.
+                capacity = round_up_to_power_of_two_or_zero(value_size);
+                delete large_data;
+                large_data = new char[capacity];
+            }
+
+            size = value_size;
+            memcpy(large_data, value.data, size);
+        }
+    }
+
+    void change(const IColumn& column, size_t row_num, Arena* arena) {
+        change_impl(assert_cast<const ColumnString &>(column).get_data_at(row_num), arena);
+    }
 
     void change(const Self& to, Arena* arena) { change_impl(to.get_string_ref(), arena); }
+
+    bool change_if_less(const IColumn& column, size_t row_num, Arena* arena) {
+        if (!has() || assert_cast<const ColumnString &>(column).get_data_at(row_num) < get_string_ref())
+        {
+            change(column, row_num, arena);
+            return true;
+        }
+        else
+            return false;
+    }
+
+    bool change_if_greater(const IColumn& column, size_t row_num, Arena* arena) {
+        if (!has() || assert_cast<const ColumnString &>(column).get_data_at(row_num) > get_string_ref())
+        {
+            change(column, row_num, arena);
+            return true;
+        }
+        else
+            return false;
+    }
 
     bool change_first_time(const IColumn& column, size_t row_num, Arena* arena) {
         if (!has()) {
@@ -219,108 +316,6 @@ public:
     bool is_equal_to(const IColumn& column, size_t row_num) const { return false; }
 };
 
-/// For any other value types.
-struct SingleValueDataGeneric {
-private:
-    using Self = SingleValueDataGeneric;
-
-    Field value;
-
-public:
-    bool has() const { return !value.is_null(); }
-
-    void insert_result_into(IColumn& to) const {
-        if (has())
-            to.insert(value);
-        else
-            to.insert_default();
-    }
-
-    void change(const IColumn& column, size_t row_num, Arena*) { column.get(row_num, value); }
-
-    void change(const Self& to, Arena*) { value = to.value; }
-
-    bool change_first_time(const IColumn& column, size_t row_num, Arena* arena) {
-        if (!has()) {
-            change(column, row_num, arena);
-            return true;
-        } else
-            return false;
-    }
-
-    bool change_first_time(const Self& to, Arena* arena) {
-        if (!has() && to.has()) {
-            change(to, arena);
-            return true;
-        } else
-            return false;
-    }
-
-    bool change_every_time(const IColumn& column, size_t row_num, Arena* arena) {
-        change(column, row_num, arena);
-        return true;
-    }
-
-    bool change_every_time(const Self& to, Arena* arena) {
-        if (to.has()) {
-            change(to, arena);
-            return true;
-        } else
-            return false;
-    }
-
-    bool change_if_less(const IColumn& column, size_t row_num, Arena* arena) {
-        if (!has()) {
-            change(column, row_num, arena);
-            return true;
-        } else {
-            Field new_value;
-            column.get(row_num, new_value);
-            if (new_value < value) {
-                value = new_value;
-                return true;
-            } else
-                return false;
-        }
-    }
-
-    bool change_if_less(const Self& to, Arena* arena) {
-        if (to.has() && (!has() || to.value < value)) {
-            change(to, arena);
-            return true;
-        } else
-            return false;
-    }
-
-    bool change_if_greater(const IColumn& column, size_t row_num, Arena* arena) {
-        if (!has()) {
-            change(column, row_num, arena);
-            return true;
-        } else {
-            Field new_value;
-            column.get(row_num, new_value);
-            if (new_value > value) {
-                value = new_value;
-                return true;
-            } else
-                return false;
-        }
-    }
-
-    bool change_if_greater(const Self& to, Arena* arena) {
-        if (to.has() && (!has() || to.value > value)) {
-            change(to, arena);
-            return true;
-        } else
-            return false;
-    }
-
-    bool is_equal_to(const IColumn& column, size_t row_num) const {
-        return has() && value == column[row_num];
-    }
-
-    bool is_equal_to(const Self& to) const { return has() && to.value == value; }
-};
 
 template <typename Data>
 struct AggregateFunctionMaxData : Data {

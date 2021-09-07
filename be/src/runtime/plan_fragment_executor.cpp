@@ -41,8 +41,10 @@
 #include "util/parse_util.h"
 #include "util/pretty_printer.h"
 #include "util/uid_util.h"
+
 #include "vec/core/block.h"
 #include "vec/exec/vexchange_node.h"
+#include "vec/runtime/vdata_stream_mgr.h"
 #include "vec/sink/data_sink.h"
 
 namespace doris {
@@ -618,8 +620,14 @@ void PlanFragmentExecutor::cancel() {
               << print_id(_runtime_state->fragment_instance_id());
     DCHECK(_prepared);
     _runtime_state->set_is_cancelled(true);
-    _runtime_state->exec_env()->stream_mgr()->cancel(_runtime_state->fragment_instance_id());
-    _runtime_state->exec_env()->result_mgr()->cancel(_runtime_state->fragment_instance_id());
+
+    // must close stream_mgr to avoid dead lock in Exchange Node
+    if (_runtime_state->enable_vectorized_exec()) {
+        _runtime_state->exec_env()->vstream_mgr()->cancel(_runtime_state->fragment_instance_id());
+    } else {
+        _runtime_state->exec_env()->stream_mgr()->cancel(_runtime_state->fragment_instance_id());
+        _runtime_state->exec_env()->result_mgr()->cancel(_runtime_state->fragment_instance_id());
+    }
 }
 
 void PlanFragmentExecutor::set_abort() {

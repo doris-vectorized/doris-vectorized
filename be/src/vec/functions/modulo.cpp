@@ -35,8 +35,19 @@ struct ModuloImpl {
     static inline Result apply(A a, B b) {
         throw_if_division_leads_to_fpe(typename NumberTraits::ToInteger<A>::Type(a),
                                        typename NumberTraits::ToInteger<B>::Type(b));
+
+        if (UNLIKELY(b == 0)) {
+            return 0;
+        }
         return typename NumberTraits::ToInteger<A>::Type(a) %
                typename NumberTraits::ToInteger<B>::Type(b);
+    }
+
+    static inline DecimalV2Value apply(DecimalV2Value a, DecimalV2Value b) {
+        if (UNLIKELY(b.value() == 0)) {
+            return DecimalV2Value(int128_t(0));
+        }
+        return a % b;
     }
 
 #if USE_EMBEDDED_COMPILER

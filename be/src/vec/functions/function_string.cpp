@@ -110,10 +110,10 @@ struct NameStartsWith {
 };
 
 struct StartsWithOp {
-    using ResultDataType = DataTypeInt8;
-    using ResultPaddedPODArray = PaddedPODArray<Int8>;
+    using ResultDataType = DataTypeUInt8;
+    using ResultPaddedPODArray = PaddedPODArray<UInt8>;
 
-    static void execute(const std::string_view& strl, const std::string_view& strr, int8_t& res) {
+    static void execute(const std::string_view& strl, const std::string_view& strr, uint8_t& res) {
         re2::StringPiece str_sp(const_cast<char*>(strl.data()), strl.length());
         re2::StringPiece prefix_sp(const_cast<char*>(strr.data()), strr.length());
         res = str_sp.starts_with(prefix_sp);
@@ -125,10 +125,10 @@ struct NameEndsWith {
 };
 
 struct EndsWithOp {
-    using ResultDataType = DataTypeInt8;
-    using ResultPaddedPODArray = PaddedPODArray<Int8>;
+    using ResultDataType = DataTypeUInt8;
+    using ResultPaddedPODArray = PaddedPODArray<UInt8>;
 
-    static void execute(const std::string_view& strl, const std::string_view& strr, int8_t& res) {
+    static void execute(const std::string_view& strl, const std::string_view& strr, uint8_t& res) {
         re2::StringPiece str_sp(const_cast<char*>(strl.data()), strl.length());
         re2::StringPiece prefix_sp(const_cast<char*>(strr.data()), strr.length());
         res = str_sp.ends_with(prefix_sp);
@@ -344,7 +344,7 @@ struct TrimImpl {
             res_offsets[i] = res_offsets[i - 1] + nstr_size + 1;
             res_data.insert_assume_reserved(raw_str + begin, raw_str + begin + nstr_size);
             // memcpy(reinterpret_cast<char*>(&res_data[res_offsets[i - 1]]) ,raw_str + begin, nstr_size);
-            res_data[res_offsets[i] - 1] = '0';
+            res_data.push_back('0');
         }
         return Status::OK();
     }
@@ -482,7 +482,7 @@ void register_function_string(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStringEndsWith>();
     factory.register_function<FunctionStringInstr>();
     factory.register_function<FunctionStringFindInSet>();
-    factory.register_function<FunctionStringLocate>();
+//    factory.register_function<FunctionStringLocate>();
     factory.register_function<FunctionReverse>();
     factory.register_function<FunctionToLower>();
     factory.register_function<FunctionToUpper>();

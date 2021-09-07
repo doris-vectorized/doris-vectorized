@@ -76,7 +76,8 @@ Status VUnionNode::get_next_materialized(RuntimeState* state, Block* block) {
     DCHECK_LT(_child_idx, _children.size());
 
     bool mem_reuse = block->mem_reuse();
-    MutableBlock mblock = MutableBlock::build_mutable_block(mem_reuse ? block : nullptr);
+    MutableBlock mblock = mem_reuse ? MutableBlock::build_mutable_block(block) :
+        MutableBlock(Block(VectorizedUtils::create_columns_with_type_and_name(row_desc())));
 
     Block child_block;
     while (has_more_materialized() && mblock.rows() <= state->batch_size()) {
@@ -92,7 +93,8 @@ Status VUnionNode::get_next_materialized(RuntimeState* state, Block* block) {
             _child_eos = false;
             _child_row_idx = 0;
         }
-        child_block.clear_column_data();
+        // Here need materialize block of child block, so here so not mem_reuse
+        child_block.clear();
         // The first batch from each child is always fetched here.
         RETURN_IF_ERROR(child(_child_idx)->get_next(state, &child_block, &_child_eos));
         SCOPED_TIMER(_materialize_exprs_evaluate_timer);
@@ -105,9 +107,10 @@ Status VUnionNode::get_next_materialized(RuntimeState* state, Block* block) {
         if (_child_eos) {
             // Unless we are inside a subplan expecting to call open()/get_next() on the child
             // again, the child can be closed at this point.
-            if (!is_in_subplan()) {
-                child(_child_idx)->close(state);
-            }
+            // TODO: Recheck whether is_in_subplan() is right
+//            if (!is_in_subplan()) {
+//                child(_child_idx)->close(state);
+//            }
             ++_child_idx;
         }
     }

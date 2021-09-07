@@ -67,8 +67,11 @@ void MysqlResultWriter::_init_profile() {
 template <PrimitiveType type, bool is_nullable>
 Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
     SCOPED_TIMER(_convert_tuple_timer);
-    for (const auto buffer : _vec_buffers) {
-        buffer->reset();
+    DCHECK(column_ptr->size() <= _vec_buffers.size());
+
+    const auto column_size = column_ptr->size();
+    for (int i = 0; i < column_size; i++) {
+        _vec_buffers[i]->reset();
     }
 
     doris::vectorized::ColumnPtr column;
@@ -79,7 +82,7 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
     }
 
     int buf_ret = 0;
-    for (int i = 0; i < column_ptr->size(); ++i) {
+    for (int i = 0; i < column_size; ++i) {
         if constexpr (is_nullable) {
             if (column_ptr->is_null_at(i)) {
                 buf_ret = _vec_buffers[i]->push_null();
@@ -194,6 +197,15 @@ Status MysqlResultWriter::append_block(Block& block) {
     SCOPED_TIMER(_append_row_batch_timer);
     if (block.rows() == 0) {
         return Status::OK();
+    }
+
+    // TODO: Recheck the vec buffer size of block buffer size
+    if (UNLIKELY(block.rows() > _vec_buffers.size())) {
+        auto gap_size = block.rows() - _vec_buffers.size();
+        _vec_buffers.reserve(block.rows());
+        for (int i = 0; i < gap_size; ++i) {
+            _vec_buffers.emplace_back(new MysqlRowBuffer);
+        }
     }
 
     Status status;

@@ -692,7 +692,7 @@ Status Block::filter_block(Block* block, int filter_column_id, int column_to_kee
         filter_block_internal(block, filter, column_to_keep);
     }
 
-    for (size_t i = column_to_keep; i < block->columns(); ++i) {
+    for (size_t i = block->columns() - 1; i >= column_to_keep; --i) {
         block->erase(i);
     }
     return Status::OK();

@@ -295,8 +295,12 @@ struct NameToDateTime {
 
 template <typename DataType>
 bool try_parse_impl(typename DataType::FieldType& x, ReadBuffer& rb, const DateLUTImpl*) {
-    if constexpr (IsDateTimeType<DataType> || IsDateType<DataType>) {
+    if constexpr (IsDateTimeType<DataType>) {
         return try_read_datetime_text(x, rb);
+    }
+
+    if constexpr (IsDateType<DataType>) {
+        return try_read_date_text(x, rb);
     }
 
     if constexpr (std::is_floating_point_v<typename DataType::FieldType>) {

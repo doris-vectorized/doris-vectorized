@@ -235,14 +235,14 @@ struct DecimalBinaryOperation {
 private:
     /// there's implicit type convertion here
     static NativeResultType apply(NativeResultType a, NativeResultType b) {
-        if constexpr (can_overflow && _check_overflow) {
-            NativeResultType res;
-            if (Op::template apply<NativeResultType>(a, b, res)) {
-                LOG(FATAL) << "Decimal math overflow";
-            }
-            return res;
-        } else
-            return Op::template apply<NativeResultType>(a, b);
+        // Now, Doris only support decimal +-*/ decimal.
+        // overflow in consider in operator
+        DecimalV2Value l(a);
+        DecimalV2Value r(b);
+        auto ans = Op::template apply(l, r);
+        NativeResultType result;
+        memcpy(&result, &ans, sizeof(NativeResultType));
+        return result;
     }
 
     template <bool scale_left>
@@ -368,6 +368,7 @@ public:
             std::is_same_v<Operation<T0, T0>, PlusImpl<T0, T0>> ||
             std::is_same_v<Operation<T0, T0>, MinusImpl<T0, T0>> ||
             std::is_same_v<Operation<T0, T0>, MultiplyImpl<T0, T0>> ||
+            std::is_same_v<Operation<T0, T0>, ModuloImpl<T0, T0>> ||
             std::is_same_v<Operation<T0, T0>, DivideFloatingImpl<T0, T0>> ||
             std::is_same_v<Operation<T0, T0>, DivideIntegralImpl<T0, T0>> ||
             std::is_same_v<Operation<T0, T0>, DivideIntegralOrZeroImpl<T0, T0>> ||

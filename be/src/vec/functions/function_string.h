@@ -566,9 +566,9 @@ public:
     size_t get_number_of_arguments() const override { return 3; }
 
     DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
-        return make_nullable(std::make_shared<DataTypeString>());
+        return std::make_shared<DataTypeString>();
     }
-    bool use_default_implementation_for_nulls() const override { return false; }
+    bool use_default_implementation_for_nulls() const override { return true; }
     bool use_default_implementation_for_constants() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,

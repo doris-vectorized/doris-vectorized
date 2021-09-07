@@ -42,6 +42,12 @@ static IAggregateFunction* create_aggregate_function_single_value(const String& 
                 argument_type);
     FOR_NUMERIC_TYPES(DISPATCH)
 #undef DISPATCH
+    if (which.idx == TypeIndex::String) {
+        return new AggregateFunctionTemplate<Data<SingleValueDataString>, false>(argument_type);
+    }
+    if (which.idx == TypeIndex::DateTime || which.idx == TypeIndex::Date) {
+        return new AggregateFunctionTemplate<Data<SingleValueDataFixed<Int128>>, false>(argument_type);
+    }
     return nullptr;
 }
 

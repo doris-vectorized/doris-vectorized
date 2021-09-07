@@ -22,9 +22,9 @@
 #include "util/binary_cast.hpp"
 
 namespace doris::vectorized {
-
+// Now, some doris function treat DateType as DateTimeType same in some function
 bool DataTypeDate::equals(const IDataType& rhs) const {
-    return typeid(rhs) == typeid(*this);
+    return rhs.get_type_id() == TypeIndex::Date || rhs.get_type_id() == TypeIndex::DateTime;
 }
 
 std::string DataTypeDate::to_string(const IColumn& column, size_t row_num) const {
@@ -51,7 +51,8 @@ void DataTypeDate::to_string(const IColumn & column, size_t row_num, BufferWrita
 
     char buf[64];
     char* pos = value.to_string(buf);
-    ostr.write(buf, pos - buf);
+    // DateTime to_string the end is /0
+    ostr.write(buf, pos - buf - 1);
 }
 
 void DataTypeDate::cast_to_date(Int128 &x) {

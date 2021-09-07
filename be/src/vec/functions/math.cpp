@@ -158,7 +158,7 @@ using FunctionLog = FunctionMathBinaryFloat64<LogImpl<LogName>>;
 struct CeilName {
     static constexpr auto name = "ceil";
 };
-using FunctionCeil = FunctionMathUnary<UnaryFunctionVectorized<CeilName, std::ceil>>;
+using FunctionCeil = FunctionMathUnary<UnaryFunctionVectorized<CeilName, std::ceil, DataTypeInt64>>;
 
 template <typename A>
 struct SignImpl {
@@ -254,12 +254,12 @@ using FunctionTan = FunctionMathUnary<UnaryFunctionVectorized<TanName, std::tan>
 struct FloorName {
     static constexpr auto name = "floor";
 };
-using FunctionFloor = FunctionMathUnary<UnaryFunctionVectorized<FloorName, std::floor>>;
+using FunctionFloor = FunctionMathUnary<UnaryFunctionVectorized<FloorName, std::floor, DataTypeInt64>>;
 
 struct RoundName {
     static constexpr auto name = "round";
 };
-using FunctionRound = FunctionMathUnary<UnaryFunctionVectorized<RoundName, std::round>>;
+using FunctionRound = FunctionMathUnary<UnaryFunctionVectorized<RoundName, std::round, DataTypeInt64>>;
 
 struct PowName {
     static constexpr auto name = "pow";

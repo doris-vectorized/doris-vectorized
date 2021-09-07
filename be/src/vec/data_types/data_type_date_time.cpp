@@ -30,8 +30,9 @@ std::string DataTypeDateTime::do_get_name() const {
 }
 
 bool DataTypeDateTime::equals(const IDataType& rhs) const {
-    return typeid(rhs) == typeid(*this);
+    return rhs.get_type_id() == TypeIndex::Date || rhs.get_type_id() == TypeIndex::DateTime;
 }
+
 std::string DataTypeDateTime::to_string(const IColumn& column, size_t row_num) const {
     Int128 int_val =
             assert_cast<const ColumnInt128&>(*column.convert_to_full_column_if_const().get())
@@ -85,7 +86,8 @@ void DataTypeDateTime::to_string(const IColumn& column, size_t row_num,
 
     char buf[64];
     char* pos = value.to_string(buf);
-    ostr.write(buf, pos - buf);
+    // DateTime to_string the end is /0
+    ostr.write(buf, pos - buf - 1);
 }
 
 void DataTypeDateTime::cast_to_date_time(Int128& x) {

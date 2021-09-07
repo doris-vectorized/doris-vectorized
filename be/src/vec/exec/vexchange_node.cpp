@@ -63,7 +63,13 @@ Status VExchangeNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     SCOPED_TIMER(runtime_profile()->total_time_counter());
     auto status = _stream_recvr->get_next(block, eos);
     if (block != nullptr) {
-        _num_rows_returned += block->rows();
+        if (_num_rows_returned + block->rows() < _limit) {
+            _num_rows_returned += block->rows();
+        } else {
+            *eos = true;
+            auto limit = _limit - _num_rows_returned;
+            block->set_num_rows(limit);
+        }
         COUNTER_SET(_rows_returned_counter, _num_rows_returned);
     }
     return status;
