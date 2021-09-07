@@ -30,7 +30,6 @@ namespace doris::vectorized {
 
 template <TimeUnit unit>
 inline Int128 date_time_add(const Int128& t, Int64 delta, bool& is_null) {
-    // use uint8 to prevent implicit convert
     auto ts_value = binary_cast<Int128, doris::DateTimeValue>(t);
     TimeInterval interval(unit, delta, false);
     is_null = !ts_value.date_add_interval(interval, unit);
@@ -157,6 +156,9 @@ struct DateTimeOp {
         for (size_t i = 0; i < size; ++i) {
             vec_to[i] = Transform::execute(vec_from0[i], vec_from1[i],
                                            reinterpret_cast<bool&>(null_map[i]));
+            // here reinterpret_cast is used to convert uint8& to bool&, 
+            // otherwise it will be implicitly converted to bool, causing the rvalue to fail to match the lvalue.
+            // the same goes for the following. 
         }
     }
 
