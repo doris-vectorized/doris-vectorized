@@ -18,8 +18,10 @@
 #pragma once
 
 #include "common/logging.h"
+
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/columns/column_vector.h"
+#include "vec/columns/column_decimal.h"
 #include "vec/common/assert_cast.h"
 #include "vec/io/io_helper.h"
 
@@ -131,6 +133,116 @@ public:
 
     bool is_equal_to(const IColumn& column, size_t row_num) const {
         return has() && assert_cast<const ColumnVector<T>&>(column).get_data()[row_num] == value;
+    }
+};
+
+/// For numeric values.
+template <>
+struct SingleValueDataFixed<DecimalV2Value> {
+private:
+    using Self = SingleValueDataFixed;
+
+    bool has_value = false; /// We need to remember if at least one value has been passed. This is necessary for AggregateFunctionIf.
+    int128_t value;
+
+public:
+    bool has() const { return has_value; }
+
+    void insert_result_into(IColumn& to) const {
+        if (has()) {
+            DecimalV2Value decimal(value);
+            assert_cast<ColumnDecimal<Decimal128> &>(to).insert_data((const char *) &decimal, 0);
+        }
+        else
+            assert_cast<ColumnDecimal<Decimal128>&>(to).insert_default();
+    }
+
+    void write(BufferWritable& buf) const {
+        write_binary(has(), buf);
+        if (has()) write_binary(value, buf);
+    }
+
+    void read(BufferReadable& buf) {
+        read_binary(has_value, buf);
+        if (has()) read_binary(value, buf);
+    }
+
+    void change(const IColumn& column, size_t row_num, Arena*) {
+        has_value = true;
+        value = assert_cast<const ColumnDecimal<Decimal128>&>(column).get_data()[row_num];
+    }
+
+    /// Assuming to.has()
+    void change(const Self& to, Arena*) {
+        has_value = true;
+        value = to.value;
+    }
+
+    bool change_first_time(const IColumn& column, size_t row_num, Arena* arena) {
+        if (!has()) {
+            change(column, row_num, arena);
+            return true;
+        } else
+            return false;
+    }
+
+    bool change_first_time(const Self& to, Arena* arena) {
+        if (!has() && to.has()) {
+            change(to, arena);
+            return true;
+        } else
+            return false;
+    }
+
+    bool change_every_time(const IColumn& column, size_t row_num, Arena* arena) {
+        change(column, row_num, arena);
+        return true;
+    }
+
+    bool change_every_time(const Self& to, Arena* arena) {
+        if (to.has()) {
+            change(to, arena);
+            return true;
+        } else
+            return false;
+    }
+
+    bool change_if_less(const IColumn& column, size_t row_num, Arena* arena) {
+        if (!has() || assert_cast<const ColumnDecimal<Decimal128>&>(column).get_data()[row_num] < value) {
+            change(column, row_num, arena);
+            return true;
+        } else
+            return false;
+    }
+
+    bool change_if_less(const Self& to, Arena* arena) {
+        if (to.has() && (!has() || to.value < value)) {
+            change(to, arena);
+            return true;
+        } else
+            return false;
+    }
+
+    bool change_if_greater(const IColumn& column, size_t row_num, Arena* arena) {
+        if (!has() || assert_cast<const ColumnDecimal<Decimal128>&>(column).get_data()[row_num] > value) {
+            change(column, row_num, arena);
+            return true;
+        } else
+            return false;
+    }
+
+    bool change_if_greater(const Self& to, Arena* arena) {
+        if (to.has() && (!has() || to.value > value)) {
+            change(to, arena);
+            return true;
+        } else
+            return false;
+    }
+
+    bool is_equal_to(const Self& to) const { return has() && to.value == value; }
+
+    bool is_equal_to(const IColumn& column, size_t row_num) const {
+        return has() && assert_cast<const ColumnDecimal<Decimal128>&>(column).get_data()[row_num] == value;
     }
 };
 

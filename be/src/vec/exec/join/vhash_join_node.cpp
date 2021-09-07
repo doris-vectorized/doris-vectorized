@@ -153,6 +153,13 @@ struct ProcessHashTableProbe {
             output_block->get_by_position(i).column = column->replicate(offset_data);
         }
 
+        if (_join_node->_vconjunct_ctx_ptr) {
+            int result_column_id = -1;
+            int orig_columns = output_block->columns();
+            (*_join_node->_vconjunct_ctx_ptr)->execute(output_block, &result_column_id);
+            Block::filter_block(output_block, result_column_id, orig_columns);
+        }
+
         int64_t m = output_block->rows();
         COUNTER_UPDATE(_rows_returned_counter, m);
         _num_rows_returned += m;

@@ -156,6 +156,10 @@ public class ArithmeticExpr extends Expr {
                         Operator.INT_DIVIDE.getName(), Lists.newArrayList(t1, t2),
                         Type.getAssignmentCompatibleType(t1, t2, false),
                         Function.NullableMode.DEPEND_ON_ARGUMENT));
+                functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
+                        Operator.MOD.getName(), Lists.newArrayList(t1, t2),
+                        Type.getAssignmentCompatibleType(t1, t2, false),
+                        Function.NullableMode.DEPEND_ON_ARGUMENT));
             }
         }
     }
