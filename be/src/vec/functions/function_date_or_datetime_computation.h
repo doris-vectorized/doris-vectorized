@@ -156,9 +156,9 @@ struct DateTimeOp {
         for (size_t i = 0; i < size; ++i) {
             vec_to[i] = Transform::execute(vec_from0[i], vec_from1[i],
                                            reinterpret_cast<bool&>(null_map[i]));
-            // here reinterpret_cast is used to convert uint8& to bool&, 
+            // here reinterpret_cast is used to convert uint8& to bool&,
             // otherwise it will be implicitly converted to bool, causing the rvalue to fail to match the lvalue.
-            // the same goes for the following. 
+            // the same goes for the following.
         }
     }
 
