@@ -105,7 +105,6 @@ struct DateDiffImpl {
     static inline Int32 execute(const Int128& t0, const Int128& t1, bool& is_null) {
         const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0);
         const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1);
-        is_null = false;
         return ts0.daynr() - ts1.daynr();
     }
 };
@@ -117,7 +116,6 @@ struct TimeDiffImpl {
     static inline double execute(const Int128& t0, const Int128& t1, bool& is_null) {
         const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0);
         const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1);
-        is_null = false;
         return ts0.second_diff(ts1);
     }
 };
@@ -130,7 +128,6 @@ struct TimeDiffImpl {
         static inline int64_t execute(const Int128& t0, const Int128& t1, bool& is_null) { \
             const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0);           \
             const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1);           \
-            is_null = false;                                                               \
             return DateTimeValue::datetime_diff<TimeUnit::UNIT>(ts1, ts0);                 \
         }                                                                                  \
     }
@@ -206,7 +203,7 @@ struct DateTimeOp {
                                 NullMap& null_map, const PaddedPODArray<Int128>& delta) {
         size_t size = delta.size();
         vec_to.resize(size);
-        null_map.resize(size);
+        null_map.resize_fill(size, false);
 
         for (size_t i = 0; i < size; ++i) {
             vec_to[i] = Transform::execute(from, delta[i], reinterpret_cast<bool&>(null_map[i]));
