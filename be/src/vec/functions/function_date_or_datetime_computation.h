@@ -29,21 +29,22 @@
 namespace doris::vectorized {
 
 template <TimeUnit unit>
-inline Int128 date_time_add(const Int128& t, Int64 delta) {
+inline Int128 date_time_add(const Int128& t, Int64 delta, bool& is_null) {
     auto ts_value = binary_cast<Int128, doris::DateTimeValue>(t);
     TimeInterval interval(unit, delta, false);
-    ts_value.date_add_interval(interval, unit);
+    is_null = !ts_value.date_add_interval(interval, unit);
 
     return binary_cast<doris::DateTimeValue, Int128>(ts_value);
 }
 
-#define ADD_TIME_FUNCTION_IMPL(CLASS, NAME, UNIT)                    \
-    struct CLASS {                                                   \
-        using ReturnType = DataTypeDateTime;                         \
-        static constexpr auto name = #NAME;                          \
-        static inline Int128 execute(const Int128& t, Int64 delta) { \
-            return date_time_add<TimeUnit::UNIT>(t, delta);          \
-        }                                                            \
+#define ADD_TIME_FUNCTION_IMPL(CLASS, NAME, UNIT)                                   \
+    struct CLASS {                                                                  \
+        using ReturnType = DataTypeDateTime;                                        \
+        static constexpr auto name = #NAME;                                         \
+        static constexpr auto is_nullable = true;                                   \
+        static inline Int128 execute(const Int128& t, Int64 delta, bool& is_null) { \
+            return date_time_add<TimeUnit::UNIT>(t, delta, is_null);                \
+        }                                                                           \
     }
 
 ADD_TIME_FUNCTION_IMPL(AddSecondsImpl, seconds_add, SECOND);
@@ -57,17 +58,18 @@ ADD_TIME_FUNCTION_IMPL(AddYearsImpl, years_add, YEAR);
 struct AddQuartersImpl {
     using ReturnType = DataTypeDateTime;
     static constexpr auto name = "quarters_add";
-
-    static inline Int128 execute(const Int128& t, Int64 delta) {
-        return date_time_add<TimeUnit::MONTH>(t, delta * 3);
+    static constexpr auto is_nullable = true;
+    static inline Int128 execute(const Int128& t, Int64 delta, bool& is_null) {
+        return date_time_add<TimeUnit::MONTH>(t, delta * 3, is_null);
     }
 };
 
 template <typename Transform>
 struct SubtractIntervalImpl {
     using ReturnType = DataTypeDateTime;
-    static inline Int128 execute(const Int128& t, Int64 delta) {
-        return Transform::execute(t, -delta);
+    static constexpr auto is_nullable = true;
+    static inline Int128 execute(const Int128& t, Int64 delta, bool& is_null) {
+        return Transform::execute(t, -delta, is_null);
     }
 };
 
@@ -99,8 +101,8 @@ struct SubtractYearsImpl : SubtractIntervalImpl<AddYearsImpl> {
 struct DateDiffImpl {
     using ReturnType = DataTypeInt32;
     static constexpr auto name = "datediff";
-
-    static inline Int32 execute(const Int128& t0, const Int128& t1) {
+    static constexpr auto is_nullable = false;
+    static inline Int32 execute(const Int128& t0, const Int128& t1, bool& is_null) {
         const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0);
         const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1);
         return ts0.daynr() - ts1.daynr();
@@ -110,23 +112,24 @@ struct DateDiffImpl {
 struct TimeDiffImpl {
     using ReturnType = DataTypeFloat64;
     static constexpr auto name = "timediff";
-
-    static inline double execute(const Int128& t0, const Int128& t1) {
+    static constexpr auto is_nullable = false;
+    static inline double execute(const Int128& t0, const Int128& t1, bool& is_null) {
         const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0);
         const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1);
         return ts0.second_diff(ts1);
     }
 };
 
-#define TIME_DIFF_FUNCTION_IMPL(CLASS, NAME, UNIT)                               \
-    struct CLASS {                                                               \
-        using ReturnType = DataTypeInt64;                                        \
-        static constexpr auto name = #NAME;                                      \
-        static inline int64_t execute(const Int128& t0, const Int128& t1) {      \
-            const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0); \
-            const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1); \
-            return DateTimeValue::datetime_diff<TimeUnit::UNIT>(ts1, ts0);       \
-        }                                                                        \
+#define TIME_DIFF_FUNCTION_IMPL(CLASS, NAME, UNIT)                                         \
+    struct CLASS {                                                                         \
+        using ReturnType = DataTypeInt64;                                                  \
+        static constexpr auto name = #NAME;                                                \
+        static constexpr auto is_nullable = false;                                         \
+        static inline int64_t execute(const Int128& t0, const Int128& t1, bool& is_null) { \
+            const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0);           \
+            const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1);           \
+            return DateTimeValue::datetime_diff<TimeUnit::UNIT>(ts1, ts0);                 \
+        }                                                                                  \
     }
 
 TIME_DIFF_FUNCTION_IMPL(YearsDiffImpl, years_diff, YEAR);
@@ -142,48 +145,69 @@ struct DateTimeOp {
     // use for (DateTime, DateTime) -> other_type
     static void vector_vector(const PaddedPODArray<FromType>& vec_from0,
                               const PaddedPODArray<FromType>& vec_from1,
-                              PaddedPODArray<ToType>& vec_to) {
+                              PaddedPODArray<ToType>& vec_to, NullMap& null_map) {
         size_t size = vec_from0.size();
         vec_to.resize(size);
+        null_map.resize_fill(size, false);
 
-        for (size_t i = 0; i < size; ++i)
-            vec_to[i] = Transform::execute(vec_from0[i], vec_from1[i]);
+        for (size_t i = 0; i < size; ++i) {
+            vec_to[i] = Transform::execute(vec_from0[i], vec_from1[i],
+                                           reinterpret_cast<bool&>(null_map[i]));
+            // here reinterpret_cast is used to convert uint8& to bool&,
+            // otherwise it will be implicitly converted to bool, causing the rvalue to fail to match the lvalue.
+            // the same goes for the following.
+        }
     }
 
     // use for (DateTime, const DateTime) -> other_type
     static void vector_constant(const PaddedPODArray<FromType>& vec_from,
-                                PaddedPODArray<ToType>& vec_to, Int128& delta) {
+                                PaddedPODArray<ToType>& vec_to, NullMap& null_map, Int128& delta) {
         size_t size = vec_from.size();
         vec_to.resize(size);
+        null_map.resize_fill(size, false);
 
-        for (size_t i = 0; i < size; ++i) vec_to[i] = Transform::execute(vec_from[i], delta);
+        for (size_t i = 0; i < size; ++i) {
+            vec_to[i] =
+                    Transform::execute(vec_from[i], delta, reinterpret_cast<bool&>(null_map[i]));
+        }
     }
 
     // use for (DateTime, const ColumnNumber) -> other_type
     static void vector_constant(const PaddedPODArray<FromType>& vec_from,
-                                PaddedPODArray<ToType>& vec_to, Int64 delta) {
+                                PaddedPODArray<ToType>& vec_to, NullMap& null_map, Int64 delta) {
         size_t size = vec_from.size();
         vec_to.resize(size);
+        null_map.resize_fill(size, false);
 
-        for (size_t i = 0; i < size; ++i) vec_to[i] = Transform::execute(vec_from[i], delta);
+        for (size_t i = 0; i < size; ++i) {
+            vec_to[i] =
+                    Transform::execute(vec_from[i], delta, reinterpret_cast<bool&>(null_map[i]));
+        }
     }
 
     // use for (const DateTime, ColumnNumber) -> other_type
     static void constant_vector(const FromType& from, PaddedPODArray<ToType>& vec_to,
-                                const IColumn& delta) {
+                                NullMap& null_map, const IColumn& delta) {
         size_t size = delta.size();
         vec_to.resize(size);
+        null_map.resize_fill(size, false);
 
-        for (size_t i = 0; i < size; ++i) vec_to[i] = Transform::execute(from, delta.get_int(i));
+        for (size_t i = 0; i < size; ++i) {
+            vec_to[i] = Transform::execute(from, delta.get_int(i),
+                                           reinterpret_cast<bool&>(null_map[i]));
+        }
     }
 
     // use for (const DateTime, DateTime) -> other_type
     static void constant_vector(const FromType& from, PaddedPODArray<ToType>& vec_to,
-                                const PaddedPODArray<Int128>& delta) {
+                                NullMap& null_map, const PaddedPODArray<Int128>& delta) {
         size_t size = delta.size();
         vec_to.resize(size);
+        null_map.resize_fill(size, false);
 
-        for (size_t i = 0; i < size; ++i) vec_to[i] = Transform::execute(from, delta[i]);
+        for (size_t i = 0; i < size; ++i) {
+            vec_to[i] = Transform::execute(from, delta[i], reinterpret_cast<bool&>(null_map[i]));
+        }
     }
 };
 
@@ -192,44 +216,56 @@ struct DateTimeAddIntervalImpl {
     static Status execute(Block& block, const ColumnNumbers& arguments, size_t result) {
         using ToType = typename Transform::ReturnType::FieldType;
         using Op = DateTimeOp<FromType, ToType, Transform>;
-
         //        const DateLUTImpl & time_zone = extractTimeZoneFromFunctionArguments(block, arguments, 2, 0);
 
         const ColumnPtr source_col = block.get_by_position(arguments[0]).column;
-
         if (const auto* sources = check_and_get_column<ColumnVector<FromType>>(source_col.get())) {
             auto col_to = ColumnVector<ToType>::create();
-
+            auto null_map = ColumnUInt8::create();
             const IColumn& delta_column = *block.get_by_position(arguments[1]).column;
 
             if (const auto* delta_const_column = typeid_cast<const ColumnConst*>(&delta_column)) {
                 if (delta_const_column->get_field().get_type() == Field::Types::Int128) {
                     Op::vector_constant(sources->get_data(), col_to->get_data(),
+                                        null_map->get_data(),
                                         delta_const_column->get_field().get<Int128>());
                 } else {
                     Op::vector_constant(sources->get_data(), col_to->get_data(),
+                                        null_map->get_data(),
                                         delta_const_column->get_field().get<Int64>());
                 }
             } else {
                 const auto* delta_vec_column =
                         check_and_get_column<ColumnVector<FromType>>(delta_column);
                 Op::vector_vector(sources->get_data(), delta_vec_column->get_data(),
-                                  col_to->get_data());
+                                  col_to->get_data(), null_map->get_data());
             }
-            block.replace_by_position(result, std::move(col_to));
+
+            if constexpr (!Transform::is_nullable)
+                block.replace_by_position(result, std::move(col_to));
+            else
+                block.get_by_position(result).column =
+                        ColumnNullable::create(std::move(col_to), std::move(null_map));
         } else if (const auto* sources_const =
                            check_and_get_column_const<ColumnVector<FromType>>(source_col.get())) {
             auto col_to = ColumnVector<ToType>::create();
+            auto null_map = ColumnUInt8::create();
+
             if (const auto* delta_vec_column = check_and_get_column<ColumnVector<FromType>>(
                         *block.get_by_position(arguments[1]).column)) {
                 Op::constant_vector(sources_const->template get_value<FromType>(),
-                                    col_to->get_data(), delta_vec_column->get_data());
+                                    col_to->get_data(), null_map->get_data(),
+                                    delta_vec_column->get_data());
             } else {
                 Op::constant_vector(sources_const->template get_value<FromType>(),
-                                    col_to->get_data(),
+                                    col_to->get_data(), null_map->get_data(),
                                     *block.get_by_position(arguments[1]).column);
             }
-            block.replace_by_position(result, std::move(col_to));
+            if constexpr (!Transform::is_nullable)
+                block.replace_by_position(result, std::move(col_to));
+            else
+                block.get_by_position(result).column =
+                        ColumnNullable::create(std::move(col_to), std::move(null_map));
         } else {
             return Status::RuntimeError(fmt::format(
                     "Illegal column {} of first argument of function {}",
@@ -276,8 +312,11 @@ public:
                         get_name());
             }
         }
-
-        return std::make_shared<typename Transform::ReturnType>();
+        if constexpr (Transform::is_nullable) {
+            return make_nullable(std::make_shared<typename Transform::ReturnType>());
+        } else {
+            return std::make_shared<typename Transform::ReturnType>();
+        }
     }
 
     bool use_default_implementation_for_constants() const override { return true; }
