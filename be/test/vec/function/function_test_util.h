@@ -34,7 +34,7 @@ namespace vectorized {
 
 template <typename ReturnType, bool nullable = false>
 void check_function(const std::string& func_name, const std::vector<TypeIndex>& input_types,
-                    const std::vector<std::pair<std::vector<std::any>, std::vector<std::any>>>& data_set) {
+                    const std::vector<std::pair<std::vector<std::any>, std::any>>& data_set) {
     size_t row_size = data_set.size();
     size_t column_size = input_types.size();
 
@@ -50,33 +50,47 @@ void check_function(const std::string& func_name, const std::vector<TypeIndex>& 
 
         if (tp == TypeIndex::String) {
             auto col = ColumnString::create();
-
+            auto null_map = ColumnUInt8::create(row_size, false);
+            auto& null_map_data = null_map->get_data();
+            //null_map_data.resize_fill(row_size, false);
             for (int j = 0; j < row_size; j++) {
+                if (data_set[j].first[i].type() == typeid(Null)) {
+                    null_map_data[j] = true;
+                    col->insert("");
+                    continue;
+                }
                 auto str = std::any_cast<std::string>(data_set[j].first[i]);
                 col->insert_data(str.c_str(), str.size());
             }
 
-            columns.emplace_back(std::move(col));
+            columns.emplace_back(ColumnNullable::create(std::move(col), std::move(null_map)));
 
-            ColumnWithTypeAndName type_and_name(columns.back()->get_ptr(),
-                                                std::make_shared<vectorized::DataTypeString>(),
-                                                col_name);
+            ColumnWithTypeAndName type_and_name(
+                    columns.back()->get_ptr(),
+                    make_nullable(std::make_shared<vectorized::DataTypeString>()), col_name);
             block.insert(i, type_and_name);
             ctn.emplace_back(type_and_name);
 
         } else if (tp == TypeIndex::Int32) {
             auto col = ColumnInt32::create();
+            auto null_map = ColumnUInt8::create(row_size, false);
+            auto& null_map_data = null_map->get_data();
 
             for (int j = 0; j < row_size; j++) {
+                if (data_set[j].first[i].type() == typeid(Null)) {
+                    null_map_data[j] = true;
+                    col->insert_value(0);
+                    continue;
+                }
                 auto value = std::any_cast<int>(data_set[j].first[i]);
                 col->insert_value(value);
             }
 
-            columns.emplace_back(std::move(col));
+            columns.emplace_back(ColumnNullable::create(std::move(col), std::move(null_map)));
 
-            ColumnWithTypeAndName type_and_name(columns.back()->get_ptr(),
-                                                std::make_shared<vectorized::DataTypeInt32>(),
-                                                col_name);
+            ColumnWithTypeAndName type_and_name(
+                    columns.back()->get_ptr(),
+                    make_nullable(std::make_shared<vectorized::DataTypeInt32>()), col_name);
             block.insert(i, type_and_name);
             ctn.emplace_back(type_and_name);
         } else {
@@ -86,9 +100,9 @@ void check_function(const std::string& func_name, const std::vector<TypeIndex>& 
     }
 
     // 2. execute function
-    auto return_type = nullable ? make_nullable(std::make_shared<ReturnType>()) : std::make_shared<ReturnType>();
-    auto func = SimpleFunctionFactory::instance().get_function(
-            func_name, ctn, return_type);
+    auto return_type = nullable ? make_nullable(std::make_shared<ReturnType>())
+                                : std::make_shared<ReturnType>();
+    auto func = SimpleFunctionFactory::instance().get_function(func_name, ctn, return_type);
     block.insert({nullptr, return_type, "result"});
     func->execute(block, arguments, block.columns() - 1, row_size);
 
@@ -100,13 +114,14 @@ void check_function(const std::string& func_name, const std::vector<TypeIndex>& 
             column->get(i, field);
 
             const auto& column_data = field.get<typename ReturnType::FieldType>();
-            const auto& expect_data = std::any_cast<typename ReturnType::FieldType>(data_set[i].second[0]);
+            const auto& expect_data =
+                    std::any_cast<typename ReturnType::FieldType>(data_set[i].second);
 
-            ASSERT_TRUE(column_data == expect_data);
+            ASSERT_EQ(column_data, expect_data);
         };
 
         if constexpr (nullable) {
-            bool is_null = std::any_cast<bool>(data_set[i].second[1]);
+            bool is_null = data_set[i].second.type() == typeid(Null);
             ASSERT_EQ(column->is_null_at(i), is_null);
             if (!is_null) check_column_data();
         } else {
