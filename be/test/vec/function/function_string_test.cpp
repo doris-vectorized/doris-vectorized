@@ -14,6 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+#include "vec/functions/function_string.h"
 
 #include <gtest/gtest.h>
 #include <time.h>
@@ -22,10 +23,9 @@
 #include <string>
 
 #include "exec/schema_scanner.h"
+#include "function_test_util.h"
 #include "runtime/row_batch.h"
 #include "runtime/tuple_row.h"
-#include "vec/functions/function_string.h"
-#include "vec/functions/function_string_to_string.h"
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris {
@@ -38,7 +38,7 @@ TEST(function_string_substr_test, function_string_substr_test) {
     int32_t length[len] = {10, 5, 12, 2, 4, 4};
     std::string str_expected[len] = {
             "\xE4\xBD\xA0\xE5\xA5\xBD", " word", "hello word", "LO", "NULL", "NULL"};
-                  //你好
+    //你好
     SchemaScanner::ColumnDesc column_descs[] = {{"k1", TYPE_VARCHAR, sizeof(StringValue), false},
                                                 {"k2", TYPE_INT, sizeof(int32_t), false},
                                                 {"k3", TYPE_INT, sizeof(int32_t), false}};
@@ -312,6 +312,53 @@ TEST(function_string_upper_test, function_string_upper_test) {
         vectorized::ColumnPtr column = block.get_columns()[1];
         ASSERT_STREQ(column->get_data_at(i).data, str_expected[i].c_str());
     }
+}
+
+TEST(function_string_test, function_append_trailing_char_if_absent_test) {
+    std::string func_name = "append_trailing_char_if_absent";
+
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                      vectorized::TypeIndex::String};
+
+    std::vector<std::pair<std::vector<std::any>, std::vector<std::any>>> data_set = {
+            {{std::string("ASD"), std::string("D")}, {std::string("ASD"), false}},
+            {{std::string("AS"), std::string("D")}, {std::string("ASD"), false}},
+            {{std::string(""), std::string("")}, {std::string(""), true}},
+            {{std::string(""), std::string("A")}, {std::string("A"), false}}};
+
+    vectorized::TypeIndex return_type = vectorized::TypeIndex::String;
+
+    bool is_nullable = true;
+
+    vectorized::check_function(func_name, input_types, data_set, return_type, is_nullable);
+}
+
+TEST(function_string_test, function_lpad_test) {
+    std::string func_name = "lpad";
+
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                      vectorized::TypeIndex::Int32,
+                                                      vectorized::TypeIndex::String};
+
+    std::vector<std::pair<std::vector<std::any>, std::vector<std::any>>> data_set = {
+            {{std::string("hi"), 5, std::string("?")}, {std::string("???hi"), false}},
+            {{std::string("g8%7IgY%AHx7luNtf8Kh"), 20, std::string("")},
+             {std::string("g8%7IgY%AHx7luNtf8Kh"), false}},
+            {{std::string("hi"), 1, std::string("?")}, {std::string("h"), false}},
+            {{std::string("你好"), 1, std::string("?")}, {std::string("你"), false}},
+            {{std::string("hi"), 0, std::string("?")}, {std::string(""), false}},
+            {{std::string("hi"), -1, std::string("?")}, {std::string(""), true}},
+            {{std::string("h"), 1, std::string("")}, {std::string("h"), false}},
+            {{std::string("hi"), 5, std::string("")}, {std::string(""), true}},
+            {{std::string("hi"), 5, std::string("ab")}, {std::string("abahi"), false}},
+            {{std::string("hi"), 5, std::string("呵呵")}, {std::string("呵呵呵hi"), false}},
+            {{std::string("呵呵"), 5, std::string("hi")}, {std::string("hih呵呵"), false}}};
+
+    vectorized::TypeIndex return_type = vectorized::TypeIndex::String;
+
+    bool is_nullable = true;
+
+    vectorized::check_function(func_name, input_types, data_set, return_type, is_nullable);
 }
 
 } // namespace doris
