@@ -25,6 +25,7 @@
 
 #include "olap/bloom_filter_predicate.h"
 #include "olap/collect_iterator.h"
+#include "vec/olap/vcollect_iterator.h"
 #include "olap/comparison_predicate.h"
 #include "olap/in_list_predicate.h"
 #include "olap/null_predicate.h"

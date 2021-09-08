@@ -18,27 +18,28 @@
 #pragma once
 
 #include "olap/olap_define.h"
-#include "olap/row_cursor.h"
 #include "olap/rowset/rowset_reader.h"
+#include "vec/core/block.h"
 
 namespace doris {
 
 class Reader;
-class RowCursor;
+class TabletSchema;
 
 namespace vectorized {
-class Block;
 
 class VCollectIterator {
 public:
     ~VCollectIterator();
 
     // Hold reader point to get reader params
-    void init(Reader *reader);
+    void init(Reader* reader);
 
     OLAPStatus add_child(RowsetReaderSharedPtr rs_reader);
 
-    void build_heap(const std::vector<RowsetReaderSharedPtr> &rs_readers);
+    void build_heap(const std::vector<RowsetReaderSharedPtr>& rs_readers);
+    // Get top row of the heap, nullptr if reach end.
+    OLAPStatus current_row(const Block** block, uint32_t* row) const;
 
     // Read nest order row in Block.
     // Returns
@@ -60,17 +61,16 @@ private:
     public:
         virtual OLAPStatus init() = 0;
 
-        virtual const RowCursor *current_row() const = 0;
-
         virtual int64_t version() const = 0;
 
-        virtual OLAPStatus current_row(const Block** block, uint32_t* row) = 0;
+        virtual OLAPStatus current_row(const Block** block, uint32_t* row) const = 0;
 
         virtual OLAPStatus next(const Block** block, uint32_t* row) = 0;
 
-        virtual OLAPStatus next(vectorized::Block *block) = 0;
+        virtual OLAPStatus next(Block* block) = 0;
 
         virtual ~LevelIterator() = 0;
+        virtual const TabletSchema& tablet_schema() const = 0;
     };
 
     // Compare row cursors between multiple merge elements,
@@ -79,27 +79,32 @@ private:
     public:
         LevelIteratorComparator(const bool reverse = false) : _reverse(reverse) {}
 
-        bool operator()(const LevelIterator *a, const LevelIterator *b);
+        bool operator()(const LevelIterator* lhs, const LevelIterator* rhs);
+
+    private:
+        bool _reverse;
     };
 
-    typedef std::priority_queue<LevelIterator *, std::vector<LevelIterator *>,
-            LevelIteratorComparator>
+    typedef std::priority_queue<LevelIterator*, std::vector<LevelIterator*>,
+                                LevelIteratorComparator>
             MergeHeap;
 
     // Iterate from rowset reader. This Iterator usually like a leaf node
     class Level0Iterator : public LevelIterator {
     public:
-        Level0Iterator(RowsetReaderSharedPtr rs_reader, Reader *reader);
+        Level0Iterator(RowsetReaderSharedPtr rs_reader, Reader* reader);
 
         OLAPStatus init() override;
 
         int64_t version() const override;
 
-        OLAPStatus current_row(const Block** block, uint32_t* row) override;
+        OLAPStatus current_row(const Block** block, uint32_t* row) const override;
 
-        OLAPStatus next(const Block** block, uint32_t* row) override ;
+        OLAPStatus next(const Block** block, uint32_t* row) override;
 
-        OLAPStatus next(vectorized::Block *block) override ;
+        OLAPStatus next(Block* block) override;
+
+        const TabletSchema& tablet_schema() const override;
 
         ~Level0Iterator();
 
@@ -107,8 +112,7 @@ private:
         OLAPStatus _refresh_current_row();
 
         RowsetReaderSharedPtr _rs_reader;
-        bool _is_delete = false;
-        Reader *_reader = nullptr;
+        Reader* _reader = nullptr;
         uint32_t _current_row = 0;
         Block _block;
     };
@@ -116,31 +120,37 @@ private:
     // Iterate from LevelIterators (maybe Level0Iterators or Level1Iterator or mixed)
     class Level1Iterator : public LevelIterator {
     public:
-        Level1Iterator(const std::list<LevelIterator *> &children, bool merge, bool reverse);
+        Level1Iterator(const std::list<LevelIterator*>& children, Reader* reader, bool merge, bool reverse);
 
         OLAPStatus init() override;
 
         int64_t version() const override;
 
-        OLAPStatus current_row(const Block** block, uint32_t* row) override;
+        OLAPStatus current_row(const Block** block, uint32_t* row) const override;
 
-        OLAPStatus next(const Block** block, uint32_t* row) override ;
+        OLAPStatus next(const Block** block, uint32_t* row) override;
 
-        OLAPStatus next(vectorized::Block *block) override;
+        OLAPStatus next(Block* block) override;
+
+        const TabletSchema& tablet_schema() const override;
+
 
         ~Level1Iterator();
 
     private:
         inline OLAPStatus _merge_next(const Block** block, uint32_t* row);
 
-        inline OLAPStatus _normal_next(vectorized::Block *block);
+        inline OLAPStatus _normal_next(const Block** block, uint32_t* row);
+
+        inline OLAPStatus _normal_next(Block* block);
 
         // Each LevelIterator corresponds to a rowset reader,
         // it will be cleared after '_heap' has been initilized when '_merge == true'.
-        std::list<LevelIterator *> _children;
+        std::list<LevelIterator*> _children;
         // point to the Level0Iterator containing the next output row.
         // null when VCollectIterator hasn't been initialized or reaches EOF.
-        LevelIterator *_cur_child = nullptr;
+        LevelIterator* _cur_child = nullptr;
+        Reader* _reader = nullptr;
 
         // when `_merge == true`, rowset reader returns ordered rows and VCollectIterator uses a priority queue to merge
         // sort them. The output of VCollectIterator is also ordered.
@@ -148,6 +158,7 @@ private:
         // from the first rowset, the second rowset, .., the last rowset. The output of CollectorIterator is also
         // *partially* ordered.
         bool _merge = true;
+        bool _reverse = false;
         // used when `_merge == true`
         std::unique_ptr<MergeHeap> _heap;
         // used when `_merge == false`
@@ -158,14 +169,13 @@ private:
 
     // Each LevelIterator corresponds to a rowset reader,
     // it will be cleared after '_inner_iter' has been initilized.
-    std::list<LevelIterator *> _children;
+    std::list<LevelIterator*> _children;
 
     bool _merge = true;
-
+    bool _reverse = false;
     // Hold reader point to access read params, such as fetch conditions.
-    Reader *_reader = nullptr;
+    Reader* _reader = nullptr;
 };
 
-}
+} // namespace vectorized
 } // namespace doris
-
