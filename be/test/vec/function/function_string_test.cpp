@@ -31,291 +31,160 @@
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris {
-
 using vectorized::Null;
 
-TEST(function_string_substr_test, function_string_substr_test) {
-    int len = 6;
-    std::string str_test[len] = {"asd你好",   "hello word", "hello word",
-                                 "HELLO,!^%", "",           "MYtestSTR"};
-    int32_t pos[len] = {4, -5, 1, 4, 5, 5};
-    int32_t length[len] = {10, 5, 12, 2, 4, 4};
-    std::string str_expected[len] = {
-            "\xE4\xBD\xA0\xE5\xA5\xBD", " word", "hello word", "LO", "NULL", "NULL"};
-    //你好
-    SchemaScanner::ColumnDesc column_descs[] = {{"k1", TYPE_VARCHAR, sizeof(StringValue), false},
-                                                {"k2", TYPE_INT, sizeof(int32_t), false},
-                                                {"k3", TYPE_INT, sizeof(int32_t), false}};
-    SchemaScanner schema_scanner(column_descs, 3);
-    ObjectPool object_pool;
-    SchemaScannerParam param;
-    schema_scanner.init(&param, &object_pool);
-    auto tuple_desc = const_cast<TupleDescriptor*>(schema_scanner.tuple_desc());
-    RowDescriptor row_desc(tuple_desc, false);
-    auto tracker_ptr = MemTracker::CreateTracker(-1, "function_string_substr_test", nullptr, false);
-    RowBatch row_batch(row_desc, len, tracker_ptr.get());
+TEST(function_string_test, function_string_substr_test) {
+    std::string func_name = "substr";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                      vectorized::TypeIndex::Int32,
+                                                      vectorized::TypeIndex::Int32};
 
-    for (int i = 0; i < len; ++i) {
-        auto idx = row_batch.add_row();
-        TupleRow* tuple_row = row_batch.get_row(idx);
-        auto tuple = (Tuple*)(row_batch.tuple_data_pool()->allocate(tuple_desc->byte_size()));
-        auto slot_desc = tuple_desc->slots()[0];
-        auto string_slot = tuple->get_string_slot(slot_desc->tuple_offset());
-        string_slot->ptr = (char*)row_batch.tuple_data_pool()->allocate(str_test[i].size());
-        string_slot->len = str_test[i].size();
-        memcpy(string_slot->ptr, str_test[i].c_str(), str_test[i].size());
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("asd你好"), 4, 10}, std::string("\xE4\xBD\xA0\xE5\xA5\xBD")}, //你好
+            {{std::string("hello word"), -5, 5}, std::string(" word")},
+            {{std::string("hello word"), 1, 12}, std::string("hello word")},
+            {{std::string("HELLO,!^%"), 4, 2}, std::string("LO")},
+            {{std::string(""), 5, 4}, Null()},
+            {{Null(), 5, 4}, Null()}};
 
-        slot_desc = tuple_desc->slots()[1];
-        memcpy(tuple->get_slot(slot_desc->tuple_offset()), &pos[i], column_descs[1].size);
-        slot_desc = tuple_desc->slots()[2];
-        memcpy(tuple->get_slot(slot_desc->tuple_offset()), &length[i], column_descs[2].size);
-        tuple_row->set_tuple(0, tuple);
-        row_batch.commit_last_row();
-    }
-    auto block = row_batch.convert_to_vec_block();
-    vectorized::ColumnNumbers arguments;
-    arguments.emplace_back(block.get_position_by_name("k1"));
-    arguments.emplace_back(block.get_position_by_name("k2"));
-    arguments.emplace_back(block.get_position_by_name("k3"));
-    doris::vectorized::ColumnsWithTypeAndName ctn = {
-            block.get_by_position(block.get_position_by_name("k1")),
-            block.get_by_position(block.get_position_by_name("k2")),
-            block.get_by_position(block.get_position_by_name("k3"))};
-    vectorized::DataTypePtr data_type(
-            doris::vectorized::make_nullable(std::make_shared<vectorized::DataTypeString>()));
-    auto str_function = doris::vectorized::SimpleFunctionFactory::instance().get_function(
-            "substr", ctn, data_type);
-    size_t num_columns_without_result = block.columns();
-
-    auto null_map = vectorized::ColumnUInt8::create(len, 0);
-    auto& null_map_data = null_map->get_data();
-    null_map_data[len - 1] = 1;
-    auto res = block.get_by_position(0).column;
-    block.get_by_position(0).column =
-            vectorized::ColumnNullable::create(std::move(res), std::move(null_map));
-
-    block.insert({nullptr, block.get_by_position(0).type, "substr(k1)"});
-
-    str_function->execute(block, arguments, num_columns_without_result, len, false);
-
-    for (int i = 0; i < len; ++i) {
-        vectorized::ColumnPtr column = block.get_columns()[3];
-        doris::vectorized::Field field;
-        if (column->is_null_at(i)) {
-            ASSERT_EQ("NULL", str_expected[i]);
-            continue;
-        }
-        column->get(i, field);
-        std::string ans = field.get<std::string>();
-        ASSERT_EQ(ans, str_expected[i]);
-    }
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
-TEST(function_string_strright_test, function_string_strright_test) {
-    int len = 6;
-    std::string str_test[len] = {"asd", "hello word", "hello word", "HELLO,!^%", "", "MYtestSTR"};
-    int32_t length[len] = {1, -2, 20, 2, 3, 3};
-    std::string str_expected[len] = {"d", "ello word", "hello word", "^%", "", "NULL"};
+TEST(function_string_test, function_string_strright_test) {
+    std::string func_name = "strright";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                      vectorized::TypeIndex::Int32};
 
-    SchemaScanner::ColumnDesc column_descs[] = {{"k1", TYPE_VARCHAR, sizeof(StringValue), false},
-                                                {"k2", TYPE_INT, sizeof(int32_t), false}};
-    SchemaScanner schema_scanner(column_descs, 2);
-    ObjectPool object_pool;
-    SchemaScannerParam param;
-    schema_scanner.init(&param, &object_pool);
-    auto tuple_desc = const_cast<TupleDescriptor*>(schema_scanner.tuple_desc());
-    RowDescriptor row_desc(tuple_desc, false);
-    auto tracker_ptr =
-            MemTracker::CreateTracker(-1, "function_string_strright_test", nullptr, false);
-    RowBatch row_batch(row_desc, len, tracker_ptr.get());
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("asd"), 1}, std::string("d")},
+            {{std::string("hello word"), -2}, std::string("ello word")},
+            {{std::string("hello word"), 20}, std::string("hello word")},
+            {{std::string("HELLO,!^%"), 2}, std::string("^%")},
+            {{std::string(""), 3}, std::string("")},
+            {{Null(), 3}, Null()}};
 
-    for (int i = 0; i < len; ++i) {
-        auto idx = row_batch.add_row();
-        TupleRow* tuple_row = row_batch.get_row(idx);
-        auto tuple = (Tuple*)(row_batch.tuple_data_pool()->allocate(tuple_desc->byte_size()));
-        auto slot_desc = tuple_desc->slots()[0];
-        auto string_slot = tuple->get_string_slot(slot_desc->tuple_offset());
-        string_slot->ptr = (char*)row_batch.tuple_data_pool()->allocate(str_test[i].size());
-        string_slot->len = str_test[i].size();
-        memcpy(string_slot->ptr, str_test[i].c_str(), str_test[i].size());
-
-        slot_desc = tuple_desc->slots()[1];
-        memcpy(tuple->get_slot(slot_desc->tuple_offset()), &length[i], column_descs[1].size);
-        tuple_row->set_tuple(0, tuple);
-        row_batch.commit_last_row();
-    }
-    auto block = row_batch.convert_to_vec_block();
-    vectorized::ColumnNumbers arguments;
-    arguments.emplace_back(block.get_position_by_name("k1"));
-    arguments.emplace_back(block.get_position_by_name("k2"));
-    doris::vectorized::ColumnsWithTypeAndName ctn = {
-            block.get_by_position(block.get_position_by_name("k1")),
-            block.get_by_position(block.get_position_by_name("k2"))};
-    vectorized::DataTypePtr data_type(
-            doris::vectorized::make_nullable(std::make_shared<vectorized::DataTypeString>()));
-    auto str_function = doris::vectorized::SimpleFunctionFactory::instance().get_function(
-            "strright", ctn, data_type);
-    size_t num_columns_without_result = block.columns();
-
-    auto null_map = vectorized::ColumnUInt8::create(len, 0);
-    auto& null_map_data = null_map->get_data();
-    null_map_data[len - 1] = 1;
-    auto res = block.get_by_position(0).column;
-    block.get_by_position(0).column =
-            vectorized::ColumnNullable::create(std::move(res), std::move(null_map));
-
-    block.insert({nullptr, block.get_by_position(0).type, "strright(k1)"});
-
-    str_function->execute(block, arguments, num_columns_without_result, len, false);
-
-    for (int i = 0; i < len; ++i) {
-        vectorized::ColumnPtr column = block.get_columns()[2];
-        doris::vectorized::Field field;
-        if (column->is_null_at(i)) {
-            ASSERT_EQ("NULL", str_expected[i]);
-            continue;
-        }
-        column->get(i, field);
-        std::string ans = field.get<std::string>();
-        ASSERT_EQ(ans, str_expected[i]);
-    }
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
-TEST(function_string_strleft_test, function_string_strleft_test) {
-    int len = 6;
-    std::string str_test[len] = {"asd", "hel  lo  ", "hello word", "HELLO,!^%", "", "MYtestSTR"};
-    int32_t length[len] = {1, 5, 20, 7, 2, 3};
-    std::string str_expected[len] = {"a", "hel  ", "hello word", "HELLO,!", "NULL", "NULL"};
+TEST(function_string_test, function_string_strleft_test) {
+    std::string func_name = "strleft";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                      vectorized::TypeIndex::Int32};
 
-    SchemaScanner::ColumnDesc column_descs[] = {{"k1", TYPE_VARCHAR, sizeof(StringValue), false},
-                                                {"k2", TYPE_INT, sizeof(int32_t), false}};
-    SchemaScanner schema_scanner(column_descs, 2);
-    ObjectPool object_pool;
-    SchemaScannerParam param;
-    schema_scanner.init(&param, &object_pool);
-    auto tuple_desc = const_cast<TupleDescriptor*>(schema_scanner.tuple_desc());
-    RowDescriptor row_desc(tuple_desc, false);
-    auto tracker_ptr =
-            MemTracker::CreateTracker(-1, "function_string_strleft_test", nullptr, false);
-    RowBatch row_batch(row_desc, len, tracker_ptr.get());
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("asd"), 1}, std::string("a")},
+            {{std::string("hel  lo  "), 5}, std::string("hel  ")},
+            {{std::string("hello word"), 20}, std::string("hello word")},
+            {{std::string("HELLO,!^%"), 7}, std::string("HELLO,!")},
+            {{std::string(""), 2}, Null()},
+            {{Null(), 3}, Null()}};
 
-    for (int i = 0; i < len; ++i) {
-        auto idx = row_batch.add_row();
-        TupleRow* tuple_row = row_batch.get_row(idx);
-        auto tuple = (Tuple*)(row_batch.tuple_data_pool()->allocate(tuple_desc->byte_size()));
-        auto slot_desc = tuple_desc->slots()[0];
-        auto string_slot = tuple->get_string_slot(slot_desc->tuple_offset());
-        string_slot->ptr = (char*)row_batch.tuple_data_pool()->allocate(str_test[i].size());
-        string_slot->len = str_test[i].size();
-        memcpy(string_slot->ptr, str_test[i].c_str(), str_test[i].size());
-
-        slot_desc = tuple_desc->slots()[1];
-        memcpy(tuple->get_slot(slot_desc->tuple_offset()), &length[i], column_descs[1].size);
-        tuple_row->set_tuple(0, tuple);
-        row_batch.commit_last_row();
-    }
-    auto block = row_batch.convert_to_vec_block();
-    vectorized::ColumnNumbers arguments;
-    arguments.emplace_back(block.get_position_by_name("k1"));
-    arguments.emplace_back(block.get_position_by_name("k2"));
-    doris::vectorized::ColumnsWithTypeAndName ctn = {
-            block.get_by_position(block.get_position_by_name("k1")),
-            block.get_by_position(block.get_position_by_name("k2"))};
-    vectorized::DataTypePtr data_type(
-            doris::vectorized::make_nullable(std::make_shared<vectorized::DataTypeString>()));
-    auto str_function = doris::vectorized::SimpleFunctionFactory::instance().get_function(
-            "strleft", ctn, data_type);
-    size_t num_columns_without_result = block.columns();
-
-    auto null_map = vectorized::ColumnUInt8::create(len, 0);
-    auto& null_map_data = null_map->get_data();
-    null_map_data[len - 1] = 1;
-    auto res = block.get_by_position(0).column;
-    block.get_by_position(0).column =
-            vectorized::ColumnNullable::create(std::move(res), std::move(null_map));
-
-    block.insert({nullptr, block.get_by_position(0).type, "strleft(k1)"});
-
-    str_function->execute(block, arguments, num_columns_without_result, len, false);
-
-    for (int i = 0; i < len; ++i) {
-        vectorized::ColumnPtr column = block.get_columns()[2];
-        doris::vectorized::Field field;
-        if (column->is_null_at(i)) {
-            ASSERT_EQ("NULL", str_expected[i]);
-            continue;
-        }
-        column->get(i, field);
-        std::string ans = field.get<std::string>();
-        ASSERT_EQ(ans, str_expected[i]);
-    }
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
-TEST(function_string_lower_test, function_string_lower_test) {
-    int len = 5;
-    std::string str_test[len] = {"", "ASD", "HELLO123", "HELLO,!^%", "MYtestSTR"};
-    std::string str_expected[len] = {"", "asd", "hello123", "hello,!^%", "myteststr"};
+TEST(function_string_test, function_string_lower_test) {
+    std::string func_name = "lower";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("ASD")}, std::string("asd")},
+            {{std::string("HELLO123")}, std::string("hello123")},
+            {{std::string("MYtestSTR")}, std::string("myteststr")},
+            {{std::string("HELLO,!^%")}, std::string("hello,!^%")},
+            {{std::string("")}, std::string("")}};
 
-    auto strcol = vectorized::ColumnString::create();
-    for (int i = 0; i < len; ++i) {
-        strcol->insert_data(str_test[i].c_str(), str_test[i].size());
-    }
-    vectorized::DataTypePtr data_type(std::make_shared<vectorized::DataTypeString>());
-    vectorized::ColumnWithTypeAndName type_and_name(strcol->get_ptr(), data_type, "k1");
-    vectorized::Block block({type_and_name});
-
-    vectorized::ColumnNumbers arguments;
-    arguments.emplace_back(block.get_position_by_name("k1"));
-
-    doris::vectorized::ColumnsWithTypeAndName ctn = {
-            block.get_by_position(block.get_position_by_name("k1"))};
-
-    auto str_function = doris::vectorized::SimpleFunctionFactory::instance().get_function(
-            "lower", ctn, data_type);
-    size_t num_columns_without_result = block.columns();
-    block.insert({nullptr, block.get_by_position(0).type, "lower(k1)"});
-
-    str_function->execute(block, arguments, num_columns_without_result, len, false);
-
-    for (int i = 0; i < len; ++i) {
-        vectorized::ColumnPtr column = block.get_columns()[1];
-        ASSERT_STREQ(column->get_data_at(i).data, str_expected[i].c_str());
-    }
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
-TEST(function_string_upper_test, function_string_upper_test) {
-    int len = 5;
-    std::string str_test[len] = {"", "asd", "hello123", "HELLO,!^%", "MYtestStr"};
-    std::string str_expected[len] = {"", "ASD", "HELLO123", "HELLO,!^%", "MYTESTSTR"};
+TEST(function_string_test, function_string_upper_test) {
+    std::string func_name = "upper";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("asd")}, std::string("ASD")},
+            {{std::string("hello123")}, std::string("HELLO123")},
+            {{std::string("HELLO,!^%")}, std::string("HELLO,!^%")},
+            {{std::string("MYtestStr")}, std::string("MYTESTSTR")},
+            {{std::string("")}, std::string("")}};
 
-    auto strcol = vectorized::ColumnString::create();
-    for (int i = 0; i < len; ++i) {
-        strcol->insert_data(str_test[i].c_str(), str_test[i].size());
-    }
-    vectorized::DataTypePtr data_type(std::make_shared<vectorized::DataTypeString>());
-    vectorized::ColumnWithTypeAndName type_and_name(strcol->get_ptr(), data_type, "k1");
-    vectorized::Block block({type_and_name});
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+TEST(function_string_test, function_string_trim_test) {
+    std::string func_name = "trim";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("a sd")}, std::string("a sd")},
+            {{std::string("  hello 123  ")}, std::string("hello 123")},
+            {{std::string("  HELLO,!^%")}, std::string("HELLO,!^%")},
+            {{std::string("MY test Str你好  ")}, std::string("MY test Str你好")},
+            {{Null()}, Null()},
+            {{std::string("")}, std::string("")}};
 
-    vectorized::ColumnNumbers arguments;
-    arguments.emplace_back(block.get_position_by_name("k1"));
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
 
-    doris::vectorized::ColumnsWithTypeAndName ctn = {
-            block.get_by_position(block.get_position_by_name("k1"))};
+TEST(function_string_test, function_string_ltrim_test) {
+    std::string func_name = "ltrim";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("a sd")}, std::string("a sd")},
+            {{std::string("  hello 123  ")}, std::string("hello 123  ")},
+            {{std::string("  HELLO,!^%")}, std::string("HELLO,!^%")},
+            {{std::string("  MY test Str你好  ")}, std::string("MY test Str你好  ")},
+            {{std::string("")}, std::string("")}};
 
-    doris::vectorized::SimpleFunctionFactory factory;
-    doris::vectorized::register_function_string(factory);
-    auto str_function =
-            factory.get_function("upper", ctn, std::make_shared<vectorized::DataTypeString>());
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
 
-    size_t num_columns_without_result = block.columns();
-    block.insert({nullptr, block.get_by_position(0).type, "upper(k1)"});
+TEST(function_string_test, function_string_rtrim_test) {
+    std::string func_name = "rtrim";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("a sd ")}, std::string("a sd")},
+            {{std::string("  hello 123  ")}, std::string("  hello 123")},
+            {{std::string("  HELLO,!^%")}, std::string("  HELLO,!^%")},
+            {{std::string("  MY test Str你好  ")}, std::string("  MY test Str你好")},
+            {{std::string("")}, std::string("")}};
 
-    str_function->execute(block, arguments, num_columns_without_result, len, false);
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+TEST(function_string_test, function_string_repeat_test) {
+    std::string func_name = "repeat";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                      vectorized::TypeIndex::Int32};
 
-    for (int i = 0; i < len; ++i) {
-        vectorized::ColumnPtr column = block.get_columns()[1];
-        ASSERT_STREQ(column->get_data_at(i).data, str_expected[i].c_str());
-    }
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("a"), 3}, std::string("aaa")},
+            {{std::string("hel lo"), 2}, std::string("hel lohel lo")},
+            {{std::string("hello word"), -1}, std::string("")},
+            {{std::string(""), 1}, std::string("")},
+            {{std::string("HELLO,!^%"), 2}, std::string("HELLO,!^%HELLO,!^%")},
+            {{std::string("你"), 2}, std::string("你你")}};
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
+TEST(function_string_test, function_string_reverse_test) {
+    std::string func_name = "reverse";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("asd ")}, std::string(" dsa")},
+            {{std::string("  hello 123  ")}, std::string("  321 olleh  ")},
+            {{std::string("  HELLO,!^%")}, std::string("%^!,OLLEH  ")},
+            {{std::string("你好啊")}, std::string("啊好你")},
+            {{std::string("")}, std::string("")}};
+
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
+TEST(function_string_test, function_string_length_test) {
+    std::string func_name = "length";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("asd ")}, int32_t(4)},
+            {{std::string("  hello 123  ")}, int32_t(13)},
+            {{std::string("  HELLO,!^%")}, int32_t(11)},
+            {{std::string("你好啊")}, int32_t(9)},
+            {{std::string("")}, int32_t(0)}};
+
+    vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
 }
 
 TEST(function_string_test, function_append_trailing_char_if_absent_test) {
@@ -331,6 +200,40 @@ TEST(function_string_test, function_append_trailing_char_if_absent_test) {
             {{std::string(""), std::string("A")}, std::string("A")}};
 
     vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
+TEST(function_string_test, function_starts_with_test) {
+    std::string func_name = "starts_with";
+
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                      vectorized::TypeIndex::String};
+
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("hello world"), std::string("hello")}, uint8_t(1)},
+            {{std::string("hello world"), std::string("world")}, uint8_t(0)},
+            {{std::string("你好"), std::string("你")}, uint8_t(1)},
+            {{std::string(""), std::string("")}, uint8_t(1)},
+            {{std::string("你好"), Null()}, Null()},
+            {{Null(), std::string("")}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeUInt8, true>(func_name, input_types, data_set);
+}
+
+TEST(function_string_test, function_ends_with_test) {
+    std::string func_name = "ends_with";
+
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                      vectorized::TypeIndex::String};
+
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("hello world"), std::string("hello")}, uint8_t(0)},
+            {{std::string("hello world"), std::string("world")}, uint8_t(1)},
+            {{std::string("你好"), std::string("好")}, uint8_t(1)},
+            {{std::string(""), std::string("")}, uint8_t(1)},
+            {{std::string("你好"), Null()}, Null()},
+            {{Null(), std::string("")}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeUInt8, true>(func_name, input_types, data_set);
 }
 
 TEST(function_string_test, function_lpad_test) {
@@ -528,8 +431,7 @@ TEST(function_string_test, function_to_base64_test) {
             {{std::string("HELLO,!^%")}, {std::string("SEVMTE8sIV4l")}},
             {{std::string("")}, {Null()}},
             {{std::string("MYtestSTR")}, {std::string("TVl0ZXN0U1RS")}},
-            {{std::string("ò&ø")}, {std::string("w7Imw7g=")}}
-    };
+            {{std::string("ò&ø")}, {std::string("w7Imw7g=")}}};
 
     vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
@@ -546,26 +448,24 @@ TEST(function_string_test, function_from_base64_test) {
             {{std::string("TVl0ZXN0U1RS")}, {std::string("MYtestSTR")}},
             {{std::string("w7Imw7g=")}, {std::string("ò&ø")}},
             {{std::string("ò&ø")}, {Null()}},
-            {{std::string("你好哈喽")}, {Null()}}
-    };
+            {{std::string("你好哈喽")}, {Null()}}};
 
     vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
-TEST(function_string_test,function_reverse_test) {
-        std::string func_name = "reverse";
-        std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
-        std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
-                {{std::string("")}, {std::string("")}},
-                {{std::string("a")}, {std::string("a")}},
-                {{std::string("美团和和阿斯顿百度ab")}, {std::string("ba度百顿斯阿和和团美")}},
-                {{std::string("!^%")}, {std::string("%^!")}},
-                {{std::string("ò&ø")}, {std::string("ø&ò")}},
-                {{std::string("A攀c")}, {std::string("c攀A")}},
-                {{std::string("NULL")}, {std::string("LLUN")}}
-        };
-        
-        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+TEST(function_string_test, function_reverse_test) {
+    std::string func_name = "reverse";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("")}, {std::string("")}},
+            {{std::string("a")}, {std::string("a")}},
+            {{std::string("美团和和阿斯顿百度ab")}, {std::string("ba度百顿斯阿和和团美")}},
+            {{std::string("!^%")}, {std::string("%^!")}},
+            {{std::string("ò&ø")}, {std::string("ø&ò")}},
+            {{std::string("A攀c")}, {std::string("c攀A")}},
+            {{std::string("NULL")}, {std::string("LLUN")}}};
+
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
 TEST(function_string_test, function_instr_test) {
