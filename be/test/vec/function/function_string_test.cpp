@@ -483,6 +483,22 @@ TEST(function_string_test, function_from_base64_test) {
     vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
+TEST(function_string_test,function_reverse_test) {
+        std::string func_name = "reverse";
+        std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+        std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+                {{std::string("")}, {std::string("")}},
+                {{std::string("a")}, {std::string("a")}},
+                {{std::string("美团和和阿斯顿百度ab")}, {std::string("ba度百顿斯阿和和团美")}},
+                {{std::string("!^%")}, {std::string("%^!")}},
+                {{std::string("ò&ø")}, {std::string("ø&ò")}},
+                {{std::string("A攀c")}, {std::string("c攀A")}},
+                {{std::string("NULL")}, {std::string("LLUN")}}
+        };
+        
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
 } // namespace doris
 
 int main(int argc, char** argv) {
