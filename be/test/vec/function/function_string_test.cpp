@@ -416,7 +416,7 @@ TEST(function_string_test, function_concat_test) {
                 {{Null()}, Null()}};
 
         vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
-                                                                    data_set);
+                                                                     data_set);
     };
 
     {
@@ -429,8 +429,22 @@ TEST(function_string_test, function_concat_test) {
                 {{std::string("123"), Null()}, Null()}};
 
         vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
-                                                                    data_set);
+                                                                     data_set);
     };
+}
+
+TEST(function_string_test, function_null_or_empty_test) {
+    std::string func_name = "null_or_empty";
+
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("")}, uint8(true)},
+            {{std::string("aa")}, uint8(false)},
+            {{std::string("我")}, uint8(false)},
+            {{Null()}, uint8(true)}};
+
+    vectorized::check_function<vectorized::DataTypeUInt8, false>(func_name, input_types, data_set);
 }
 
 } // namespace doris
