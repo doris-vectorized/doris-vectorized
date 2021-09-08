@@ -393,14 +393,18 @@ struct StringAppendTrailingCharIfAbsent {
         DCHECK_EQ(loffsets.size(), roffsets.size());
         size_t input_rows_count = loffsets.size();
         res_offsets.resize(input_rows_count);
+        fmt::memory_buffer buffer;
+
         for (size_t i = 0; i < input_rows_count; ++i) {
+            buffer.clear();
+
             int l_size = loffsets[i] - loffsets[i - 1] - 1;
             const auto l_raw = reinterpret_cast<const char*>(&ldata[loffsets[i - 1]]);
 
             int r_size = roffsets[i] - roffsets[i - 1] - 1;
-            const auto r_raw = reinterpret_cast<const char*>(&rdata[loffsets[i - 1]]);
+            const auto r_raw = reinterpret_cast<const char*>(&rdata[roffsets[i - 1]]);
 
-            if (r_size == 0) {
+            if (r_size != 1) {
                 StringOP::push_null_string(i, res_data, res_offsets, null_map_data);
                 continue;
             }
@@ -409,9 +413,11 @@ struct StringAppendTrailingCharIfAbsent {
                                             res_offsets);
                 continue;
             }
-            StringOP::push_value_string(std::string_view(l_raw, l_size), i, res_data, res_offsets);
-            res_data[res_data.size() - 1] = *r_raw;
-            res_data.push_back('\0');
+
+            buffer.append(l_raw, l_raw + l_size);
+            buffer.append(r_raw, r_raw + 1);
+            StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i, res_data,
+                                        res_offsets);
         }
     }
 };
@@ -482,7 +488,7 @@ void register_function_string(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStringEndsWith>();
     factory.register_function<FunctionStringInstr>();
     factory.register_function<FunctionStringFindInSet>();
-//    factory.register_function<FunctionStringLocate>();
+    //    factory.register_function<FunctionStringLocate>();
     factory.register_function<FunctionReverse>();
     factory.register_function<FunctionToLower>();
     factory.register_function<FunctionToUpper>();
