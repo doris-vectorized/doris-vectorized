@@ -30,6 +30,8 @@
 
 namespace doris {
 
+using vectorized::Null;
+
 TEST(function_string_substr_test, function_string_substr_test) {
     int len = 6;
     std::string str_test[len] = {"asd你好",   "hello word", "hello word",
@@ -320,11 +322,11 @@ TEST(function_string_test, function_append_trailing_char_if_absent_test) {
     std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
                                                       vectorized::TypeIndex::String};
 
-    std::vector<std::pair<std::vector<std::any>, std::vector<std::any>>> data_set = {
-            {{std::string("ASD"), std::string("D")}, {std::string("ASD"), false}},
-            {{std::string("AS"), std::string("D")}, {std::string("ASD"), false}},
-            {{std::string(""), std::string("")}, {std::string(""), true}},
-            {{std::string(""), std::string("A")}, {std::string("A"), false}}};
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("ASD"), std::string("D")}, std::string("ASD")},
+            {{std::string("AS"), std::string("D")}, std::string("ASD")},
+            {{std::string(""), std::string("")}, Null()},
+            {{std::string(""), std::string("A")}, std::string("A")}};
 
     vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
@@ -336,21 +338,113 @@ TEST(function_string_test, function_lpad_test) {
                                                       vectorized::TypeIndex::Int32,
                                                       vectorized::TypeIndex::String};
 
-    std::vector<std::pair<std::vector<std::any>, std::vector<std::any>>> data_set = {
-            {{std::string("hi"), 5, std::string("?")}, {std::string("???hi"), false}},
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("hi"), 5, std::string("?")}, std::string("???hi")},
             {{std::string("g8%7IgY%AHx7luNtf8Kh"), 20, std::string("")},
-             {std::string("g8%7IgY%AHx7luNtf8Kh"), false}},
-            {{std::string("hi"), 1, std::string("?")}, {std::string("h"), false}},
-            {{std::string("你好"), 1, std::string("?")}, {std::string("你"), false}},
-            {{std::string("hi"), 0, std::string("?")}, {std::string(""), false}},
-            {{std::string("hi"), -1, std::string("?")}, {std::string(""), true}},
-            {{std::string("h"), 1, std::string("")}, {std::string("h"), false}},
-            {{std::string("hi"), 5, std::string("")}, {std::string(""), true}},
-            {{std::string("hi"), 5, std::string("ab")}, {std::string("abahi"), false}},
-            {{std::string("hi"), 5, std::string("呵呵")}, {std::string("呵呵呵hi"), false}},
-            {{std::string("呵呵"), 5, std::string("hi")}, {std::string("hih呵呵"), false}}};
+             std::string("g8%7IgY%AHx7luNtf8Kh")},
+            {{std::string("hi"), 1, std::string("?")}, std::string("h")},
+            {{std::string("你好"), 1, std::string("?")}, std::string("你")},
+            {{std::string("hi"), 0, std::string("?")}, std::string("")},
+            {{std::string("hi"), -1, std::string("?")}, Null()},
+            {{std::string("h"), 1, std::string("")}, std::string("h")},
+            {{std::string("hi"), 5, std::string("")}, Null()},
+            {{std::string("hi"), 5, std::string("ab")}, std::string("abahi")},
+            {{std::string("hi"), 5, std::string("呵呵")}, std::string("呵呵呵hi")},
+            {{std::string("呵呵"), 5, std::string("hi")}, std::string("hih呵呵")}};
 
     vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
+TEST(function_string_test, function_rpad_test) {
+    std::string func_name = "rpad";
+
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                      vectorized::TypeIndex::Int32,
+                                                      vectorized::TypeIndex::String};
+
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("hi"), 5, std::string("?")}, std::string("hi???")},
+            {{std::string("g8%7IgY%AHx7luNtf8Kh"), 20, std::string("")},
+             std::string("g8%7IgY%AHx7luNtf8Kh")},
+            {{std::string("hi"), 1, std::string("?")}, std::string("h")},
+            {{std::string("你好"), 1, std::string("?")}, std::string("你")},
+            {{std::string("hi"), 0, std::string("?")}, std::string("")},
+            {{std::string("hi"), -1, std::string("?")}, Null()},
+            {{std::string("h"), 1, std::string("")}, std::string("h")},
+            {{std::string("hi"), 5, std::string("")}, Null()},
+            {{std::string("hi"), 5, std::string("ab")}, std::string("hiaba")},
+            {{std::string("hi"), 5, std::string("呵呵")}, std::string("hi呵呵呵")},
+            {{std::string("呵呵"), 5, std::string("hi")}, std::string("呵呵hih")}};
+
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
+TEST(function_string_test, function_ascii_test) {
+    std::string func_name = "ascii";
+
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {{{std::string("")}, 0},
+                                                                        {{std::string("aa")}, 97},
+                                                                        {{std::string("我")}, 230},
+                                                                        {{Null()}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
+}
+
+TEST(function_string_test, function_char_length_test) {
+    std::string func_name = "char_length";
+
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("")}, 0},    {{std::string("aa")}, 2},  {{std::string("我")}, 1},
+            {{std::string("我a")}, 2}, {{std::string("a我")}, 2}, {{std::string("123")}, 3},
+            {{Null()}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
+}
+
+TEST(function_string_test, function_concat_test) {
+    std::string func_name = "concat";
+    {
+        std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+
+        std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+                {{std::string("")}, std::string("")},
+                {{std::string("123")}, std::string("123")},
+                {{Null()}, Null()}};
+
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
+                                                                     data_set);
+    };
+
+    {
+        std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                          vectorized::TypeIndex::String};
+
+        std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+                {{std::string(""), std::string("")}, std::string("")},
+                {{std::string("123"), std::string("45")}, std::string("12345")},
+                {{std::string("123"), Null()}, Null()}};
+
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
+                                                                     data_set);
+    };
+}
+
+TEST(function_string_test, function_null_or_empty_test) {
+    std::string func_name = "null_or_empty";
+
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("")}, uint8(true)},
+            {{std::string("aa")}, uint8(false)},
+            {{std::string("我")}, uint8(false)},
+            {{Null()}, uint8(true)}};
+
+    vectorized::check_function<vectorized::DataTypeUInt8, false>(func_name, input_types, data_set);
 }
 
 } // namespace doris
