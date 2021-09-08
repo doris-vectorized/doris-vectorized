@@ -31,9 +31,10 @@
 
 namespace doris {
 namespace vectorized {
-void check_function(std::string func_name, std::vector<TypeIndex> input_types,
-                    std::vector<std::pair<std::vector<std::any>, std::vector<std::any>>> data_set,
-                    TypeIndex return_type, bool is_nullable) {
+
+template <typename ReturnType, bool nullable = false>
+void check_function(const std::string& func_name, const std::vector<TypeIndex>& input_types,
+                    const std::vector<std::pair<std::vector<std::any>, std::vector<std::any>>>& data_set) {
     size_t row_size = data_set.size();
     size_t column_size = input_types.size();
 
@@ -42,6 +43,7 @@ void check_function(std::string func_name, std::vector<TypeIndex> input_types,
     ColumnNumbers arguments;
     ColumnsWithTypeAndName ctn;
 
+    // 1. build block and column type and names
     for (int i = 0; i < column_size; i++) {
         TypeIndex tp = input_types[i];
         std::string col_name = "k" + std::to_string(i);
@@ -77,57 +79,39 @@ void check_function(std::string func_name, std::vector<TypeIndex> input_types,
                                                 col_name);
             block.insert(i, type_and_name);
             ctn.emplace_back(type_and_name);
-
         } else {
             assert(false);
         }
         arguments.push_back(i);
     }
 
-    if (return_type == vectorized::TypeIndex::String) {
-        if (is_nullable) {
-            auto func = SimpleFunctionFactory::instance().get_function(
-                    func_name, ctn, make_nullable(std::make_shared<vectorized::DataTypeString>()));
+    // 2. execute function
+    auto return_type = nullable ? make_nullable(std::make_shared<ReturnType>()) : std::make_shared<ReturnType>();
+    auto func = SimpleFunctionFactory::instance().get_function(
+            func_name, ctn, return_type);
+    block.insert({nullptr, return_type, "result"});
+    func->execute(block, arguments, block.columns() - 1, row_size);
 
-            block.insert({nullptr, block.get_by_position(0).type, "result"});
+    // 3. check the result of function
+    for (int i = 0; i < row_size; ++i) {
+        ColumnPtr column = block.get_columns()[block.columns() - 1];
+        auto check_column_data = [&]() {
+            vectorized::Field field;
+            column->get(i, field);
 
-            func->execute(block, arguments, block.columns() - 1, row_size);
+            const auto& column_data = field.get<typename ReturnType::FieldType>();
+            const auto& expect_data = std::any_cast<typename ReturnType::FieldType>(data_set[i].second[0]);
 
-            for (int i = 0; i < row_size; ++i) {
-                ColumnPtr column = block.get_columns()[block.columns() - 1];
-                bool is_null = std::any_cast<bool>(data_set[i].second[1]);
+            ASSERT_TRUE(column_data == expect_data);
+        };
 
-                ASSERT_EQ(column->is_null_at(i), is_null);
-
-                if (!is_null) {
-                    vectorized::Field field;
-                    column->get(i, field);
-
-                    const std::string& str = field.get<std::string>();
-                    std::string expect_str = std::any_cast<std::string>(data_set[i].second[0]);
-
-                    ASSERT_STREQ(expect_str.c_str(), str.c_str());
-                }
-            }
+        if constexpr (nullable) {
+            bool is_null = std::any_cast<bool>(data_set[i].second[1]);
+            ASSERT_EQ(column->is_null_at(i), is_null);
+            if (!is_null) check_column_data();
         } else {
-            auto func = SimpleFunctionFactory::instance().get_function(
-                    func_name, ctn, std::make_shared<vectorized::DataTypeString>());
-
-            block.insert({nullptr, block.get_by_position(0).type, "result"});
-
-            func->execute(block, arguments, block.columns() - 1, row_size);
-
-            for (int i = 0; i < row_size; ++i) {
-                ColumnPtr column = block.get_columns()[block.columns() - 1];
-
-                const std::string& str = column->get_data_at(i).data;
-                std::string expect_str = std::any_cast<std::string>(data_set[i].second[0]);
-
-                ASSERT_STREQ(expect_str.c_str(), str.c_str());
-            }
+            check_column_data();
         }
-    } else {
-        assert(0);
     }
 }
 } // namespace vectorized

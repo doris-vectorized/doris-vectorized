@@ -326,11 +326,7 @@ TEST(function_string_test, function_append_trailing_char_if_absent_test) {
             {{std::string(""), std::string("")}, {std::string(""), true}},
             {{std::string(""), std::string("A")}, {std::string("A"), false}}};
 
-    vectorized::TypeIndex return_type = vectorized::TypeIndex::String;
-
-    bool is_nullable = true;
-
-    vectorized::check_function(func_name, input_types, data_set, return_type, is_nullable);
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
 TEST(function_string_test, function_lpad_test) {
@@ -354,11 +350,7 @@ TEST(function_string_test, function_lpad_test) {
             {{std::string("hi"), 5, std::string("呵呵")}, {std::string("呵呵呵hi"), false}},
             {{std::string("呵呵"), 5, std::string("hi")}, {std::string("hih呵呵"), false}}};
 
-    vectorized::TypeIndex return_type = vectorized::TypeIndex::String;
-
-    bool is_nullable = true;
-
-    vectorized::check_function(func_name, input_types, data_set, return_type, is_nullable);
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
 } // namespace doris
