@@ -31,8 +31,9 @@ namespace doris::vectorized {
 #define TIME_FUNCTION_IMPL(CLASS, UNIT, FUNCTION)                     \
     struct CLASS {                                                    \
         static constexpr auto name = #UNIT;                           \
-        static inline auto execute(const Int128& t) {                 \
+        static inline auto execute(const Int128& t, bool& is_null) {  \
             const auto& date_time_value = (doris::DateTimeValue&)(t); \
+            is_null = !date_time_value.is_valid_date();               \
             return date_time_value.FUNCTION;                          \
         }                                                             \
     }
@@ -56,8 +57,9 @@ TIME_FUNCTION_IMPL(ToDaysImpl, to_days, daynr());
 struct ToDateImpl {
     static constexpr auto name = "to_date";
 
-    static inline auto execute(const Int128& t) {
+    static inline auto execute(const Int128& t, bool& is_null) {
         auto dt = binary_cast<Int128, doris::DateTimeValue>(t);
+        is_null = !dt.is_valid_date();
         dt.cast_to_date();
         return binary_cast<doris::DateTimeValue, Int128>(dt);
     }
@@ -70,16 +72,17 @@ struct DateImpl : public ToDateImpl {
 // this function
 struct TimeStampImpl {
     static constexpr auto name = "timestamp";
-    static inline auto execute(const Int128& t) { return t; }
+    static inline auto execute(const Int128& t, bool& is_null) { return t; }
 };
 
 struct UnixTimeStampImpl {
     static constexpr auto name = "unix_timestamp";
-    static inline int execute(const Int128& t) {
+    static inline int execute(const Int128& t, bool& is_null) {
         // TODO: use default time zone, slowly and incorrect, just for test use
         static cctz::time_zone time_zone = cctz::fixed_time_zone(cctz::seconds(8 * 60 * 60));
 
         const auto& dt = (doris::DateTimeValue&)(t);
+        is_null = !dt.is_valid_date();
         int64_t timestamp = 0;
         dt.unix_timestamp(&timestamp, time_zone);
 
@@ -92,9 +95,10 @@ struct DayNameImpl {
     static constexpr auto max_size = MAX_DAY_NAME_LEN;
 
     static inline auto execute(const DateTimeValue& dt, ColumnString::Chars& res_data,
-                               size_t& offset) {
+                               size_t& offset, bool& is_null) {
         const auto* day_name = dt.day_name();
-        if (day_name == nullptr) {
+        is_null = !dt.is_valid_date();
+        if (day_name == nullptr || is_null) {
             offset += 1;
             res_data[offset - 1] = 0;
         } else {
@@ -112,9 +116,10 @@ struct MonthNameImpl {
     static constexpr auto max_size = MAX_MONTH_NAME_LEN;
 
     static inline auto execute(const DateTimeValue& dt, ColumnString::Chars& res_data,
-                               size_t& offset) {
+                               size_t& offset, bool& is_null) {
         const auto* month_name = dt.month_name();
-        if (month_name == nullptr) {
+        is_null = !dt.is_valid_date();
+        if (month_name == nullptr || is_null) {
             offset += 1;
             res_data[offset - 1] = 0;
         } else {
@@ -188,16 +193,18 @@ struct FromUnixTimeImpl {
 template <typename Transform>
 struct TransformerToStringOneArgument {
     static void vector(const PaddedPODArray<Int128>& ts, ColumnString::Chars& res_data,
-                       ColumnString::Offsets& res_offsets) {
-        auto len = ts.size();
+                       ColumnString::Offsets& res_offsets, NullMap& null_map) {
+        const auto len = ts.size();
         res_data.resize(len * Transform::max_size);
         res_offsets.resize(len);
+        null_map.resize_fill(len, false);
 
         size_t offset = 0;
         for (int i = 0; i < len; ++i) {
             const auto& t = ts[i];
             const auto& date_time_value = reinterpret_cast<const DateTimeValue&>(t);
-            res_offsets[i] = Transform::execute(date_time_value, res_data, offset);
+            res_offsets[i] = Transform::execute(date_time_value, res_data, offset,
+                    reinterpret_cast<bool&>(null_map[i]));
         }
     }
 };
@@ -210,6 +217,7 @@ struct TransformerToStringTwoArgument {
                                 PaddedPODArray<UInt8>& null_map) {
         auto len = ts.size();
         res_offsets.resize(len);
+        null_map.resize_fill(len, false);
 
         size_t offset = 0;
         for (int i = 0; i < len; ++i) {
@@ -225,12 +233,15 @@ struct TransformerToStringTwoArgument {
 
 template <typename FromType, typename ToType, typename Transform>
 struct Transformer {
-    //    static void vector(const PaddedPODArray<FromType> & vec_from, PaddedPODArray<ToType> & vec_to, const DateLUTImpl & time_zone)
-    static void vector(const PaddedPODArray<FromType>& vec_from, PaddedPODArray<ToType>& vec_to) {
+    static void vector(const PaddedPODArray<FromType>& vec_from, PaddedPODArray<ToType>& vec_to,
+            NullMap& null_map) {
         size_t size = vec_from.size();
         vec_to.resize(size);
+        null_map.resize_fill(size, false);
 
-        for (size_t i = 0; i < size; ++i) vec_to[i] = Transform::execute(vec_from[i]);
+        for (size_t i = 0; i < size; ++i) {
+            vec_to[i] = Transform::execute(vec_from[i], reinterpret_cast<bool&>(null_map[i]));
+        }
     }
 };
 
@@ -243,8 +254,10 @@ struct DateTimeTransformImpl {
         const ColumnPtr source_col = block.get_by_position(arguments[0]).column;
         if (const auto* sources = check_and_get_column<ColumnVector<FromType>>(source_col.get())) {
             auto col_to = ColumnVector<ToType>::create();
-            Op::vector(sources->get_data(), col_to->get_data());
-            block.replace_by_position(result, std::move(col_to));
+            auto null_map = ColumnVector<UInt8>::create();
+            Op::vector(sources->get_data(), col_to->get_data(), null_map->get_data());
+            block.replace_by_position(result,
+                    ColumnNullable::create(std::move(col_to), std::move(null_map)));
         } else {
             return Status::RuntimeError(fmt::format(
                     "Illegal column {} of first argument of function {}",
