@@ -126,6 +126,8 @@ void check_function(std::string func_name, std::vector<TypeIndex> input_types,
                 ASSERT_STREQ(expect_str.c_str(), str.c_str());
             }
         }
+    } else {
+        assert(0);
     }
 }
 } // namespace vectorized
