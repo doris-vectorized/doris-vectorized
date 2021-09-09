@@ -122,10 +122,13 @@ vectorized::DataTypePtr Schema::get_data_type_ptr(FieldType type) {
 
         case OLAP_FIELD_TYPE_LARGEINT:
             return std::make_shared<vectorized::DataTypeInt128>();
-//        case OLAP_FIELD_TYPE_DATE:
-//            return std::make_shared<vectorized::DataTypeDate>();
-//        case OLAP_FIELD_TYPE_DATETIME:
-//            return std::make_shared<vectorized::DataTypeDateTime>();
+
+        case OLAP_FIELD_TYPE_DATE:
+            return std::make_shared<vectorized::DataTypeDate>();
+
+        case OLAP_FIELD_TYPE_DATETIME:
+            return std::make_shared<vectorized::DataTypeDateTime>();
+
         case OLAP_FIELD_TYPE_DOUBLE:
             return std::make_shared<vectorized::DataTypeFloat64>();
 
@@ -134,8 +137,8 @@ vectorized::DataTypePtr Schema::get_data_type_ptr(FieldType type) {
         case OLAP_FIELD_TYPE_HLL:
             return std::make_shared<vectorized::DataTypeString>();
 
-//        case OLAP_FIELD_TYPE_DECIMAL:
-//            return std::make_shared<vectorized::DataTypeDecimal<vectorized::Decimal128>>(27, 9);
+        case OLAP_FIELD_TYPE_DECIMAL:
+            return std::make_shared<vectorized::DataTypeDecimal<vectorized::Decimal128>>(27, 9);
 
         default:
             DCHECK(false);
