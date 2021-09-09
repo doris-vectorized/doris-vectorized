@@ -18,3 +18,4 @@
 # where to put generated libraries
 set(EXECUTABLE_OUTPUT_PATH "${BUILD_DIR}/test/vec/exec")
 
+ADD_BE_TEST(vgeneric_iterators_test)
