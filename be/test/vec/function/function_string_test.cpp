@@ -433,6 +433,75 @@ TEST(function_string_test, function_concat_test) {
         vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
                                                                      data_set);
     };
+
+    {
+        std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                          vectorized::TypeIndex::String,
+                                                          vectorized::TypeIndex::String};
+
+        std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+                {{std::string(""), std::string("1"), std::string("")}, std::string("1")},
+                {{std::string("123"), std::string("456"), std::string("789")},
+                 std::string("123456789")},
+                {{std::string("123"), Null(), std::string("789")}, Null()}};
+
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
+                                                                     data_set);
+    };
+}
+
+TEST(function_string_test, function_concat_ws_test) {
+    std::string func_name = "concat_ws";
+    {
+        std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                          vectorized::TypeIndex::String};
+
+        std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+                {{std::string("-"), std::string("")}, std::string("")},
+                {{std::string(""), std::string("123")}, std::string("123")},
+                {{std::string(""), std::string("")}, std::string("")},
+                {{Null(), std::string("")}, Null()},
+                {{Null(), Null()}, Null()}};
+
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
+                                                                     data_set);
+    };
+
+    {
+        std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                          vectorized::TypeIndex::String,
+                                                          vectorized::TypeIndex::String};
+
+        std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+                {{std::string("-"), std::string(""), std::string("")}, std::string("-")},
+                {{std::string(""), std::string("123"), std::string("456")}, std::string("123456")},
+                {{std::string(""), std::string(""), std::string("")}, std::string("")},
+                {{Null(), std::string(""), std::string("")}, Null()},
+                {{Null(), std::string(""), Null()}, Null()}};
+
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
+                                                                     data_set);
+    };
+
+    {
+        std::vector<vectorized::TypeIndex> input_types = {
+                vectorized::TypeIndex::String, vectorized::TypeIndex::String,
+                vectorized::TypeIndex::String, vectorized::TypeIndex::String};
+
+        std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+                {{std::string("-"), std::string(""), std::string(""), std::string("")},
+                 std::string("--")},
+                {{std::string(""), std::string("123"), std::string("456"), std::string("789")},
+                 std::string("123456789")},
+                {{std::string("-"), std::string(""), std::string("?"), std::string("")},
+                 std::string("-?-")},
+                {{Null(), std::string(""), std::string("?"), std::string("")}, Null()},
+                {{std::string("-"), std::string("123"), Null(), std::string("456")},
+                 std::string("123-456")}};
+
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
+                                                                     data_set);
+    };
 }
 
 TEST(function_string_test, function_null_or_empty_test) {
@@ -497,6 +566,42 @@ TEST(function_string_test,function_reverse_test) {
         };
         
         vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
+TEST(function_string_test, function_instr_test) {
+    std::string func_name = "instr";
+
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                      vectorized::TypeIndex::String};
+
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("abcdefg"), std::string("efg")}, 5},
+            {{std::string("aa"), std::string("a")}, 1},
+            {{std::string("我是"), std::string("是")}, 2},
+            {{std::string("abcd"), std::string("e")}, 0},
+            {{std::string("abcdef"), std::string("")}, 1},
+            {{std::string(""), std::string("")}, 1},
+            {{std::string("aaaab"), std::string("bb")}, 0}};
+
+    vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
+}
+
+TEST(function_string_test, function_find_in_set_test) {
+    std::string func_name = "find_in_set";
+
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                      vectorized::TypeIndex::String};
+
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("abcdefg"), std::string("a,b,c")}, 0},
+            {{std::string("aa"), std::string("a,aa,aaa")}, 2},
+            {{std::string("aa"), std::string("aa,aa,aa")}, 1},
+            {{std::string("a"), Null()}, Null()},
+            {{Null(), std::string("aa")}, Null()},
+            {{std::string("a"), std::string("")}, 0},
+            {{std::string(""), std::string(",,")}, 1}};
+
+    vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
 }
 
 } // namespace doris
