@@ -250,26 +250,33 @@ struct NameReverse {
 struct ReverseImpl {
     static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
                          ColumnString::Chars& res_data, ColumnString::Offsets& res_offsets) {
-        auto size = offsets.size();
-        res_offsets.resize(size);
-        for (int i = 0; i < size; ++i) {
+        
+        auto rows_count = offsets.size();
+        // allocate memory and memory align
+        res_offsets.resize(rows_count);
+        for (int i = 0; i < rows_count; ++i) {
             res_offsets[i] = offsets[i];
         }
-
+        
         size_t data_length = data.size();
+        // allocate memory and memory align
         res_data.resize(data_length);
-        for (int i = 0; i < size; ++i) {
-            const char* l_raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
-            int l_str_size = offsets[i] - offsets[i - 1] - 1;
-
-            char* r_raw_str = reinterpret_cast<char*>(&res_data[res_offsets[i - 1]]);
-            memcpy(r_raw_str, l_raw_str, l_str_size);
-
-            // reserve
-            for (size_t j = 0, char_size = 0; j < l_str_size; j += char_size) {
-                char_size = get_utf8_byte_length((unsigned)(r_raw_str)[j]);
-                std::copy(l_raw_str + j, l_raw_str + j + char_size,
-                          r_raw_str + l_str_size - j - char_size);
+        
+        for (int i = 0; i < rows_count; ++i) {
+            auto src_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            // -1 means '\0'
+            size_t src_str_size = offsets[i] - offsets[i - 1] - 1;
+            // use unsigned char* support chinese characters
+            auto dst_str = reinterpret_cast<unsigned char*>(&res_data[res_offsets[i - 1]]);
+            
+            // add 1 equals *(dst_str+src_str_size) = '\0';
+            memcpy(dst_str, src_str, src_str_size+1);
+            
+            // reverse
+            for (size_t j = 0, char_size = 0; j < src_str_size; j += char_size) {
+                char_size = get_utf8_byte_length((unsigned) (src_str)[j]);
+                std::copy(src_str + j, src_str + j + char_size,
+                          dst_str + src_str_size - j - char_size);
             }
         }
         return Status::OK();
