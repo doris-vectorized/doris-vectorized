@@ -1006,10 +1006,10 @@ visible_functions = [
         '15FunctionContextERKNS1_9StringValES6_', '', '', '', ''],
     [['from_base64'], 'VARCHAR', ['VARCHAR'],
         '_ZN5doris19EncryptionFunctions11from_base64EPN9doris_udf'
-        '15FunctionContextERKNS1_9StringValE', '', '', '', ''],
+        '15FunctionContextERKNS1_9StringValE', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['to_base64'], 'VARCHAR', ['VARCHAR'],
         '_ZN5doris19EncryptionFunctions9to_base64EPN9doris_udf'
-        '15FunctionContextERKNS1_9StringValE', '', '', '', ''],
+        '15FunctionContextERKNS1_9StringValE', '', '', 'vec', 'ALWAYS_NULLABLE'],
     # for compatable with MySQL
     [['md5'], 'VARCHAR', ['VARCHAR'],
         '_ZN5doris19EncryptionFunctions3md5EPN9doris_udf15FunctionContextERKNS1_9StringValE', '', '', '', ''],
