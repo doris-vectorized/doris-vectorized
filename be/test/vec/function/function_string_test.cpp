@@ -586,6 +586,24 @@ TEST(function_string_test, function_instr_test) {
     vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
 }
 
+TEST(function_string_test, function_find_in_set_test) {
+    std::string func_name = "find_in_set";
+
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
+                                                      vectorized::TypeIndex::String};
+
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("abcdefg"), std::string("a,b,c")}, 0},
+            {{std::string("aa"), std::string("a,aa,aaa")}, 2},
+            {{std::string("aa"), std::string("aa,aa,aa")}, 1},
+            {{std::string("a"), Null()}, Null()},
+            {{Null(), std::string("aa")}, Null()},
+            {{std::string("a"), std::string("")}, 0},
+            {{std::string(""), std::string(",,")}, 1}};
+
+    vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
+}
+
 } // namespace doris
 
 int main(int argc, char** argv) {
