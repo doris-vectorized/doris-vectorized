@@ -44,14 +44,57 @@ class VAutoIncrementIterator : public RowwiseIterator {
 public:
     // Will generate num_rows rows in total
     VAutoIncrementIterator(const Schema& schema, size_t num_rows)
-            : _schema(schema), _num_rows(num_rows), _rows_returned(0) {}
+            : _schema(schema), _num_rows(num_rows), _rows_returned() {}
     ~VAutoIncrementIterator() override {}
 
     // NOTE: Currently, this function will ignore StorageReadOptions
     Status init(const StorageReadOptions& opts) override;
 
     Status next_batch(vectorized::Block* block) override {
-        return Status::NotSupported("to be implemented. (TODO)");
+        int row_idx = 0;
+        while (_rows_returned < _num_rows) {
+            for (int j = 0; j < _schema.num_columns(); ++j) {
+                vectorized::ColumnWithTypeAndName vc = block->get_by_position(j);
+                vectorized::IColumn& vi = (vectorized::IColumn&)(*vc.column);
+
+                char data[16] = {};
+                size_t data_len = 0;
+                const auto* col_schema = _schema.column(j);
+                switch (col_schema->type()) {
+                    case OLAP_FIELD_TYPE_SMALLINT:
+                        *(int16_t*)data = _rows_returned + j;
+                        data_len = sizeof(int16_t);
+                        break; 
+                    case OLAP_FIELD_TYPE_INT:
+                        *(int32_t*)data = _rows_returned + j;
+                        data_len = sizeof(int32_t);
+                        break;
+                    case OLAP_FIELD_TYPE_BIGINT:
+                        *(int64_t*)data = _rows_returned + j;
+                        data_len = sizeof(int64_t);
+                        break;
+                    case OLAP_FIELD_TYPE_FLOAT: 
+                        *(float*)data = _rows_returned + j;
+                        data_len = sizeof(float);
+                        break;
+                    case OLAP_FIELD_TYPE_DOUBLE: 
+                        *(double*)data = _rows_returned + j;
+                        data_len = sizeof(double);
+                        break;
+                    default:
+                        break;
+                }
+
+                vi.insert_data(data, data_len);
+            }
+
+            ++row_idx;
+            ++_rows_returned;
+        }
+
+        if (row_idx > 0)
+            return Status::OK();
+        return Status::EndOfFile("End of VAutoIncrementIterator");
     }
 
     const Schema& schema() const override { return _schema; }
@@ -87,6 +130,21 @@ public:
     ~VMergeIteratorContext() {
         delete _iter;
         _iter = nullptr;
+    }
+
+    Status block_reset()
+    {
+        _block.clear();
+
+        const Schema& schema = _iter->schema();
+        for (auto &column_desc : schema.columns()) {
+            auto data_type = Schema::get_data_type_ptr(column_desc->type());
+            if (data_type == nullptr) {
+                return Status::RuntimeError("invalid data type");
+            }
+            _block.insert(ColumnWithTypeAndName(data_type->create_column(), data_type, column_desc->name()));
+        }
+        return Status::OK();
     }
 
     // Initialize this context and will prepare data for current_row()
@@ -174,6 +232,7 @@ private:
 
 Status VMergeIteratorContext::init(const StorageReadOptions& opts) {
     RETURN_IF_ERROR(_iter->init(opts));
+    RETURN_IF_ERROR(block_reset());
     RETURN_IF_ERROR(_load_next_block());
     if (valid()) {
         RETURN_IF_ERROR(advance());
@@ -196,7 +255,7 @@ Status VMergeIteratorContext::advance() {
 
 Status VMergeIteratorContext::_load_next_block() {
     do {
-        _block.clear();
+        block_reset();
         Status st = _iter->next_batch(&_block);
         if (!st.ok()) {
             _valid = false;
