@@ -204,6 +204,23 @@ public:
         *n = max_fetch;
         return Status::OK();
     }
+    
+    Status next_batch(size_t* count, vectorized::MutableColumnPtr& dst) override {
+        DCHECK(_parsed);
+        
+        if (PREDICT_FALSE(*count == 0 || _cur_idx >= _num_elems)) {
+            *count = 0;
+            return Status::OK();
+        }
+        
+        size_t max_fetch = std::min(*count, static_cast<size_t>(_num_elems - _cur_idx));
+    
+        dst->insert_data(&_data[PLAIN_PAGE_HEADER_SIZE + _cur_idx * SIZE_OF_TYPE], max_fetch * SIZE_OF_TYPE);
+        _cur_idx += max_fetch;
+        
+        *count = max_fetch;
+        return Status::OK();
+    }
 
     Status peek_next_batch(size_t* n, ColumnBlockView* dst) override {
         return next_batch<false>(n, dst);
