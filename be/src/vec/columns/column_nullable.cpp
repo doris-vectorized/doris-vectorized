@@ -75,9 +75,11 @@ void ColumnNullable::get(size_t n, Field& res) const {
         get_nested_column().get(n, res);
 }
 
-StringRef ColumnNullable::get_data_at(size_t /*n*/) const {
-    LOG(FATAL) << "Method getDataAt is not supported for " << get_name();
-    __builtin_unreachable();
+StringRef ColumnNullable::get_data_at(size_t n) const {
+    if (is_null_at(n)) {
+        return StringRef((const char*)nullptr, 0);
+    }
+    return get_nested_column().get_data_at(n);
 }
 
 void ColumnNullable::insert_data(const char* pos, size_t length) {
@@ -415,7 +417,8 @@ ColumnPtr make_nullable(const ColumnPtr& column, bool is_nullable) {
 
     if (is_column_const(*column))
         return ColumnConst::create(
-                make_nullable(assert_cast<const ColumnConst&>(*column).get_data_column_ptr(), is_nullable),
+                make_nullable(assert_cast<const ColumnConst&>(*column).get_data_column_ptr(),
+                              is_nullable),
                 column->size());
 
     return ColumnNullable::create(column, ColumnUInt8::create(column->size(), is_nullable ? 1 : 0));
