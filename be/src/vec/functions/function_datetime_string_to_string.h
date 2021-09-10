@@ -57,7 +57,7 @@ public:
         if (sources) {
             auto col_res = ColumnString::create();
             ColumnUInt8::MutablePtr col_null_map_to;
-            col_null_map_to = ColumnUInt8::create(sources->size());
+            col_null_map_to = ColumnUInt8::create();
             auto& vec_null_map_to = col_null_map_to->get_data();
 
             if (arguments.size() == 2) {
@@ -75,7 +75,7 @@ public:
                 }
             } else {
                 TransformerToStringTwoArgument<Transform>::vector_constant(
-                        sources->get_data(), "yyyy-MM-dd HH:mm:ss", col_res->get_chars(),
+                        sources->get_data(), "%Y-%m-%d %H:%i:%s", col_res->get_chars(),
                         col_res->get_offsets(), vec_null_map_to);
             }
 

@@ -34,7 +34,7 @@ public:
     size_t get_number_of_arguments() const override { return 1; }
 
     DataTypePtr get_return_type_impl(const ColumnsWithTypeAndName& arguments) const override {
-        return std::make_shared<DataTypeString>();
+        return make_nullable(std::make_shared<DataTypeString>());
     }
 
     bool use_default_implementation_for_constants() const override { return true; }
@@ -45,9 +45,10 @@ public:
         const ColumnPtr source_col = block.get_by_position(arguments[0]).column;
         const auto* sources = check_and_get_column<ColumnVector<Int128>>(source_col.get());
         auto col_res = ColumnString::create();
+        auto null_map = ColumnVector<UInt8>::create();
         if (sources) {
             TransformerToStringOneArgument<Transform>::vector(
-                    sources->get_data(), col_res->get_chars(), col_res->get_offsets());
+                    sources->get_data(), col_res->get_chars(), col_res->get_offsets(), null_map->get_data());
             block.replace_by_position(result, std::move(col_res));
         } else {
             return Status::InternalError("Illegal column " +

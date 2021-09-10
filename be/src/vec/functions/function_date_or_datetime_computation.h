@@ -105,6 +105,7 @@ struct DateDiffImpl {
     static inline Int32 execute(const Int128& t0, const Int128& t1, bool& is_null) {
         const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0);
         const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1);
+        is_null = !ts0.is_valid_date() || ts1.is_valid_date();
         return ts0.daynr() - ts1.daynr();
     }
 };
@@ -116,6 +117,7 @@ struct TimeDiffImpl {
     static inline double execute(const Int128& t0, const Int128& t1, bool& is_null) {
         const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0);
         const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1);
+        is_null = !ts0.is_valid_date() || !ts1.is_valid_date();
         return ts0.second_diff(ts1);
     }
 };
@@ -128,6 +130,7 @@ struct TimeDiffImpl {
         static inline int64_t execute(const Int128& t0, const Int128& t1, bool& is_null) { \
             const auto& ts0 = reinterpret_cast<const doris::DateTimeValue&>(t0);           \
             const auto& ts1 = reinterpret_cast<const doris::DateTimeValue&>(t1);           \
+            is_null = !ts0.is_valid_date() || ts1.is_valid_date();                         \
             return DateTimeValue::datetime_diff<TimeUnit::UNIT>(ts1, ts0);                 \
         }                                                                                  \
     }
@@ -229,7 +232,6 @@ struct DateTimeAddIntervalImpl {
     static Status execute(Block& block, const ColumnNumbers& arguments, size_t result) {
         using ToType = typename Transform::ReturnType::FieldType;
         using Op = DateTimeOp<FromType, ToType, Transform>;
-        //        const DateLUTImpl & time_zone = extractTimeZoneFromFunctionArguments(block, arguments, 2, 0);
 
         const ColumnPtr source_col = block.get_by_position(arguments[0]).column;
         if (const auto* sources = check_and_get_column<ColumnVector<FromType>>(source_col.get())) {
@@ -261,10 +263,7 @@ struct DateTimeAddIntervalImpl {
                 }
             }
 
-            if constexpr (!Transform::is_nullable)
-                block.replace_by_position(result, std::move(col_to));
-            else
-                block.get_by_position(result).column =
+            block.get_by_position(result).column =
                         ColumnNullable::create(std::move(col_to), std::move(null_map));
         } else if (const auto* sources_const =
                            check_and_get_column_const<ColumnVector<FromType>>(source_col.get())) {
@@ -281,10 +280,7 @@ struct DateTimeAddIntervalImpl {
                                     col_to->get_data(), null_map->get_data(),
                                     *block.get_by_position(arguments[1]).column);
             }
-            if constexpr (!Transform::is_nullable)
-                block.replace_by_position(result, std::move(col_to));
-            else
-                block.get_by_position(result).column =
+            block.get_by_position(result).column =
                         ColumnNullable::create(std::move(col_to), std::move(null_map));
         } else {
             return Status::RuntimeError(fmt::format(
@@ -332,11 +328,7 @@ public:
                         get_name());
             }
         }
-        if constexpr (Transform::is_nullable) {
-            return make_nullable(std::make_shared<typename Transform::ReturnType>());
-        } else {
-            return std::make_shared<typename Transform::ReturnType>();
-        }
+        return make_nullable(std::make_shared<typename Transform::ReturnType>());
     }
 
     bool use_default_implementation_for_constants() const override { return true; }
