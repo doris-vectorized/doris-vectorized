@@ -147,6 +147,15 @@ public class ArithmeticExpr extends Expr {
                 Lists.<Type>newArrayList(Type.DECIMALV2, Type.DECIMALV2),
                 Type.DECIMALV2, Function.NullableMode.DEPEND_ON_ARGUMENT));
 
+        functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
+                Operator.MOD.getName(),
+                Lists.<Type>newArrayList(Type.DOUBLE, Type.DOUBLE),
+                Type.DOUBLE, Function.NullableMode.DEPEND_ON_ARGUMENT));
+        functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
+                Operator.MOD.getName(),
+                Lists.<Type>newArrayList(Type.DECIMALV2, Type.DECIMALV2),
+                Type.DECIMALV2, Function.NullableMode.DEPEND_ON_ARGUMENT));
+
         for (int i = 0; i < Type.getIntegerTypes().size(); i++) {
             Type t1 = Type.getIntegerTypes().get(i);
             for (int j = 0; j < Type.getIntegerTypes().size(); j++) {

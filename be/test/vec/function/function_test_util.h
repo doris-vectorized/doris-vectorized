@@ -32,6 +32,17 @@
 namespace doris {
 namespace vectorized {
 
+template <typename ColumnType, typename Column, typename NullColumn>
+void insert_column_to_block(std::list<ColumnPtr>& columns, ColumnsWithTypeAndName& ctn,
+        Column&& col, NullColumn&& null_map, Block& block, const std::string& col_name, int i) {
+    columns.emplace_back(ColumnNullable::create(std::move(col), std::move(null_map)));
+    ColumnWithTypeAndName type_and_name(columns.back()->get_ptr(),
+                                                make_nullable(std::make_shared<ColumnType>()),
+                                                col_name);
+    block.insert(i, type_and_name);
+    ctn.emplace_back(type_and_name);
+}
+
 template <typename ReturnType, bool nullable = false>
 void check_function(const std::string& func_name, const std::vector<TypeIndex>& input_types,
                     const std::vector<std::pair<std::vector<std::any>, std::any>>& data_set) {
@@ -48,11 +59,11 @@ void check_function(const std::string& func_name, const std::vector<TypeIndex>& 
         TypeIndex tp = input_types[i];
         std::string col_name = "k" + std::to_string(i);
 
+        auto null_map = ColumnUInt8::create(row_size, false);
+        auto& null_map_data = null_map->get_data();
+
         if (tp == TypeIndex::String) {
             auto col = ColumnString::create();
-            auto null_map = ColumnUInt8::create(row_size, false);
-            auto& null_map_data = null_map->get_data();
-            //null_map_data.resize_fill(row_size, false);
             for (int j = 0; j < row_size; j++) {
                 if (data_set[j].first[i].type() == typeid(Null)) {
                     null_map_data[j] = true;
@@ -62,19 +73,10 @@ void check_function(const std::string& func_name, const std::vector<TypeIndex>& 
                 auto str = std::any_cast<std::string>(data_set[j].first[i]);
                 col->insert_data(str.c_str(), str.size());
             }
-
-            columns.emplace_back(ColumnNullable::create(std::move(col), std::move(null_map)));
-
-            ColumnWithTypeAndName type_and_name(
-                    columns.back()->get_ptr(),
-                    make_nullable(std::make_shared<vectorized::DataTypeString>()), col_name);
-            block.insert(i, type_and_name);
-            ctn.emplace_back(type_and_name);
-
+            insert_column_to_block<DataTypeString>(columns, ctn, std::move(col),
+                    std::move(null_map), block, col_name, i);
         } else if (tp == TypeIndex::Int32) {
             auto col = ColumnInt32::create();
-            auto null_map = ColumnUInt8::create(row_size, false);
-            auto& null_map_data = null_map->get_data();
 
             for (int j = 0; j < row_size; j++) {
                 if (data_set[j].first[i].type() == typeid(Null)) {
@@ -83,16 +85,48 @@ void check_function(const std::string& func_name, const std::vector<TypeIndex>& 
                     continue;
                 }
                 auto value = std::any_cast<int>(data_set[j].first[i]);
-                col->insert_value(value);
+                col->insert_data(reinterpret_cast<char*>(&value), 0);
             }
+            insert_column_to_block<DataTypeInt32>(columns, ctn, std::move(col),
+                    std::move(null_map), block, col_name, i);
+        } else if (tp == TypeIndex::DateTime) {
+            static std::string date_time_format("%Y-%m-%d %H:%i:%s");
+            auto col = ColumnInt128::create();
 
-            columns.emplace_back(ColumnNullable::create(std::move(col), std::move(null_map)));
+            for (int j = 0; j < row_size; j++) {
+                if (data_set[j].first[i].type() == typeid(Null)) {
+                    null_map_data[j] = true;
+                    col->insert_default();
+                    continue;
+                }
+                auto datetime_str = std::any_cast<std::string>(data_set[j].first[i]);
+                DateTimeValue v;
+                v.from_date_format_str(date_time_format.c_str(), date_time_format.size(),
+                    datetime_str.c_str(), datetime_str.size());
+                v.to_datetime();
+                col->insert_data(reinterpret_cast<char*>(&v), 0);
+            }
+            insert_column_to_block<DataTypeDateTime>(columns, ctn,
+                    std::move(col), std::move(null_map), block, col_name, i);
+        } else if (tp == TypeIndex::Date) {
+            static std::string date_time_format("%Y-%m-%d");
+            auto col = ColumnInt128::create();
 
-            ColumnWithTypeAndName type_and_name(
-                    columns.back()->get_ptr(),
-                    make_nullable(std::make_shared<vectorized::DataTypeInt32>()), col_name);
-            block.insert(i, type_and_name);
-            ctn.emplace_back(type_and_name);
+            for (int j = 0; j < row_size; j++) {
+                if (data_set[j].first[i].type() == typeid(Null)) {
+                    null_map_data[j] = true;
+                    col->insert_default();
+                    continue;
+                }
+                auto datetime_str = std::any_cast<std::string>(data_set[j].first[i]);
+                DateTimeValue v;
+                v.from_date_format_str(date_time_format.c_str(), date_time_format.size(),
+                    datetime_str.c_str(), datetime_str.size());
+                v.cast_to_date();
+                col->insert_data(reinterpret_cast<char*>(&v), 0);
+            }
+            insert_column_to_block<DataTypeDateTime>(columns, ctn, std::move(col),
+                    std::move(null_map), block, col_name, i);
         } else {
             assert(false);
         }
@@ -104,6 +138,7 @@ void check_function(const std::string& func_name, const std::vector<TypeIndex>& 
                                 : std::make_shared<ReturnType>();
     auto func = SimpleFunctionFactory::instance().get_function(func_name, ctn, return_type);
     block.insert({nullptr, return_type, "result"});
+    DCHECK(func != nullptr);
     func->execute(block, arguments, block.columns() - 1, row_size);
 
     // 3. check the result of function

@@ -69,7 +69,7 @@ public:
                     get_name(), arguments.size());
         }
 
-        return std::make_shared<ToDataType>();
+        return make_nullable(std::make_shared<ToDataType>());
     }
 
     bool use_default_implementation_for_constants() const override { return true; }
