@@ -9,9 +9,9 @@
 #include "runtime/mem_tracker.h"
 #include "runtime/runtime_state.h"
 #include "vec/common/sip_hash.h"
-#include "vec/runtime/vpartition_info.h"
 #include "vec/runtime/vdata_stream_mgr.h"
 #include "vec/runtime/vdata_stream_recvr.h"
+#include "vec/runtime/vpartition_info.h"
 
 namespace doris::vectorized {
 
@@ -396,6 +396,25 @@ Status VDataStreamSender::send(RuntimeState* state, Block* block) {
     } else if (_part_type == TPartitionType::BUCKET_SHFFULE_HASH_PARTITIONED) {
         // 1. caculate hash
         // 2. dispatch rows to channel
+        int num_channels = _channel_shared_ptrs.size();
+        auto send_block = *block;
+        std::vector<int> result(_partition_expr_ctxs.size());
+        int counter = 0;
+        for (auto ctx : _partition_expr_ctxs) {
+            RETURN_IF_ERROR(ctx->execute(block, &result[counter++]));
+        }
+        int rows = block->rows();
+        for (int i = 0; i < rows; ++i) {
+            size_t hash_val = 0;
+            for (int j = 0; j < result.size(); ++j) {
+                auto column = block->get_by_position(result[j]).column;
+                void* val = reinterpret_cast<void*>(const_cast<char*>(column->get_data_at(i).data));
+                hash_val = RawValue::zlib_crc32(val, _partition_expr_ctxs[j]->root()->type(),
+                                                hash_val);
+            }
+            auto target_channel_id = hash_val % num_channels;
+            RETURN_IF_ERROR(_channel_shared_ptrs[target_channel_id]->add_row(&send_block, i));
+        }
     } else {
         // Range partition
         // 1. caculate range
