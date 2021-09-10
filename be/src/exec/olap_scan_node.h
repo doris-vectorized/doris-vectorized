@@ -369,8 +369,8 @@ protected:
 
     bool _is_pushed_index(int index) { return _pushed_conjuncts_index.count(index); }
     bool _is_leaf_expr(vectorized::VExpr* expr);
-    vectorized::VExpr* _dfs_peel_conjuct(vectorized::VExpr* expr);
-    void _peel_conjuct(); //remove pushed expr from conjuct tree
+    vectorized::VExpr* _dfs_peel_conjunct(vectorized::VExpr* expr);
+    void _peel_conjunct(); //remove pushed expr from conjunct tree
     int _leaf_index;
 };
 

@@ -457,7 +457,7 @@ Status OlapScanNode::start_scan(RuntimeState* state) {
     // 4.1 Filter idle conjunct which already trans to olap filters`
     remove_pushed_conjuncts(state);
     // 4.2 Filter idle conjunct in vexpr_contexts
-    _peel_conjuct();
+    _peel_conjunct();
 
     VLOG_CRITICAL << "BuildScanKey";
     // 5. Using `Key Column`'s ColumnValueRange to split ScanRange to several `Sub ScanRange`
@@ -1663,69 +1663,69 @@ bool OlapScanNode::_is_leaf_expr(vectorized::VExpr* expr) {
     return !expr->is_AND_expr();
 }
 
-vectorized::VExpr* OlapScanNode::_dfs_peel_conjuct(vectorized::VExpr* expr) {
-    LOG(INFO) << "_dfs_peel_conjuct():" << expr->debug_string();
+vectorized::VExpr* OlapScanNode::_dfs_peel_conjunct(vectorized::VExpr* expr) {
+    LOG(INFO) << "_dfs_peel_conjunct():" << expr->debug_string();
     if (_is_leaf_expr(expr)) {
-        LOG(INFO) << "_dfs_peel_conjuct():"
+        LOG(INFO) << "_dfs_peel_conjunct():"
                   << "is leaf";
         _leaf_index++;
         if (_is_pushed_index(_leaf_index - 1)) {
-            LOG(INFO) << "_dfs_peel_conjuct():"
+            LOG(INFO) << "_dfs_peel_conjunct():"
                       << "is pushed";
             return nullptr;
         }
-        LOG(INFO) << "_dfs_peel_conjuct():"
+        LOG(INFO) << "_dfs_peel_conjunct():"
                   << "not pushed";
         return expr;
     } else {
         //here do not close Expr* now
-        vectorized::VExpr* left_child = _dfs_peel_conjuct(expr->children()[0]);
-        vectorized::VExpr* right_child = _dfs_peel_conjuct(expr->children()[1]);
+        vectorized::VExpr* left_child = _dfs_peel_conjunct(expr->children()[0]);
+        vectorized::VExpr* right_child = _dfs_peel_conjunct(expr->children()[1]);
 
         expr->set_child(0, left_child);
         expr->set_child(1, right_child);
 
         if (left_child != nullptr && right_child != nullptr) {
-            LOG(INFO) << "_dfs_peel_conjuct():"
+            LOG(INFO) << "_dfs_peel_conjunct():"
                       << "return self";
             return expr;
         } else if (left_child != nullptr && right_child == nullptr) {
-            LOG(INFO) << "_dfs_peel_conjuct():"
+            LOG(INFO) << "_dfs_peel_conjunct():"
                       << "return left";
             return left_child;
         } else if (left_child == nullptr && right_child != nullptr) {
-            LOG(INFO) << "_dfs_peel_conjuct():"
+            LOG(INFO) << "_dfs_peel_conjunct():"
                       << "return right";
             return right_child;
         } else if (left_child == nullptr && right_child == nullptr) {
-            LOG(INFO) << "_dfs_peel_conjuct():"
+            LOG(INFO) << "_dfs_peel_conjunct():"
                       << "return null";
             return nullptr;
         }
     }
-    LOG(INFO) << "_dfs_peel_conjuct():"
+    LOG(INFO) << "_dfs_peel_conjunct():"
               << "unknow state";
     return nullptr;
 }
 
-void OlapScanNode::_peel_conjuct() {
+void OlapScanNode::_peel_conjunct() {
     if (_vconjunct_ctx_ptr.get() == nullptr) return;
-    LOG(INFO) << "_peel_conjuct():"
+    LOG(INFO) << "_peel_conjunct():"
               << "start peel";
 
     _leaf_index = 0;
 
-    vectorized::VExpr* conjuct_expr_root = (*_vconjunct_ctx_ptr.get())->root();
+    vectorized::VExpr* conjunct_expr_root = (*_vconjunct_ctx_ptr.get())->root();
 
-    if (conjuct_expr_root != nullptr) {
-        vectorized::VExpr* new_conjuct_expr_root = _dfs_peel_conjuct(conjuct_expr_root);
-        if (new_conjuct_expr_root == nullptr) {
+    if (conjunct_expr_root != nullptr) {
+        vectorized::VExpr* new_conjunct_expr_root = _dfs_peel_conjunct(conjunct_expr_root);
+        if (new_conjunct_expr_root == nullptr) {
             _vconjunct_ctx_ptr = nullptr;
         } else {
-            (*_vconjunct_ctx_ptr.get())->set_root(new_conjuct_expr_root);
+            (*_vconjunct_ctx_ptr.get())->set_root(new_conjunct_expr_root);
         }
     } else {
-        LOG(INFO) << "_peel_conjuct():"
+        LOG(INFO) << "_peel_conjunct():"
                   << "_vconjunct_ctx_ptr->root() is null";
     }
 }
