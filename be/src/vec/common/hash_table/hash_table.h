@@ -115,6 +115,15 @@ void set(T& x) {
   * They have to be specialized for each particular Cell class to supersede the
   * default verision that takes a generic pointer-like object.
   */
+struct VoidKey {};
+struct VoidMapped
+{
+    template <typename T>
+    auto & operator=(const T &)
+    {
+        return *this;
+    }
+};
 
 /**
   * The default implementation of GetMapped that is used for the above case (2).

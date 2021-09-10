@@ -23,7 +23,7 @@
 #include "exec/exec_node.h"
 #include "vec/aggregate_functions/aggregate_function.h"
 #include "vec/common/columns_hashing.h"
-#include "vec/common/hash_table/hash_map.h"
+#include "vec/common/hash_table/fixed_hash_map.h"
 #include "vec/exprs/vectorized_agg_fn.h"
 
 namespace doris {
@@ -57,9 +57,7 @@ struct AggregationMethodSerialized {
 
     using State = ColumnsHashing::HashMethodSerialized<typename Data::value_type, Mapped>;
 
-    static const bool low_cardinality_optimization = false;
-
-    static void insertKeyIntoColumns(const StringRef& key, MutableColumns& key_columns,
+    static void insert_key_into_columns(const StringRef& key, MutableColumns& key_columns,
                                      const Sizes&) {
         auto pos = key.data;
         for (auto& column : key_columns) pos = column->deserialize_and_insert_from_arena(pos);
@@ -76,16 +74,71 @@ struct AggregationMethodSerialized {
 using AggregatedDataWithoutKey = AggregateDataPtr;
 using AggregatedDataWithStringKey = HashMapWithSavedHash<StringRef, AggregateDataPtr>;
 
+/// For the case where there is one numeric key.
+/// FieldType is UInt8/16/32/64 for any type with corresponding bit width.
+template <typename FieldType, typename TData,
+        bool consecutive_keys_optimization = true>
+struct AggregationMethodOneNumber
+{
+    using Data = TData;
+    using Key = typename Data::key_type;
+    using Mapped = typename Data::mapped_type;
+    using Iterator = typename Data::iterator;
+
+    Data data;
+    Iterator iterator;
+    bool inited = false;
+
+    AggregationMethodOneNumber() = default;
+
+    template <typename Other>
+    AggregationMethodOneNumber(const Other & other) : data(other.data) {}
+
+    /// To use one `Method` in different threads, use different `State`.
+    using State = ColumnsHashing::HashMethodOneNumber<typename Data::value_type,
+        Mapped, FieldType, consecutive_keys_optimization>;
+
+    // Insert the key from the hash table into columns.
+    static void insert_key_into_columns(const Key & key, MutableColumns & key_columns, const Sizes & /*key_sizes*/) {
+        const auto * key_holder = reinterpret_cast<const char *>(&key);
+        auto * column = static_cast<ColumnVectorHelper *>(key_columns[0].get());
+        column->insert_raw_data<sizeof(FieldType)>(key_holder);
+    }
+
+    void init_once() {
+        if (!inited) {
+            inited = true;
+            iterator = data.begin();
+        }
+    }
+};
+
+using AggregatedDataWithUInt8Key = FixedImplicitZeroHashMapWithCalculatedSize<UInt8, AggregateDataPtr>;
+using AggregatedDataWithUInt16Key = FixedImplicitZeroHashMap<UInt16, AggregateDataPtr>;
+using AggregatedDataWithUInt32Key = HashMap<UInt32, AggregateDataPtr, HashCRC32<UInt32>>;
+using AggregatedDataWithUInt64Key = HashMap<UInt64, AggregateDataPtr, HashCRC32<UInt64>>;
+
+using AggregatedMethodVariants = std::variant<AggregationMethodSerialized<AggregatedDataWithStringKey>,
+                                    AggregationMethodOneNumber<UInt8, AggregatedDataWithUInt8Key, false>,
+                                    AggregationMethodOneNumber<UInt16, AggregatedDataWithUInt16Key, false>,
+                                    AggregationMethodOneNumber<UInt32, AggregatedDataWithUInt32Key>,
+                                    AggregationMethodOneNumber<UInt64, AggregatedDataWithUInt64Key>>;
+
 struct AggregatedDataVariants {
     AggregatedDataVariants() = default;
     AggregatedDataVariants(const AggregatedDataVariants&) = delete;
     AggregatedDataVariants& operator=(const AggregatedDataVariants&) = delete;
     AggregatedDataWithoutKey without_key = nullptr;
-    std::unique_ptr<AggregationMethodSerialized<AggregatedDataWithStringKey>> serialized;
+    AggregatedMethodVariants _aggregated_method_variant;
+
     enum class Type {
         EMPTY = 0,
         without_key,
-        serialized
+        serialized,
+        int8_key,
+        int16_key,
+        int32_key,
+        int64_key
         // TODO: add more key optimize types
     };
 
@@ -95,7 +148,19 @@ struct AggregatedDataVariants {
         _type = type;
         switch (_type) {
         case Type::serialized:
-            serialized.reset(new AggregationMethodSerialized<AggregatedDataWithStringKey>());
+            _aggregated_method_variant.emplace<AggregationMethodSerialized<AggregatedDataWithStringKey>>();
+            break;
+        case Type::int8_key:
+            _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt8, AggregatedDataWithUInt8Key, false>>();
+            break;
+        case Type::int16_key:
+            _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt16, AggregatedDataWithUInt16Key, false>>();
+            break;
+        case Type::int32_key:
+            _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt32, AggregatedDataWithUInt32Key>>();
+            break;
+        case Type::int64_key:
+            _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt64, AggregatedDataWithUInt64Key>>();
             break;
         default:
             break;
@@ -183,6 +248,7 @@ private:
     Status _merge_with_serialized_key(Block* block);
     void _update_memusage_with_serialized_key();
     void _close_with_serialized_key();
+    void _init_hash_method(std::vector<VExprContext*>& probe_exprs);
 
     void release_tracker();
 
