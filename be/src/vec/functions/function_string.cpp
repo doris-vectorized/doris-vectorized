@@ -243,6 +243,70 @@ struct StringFunctionImpl {
     }
 };
 
+struct NameHex{
+    static constexpr auto name = "hex";
+};
+struct HexImpl{
+    static void fast_hex_encode(const char* src_str, char* dst_str,
+                                const char* hexDigits = "0123456789ABCDEF") {
+        // hex(str) str length is n, ans must be 2*n length
+        for (int i = 0; i < strlen(src_str); i++) {
+            char res[2];
+            // low 4 bits
+            *(res + 1) = hexDigits[src_str[i] & 0x0F];
+            // high 4 bits
+            *res = hexDigits[(src_str[i] >> 4) & 0x0F];
+            std::copy(res, res + 2, dst_str + 2 * i);
+        }
+        // after hex ,have to add '\0'
+        *(dst_str+2*strlen(src_str))='\0';
+    }
+    static Status vector(const ColumnString::Chars &data, const ColumnString::Offsets &offsets,
+                         ColumnString::Chars &res_data, ColumnString::Offsets &res_offsets) {
+        
+        size_t data_length = data.size();
+        // allocate memory and memory align
+        res_data.resize(data_length);
+        
+        auto rows_count = offsets.size();
+        // allocate memory and memory align
+        res_offsets.resize(rows_count);
+        
+        // offsets[-1]=0,equals assign 0.
+        auto pre_offset = offsets[-1];
+        for (size_t i = 0; i < rows_count; ++i) {
+            const char* src_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            // -1 means '\0'
+            size_t src_str_size = offsets[i] - offsets[i - 1] - 1;
+            LOG(INFO) << "src_str_size offset[i]-offset[i-1]-1: " << src_str_size;
+            LOG(INFO) << "strlen(src_str): " << strlen(src_str);
+            //use char*
+            char* dst_str = reinterpret_cast<char*>(&res_data[res_offsets[i - 1]]);
+            
+            fast_hex_encode ( src_str, dst_str, "0123456789ABCDEF" );
+            
+            LOG(INFO) << "dst_str len: " << strlen(dst_str);
+            LOG(INFO) << "src_str: " << src_str;
+            LOG(INFO) << "dst_str: " << dst_str;
+            // sum use to get count of every char size of src_raw_str
+            auto sum = 0;
+            for (size_t j = 0, char_size = 0; j < strlen(dst_str); j += char_size) {
+                char_size = get_utf8_byte_length((unsigned) (dst_str)[j]);
+                sum += char_size;
+            }
+            LOG(INFO) << "sum: " << sum;
+            // change res_offsets
+            res_offsets[i - 1] = pre_offset;
+            // 1 means '\0'
+            res_offsets[i] = res_offsets[i - 1] + sum + 1;
+            pre_offset = res_offsets[i];
+            LOG(INFO) << "res_offset[i-1]: " << res_offsets[i-1];
+            LOG(INFO) << "res_offset[i]: " << res_offsets[i];
+        }
+        return Status::OK();
+    }
+};
+
 struct NameReverse {
     static constexpr auto name = "reverse";
 };
@@ -545,6 +609,8 @@ using FunctionStringLocate =
         FunctionBinaryToType<DataTypeString, DataTypeString, StringInstrImpl, NameLocate>;
 using FunctionStringFindInSet =
         FunctionBinaryToType<DataTypeString, DataTypeString, StringFindInSetImpl, NameFindInSet>;
+    
+using FunctionHex = FunctionStringToString<HexImpl,NameHex>;
 
 using FunctionReverse = FunctionStringToString<ReverseImpl, NameReverse>;
 
@@ -579,6 +645,7 @@ void register_function_string(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStringInstr>();
     factory.register_function<FunctionStringFindInSet>();
     //    factory.register_function<FunctionStringLocate>();
+    factory.register_function<FunctionHex>();
     factory.register_function<FunctionReverse>();
     factory.register_function<FunctionToLower>();
     factory.register_function<FunctionToUpper>();
