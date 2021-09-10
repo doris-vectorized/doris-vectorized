@@ -65,7 +65,7 @@ OlapScanNode::~OlapScanNode() {}
 
 Status OlapScanNode::init(const TPlanNode& tnode, RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::init(tnode, state));
-    _direct_conjunct_size =  _conjunct_ctxs.size();
+    _direct_conjunct_size = _conjunct_ctxs.size();
 
     const TQueryOptions& query_options = state->query_options();
     if (query_options.__isset.max_scan_key_num) {
@@ -454,9 +454,10 @@ Status OlapScanNode::start_scan(RuntimeState* state) {
     RETURN_IF_ERROR(build_olap_filters());
 
     VLOG_CRITICAL << "Filter idle conjuncts";
-    // 4. Filter idle conjunct which already trans to olap filters`
-    // TODO: filter idle conjunct in vexpr_contexts
+    // 4.1 Filter idle conjunct which already trans to olap filters`
     remove_pushed_conjuncts(state);
+    // 4.2 Filter idle conjunct in vexpr_contexts
+    _peel_conjuct();
 
     VLOG_CRITICAL << "BuildScanKey";
     // 5. Using `Key Column`'s ColumnValueRange to split ScanRange to several `Sub ScanRange`
@@ -1657,5 +1658,76 @@ Status OlapScanNode::add_one_batch(RowBatchInterface* row_batch) {
 }
 
 void OlapScanNode::debug_string(int /* indentation_level */, std::stringstream* /* out */) const {}
+
+bool OlapScanNode::_is_leaf_expr(vectorized::VExpr* expr) {
+    return !expr->is_AND_expr();
+}
+
+vectorized::VExpr* OlapScanNode::_dfs_peel_conjuct(vectorized::VExpr* expr) {
+    LOG(INFO) << "_dfs_peel_conjuct():" << expr->debug_string();
+    if (_is_leaf_expr(expr)) {
+        LOG(INFO) << "_dfs_peel_conjuct():"
+                  << "is leaf";
+        _leaf_index++;
+        if (_is_pushed_index(_leaf_index - 1)) {
+            LOG(INFO) << "_dfs_peel_conjuct():"
+                      << "is pushed";
+            return nullptr;
+        }
+        LOG(INFO) << "_dfs_peel_conjuct():"
+                  << "not pushed";
+        return expr;
+    } else {
+        //here do not close Expr* now
+        vectorized::VExpr* left_child = _dfs_peel_conjuct(expr->children()[0]);
+        vectorized::VExpr* right_child = _dfs_peel_conjuct(expr->children()[1]);
+
+        expr->set_child(0, left_child);
+        expr->set_child(1, right_child);
+
+        if (left_child != nullptr && right_child != nullptr) {
+            LOG(INFO) << "_dfs_peel_conjuct():"
+                      << "return self";
+            return expr;
+        } else if (left_child != nullptr && right_child == nullptr) {
+            LOG(INFO) << "_dfs_peel_conjuct():"
+                      << "return left";
+            return left_child;
+        } else if (left_child == nullptr && right_child != nullptr) {
+            LOG(INFO) << "_dfs_peel_conjuct():"
+                      << "return right";
+            return right_child;
+        } else if (left_child == nullptr && right_child == nullptr) {
+            LOG(INFO) << "_dfs_peel_conjuct():"
+                      << "return null";
+            return nullptr;
+        }
+    }
+    LOG(INFO) << "_dfs_peel_conjuct():"
+              << "unknow state";
+    return nullptr;
+}
+
+void OlapScanNode::_peel_conjuct() {
+    if (_vconjunct_ctx_ptr.get() == nullptr) return;
+    LOG(INFO) << "_peel_conjuct():"
+              << "start peel";
+
+    _leaf_index = 0;
+
+    vectorized::VExpr* conjuct_expr_root = (*_vconjunct_ctx_ptr.get())->root();
+
+    if (conjuct_expr_root != nullptr) {
+        vectorized::VExpr* new_conjuct_expr_root = _dfs_peel_conjuct(conjuct_expr_root);
+        if (new_conjuct_expr_root == nullptr) {
+            _vconjunct_ctx_ptr = nullptr;
+        } else {
+            (*_vconjunct_ctx_ptr.get())->set_root(new_conjuct_expr_root);
+        }
+    } else {
+        LOG(INFO) << "_peel_conjuct():"
+                  << "_vconjunct_ctx_ptr->root() is null";
+    }
+}
 
 } // namespace doris

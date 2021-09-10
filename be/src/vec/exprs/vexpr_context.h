@@ -35,6 +35,7 @@ public:
     doris::Status execute(doris::vectorized::Block* block, int* result_column_id);
 
     VExpr* root() { return _root; }
+    void set_root(VExpr* expr) { _root = expr; }
 
 private:
     VExpr* _root;
