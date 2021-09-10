@@ -504,6 +504,38 @@ TEST(function_string_test, function_find_in_set_test) {
     vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
 }
 
+TEST(function_string_test, function_hex_test) {
+    std::string func_name = "hex";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("0")}, {std::string("30")}},
+            {{std::string("1")}, {std::string("31")}},
+            {{std::string("123")}, {std::string("313233")}},
+            {{std::string("A")}, {std::string("41")}},
+            {{std::string("a")}, {std::string("61")}},
+            {{std::string("我")}, {std::string("E68891")}},
+            {{std::string("?")}, {std::string("3F")}},
+            {{std::string("？")}, {std::string("EFBC9F")}}};
+    
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
+TEST(function_string_test, function_unhex_test) {
+    std::string func_name = "unhex";
+    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
+            {{std::string("@")}, {std::string("@")}},
+            {{std::string("@！#")}, {std::string("@！#")}},
+            {{std::string("61")}, {std::string("a")}},
+            {{std::string("313233")}, {std::string("123")}},
+            {{std::string("ò&ø")}, {std::string("ò&ø")}},
+            {{std::string("@@")}, {std::string("NULL")}},
+            {{std::string("EFBC9F")}, {std::string("？")}},
+            {{std::string("我")}, {std::string("我")}}};
+    
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
 } // namespace doris
 
 int main(int argc, char** argv) {
