@@ -310,14 +310,14 @@ struct UnHexImpl{
             return true;
         }
         
-        value = c - 'A';
+        value = src_c - 'A';
         // 5 = ('F'-'A')
         if (value >= 0 && value <= 5) {
             c += (value + 10) * k;
             return true;
         }
         
-        value = c - 'a';
+        value = src_c - 'a';
         // 5 = ('f'-'a')
         if (value >= 0 && value <= 5) {
             c += (value + 10) * k;
