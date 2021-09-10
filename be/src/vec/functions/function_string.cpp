@@ -243,14 +243,14 @@ struct StringFunctionImpl {
     }
 };
 
-struct NameHex{
+struct NameHex {
     static constexpr auto name = "hex";
 };
-struct HexImpl{
+struct HexImpl {
     static void fast_hex_encode(const char* src_str, char* dst_str,
                                 const char* hexDigits = "0123456789ABCDEF") {
         // hex(str) str length is n, ans must be 2*n length
-        for (int i = 0; i < strlen(src_str); i++) {
+        for (size_t i = 0; i < strlen(src_str); i++) {
             char res[2];
             // low 4 bits
             *(res + 1) = hexDigits[src_str[i] & 0x0F];
@@ -259,10 +259,106 @@ struct HexImpl{
             std::copy(res, res + 2, dst_str + 2 * i);
         }
         // after hex ,have to add '\0'
-        *(dst_str+2*strlen(src_str))='\0';
+        *(dst_str + 2 * strlen(src_str)) = '\0';
     }
-    static Status vector(const ColumnString::Chars &data, const ColumnString::Offsets &offsets,
-                         ColumnString::Chars &res_data, ColumnString::Offsets &res_offsets) {
+    
+    static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
+                         ColumnString::Chars& res_data, ColumnString::Offsets& res_offsets) {
+        size_t data_length = data.size();
+        // allocate memory and memory align
+        res_data.resize(data_length);
+        
+        auto rows_count = offsets.size();
+        // allocate memory and memory align
+        res_offsets.resize(rows_count);
+        
+        // offsets[-1]=0,equals assign 0.
+        auto pre_offset = offsets[-1];
+        for (size_t i = 0; i < rows_count; ++i) {
+            const char* src_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            //use char*
+            char* dst_str = reinterpret_cast<char*>(&res_data[res_offsets[i - 1]]);
+            
+            fast_hex_encode(src_str, dst_str, "0123456789ABCDEF");
+            
+            // sum use to get count of every char size of src_raw_str
+            auto sum = 0;
+            for (size_t j = 0, char_size = 0; j < strlen(dst_str); j += char_size) {
+                char_size = get_utf8_byte_length((unsigned) (dst_str)[j]);
+                sum += char_size;
+            }
+            // change res_offsets
+            res_offsets[i - 1] = pre_offset;
+            // 1 means '\0'
+            res_offsets[i] = res_offsets[i - 1] + sum + 1;
+            pre_offset = res_offsets[i];
+        }
+        return Status::OK();
+    }
+};
+
+struct NameUnHex{
+    static constexpr auto name = "unhex";
+};
+struct UnHexImpl{
+    static bool check_and_decode_one(char& c, const char src_c, bool flag) {
+        int k = flag ? 16 : 1;
+        int value = src_c - '0';
+        // 9 = ('9'-'0')
+        if (value >= 0 && value <= 9) {
+            c += value * k;
+            return true;
+        }
+        
+        value = c - 'A';
+        // 5 = ('F'-'A')
+        if (value >= 0 && value <= 5) {
+            c += (value + 10) * k;
+            return true;
+        }
+        
+        value = c - 'a';
+        // 5 = ('f'-'a')
+        if (value >= 0 && value <= 5) {
+            c += (value + 10) * k;
+            return true;
+        }
+        // not in ( ['0','9'], ['a','f'], ['A','F'] )
+        return false;
+    }
+    
+    static void fast_hex_decode(const char* src_str, char* dst_str) {
+        
+        // if str length is odd or 0 ,return src_str like mysql dose.
+        auto src_len = strlen(src_str);
+        if ((src_len & 1) != 0 or src_len == 0) {
+            std::copy(src_str, src_str + src_len, dst_str);
+            *(dst_str + src_len) = '\0';
+            return;
+        }
+        //check and decode one character at the same time
+        // character in ( ['0','9'], ['a','f'], ['A','F'] ), return 'NULL' like mysql dose.
+        for (auto i = 0, dst_index = 0; i < src_len; i += 2, dst_index++) {
+            char c = 0;
+            // combine src_str two character into dst_str one character , bool param means weather multiple 16.
+            bool left_4bits_flag = check_and_decode_one(c, *(src_str + i), true);
+            bool right_4bits_flag = check_and_decode_one(c, *(src_str + i + 1), false);
+            
+            if (!left_4bits_flag || !right_4bits_flag) {
+                *dst_str = 'N';
+                *(dst_str + 1) = 'U';
+                *(dst_str + 2) = 'L';
+                *(dst_str + 3) = 'L';
+                *(dst_str + 4) = '\0';
+                return;
+            }
+            *(dst_str + dst_index) = c;
+        }
+        *(dst_str + src_len / 2 + 1) = '\0';
+    }
+    
+    static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
+                         ColumnString::Chars& res_data, ColumnString::Offsets& res_offsets) {
         
         size_t data_length = data.size();
         // allocate memory and memory align
@@ -276,32 +372,22 @@ struct HexImpl{
         auto pre_offset = offsets[-1];
         for (size_t i = 0; i < rows_count; ++i) {
             const char* src_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
-            // -1 means '\0'
-            size_t src_str_size = offsets[i] - offsets[i - 1] - 1;
-            LOG(INFO) << "src_str_size offset[i]-offset[i-1]-1: " << src_str_size;
-            LOG(INFO) << "strlen(src_str): " << strlen(src_str);
             //use char*
             char* dst_str = reinterpret_cast<char*>(&res_data[res_offsets[i - 1]]);
             
-            fast_hex_encode ( src_str, dst_str, "0123456789ABCDEF" );
+            fast_hex_decode(src_str, dst_str);
             
-            LOG(INFO) << "dst_str len: " << strlen(dst_str);
-            LOG(INFO) << "src_str: " << src_str;
-            LOG(INFO) << "dst_str: " << dst_str;
             // sum use to get count of every char size of src_raw_str
             auto sum = 0;
             for (size_t j = 0, char_size = 0; j < strlen(dst_str); j += char_size) {
                 char_size = get_utf8_byte_length((unsigned) (dst_str)[j]);
                 sum += char_size;
             }
-            LOG(INFO) << "sum: " << sum;
             // change res_offsets
             res_offsets[i - 1] = pre_offset;
             // 1 means '\0'
             res_offsets[i] = res_offsets[i - 1] + sum + 1;
             pre_offset = res_offsets[i];
-            LOG(INFO) << "res_offset[i-1]: " << res_offsets[i-1];
-            LOG(INFO) << "res_offset[i]: " << res_offsets[i];
         }
         return Status::OK();
     }
@@ -612,6 +698,8 @@ using FunctionStringFindInSet =
     
 using FunctionHex = FunctionStringToString<HexImpl,NameHex>;
 
+using FunctionUnHex = FunctionStringToString<UnHexImpl,NameUnHex>;
+
 using FunctionReverse = FunctionStringToString<ReverseImpl, NameReverse>;
 
 using FunctionToLower = FunctionStringToString<TransferImpl<::tolower>, NameToLower>;
@@ -646,6 +734,7 @@ void register_function_string(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStringFindInSet>();
     //    factory.register_function<FunctionStringLocate>();
     factory.register_function<FunctionHex>();
+    factory.register_function<FunctionUnHex>();
     factory.register_function<FunctionReverse>();
     factory.register_function<FunctionToLower>();
     factory.register_function<FunctionToUpper>();
