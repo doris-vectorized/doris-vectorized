@@ -33,8 +33,6 @@
 namespace doris::vectorized {
 
 class Arena;
-// class ReadBuffer;
-// class WriteBuffer;
 class IColumn;
 class IDataType;
 

@@ -113,16 +113,86 @@ struct AggregationMethodOneNumber
     }
 };
 
+template <typename Base>
+struct AggregationDataWithNullKey : public Base {
+    using Base::Base;
+
+    bool & has_null_key_data() { return has_null_key; }
+    AggregateDataPtr& get_null_key_data() { return null_key_data; }
+    bool has_null_key_data() const { return has_null_key; }
+    const AggregateDataPtr get_null_key_data() const { return null_key_data; }
+    size_t size() const { return Base::size() + (has_null_key ? 1 : 0); }
+    bool empty() const { return Base::empty() && !has_null_key; }
+
+    void clear() {
+        Base::clear();
+        has_null_key = false;
+    }
+
+    void clear_and_shrink() {
+        Base::clear_and_shrink();
+        has_null_key = false;
+    }
+
+private:
+    bool has_null_key = false;
+    AggregateDataPtr null_key_data = nullptr;
+};
+
+/// Single low cardinality column.
+template <typename SingleColumnMethod>
+struct AggregationMethodSingleNullableColumn : public SingleColumnMethod {
+    using Base = SingleColumnMethod;
+    using BaseState = typename Base::State;
+
+    using Data = typename Base::Data;
+    using Key = typename Base::Key;
+    using Mapped = typename Base::Mapped;
+
+    using Base::data;
+
+    AggregationMethodSingleNullableColumn() = default;
+
+    template <typename Other>
+    explicit AggregationMethodSingleNullableColumn(const Other & other) : Base(other) {}
+
+    using State = ColumnsHashing::HashMethodSingleLowNullableColumn<BaseState, Mapped, true>;
+
+    static void insert_key_into_columns(const Key & key,
+        MutableColumns & key_columns, const Sizes & /*key_sizes*/) {
+        auto col = key_columns[0].get();
+
+        if constexpr (std::is_same_v<Key, StringRef>) {
+            col->insert_data(key.data, key.size);
+        } else {
+            col->insert_data(reinterpret_cast<const char *>(&key), sizeof(key));
+        }
+    }
+};
+
 using AggregatedDataWithUInt8Key = FixedImplicitZeroHashMapWithCalculatedSize<UInt8, AggregateDataPtr>;
 using AggregatedDataWithUInt16Key = FixedImplicitZeroHashMap<UInt16, AggregateDataPtr>;
 using AggregatedDataWithUInt32Key = HashMap<UInt32, AggregateDataPtr, HashCRC32<UInt32>>;
 using AggregatedDataWithUInt64Key = HashMap<UInt64, AggregateDataPtr, HashCRC32<UInt64>>;
+using AggregatedDataWithUInt128Key = HashMap<UInt128, AggregateDataPtr, HashCRC32<UInt128>>;
+
+using AggregatedDataWithNullableUInt8Key = AggregationDataWithNullKey<AggregatedDataWithUInt8Key>;
+using AggregatedDataWithNullableUInt16Key = AggregationDataWithNullKey<AggregatedDataWithUInt16Key>;
+using AggregatedDataWithNullableUInt32Key = AggregationDataWithNullKey<AggregatedDataWithUInt32Key>;
+using AggregatedDataWithNullableUInt64Key = AggregationDataWithNullKey<AggregatedDataWithUInt64Key>;
+using AggregatedDataWithNullableUInt128Key = AggregationDataWithNullKey<AggregatedDataWithUInt128Key>;
 
 using AggregatedMethodVariants = std::variant<AggregationMethodSerialized<AggregatedDataWithStringKey>,
                                     AggregationMethodOneNumber<UInt8, AggregatedDataWithUInt8Key, false>,
                                     AggregationMethodOneNumber<UInt16, AggregatedDataWithUInt16Key, false>,
                                     AggregationMethodOneNumber<UInt32, AggregatedDataWithUInt32Key>,
-                                    AggregationMethodOneNumber<UInt64, AggregatedDataWithUInt64Key>>;
+                                    AggregationMethodOneNumber<UInt64, AggregatedDataWithUInt64Key>,
+                                    AggregationMethodOneNumber<UInt128, AggregatedDataWithUInt128Key>,
+                                    AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt8, AggregatedDataWithNullableUInt8Key, false>>,
+                                    AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt16, AggregatedDataWithNullableUInt16Key, false>>,
+                                    AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt32, AggregatedDataWithNullableUInt32Key>>,
+                                    AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt64, AggregatedDataWithNullableUInt64Key>>,
+                                    AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt128, AggregatedDataWithNullableUInt128Key>>>;
 
 struct AggregatedDataVariants {
     AggregatedDataVariants() = default;
@@ -138,29 +208,53 @@ struct AggregatedDataVariants {
         int8_key,
         int16_key,
         int32_key,
-        int64_key
+        int64_key,
+        int128_key
         // TODO: add more key optimize types
     };
 
     Type _type = Type::EMPTY;
 
-    void init(Type type) {
+    void init(Type type, bool is_nullable = false) {
         _type = type;
         switch (_type) {
         case Type::serialized:
             _aggregated_method_variant.emplace<AggregationMethodSerialized<AggregatedDataWithStringKey>>();
             break;
         case Type::int8_key:
-            _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt8, AggregatedDataWithUInt8Key, false>>();
+            if (is_nullable) {
+                _aggregated_method_variant.emplace<AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt8, AggregatedDataWithNullableUInt8Key, false>>>();
+            } else {
+                _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt8, AggregatedDataWithUInt8Key, false>>();
+            }
             break;
         case Type::int16_key:
-            _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt16, AggregatedDataWithUInt16Key, false>>();
+            if (is_nullable) {
+                _aggregated_method_variant.emplace<AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt16, AggregatedDataWithNullableUInt16Key, false>>>();
+            } else {
+                _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt16, AggregatedDataWithUInt16Key, false>>();
+            }
             break;
         case Type::int32_key:
-            _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt32, AggregatedDataWithUInt32Key>>();
+            if (is_nullable) {
+                _aggregated_method_variant.emplace<AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt32, AggregatedDataWithNullableUInt32Key>>>();
+            } else {
+                _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt32, AggregatedDataWithUInt32Key>>();
+            }
             break;
         case Type::int64_key:
-            _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt64, AggregatedDataWithUInt64Key>>();
+            if (is_nullable) {
+                _aggregated_method_variant.emplace<AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt64, AggregatedDataWithNullableUInt64Key>>>();
+            } else {
+                _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt64, AggregatedDataWithUInt64Key>>();
+            }
+            break;
+        case Type::int128_key:
+            if (is_nullable) {
+                _aggregated_method_variant.emplace<AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt128, AggregatedDataWithNullableUInt128Key>>>();
+            } else {
+                _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt128, AggregatedDataWithUInt128Key>>();
+            }
             break;
         default:
             break;
