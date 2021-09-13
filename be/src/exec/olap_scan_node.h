@@ -368,7 +368,7 @@ protected:
     RuntimeProfile::Counter* _olap_wait_batch_queue_timer = nullptr;
 
     vectorized::VExpr* _dfs_peel_conjunct(vectorized::VExpr* expr);
-    void peel_pushed_conjuncts(); //remove pushed expr from conjunct tree
+    void _peel_pushed_conjuncts(); // remove pushed expr from conjunct tree
     int _leaf_index;
 };
 

@@ -454,10 +454,8 @@ Status OlapScanNode::start_scan(RuntimeState* state) {
     RETURN_IF_ERROR(build_olap_filters());
 
     VLOG_CRITICAL << "Filter idle conjuncts";
-    // 4.1 Filter idle conjunct which already trans to olap filters`
+    // 4 Filter idle conjunct which already trans to olap filters
     remove_pushed_conjuncts(state);
-    // 4.2 Filter idle conjunct in vexpr_contexts
-    peel_pushed_conjuncts();
 
     VLOG_CRITICAL << "BuildScanKey";
     // 5. Using `Key Column`'s ColumnValueRange to split ScanRange to several `Sub ScanRange`
@@ -525,6 +523,8 @@ void OlapScanNode::remove_pushed_conjuncts(RuntimeState* state) {
             _vconjunct_ctx_ptr = nullptr;
         }
     }
+    // filter idle conjunct in vexpr_contexts
+    _peel_pushed_conjuncts();
 }
 
 void OlapScanNode::eval_const_conjuncts() {
@@ -1681,7 +1681,7 @@ vectorized::VExpr* OlapScanNode::_dfs_peel_conjunct(vectorized::VExpr* expr) {
 // It relies on the logic of function convertConjunctsToAndCompoundPredicate() of FE splicing expr.
 // It requires FE to satisfy each splicing with 'and' expr, and spliced from left to right, in order.
 // Expr tree specific forms do not require requirements.
-void OlapScanNode::peel_pushed_conjuncts() {
+void OlapScanNode::_peel_pushed_conjuncts() {
     if (_vconjunct_ctx_ptr.get() == nullptr) return;
 
     _leaf_index = 0;
