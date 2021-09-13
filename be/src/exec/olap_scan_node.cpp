@@ -454,7 +454,7 @@ Status OlapScanNode::start_scan(RuntimeState* state) {
     RETURN_IF_ERROR(build_olap_filters());
 
     VLOG_CRITICAL << "Filter idle conjuncts";
-    // 4 Filter idle conjunct which already trans to olap filters
+    // 4. Filter idle conjunct which already trans to olap filters
     remove_pushed_conjuncts(state);
 
     VLOG_CRITICAL << "BuildScanKey";
