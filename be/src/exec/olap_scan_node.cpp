@@ -457,7 +457,7 @@ Status OlapScanNode::start_scan(RuntimeState* state) {
     // 4.1 Filter idle conjunct which already trans to olap filters`
     remove_pushed_conjuncts(state);
     // 4.2 Filter idle conjunct in vexpr_contexts
-    _peel_conjunct();
+    peel_pushed_conjuncts();
 
     VLOG_CRITICAL << "BuildScanKey";
     // 5. Using `Key Column`'s ColumnValueRange to split ScanRange to several `Sub ScanRange`
@@ -1659,56 +1659,31 @@ Status OlapScanNode::add_one_batch(RowBatchInterface* row_batch) {
 
 void OlapScanNode::debug_string(int /* indentation_level */, std::stringstream* /* out */) const {}
 
-bool OlapScanNode::_is_leaf_expr(vectorized::VExpr* expr) {
-    return !expr->is_AND_expr();
-}
-
 vectorized::VExpr* OlapScanNode::_dfs_peel_conjunct(vectorized::VExpr* expr) {
-    LOG(INFO) << "_dfs_peel_conjunct():" << expr->debug_string();
-    if (_is_leaf_expr(expr)) {
-        LOG(INFO) << "_dfs_peel_conjunct():"
-                  << "is leaf";
-        _leaf_index++;
-        if (_is_pushed_index(_leaf_index - 1)) {
-            LOG(INFO) << "_dfs_peel_conjunct():"
-                      << "is pushed";
-            return nullptr;
-        }
-        LOG(INFO) << "_dfs_peel_conjunct():"
-                  << "not pushed";
-        return expr;
+    if (!expr->is_and_expr()) {
+        // leaf expr condition
+        return _pushed_conjuncts_index.count(_leaf_index++) ? nullptr : expr;
     } else {
-        //here do not close Expr* now
         vectorized::VExpr* left_child = _dfs_peel_conjunct(expr->children()[0]);
         vectorized::VExpr* right_child = _dfs_peel_conjunct(expr->children()[1]);
-
+        // here do not close Expr* now
         expr->set_child(0, left_child);
         expr->set_child(1, right_child);
 
         if (left_child != nullptr && right_child != nullptr) {
-            LOG(INFO) << "_dfs_peel_conjunct():"
-                      << "return self";
             return expr;
-        } else if (left_child != nullptr && right_child == nullptr) {
-            LOG(INFO) << "_dfs_peel_conjunct():"
-                      << "return left";
-            return left_child;
-        } else if (left_child == nullptr && right_child != nullptr) {
-            LOG(INFO) << "_dfs_peel_conjunct():"
-                      << "return right";
-            return right_child;
         } else if (left_child == nullptr && right_child == nullptr) {
-            LOG(INFO) << "_dfs_peel_conjunct():"
-                      << "return null";
             return nullptr;
         }
+        return left_child != nullptr ? left_child : right_child;
     }
-    LOG(INFO) << "_dfs_peel_conjunct():"
-              << "unknow state";
-    return nullptr;
 }
 
-void OlapScanNode::_peel_conjunct() {
+// This function is used to remove pushed expr in expr tree.
+// It relies on the logic of function convertConjunctsToAndCompoundPredicate() of FE splicing expr.
+// It requires FE to satisfy each splicing with 'and' expr, and spliced from left to right, in order.
+// Expr tree specific forms do not require requirements.
+void OlapScanNode::peel_pushed_conjuncts() {
     if (_vconjunct_ctx_ptr.get() == nullptr) return;
     LOG(INFO) << "_peel_conjunct():"
               << "start peel";
@@ -1721,12 +1696,13 @@ void OlapScanNode::_peel_conjunct() {
         vectorized::VExpr* new_conjunct_expr_root = _dfs_peel_conjunct(conjunct_expr_root);
         if (new_conjunct_expr_root == nullptr) {
             _vconjunct_ctx_ptr = nullptr;
+            LOG(INFO) << "new_vconjunct_expr_root is null";
         } else {
             (*_vconjunct_ctx_ptr.get())->set_root(new_conjunct_expr_root);
+            LOG(INFO) << "new_vconjunct_expr_root " << new_conjunct_expr_root->debug_string();
         }
     } else {
-        LOG(INFO) << "_peel_conjunct():"
-                  << "_vconjunct_ctx_ptr->root() is null";
+        LOG(INFO) << "_vconjunct_ctx_ptr->root() is null";
     }
 }
 
