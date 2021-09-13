@@ -82,11 +82,17 @@ std::string VectorizedFnCall::debug_string() const {
     std::stringstream out;
     out << "VectorizedFn[";
     out << _expr_name;
-    out << "](";
+    out << "]{";
+    bool first = true;
     for (VExpr* input_expr : children()) {
-        out << " " << input_expr->debug_string() << ")";
+        if (first) {
+            first = false;
+        } else {
+            out << ",";
+        }
+        out << input_expr->debug_string();
     }
-    out << ")";
+    out << "}";
     return out.str();
 }
 
