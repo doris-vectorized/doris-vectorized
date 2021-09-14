@@ -1659,14 +1659,14 @@ Status OlapScanNode::add_one_batch(RowBatchInterface* row_batch) {
 
 void OlapScanNode::debug_string(int /* indentation_level */, std::stringstream* /* out */) const {}
 
-vectorized::VExpr* OlapScanNode::_dfs_peel_conjunct(vectorized::VExpr* expr, int& _leaf_index) {
+vectorized::VExpr* OlapScanNode::_dfs_peel_conjunct(vectorized::VExpr* expr, int& leaf_index) {
     static constexpr auto is_leaf = [](vectorized::VExpr* expr) { return !expr->is_and_expr(); };
 
     if (is_leaf(expr)) {
-        return _pushed_conjuncts_index.count(_leaf_index++) ? nullptr : expr;
+        return _pushed_conjuncts_index.count(leaf_index++) ? nullptr : expr;
     } else {
-        vectorized::VExpr* left_child = _dfs_peel_conjunct(expr->children()[0], _leaf_index);
-        vectorized::VExpr* right_child = _dfs_peel_conjunct(expr->children()[1], _leaf_index);
+        vectorized::VExpr* left_child = _dfs_peel_conjunct(expr->children()[0], leaf_index);
+        vectorized::VExpr* right_child = _dfs_peel_conjunct(expr->children()[1], leaf_index);
 
         if (left_child != nullptr && right_child != nullptr) {
             expr->set_children({left_child, right_child});
@@ -1684,12 +1684,12 @@ vectorized::VExpr* OlapScanNode::_dfs_peel_conjunct(vectorized::VExpr* expr, int
 void OlapScanNode::_peel_pushed_conjuncts() {
     if (_vconjunct_ctx_ptr.get() == nullptr) return;
 
-    int _leaf_index = 0;
+    int leaf_index = 0;
     vectorized::VExpr* conjunct_expr_root = (*_vconjunct_ctx_ptr.get())->root();
 
     if (conjunct_expr_root != nullptr) {
         vectorized::VExpr* new_conjunct_expr_root =
-                _dfs_peel_conjunct(conjunct_expr_root, _leaf_index);
+                _dfs_peel_conjunct(conjunct_expr_root, leaf_index);
         if (new_conjunct_expr_root == nullptr) {
             _vconjunct_ctx_ptr = nullptr;
             _scanner_profile->add_info_string("VconjunctExprTree", "null");
