@@ -215,6 +215,9 @@ public:
 
         return *lookup_result_get_mapped(it);
     }
+
+    char* get_null_key_data() { return nullptr; }
+    bool has_null_key_data() const { return false; }
 };
 
 template <typename Key, typename Mapped, typename Hash = DefaultHash<Key>,

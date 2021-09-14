@@ -179,5 +179,60 @@ struct HashMethodKeysFixed
     }
 };
 
+template <typename SingleColumnMethod, typename Mapped, bool use_cache>
+struct HashMethodSingleLowNullableColumn : public SingleColumnMethod {
+    using Base = SingleColumnMethod;
+
+    static constexpr bool has_mapped = !std::is_same<Mapped, void>::value;
+    using EmplaceResult = columns_hashing_impl::EmplaceResultImpl<Mapped>;
+    using FindResult = columns_hashing_impl::FindResultImpl<Mapped>;
+
+    static HashMethodContextPtr createContext(const HashMethodContext::Settings & settings) {
+        return nullptr;
+    }
+
+    ColumnRawPtrs key_columns;
+
+    static const ColumnRawPtrs get_nested_column(const IColumn *col) {
+        auto* nullable = check_and_get_column<ColumnNullable>(*col);
+        const auto nested_col = nullable->get_nested_column_ptr().get();
+        return {nested_col};
+    }
+
+    HashMethodSingleLowNullableColumn(
+            const ColumnRawPtrs & key_columns_nullable, const Sizes & key_sizes, const HashMethodContextPtr & context)
+        : Base(get_nested_column(key_columns_nullable[0]), key_sizes, context), key_columns(key_columns_nullable) {
+    }
+
+    template <typename Data>
+    ALWAYS_INLINE EmplaceResult emplace_key(Data & data, size_t row, Arena & pool) {
+        if (key_columns[0]->is_null_at(row)) {
+            bool has_null_key = data.has_null_key_data();
+            data.has_null_key_data() = true;
+
+            if constexpr (has_mapped)
+                return EmplaceResult(data.get_null_key_data(), data.get_null_key_data(), !has_null_key);
+            else
+                return EmplaceResult(!has_null_key);
+        }
+
+        auto key_holder = Base::get_key_holder(row, pool);
+
+        bool inserted = false;
+        typename Data::LookupResult it;
+        data.emplace(key_holder, it, inserted);
+
+        if constexpr (has_mapped) {
+            auto & mapped = *lookup_result_get_mapped(it);
+            if (inserted) {
+                new (&mapped) Mapped();
+            }
+            return EmplaceResult(mapped, mapped, inserted);
+        }
+        else
+            return EmplaceResult(inserted);
+    }
+};
+
 } // namespace ColumnsHashing
 } // namespace doris::vectorized

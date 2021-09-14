@@ -125,18 +125,28 @@ Status AggregationNode::init(const TPlanNode& tnode, RuntimeState* state) {
 void AggregationNode::_init_hash_method(std::vector<VExprContext*>& probe_exprs) {
     DCHECK(probe_exprs.size() >= 1);
     if (probe_exprs.size() == 1) {
+        auto is_nullable = probe_exprs[0]->root()->is_nullable();
         switch (probe_exprs[0]->root()->result_type()) {
             case TYPE_TINYINT:
-                _agg_data.init(AggregatedDataVariants::Type::int8_key);
+            case TYPE_BOOLEAN:
+                _agg_data.init(AggregatedDataVariants::Type::int8_key, is_nullable);
                 return;
             case TYPE_SMALLINT:
-                _agg_data.init(AggregatedDataVariants::Type::int16_key);
+                _agg_data.init(AggregatedDataVariants::Type::int16_key, is_nullable);
                 return;
             case TYPE_INT:
-                _agg_data.init(AggregatedDataVariants::Type::int32_key);
+            case TYPE_FLOAT:
+                _agg_data.init(AggregatedDataVariants::Type::int32_key, is_nullable);
                 return;
             case TYPE_BIGINT:
-                _agg_data.init(AggregatedDataVariants::Type::int64_key);
+            case TYPE_DOUBLE:
+                _agg_data.init(AggregatedDataVariants::Type::int64_key, is_nullable);
+                return;
+            case TYPE_LARGEINT:
+            case TYPE_DATE:
+            case TYPE_DATETIME:
+            case TYPE_DECIMALV2:
+                _agg_data.init(AggregatedDataVariants::Type::int128_key, is_nullable);
                 return;
             default:
                 break;
@@ -551,7 +561,6 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
                                                      doris::vectorized::Block* out_block) {
     SCOPED_TIMER(_build_timer);
     DCHECK(!_probe_expr_ctxs.empty());
-    DCHECK(_agg_data._aggregated_method_variant.index() != 0);
 
     size_t key_size = _probe_expr_ctxs.size();
     ColumnRawPtrs key_columns(key_size);
@@ -681,7 +690,6 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
 Status AggregationNode::_execute_with_serialized_key(Block* block) {
     SCOPED_TIMER(_build_timer);
     DCHECK(!_probe_expr_ctxs.empty());
-    DCHECK(_agg_data._aggregated_method_variant.index() != 0);
 
     size_t key_size = _probe_expr_ctxs.size();
     ColumnRawPtrs key_columns(key_size);
@@ -735,8 +743,6 @@ Status AggregationNode::_execute_with_serialized_key(Block* block) {
 
 Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Block* block,
                                                         bool* eos) {
-    DCHECK(_agg_data._aggregated_method_variant.index() != 0);
-
     bool mem_reuse = block->mem_reuse();
     auto column_withschema = VectorizedUtils::create_columns_with_type_and_name(row_desc());
     int key_size = _probe_expr_ctxs.size();
@@ -775,7 +781,22 @@ Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Blo
             ++iter;
         }
         if (iter == data.end()) {
-            *eos = true;
+            if (agg_method.data.has_null_key_data()) {
+                // only one key of group by support wrap null key
+                // here need additional processing logic on the null key / value
+                DCHECK(key_columns.size() == 1);
+                DCHECK(key_columns[0]->is_nullable());
+                if (key_columns[0]->size() < state->batch_size()) {
+                    key_columns[0]->insert_data(nullptr, 0);
+                    auto mapped = agg_method.data.get_null_key_data();
+                    for (size_t i = 0; i < _aggregate_evaluators.size(); ++i)
+                        _aggregate_evaluators[i]->insert_result_info(mapped + _offsets_of_aggregate_states[i],
+                                                                     value_columns[i].get());
+                    *eos = true;
+                }
+            } else {
+                *eos = true;
+            }
         }
     }, _agg_data._aggregated_method_variant);
 
@@ -797,8 +818,6 @@ Status AggregationNode::_get_with_serialized_key_result(RuntimeState* state, Blo
 
 Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* state, Block* block,
                                                               bool* eos) {
-    DCHECK(_agg_data._aggregated_method_variant.index() != 0);
-
     int key_size = _probe_expr_ctxs.size();
     int agg_size = _aggregate_evaluators.size();
     MutableColumns value_columns(agg_size);
@@ -846,8 +865,24 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
             }
             ++iter;
         }
+
         if (iter == data.end()) {
-            *eos = true;
+            if (agg_method.data.has_null_key_data()) {
+                DCHECK(key_columns.size() == 1);
+                DCHECK(key_columns[0]->is_nullable());
+                if (agg_method.data.has_null_key_data()) {
+                    key_columns[0]->insert_data(nullptr, 0);
+                    auto mapped = agg_method.data.get_null_key_data();
+                    for (size_t i = 0; i < _aggregate_evaluators.size(); ++i) {
+                        _aggregate_evaluators[i]->function()->serialize(
+                                mapped + _offsets_of_aggregate_states[i], value_buffer_writers[i]);
+                        value_buffer_writers[i].commit();
+                    }
+                    *eos = true;
+                }
+            } else {
+                *eos = true;
+            }
         }
     }, _agg_data._aggregated_method_variant);
 
@@ -868,7 +903,6 @@ Status AggregationNode::_serialize_with_serialized_key_result(RuntimeState* stat
 
 Status AggregationNode::_merge_with_serialized_key(Block* block) {
     SCOPED_TIMER(_merge_timer);
-    DCHECK(_agg_data._aggregated_method_variant.index() != 0);
 
     size_t key_size = _probe_expr_ctxs.size();
     ColumnRawPtrs key_columns(key_size);
@@ -952,8 +986,6 @@ void AggregationNode::_update_memusage_with_serialized_key() {
 }
 
 void AggregationNode::_close_with_serialized_key() {
-    DCHECK(_agg_data._aggregated_method_variant.index() != 0);
-
     std::visit([&](auto&& agg_method)-> void {
         auto& data = agg_method.data;
         data.for_each_mapped([&](auto& mapped) {
