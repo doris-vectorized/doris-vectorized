@@ -19,7 +19,7 @@
 #define DORIS_BE_SRC_QUERY_EXEC_TEXT_CONVERTER_H
 
 #include "runtime/runtime_state.h"
-
+#include "vec/core/block.h"
 namespace doris {
 
 class MemPool;
@@ -47,6 +47,9 @@ public:
     // Returns true if the value was written successfully.
     bool write_slot(const SlotDescriptor* slot_desc, Tuple* tuple, const char* data, int len,
                     bool copy_string, bool need_escape, MemPool* pool);
+
+    bool write_column(const SlotDescriptor* slot_desc, vectorized::MutableColumnPtr* column_ptr,
+                      const char* data, int len, bool copy_string, bool need_escape, MemPool* pool);
 
     // Removes escape characters from len characters of the null-terminated string src,
     // and copies the unescaped string into dest, changing *len to the unescaped length.
