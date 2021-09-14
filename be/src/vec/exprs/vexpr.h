@@ -78,9 +78,12 @@ public:
                                           VExpr* parent, int* node_idx, VExpr** root_expr,
                                           VExprContext** ctx);
     const std::vector<VExpr*>& children() const { return _children; }
+    void set_children(std::vector<VExpr*> children) { _children = children; }
     virtual std::string debug_string() const;
     static std::string debug_string(const std::vector<VExpr*>& exprs);
     static std::string debug_string(const std::vector<VExprContext*>& ctxs);
+
+    bool is_and_expr() { return _fn.name.function_name == "and"; }
 
 protected:
     /// Simple debug string that provides no expr subclass-specific information
