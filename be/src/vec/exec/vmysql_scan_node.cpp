@@ -56,7 +56,7 @@ Status VMysqlScanNode::prepare(RuntimeState* state) {
         return Status::InternalError("new a mysql scanner failed.");
     }
 
-    _tuple_pool.reset(new (std::nothrow) MemPool(mem_tracker().get())); 
+    _tuple_pool.reset(new (std::nothrow) MemPool(mem_tracker().get()));
     if (_tuple_pool.get() == NULL) {
         return Status::InternalError("new a mem pool failed.");
     }
@@ -106,59 +106,73 @@ Status VMysqlScanNode::get_next(RuntimeState* state, vectorized::Block* block, b
     if (state == NULL || block == NULL || eos == NULL)
         return Status::InternalError("input is NULL pointer");
     if (!_is_init) return Status::InternalError("used before initialize.");
-
     RETURN_IF_ERROR(exec_debug_action(TExecNodePhase::GETNEXT));
     RETURN_IF_CANCELLED(state);
-
-    std::vector<vectorized::MutableColumnPtr> columns;
+    bool mem_reuse = block->mem_reuse();
+    DCHECK(block->rows() == 0);
+    std::vector<vectorized::MutableColumnPtr> columns(_slot_num);
     bool mysql_eos = false;
 
-    while (true) {
-        RETURN_IF_CANCELLED(state);
-        int batch_size = state->batch_size();
-        if (block->rows() == batch_size) {
-            LOG(INFO) << "data full: " << batch_size;
-            return Status::OK(); //TODO 如果数据满了？？？
-        }
-
-        char** data = NULL;
-        unsigned long* length = NULL;
-        RETURN_IF_ERROR(_mysql_scanner->get_next_row(&data, &length, &mysql_eos));
-
-        if (mysql_eos) {
-            *eos = true;
-            return Status::OK();
-        }
-        int j = 0;
+    do {
         for (int i = 0; i < _slot_num; ++i) {
-
-            auto slot_desc = _tuple_desc->slots()[i];
-            columns.emplace_back(slot_desc->get_empty_mutable_column());
-
-            if (!slot_desc->is_materialized()) {
-                continue;
-            }
-            if (data[j] == nullptr) {
-                if (slot_desc->is_nullable()) {
-                    auto* nullable_column = reinterpret_cast<vectorized::ColumnNullable*>(columns[i].get());
-                    nullable_column->insert_data(nullptr, 0);
-                } else {
-                    std::stringstream ss;
-                    ss << "nonnull column contains NULL. table=" << _table_name
-                       << ", column=" << slot_desc->col_name();
-                    return Status::InternalError(ss.str());
-                }
+            if (mem_reuse) {
+                columns[i] = std::move(*block->get_by_position(i).column).mutate();
             } else {
-                RETURN_IF_ERROR(write_text_slot(data[j], length[j], slot_desc, &columns[i], state));
+                columns[i] = _tuple_desc->slots()[i]->get_empty_mutable_column();
             }
-            j++;
+        }
+        while (true) {
+            RETURN_IF_CANCELLED(state);
+            int batch_size = state->batch_size();
+            if (columns[0]->size() == batch_size) {
+                break;
+            }
+
+            char** data = NULL;
+            unsigned long* length = NULL;
+            RETURN_IF_ERROR(_mysql_scanner->get_next_row(&data, &length, &mysql_eos));
+
+            if (mysql_eos) {
+                *eos = true;
+                break;
+            }
+            int j = 0;
+            for (int i = 0; i < _slot_num; ++i) {
+                auto slot_desc = _tuple_desc->slots()[i];
+                if (!slot_desc->is_materialized()) {
+                    continue;
+                }
+
+                if (data[j] == nullptr) {
+                    if (slot_desc->is_nullable()) {
+                        auto* nullable_column =
+                                reinterpret_cast<vectorized::ColumnNullable*>(columns[i].get());
+                        nullable_column->insert_data(nullptr, 0);
+                    } else {
+                        std::stringstream ss;
+                        ss << "nonnull column contains NULL. table=" << _table_name
+                           << ", column=" << slot_desc->col_name();
+                        return Status::InternalError(ss.str());
+                    }
+                } else {
+                    RETURN_IF_ERROR(
+                            write_text_slot(data[j], length[j], slot_desc, &columns[i], state));
+                }
+                j++;
+            }
         }
         auto n_columns = 0;
-        for (const auto slot_desc : _tuple_desc->slots()) {
-            block->insert({columns[n_columns++]->get_ptr(), slot_desc->get_data_type_ptr(),
-                           slot_desc->col_name()});
+        if (!mem_reuse) {
+            for (const auto slot_desc : _tuple_desc->slots()) {
+                block->insert(ColumnWithTypeAndName(std::move(columns[n_columns++]),
+                                                    slot_desc->get_data_type_ptr(),
+                                                    slot_desc->col_name()));
+            }
+        } else {
+            columns.clear();
         }
-    }
+        VLOG_ROW << "VMYSQLScanNode output rows: " << block->rows();
+    } while (block->rows() == 0 && !(*eos));
     return Status::OK();
 }
 
