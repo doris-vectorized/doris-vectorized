@@ -170,8 +170,9 @@ public:
         return false;
     }
 
+    char* get_null_key_data() { return nullptr; }
+    bool has_null_key_data() const { return false; }
 };
-
 
 template <typename Key, typename Mapped, typename Allocator = HashTableAllocator>
 using FixedImplicitZeroHashMap = FixedHashMap<
