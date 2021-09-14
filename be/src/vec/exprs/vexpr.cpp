@@ -33,8 +33,7 @@ using doris::RowDescriptor;
 using doris::TypeDescriptor;
 
 VExpr::VExpr(const doris::TExprNode& node)
-        : _node_type(node.node_type),
-          _type(TypeDescriptor::from_thrift(node.type)) {
+        : _node_type(node.node_type), _type(TypeDescriptor::from_thrift(node.type)) {
     if (node.__isset.fn) {
         _fn = node.fn;
     }
@@ -45,8 +44,7 @@ VExpr::VExpr(const doris::TExprNode& node)
     }
 }
 
-VExpr::VExpr(const TypeDescriptor& type, bool is_slotref, bool is_nullable)
-        : _type(type) {
+VExpr::VExpr(const TypeDescriptor& type, bool is_slotref, bool is_nullable) : _type(type) {
     if (is_slotref) {
         _node_type = TExprNodeType::SLOT_REF;
     }
@@ -94,6 +92,7 @@ Status VExpr::create_expr(doris::ObjectPool* pool, const doris::TExprNode& texpr
     case doris::TExprNodeType::ARITHMETIC_EXPR:
     case doris::TExprNodeType::COMPOUND_PRED:
     case doris::TExprNodeType::BINARY_PRED:
+    case doris::TExprNodeType::INFO_FUNC:
     case doris::TExprNodeType::FUNCTION_CALL:
     case doris::TExprNodeType::COMPUTE_FUNCTION_CALL: {
         *expr = pool->add(new VectorizedFnCall(texpr_node));
