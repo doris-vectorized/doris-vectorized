@@ -527,26 +527,25 @@ void HashJoinNode::_hash_table_init() {
         }
     }
 
-    if (key_byte_size > sizeof(UInt128)) {
+    if (std::tuple_size<KeysNullMap<UInt128>>::value + key_byte_size > sizeof(UInt128)) {
         use_fixed_key = false;
     }
 
     if (use_fixed_key) {
-        if (key_byte_size <= sizeof(UInt64)) {
-            if (has_null) {
+        // TODO: may we should support uint256 in the future
+        if (has_null) {
+            if (std::tuple_size<KeysNullMap<UInt64>>::value + key_byte_size <= sizeof(UInt64)) {
                 _hash_table_variants.emplace<I64FixedKeyHashTableContext<true>>();
             } else {
-                _hash_table_variants.emplace<I64FixedKeyHashTableContext<false>>();
+                _hash_table_variants.emplace<I128FixedKeyHashTableContext<true>>();
             }
         } else {
-            DCHECK_LE(key_byte_size, sizeof(UInt128));
-            if (has_null) {
-                _hash_table_variants.emplace<I128FixedKeyHashTableContext<true>>();
+            if (key_byte_size <= sizeof(UInt64)) {
+                _hash_table_variants.emplace<I64FixedKeyHashTableContext<false>>();
             } else {
                 _hash_table_variants.emplace<I128FixedKeyHashTableContext<false>>();
             }
         }
-
     } else {
         _hash_table_variants.emplace<SerializedHashTableContext>();
     }
