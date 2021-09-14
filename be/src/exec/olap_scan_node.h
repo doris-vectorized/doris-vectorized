@@ -35,6 +35,7 @@
 #include "util/progress_updater.h"
 #include "util/spinlock.h"
 #include "vec/exec/volap_scanner.h"
+#include "vec/exprs/vexpr.h"
 
 namespace doris {
 class IRuntimeFilter;
@@ -365,6 +366,9 @@ protected:
     RuntimeProfile::Counter* _scanner_wait_worker_timer = nullptr;
 
     RuntimeProfile::Counter* _olap_wait_batch_queue_timer = nullptr;
+
+    vectorized::VExpr* _dfs_peel_conjunct(vectorized::VExpr* expr, int& leaf_index);
+    void _peel_pushed_conjuncts(); // remove pushed expr from conjunct tree
 };
 
 } // namespace doris
