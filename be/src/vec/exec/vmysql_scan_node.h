@@ -34,42 +34,19 @@ class MemPool;
 class Status;
 namespace vectorized {
 
-class VMysqlScanNode : public ExecNode {
+class VMysqlScanNode : public MysqlScanNode {
 public:
     VMysqlScanNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs);
     ~VMysqlScanNode();
 
-    //initialize _mysql_scanner, and create _text_converter.
-    virtual Status prepare(RuntimeState* state);
-
-    // Start MySQL scan using _mysql_scanner.
-    virtual Status open(RuntimeState* state);
-
-    // Fill the next row batch by calling next() on the _mysql_scanner,
+    // Fill the next block by calling next() on the _mysql_scanner,
     // converting text data in MySQL cells to binary data.
-    virtual Status get_next(RuntimeState* state, RowBatch* row_batch, bool* eos);
     virtual Status get_next(RuntimeState* state, vectorized::Block* block, bool* eos);
 
-    // Close the _mysql_scanner, and report errors.
-    virtual Status close(RuntimeState* state);
-
-    virtual void debug_string(int indentation_level, std::stringstream* out) const;
-
-    Status write_text_slot(char* value, int value_length, SlotDescriptor* slot,
+private:
+    Status write_text_column(char* value, int value_length, SlotDescriptor* slot,
                            vectorized::MutableColumnPtr* column_ptr, RuntimeState* state);
 
-private:
-    bool _is_init;
-    MysqlScannerParam _my_param;
-    std::string _table_name;
-    TupleId _tuple_id;
-    std::vector<std::string> _columns;
-    std::vector<std::string> _filters;
-    const TupleDescriptor* _tuple_desc;
-    int _slot_num;
-    std::unique_ptr<MemPool> _tuple_pool;
-    std::unique_ptr<MysqlScanner> _mysql_scanner;
-    std::unique_ptr<TextConverter> _text_converter;
 };
 } // namespace vectorized
 } // namespace doris

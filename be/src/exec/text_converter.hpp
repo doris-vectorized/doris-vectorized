@@ -164,6 +164,136 @@ inline bool TextConverter::write_slot(const SlotDescriptor* slot_desc, Tuple* tu
     return true;
 }
 
+inline bool TextConverter::write_column(const SlotDescriptor* slot_desc,
+                                        vectorized::MutableColumnPtr* column_ptr, const char* data,
+                                        int len, bool copy_string, bool need_escape) {
+    // \N means it's NULL
+    if (true == slot_desc->is_nullable()) {
+        auto* nullable_column = reinterpret_cast<vectorized::ColumnNullable*>(column_ptr->get());
+        if (len == 2 && data[0] == '\\' && data[1] == 'N') {
+            nullable_column->insert_data(nullptr, 0);
+            return true;
+        } else {
+            nullable_column->get_null_map_data().push_back(0);
+            column_ptr = reinterpret_cast<vectorized::MutableColumnPtr*>(
+                    &nullable_column->get_nested_column());
+        }
+    }
+    StringParser::ParseResult parse_result = StringParser::PARSE_SUCCESS;
+
+    // Parse the raw-text data. Translate the text string to internal format.
+    switch (slot_desc->type().type) {
+    case TYPE_HLL:
+    case TYPE_VARCHAR:
+    case TYPE_CHAR: {
+        fmt::memory_buffer buffer;
+        buffer.append(data, data + len);
+        if (need_escape) {
+            buffer = unescape_string(buffer);
+        }
+        reinterpret_cast<vectorized::ColumnString*>(column_ptr)
+                ->insert_data(buffer.data(), buffer.size());
+        break;
+    }
+
+    case TYPE_BOOLEAN: {
+        bool num = StringParser::string_to_bool(data, len, &parse_result);
+        reinterpret_cast<vectorized::ColumnVector<vectorized::UInt8>*>(column_ptr)
+                ->insert_value((uint8_t)num);
+        break;
+    }
+    case TYPE_TINYINT: {
+        int8_t num = StringParser::string_to_int<int8_t>(data, len, &parse_result);
+        reinterpret_cast<vectorized::ColumnVector<vectorized::Int8>*>(column_ptr)
+                ->insert_value(num);
+        break;
+    }
+    case TYPE_SMALLINT: {
+        int16_t num = StringParser::string_to_int<int16_t>(data, len, &parse_result);
+        reinterpret_cast<vectorized::ColumnVector<vectorized::Int16>*>(column_ptr)
+                ->insert_value(num);
+        break;
+    }
+    case TYPE_INT: {
+        int32_t num = StringParser::string_to_int<int32_t>(data, len, &parse_result);
+        reinterpret_cast<vectorized::ColumnVector<vectorized::Int32>*>(column_ptr)
+                ->insert_value(num);
+        break;
+    }
+    case TYPE_BIGINT: {
+        int64_t num = StringParser::string_to_int<int64_t>(data, len, &parse_result);
+        reinterpret_cast<vectorized::ColumnVector<vectorized::Int64>*>(column_ptr)
+                ->insert_value(num);
+        break;
+    }
+    case TYPE_LARGEINT: {
+        __int128 num = StringParser::string_to_int<__int128>(data, len, &parse_result);
+        reinterpret_cast<vectorized::ColumnVector<vectorized::Int128>*>(column_ptr)
+                ->insert_value(num);
+        break;
+    }
+
+    case TYPE_FLOAT: {
+        float num = StringParser::string_to_float<float>(data, len, &parse_result);
+        reinterpret_cast<vectorized::ColumnVector<vectorized::Float32>*>(column_ptr)
+                ->insert_value(num);
+        break;
+    }
+    case TYPE_DOUBLE: {
+        double num = StringParser::string_to_float<double>(data, len, &parse_result);
+        reinterpret_cast<vectorized::ColumnVector<vectorized::Float64>*>(column_ptr)
+                ->insert_value(num);
+        break;
+    }
+    case TYPE_DATE: {
+        DateTimeValue ts_slot;
+        if (!ts_slot.from_date_str(data, len)) {
+            parse_result = StringParser::PARSE_FAILURE;
+            break;
+        }
+        ts_slot.cast_to_date();
+        reinterpret_cast<vectorized::ColumnVector<vectorized::Int128>*>(column_ptr)
+                ->insert_data(reinterpret_cast<char*>(&ts_slot), 0);
+        break;
+    }
+
+    case TYPE_DATETIME: {
+        DateTimeValue ts_slot;
+        if (!ts_slot.from_date_str(data, len)) {
+            parse_result = StringParser::PARSE_FAILURE;
+        }
+        ts_slot.to_datetime();
+        reinterpret_cast<vectorized::ColumnVector<vectorized::Int128>*>(column_ptr)
+                ->insert_data(reinterpret_cast<char*>(&ts_slot), 0);
+        break;
+    }
+
+    case TYPE_DECIMALV2: {
+        DecimalV2Value decimal_slot;
+        if (decimal_slot.parse_from_str(data, len)) {
+            parse_result = StringParser::PARSE_FAILURE;
+        }
+        PackedInt128 num = binary_cast<DecimalV2Value, PackedInt128>(decimal_slot);
+        reinterpret_cast<vectorized::ColumnVector<doris::PackedInt128>*>(column_ptr)
+                ->insert_value(num.value);
+        break;
+    }
+
+    default:
+        DCHECK(false) << "bad slot type: " << slot_desc->type();
+        break;
+    }
+
+    // TODO: add warning for overflow case
+    if (parse_result != StringParser::PARSE_SUCCESS) {
+        auto* nullable_column = reinterpret_cast<vectorized::ColumnNullable*>(column_ptr->get());
+        nullable_column->insert_data(nullptr, 0);
+        return false;
+    }
+
+    return true;
+}
+
 } // namespace doris
 
 #endif
