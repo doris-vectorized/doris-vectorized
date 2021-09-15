@@ -796,9 +796,16 @@ std::string MutableBlock::dump_data(size_t row_limit) const {
 }
 int Block::compare_at(size_t n, size_t m, const Block& rhs, int nan_direction_hint) const {
     DCHECK_EQ(columns(), rhs.columns());
+    return compare_at(n, m, columns(), rhs, nan_direction_hint);
+}
+
+int Block::compare_at(size_t n, size_t m, size_t num_columns, const Block& rhs, int nan_direction_hint) const {
+    DCHECK_GE(columns(), num_columns);
+    DCHECK_GE(rhs.columns(), num_columns);
+
     DCHECK_GE(n, rows());
     DCHECK_GE(n, rhs.rows());
-    for (size_t i = 0; i <= columns(); ++i) {
+    for (size_t i = 0; i <= num_columns; ++i) {
         DCHECK(get_by_position(i).type->equals(*rhs.get_by_position(i).type));
         auto res = get_by_position(i).column->compare_at(n, m, *(rhs.get_by_position(i).column),
                                                          nan_direction_hint);
@@ -808,5 +815,6 @@ int Block::compare_at(size_t n, size_t m, const Block& rhs, int nan_direction_hi
     }
     return 0;
 }
+
 
 } // namespace doris::vectorized

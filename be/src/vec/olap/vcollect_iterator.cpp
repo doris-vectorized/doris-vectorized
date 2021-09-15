@@ -80,18 +80,18 @@ void VCollectIterator::build_heap(const std::vector<RowsetReaderSharedPtr>& rs_r
                 ++i;
             }
             Level1Iterator* cumu_iter =
-                    new Level1Iterator(cumu_children, cumu_children.size() > 1, _reverse);
+                    new Level1Iterator(cumu_children, _reader, cumu_children.size() > 1, _reverse);
             cumu_iter->init();
             std::list<LevelIterator*> children;
             children.push_back(*base_reader_child);
             children.push_back(cumu_iter);
-            _inner_iter.reset(new Level1Iterator(children, _merge, _reverse));
+            _inner_iter.reset(new Level1Iterator(children, _reader, _merge, _reverse));
         } else {
             // _children.size() == 1
-            _inner_iter.reset(new Level1Iterator(_children, _merge, _reverse));
+            _inner_iter.reset(new Level1Iterator(_children, _reader, _merge, _reverse));
         }
     } else {
-        _inner_iter.reset(new Level1Iterator(_children, _merge, _reverse));
+        _inner_iter.reset(new Level1Iterator(_children, _reader, _merge, _reverse));
     }
     _inner_iter->init();
     // Clear _children earlier to release any related references
@@ -106,9 +106,21 @@ bool VCollectIterator::LevelIteratorComparator::operator()(const LevelIterator* 
     uint32_t rhs_id;
     RETURN_NOT_OK(lhs->current_row(&lhs_block, &lhs_id));
     RETURN_NOT_OK(rhs->current_row(&rhs_block, &rhs_id));
-    int cmp_res = lhs_block->compare_at(lhs_id, rhs_id, *rhs_block, -1);
+    int cmp_res = lhs_block->compare_at(lhs_id, rhs_id, lhs->tablet_schema().num_key_columns(),
+                                        *rhs_block, -1);
     if (cmp_res != 0) {
         return cmp_res > 0;
+    }
+
+    if (lhs->tablet_schema().has_sequence_col()) {
+        int32_t sequence_col_idx = lhs->tablet_schema().sequence_col_idx();
+        cmp_res = lhs_block->get_by_position(sequence_col_idx)
+                          .column->compare_at(
+                                  lhs_id, rhs_id,
+                                  *(rhs_block->get_by_position(sequence_col_idx).column), -1);
+        if (cmp_res != 0) {
+            return cmp_res > 0;
+        }
     }
     // if row cursors equal, compare data version.
     // read data from higher version to lower version.
@@ -154,8 +166,7 @@ OLAPStatus VCollectIterator::Level0Iterator::init() {
     return _refresh_current_row();
 }
 
-OLAPStatus VCollectIterator::Level0Iterator::current_row(const Block** block,
-                                                               uint32_t* row) const {
+OLAPStatus VCollectIterator::Level0Iterator::current_row(const Block** block, uint32_t* row) const {
     *row = _current_row;
     *block = &_block;
     return OLAP_SUCCESS;
@@ -196,9 +207,14 @@ OLAPStatus VCollectIterator::Level0Iterator::next(Block* block) {
     return OLAP_SUCCESS;
 }
 
+const TabletSchema& VCollectIterator::Level0Iterator::tablet_schema() const {
+    return _reader->tablet()->tablet_schema();
+}
+
 VCollectIterator::Level1Iterator::Level1Iterator(
-        const std::list<VCollectIterator::LevelIterator*>& children, bool merge, bool reverse)
-        : _children(children), _merge(merge), _reverse(reverse) {}
+        const std::list<VCollectIterator::LevelIterator*>& children, Reader* reader, bool merge,
+        bool reverse)
+        : _children(children), _reader(reader), _merge(merge), _reverse(reverse) {}
 
 VCollectIterator::LevelIterator::~LevelIterator() {}
 
@@ -228,8 +244,7 @@ OLAPStatus VCollectIterator::Level1Iterator::next(const Block** block, uint32_t*
 }
 
 // Get top row of the heap, nullptr if reach end.
-OLAPStatus VCollectIterator::Level1Iterator::current_row(const Block** block,
-                                                               uint32_t* row) const {
+OLAPStatus VCollectIterator::Level1Iterator::current_row(const Block** block, uint32_t* row) const {
     if (_cur_child != nullptr) {
         return _cur_child->current_row(block, row);
     }
@@ -267,8 +282,7 @@ OLAPStatus VCollectIterator::Level1Iterator::init() {
     return OLAP_SUCCESS;
 }
 
-OLAPStatus VCollectIterator::Level1Iterator::_merge_next(const Block** block,
-                                                                uint32_t* row) {
+OLAPStatus VCollectIterator::Level1Iterator::_merge_next(const Block** block, uint32_t* row) {
     _heap->pop();
     auto res = _cur_child->next(block, row);
     if (LIKELY(res == OLAP_SUCCESS)) {
@@ -334,5 +348,10 @@ OLAPStatus VCollectIterator::Level1Iterator::_normal_next(Block* block) {
         return res;
     }
 }
+
+const TabletSchema& VCollectIterator::Level1Iterator::tablet_schema() const {
+    return _reader->tablet()->tablet_schema();
+}
+
 } // namespace vectorized
 } // namespace doris

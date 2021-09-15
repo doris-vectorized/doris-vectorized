@@ -24,6 +24,7 @@
 namespace doris {
 
 class Reader;
+class TabletSchema;
 
 namespace vectorized {
 
@@ -69,6 +70,7 @@ private:
         virtual OLAPStatus next(Block* block) = 0;
 
         virtual ~LevelIterator() = 0;
+        virtual const TabletSchema& tablet_schema() const = 0;
     };
 
     // Compare row cursors between multiple merge elements,
@@ -102,6 +104,8 @@ private:
 
         OLAPStatus next(Block* block) override;
 
+        const TabletSchema& tablet_schema() const override;
+
         ~Level0Iterator();
 
     private:
@@ -116,7 +120,7 @@ private:
     // Iterate from LevelIterators (maybe Level0Iterators or Level1Iterator or mixed)
     class Level1Iterator : public LevelIterator {
     public:
-        Level1Iterator(const std::list<LevelIterator*>& children, bool merge, bool reverse);
+        Level1Iterator(const std::list<LevelIterator*>& children, Reader* reader, bool merge, bool reverse);
 
         OLAPStatus init() override;
 
@@ -127,6 +131,9 @@ private:
         OLAPStatus next(const Block** block, uint32_t* row) override;
 
         OLAPStatus next(Block* block) override;
+
+        const TabletSchema& tablet_schema() const override;
+
 
         ~Level1Iterator();
 
@@ -143,6 +150,7 @@ private:
         // point to the Level0Iterator containing the next output row.
         // null when VCollectIterator hasn't been initialized or reaches EOF.
         LevelIterator* _cur_child = nullptr;
+        Reader* _reader = nullptr;
 
         // when `_merge == true`, rowset reader returns ordered rows and VCollectIterator uses a priority queue to merge
         // sort them. The output of VCollectIterator is also ordered.

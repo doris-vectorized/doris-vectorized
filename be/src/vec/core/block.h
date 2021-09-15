@@ -206,6 +206,8 @@ public:
       * For non Nullable and non floating point types, nan_direction_hint is ignored.
       */
     int compare_at(size_t n, size_t m, const Block& rhs, int nan_direction_hint) const;
+    int compare_at(size_t n, size_t m, size_t num_cols, const Block& rhs, int nan_direction_hint) const;
+
 
 private:
     void erase_impl(size_t position);
