@@ -143,55 +143,44 @@ private:
         int size = offsets.size();
         res_offsets.resize(size);
         res_chars.reserve(chars.size());
-        std::vector<size_t> index;
+
+        std::vector<size_t> str_index;
+        fmt::memory_buffer buffer;
 
         for (int i = 0; i < size; ++i) {
-            const char* raw_str = reinterpret_cast<const char*>(&chars[offsets[i - 1]]);
-            int str_size = offsets[i] - offsets[i - 1] - 1;
+            str_index.clear();
+            buffer.clear();
+
+            const char* str_data = reinterpret_cast<const char*>(&chars[offsets[i - 1]]);
+            int str_len = offsets[i] - offsets[i - 1] - 1;
+
+            size_t str_char_size = get_char_len(std::string_view(str_data, str_len), &str_index);
+
+            int fixed_pos = start[i];
+
+            if (fixed_pos < 0)
+                fixed_pos = str_char_size + fixed_pos + 1; // start from the last x_th
+
             // return null if start > src.length
-            if (start[i] > str_size) {
+            if (fixed_pos > str_char_size) {
                 StringOP::push_null_string(i, res_chars, res_offsets, null_map);
                 continue;
             }
             // return "" if len < 0 or str == 0 or start == 0
-            if (len[i] <= 0 || str_size == 0 || start[i] == 0) {
+            if (len[i] <= 0 || str_char_size == 0 || fixed_pos == 0) {
                 StringOP::push_empty_string(i, res_chars, res_offsets);
                 continue;
             }
-            // reference to string_function.cpp: substring
-            size_t byte_pos = 0;
-            index.clear();
-            for (size_t j = 0, char_size = 0; j < str_size; j += char_size) {
-                char_size = get_utf8_byte_length((unsigned)(raw_str)[i]);
-                index.push_back(j);
-                if (start[i] > 0 && index.size() > start[i] + len[i]) {
-                    break;
-                }
-            }
 
-            int fixed_pos = start[i];
-            if (fixed_pos < 0) {
-                fixed_pos = index.size() + fixed_pos + 1;
-            }
-            if (fixed_pos > index.size()) {
-                StringOP::push_null_string(i, res_chars, res_offsets, null_map);
-                continue;
-            }
-
-            byte_pos = index[fixed_pos - 1];
-            int fixed_len = str_size - byte_pos;
-            if (fixed_pos + len[i] <= index.size()) {
-                fixed_len = index[fixed_pos + len[i] - 1] - byte_pos;
-            }
-
-            if (byte_pos <= str_size && fixed_len > 0) {
-                // return StringVal(str.ptr + byte_pos, fixed_len);
-                StringOP::push_value_string(
-                        std::string_view {raw_str + byte_pos, (size_t)fixed_len}, i, res_chars,
-                        res_offsets);
+            if (len[i] < str_char_size - fixed_pos + 1) {
+                buffer.append(str_data + str_index[fixed_pos - 1],
+                              str_data + str_index[fixed_pos + len[i] - 1]);
             } else {
-                StringOP::push_empty_string(i, res_chars, res_offsets);
+                buffer.append(str_data + str_index[fixed_pos - 1], str_data + str_len);
             }
+
+            StringOP::push_value_string(std::string_view(buffer.data(), buffer.size()), i,
+                                        res_chars, res_offsets);
         }
     }
 };
