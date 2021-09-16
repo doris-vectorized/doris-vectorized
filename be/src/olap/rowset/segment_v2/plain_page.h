@@ -212,8 +212,8 @@ public:
             *count = 0;
             return Status::OK();
         }
-        
-        size_t max_fetch = std::min(*count, static_cast<size_t>(_num_elems - _cur_idx));
+    
+        size_t max_fetch = std::min<size_t>(*count, _num_elems - _cur_idx);
     
         dst->insert_data(&_data[PLAIN_PAGE_HEADER_SIZE + _cur_idx * SIZE_OF_TYPE], max_fetch * SIZE_OF_TYPE);
         _cur_idx += max_fetch;
