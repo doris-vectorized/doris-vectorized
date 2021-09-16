@@ -166,7 +166,7 @@ inline bool TextConverter::write_slot(const SlotDescriptor* slot_desc, Tuple* tu
 
 inline bool TextConverter::write_column(const SlotDescriptor* slot_desc,
                                         vectorized::MutableColumnPtr* column_ptr, const char* data,
-                                        int len, bool copy_string, bool need_escape) {
+                                        size_t len, bool copy_string, bool need_escape) {
     // \N means it's NULL
     if (true == slot_desc->is_nullable()) {
         auto* nullable_column = reinterpret_cast<vectorized::ColumnNullable*>(column_ptr->get());
@@ -186,13 +186,10 @@ inline bool TextConverter::write_column(const SlotDescriptor* slot_desc,
     case TYPE_HLL:
     case TYPE_VARCHAR:
     case TYPE_CHAR: {
-        fmt::memory_buffer buffer;
-        buffer.append(data, data + len);
         if (need_escape) {
-            buffer = unescape_string(buffer);
+            unescape_string_on_spot(data, &len);
         }
-        reinterpret_cast<vectorized::ColumnString*>(column_ptr)
-                ->insert_data(buffer.data(), buffer.size());
+        reinterpret_cast<vectorized::ColumnString*>(column_ptr)->insert_data(data, len);
         break;
     }
 
