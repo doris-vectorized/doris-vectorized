@@ -134,15 +134,17 @@ public:
 
     Status block_reset()
     {
-        _block.clear();
-
-        const Schema& schema = _iter->schema();
-        for (auto &column_desc : schema.columns()) {
-            auto data_type = Schema::get_data_type_ptr(column_desc->type());
-            if (data_type == nullptr) {
-                return Status::RuntimeError("invalid data type");
+        if (!_block) {
+            const Schema& schema = _iter->schema();
+            for (auto &column_desc : schema.columns()) {
+                auto data_type = Schema::get_data_type_ptr(column_desc->type());
+                if (data_type == nullptr) {
+                    return Status::RuntimeError("invalid data type");
+                }
+                _block.insert(ColumnWithTypeAndName(data_type->create_column(), data_type, column_desc->name()));
             }
-            _block.insert(ColumnWithTypeAndName(data_type->create_column(), data_type, column_desc->name()));
+        } else {
+            _block.clear_column_data();
         }
         return Status::OK();
     }
