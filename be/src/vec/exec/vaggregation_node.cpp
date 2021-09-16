@@ -172,7 +172,7 @@ void AggregationNode::_init_hash_method(std::vector<VExprContext*>& probe_exprs)
              }
          }
 
-         if (std::tuple_size<KeysNullMap<UInt128>>::value + key_byte_size > sizeof(UInt128)) {
+         if (std::tuple_size<KeysNullMap<UInt256>>::value + key_byte_size > sizeof(UInt256)) {
              use_fixed_key = false;
          }
 
@@ -180,13 +180,19 @@ void AggregationNode::_init_hash_method(std::vector<VExprContext*>& probe_exprs)
             if (has_null) {
                 if (std::tuple_size<KeysNullMap<UInt64>>::value + key_byte_size <= sizeof(UInt64)) {
                     _agg_data.init(AggregatedDataVariants::Type::int64_keys, has_null);
-                } else {
+                } else if (std::tuple_size<KeysNullMap<UInt128>>::value + key_byte_size <= sizeof(UInt128)) {
                     _agg_data.init(AggregatedDataVariants::Type::int128_keys, has_null);
+                } else {
+                    _agg_data.init(AggregatedDataVariants::Type::int256_keys, has_null);
                 }
-            } else if (key_byte_size <= sizeof(UInt64)) {
-                _agg_data.init(AggregatedDataVariants::Type::int64_keys, has_null);
             } else {
-                _agg_data.init(AggregatedDataVariants::Type::int128_keys, has_null);
+                if (key_byte_size <= sizeof(UInt64)) {
+                    _agg_data.init(AggregatedDataVariants::Type::int64_keys, has_null);
+                } else if (key_byte_size <= sizeof(UInt128)) {
+                    _agg_data.init(AggregatedDataVariants::Type::int128_keys, has_null);
+                } else {
+                    _agg_data.init(AggregatedDataVariants::Type::int256_keys, has_null);
+                }
             }
         } else {
              _agg_data.init(AggregatedDataVariants::Type::serialized);

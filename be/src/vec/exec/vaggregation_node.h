@@ -248,6 +248,7 @@ using AggregatedDataWithUInt16Key = FixedImplicitZeroHashMap<UInt16, AggregateDa
 using AggregatedDataWithUInt32Key = HashMap<UInt32, AggregateDataPtr, HashCRC32<UInt32>>;
 using AggregatedDataWithUInt64Key = HashMap<UInt64, AggregateDataPtr, HashCRC32<UInt64>>;
 using AggregatedDataWithUInt128Key = HashMap<UInt128, AggregateDataPtr, HashCRC32<UInt128>>;
+using AggregatedDataWithUInt256Key = HashMap<UInt256, AggregateDataPtr, UInt256HashCRC32>;
 
 using AggregatedDataWithNullableUInt8Key = AggregationDataWithNullKey<AggregatedDataWithUInt8Key>;
 using AggregatedDataWithNullableUInt16Key = AggregationDataWithNullKey<AggregatedDataWithUInt16Key>;
@@ -269,7 +270,9 @@ using AggregatedMethodVariants = std::variant<AggregationMethodSerialized<Aggreg
                                     AggregationMethodKeysFixed<AggregatedDataWithUInt64Key, false>,
                                     AggregationMethodKeysFixed<AggregatedDataWithUInt64Key, true>,
                                     AggregationMethodKeysFixed<AggregatedDataWithUInt128Key, false>,
-                                    AggregationMethodKeysFixed<AggregatedDataWithUInt128Key, true>>;
+                                    AggregationMethodKeysFixed<AggregatedDataWithUInt128Key, true>,
+                                    AggregationMethodKeysFixed<AggregatedDataWithUInt256Key, false>,
+                                    AggregationMethodKeysFixed<AggregatedDataWithUInt256Key, true>>;
 
 struct AggregatedDataVariants {
     AggregatedDataVariants() = default;
@@ -289,8 +292,8 @@ struct AggregatedDataVariants {
         int64_key,
         int128_key,
         int64_keys,
-        int128_keys
-        // TODO: add more key optimize types
+        int128_keys,
+        int256_keys
     };
 
     Type _type = Type::EMPTY;
@@ -298,6 +301,8 @@ struct AggregatedDataVariants {
     void init(Type type, bool is_nullable = false) {
         _type = type;
         switch (_type) {
+        case Type::without_key:
+            break;
         case Type::serialized:
             _aggregated_method_variant.emplace<AggregationMethodSerialized<AggregatedDataWithStringKey>>();
             break;
@@ -348,6 +353,13 @@ struct AggregatedDataVariants {
                 _aggregated_method_variant.emplace<AggregationMethodKeysFixed<AggregatedDataWithUInt128Key, true>>();
             } else {
                 _aggregated_method_variant.emplace<AggregationMethodKeysFixed<AggregatedDataWithUInt128Key, false>>();
+            }
+            break;
+        case Type::int256_keys:
+            if (is_nullable) {
+                _aggregated_method_variant.emplace<AggregationMethodKeysFixed<AggregatedDataWithUInt256Key, true>>();
+            } else {
+                _aggregated_method_variant.emplace<AggregationMethodKeysFixed<AggregatedDataWithUInt256Key, false>>();
             }
             break;
         default:
