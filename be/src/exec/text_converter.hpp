@@ -287,7 +287,8 @@ inline bool TextConverter::write_column(const SlotDescriptor* slot_desc,
     // TODO: add warning for overflow case
     if (parse_result != StringParser::PARSE_SUCCESS) {
         auto* nullable_column = reinterpret_cast<vectorized::ColumnNullable*>(column_ptr->get());
-        nullable_column->insert_data(nullptr, 0);
+        doris::vectorized::NullMap& null_map = nullable_column->get_null_map_data();
+        null_map[null_map.size() - 1] = 1;
         return false;
     }
 
