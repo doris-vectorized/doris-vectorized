@@ -578,6 +578,53 @@ Status FileColumnIterator::next_batch(size_t* n, ColumnBlockView* dst, bool* has
     return Status::OK();
 }
 
+Status FileColumnIterator::next_batch(size_t* n, vectorized::MutableColumnPtr &dst, bool* has_null) {
+    size_t curr_size = dst->byte_size();
+    size_t remaining = *n;
+    *has_null = false;
+    while (remaining > 0) {
+        if (!_page->has_remaining()) {
+            bool eos = false;
+            RETURN_IF_ERROR(_load_next_page(&eos));
+            if (eos) {
+                break;
+            }
+        }
+
+        // number of rows to be read from this page
+        size_t nrows_in_page = std::min(remaining, _page->remaining());
+        size_t nrows_to_read = nrows_in_page;
+        if (_page->has_null) {
+            while (nrows_to_read > 0) {
+                bool is_null = false;
+                size_t this_run = _page->null_decoder.GetNextRun(&is_null, nrows_to_read);
+                // we use num_rows only for CHECK
+                size_t num_rows = this_run;
+                if (!is_null) {
+                    RETURN_IF_ERROR(_page->data_decoder->next_batch(&num_rows, dst));
+                    DCHECK_EQ(this_run, num_rows);
+                } else {
+                    *has_null = true;
+                }
+
+                nrows_to_read -= this_run;
+                _page->offset_in_page += this_run;
+                _current_ordinal += this_run;
+            }
+        } else {
+            RETURN_IF_ERROR(_page->data_decoder->next_batch(&nrows_to_read, dst));
+            DCHECK_EQ(nrows_to_read, nrows_in_page);
+
+            _page->offset_in_page += nrows_to_read;
+            _current_ordinal += nrows_to_read;
+        }
+        remaining -= nrows_in_page;
+    }
+    *n -= remaining;
+    _opts.stats->bytes_read += (dst->byte_size() - curr_size) + BitmapSize(*n);
+    return Status::OK();
+}
+
 Status FileColumnIterator::_load_next_page(bool* eos) {
     _page_iter.next();
     if (!_page_iter.valid()) {
