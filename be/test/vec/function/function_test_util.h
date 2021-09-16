@@ -32,7 +32,20 @@
 namespace doris {
 namespace vectorized {
 
+<<<<<<< HEAD
 using DataSet = std::vector<std::pair<std::vector<std::any>, std::any>>;
+=======
+__int128 str_to_data_time(std::string datetime_str, bool data_time = true) {
+    DateTimeValue v;
+    v.from_date_str(datetime_str.c_str(), datetime_str.size());
+    if (data_time) { //bool data_time only to simplifly represent data_time or data need to cast, just use in time-functions uint test
+        v.to_datetime();
+    } else {
+        v.cast_to_date();
+    }
+    return binary_cast<doris::DateTimeValue, Int128>(v);
+}
+>>>>>>> add time functions unit test
 
 template <typename ColumnType, typename Column, typename NullColumn>
 void insert_column_to_block(std::list<ColumnPtr>& columns, ColumnsWithTypeAndName& ctn,
