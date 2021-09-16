@@ -32,7 +32,7 @@ RowwiseIterator* new_merge_iterator(std::list<RowwiseIterator*> inputs, std::sha
 //
 // Inputs iterators' ownership is taken by created union iterator. And client
 // should delete returned iterator after usage.
-RowwiseIterator* new_union_iterator(std::list<RowwiseIterator*> inputs, std::shared_ptr<MemTracker> parent);
+RowwiseIterator* new_union_iterator(std::vector<RowwiseIterator*>& inputs, std::shared_ptr<MemTracker> parent);
 
 // Create an auto increment iterator which returns num_rows data in format of schema.
 // This class aims to be used in unit test.

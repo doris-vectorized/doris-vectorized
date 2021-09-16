@@ -587,11 +587,7 @@ void AggregateFunctions::sum(FunctionContext* ctx, const DecimalV2Val& src, Deci
         return;
     }
 
-    if (dst->is_null) {
-        dst->is_null = false;
-        dst->set_to_zero();
-    }
-
+    dst->is_null = false;
     DecimalV2Value new_src = DecimalV2Value::from_decimal_val(src);
     DecimalV2Value new_dst = DecimalV2Value::from_decimal_val(*dst);
     new_dst = new_dst + new_src;
@@ -603,12 +599,7 @@ void AggregateFunctions::sum(FunctionContext* ctx, const LargeIntVal& src, Large
     if (src.is_null) {
         return;
     }
-
-    if (dst->is_null) {
-        dst->is_null = false;
-        dst->val = 0;
-    }
-
+    dst->is_null = false;
     dst->val += src.val;
 }
 
