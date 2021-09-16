@@ -29,8 +29,8 @@
 #include "runtime/string_value.h"
 #include "runtime/tuple_row.h"
 
-//#include "vec/columns/column_vector.h"
-//#include "vec/core/block.h"
+#include "vec/columns/column_vector.h"
+#include "vec/core/block.h"
 
 using std::vector;
 
