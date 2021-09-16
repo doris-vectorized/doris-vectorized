@@ -421,6 +421,8 @@ public:
 
     Status next_batch(size_t* n, ColumnBlockView* dst, bool* has_null) override;
 
+    Status next_batch(size_t* n, vectorized::MutableColumnPtr &dst, bool* has_null) override;
+
     ordinal_t get_current_ordinal() const override { return _current_rowid; }
 
 private:
