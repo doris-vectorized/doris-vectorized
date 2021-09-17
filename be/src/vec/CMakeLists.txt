@@ -72,6 +72,7 @@ set(VEC_FILES
   exec/vunion_node.cpp
   exec/vblocking_join_node.cpp
   exec/vcross_join_node.cpp
+  exec/vodbc_scan_node.cpp
   exec/vmysql_scan_node.cpp
   exec/join/vhash_join_node.cpp
   exprs/vectorized_agg_fn.cpp
