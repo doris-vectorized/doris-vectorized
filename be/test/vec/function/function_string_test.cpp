@@ -35,9 +35,9 @@ using vectorized::Null;
 
 TEST(function_string_test, function_string_substr_test) {
     std::string func_name = "substr";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                      vectorized::TypeIndex::Int32,
-                                                      vectorized::TypeIndex::Int32};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                         vectorized::TypeIndex::Int32,
+                                         vectorized::TypeIndex::Int32};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("asd你好"), 4, 10}, std::string("\xE4\xBD\xA0\xE5\xA5\xBD")}, //你好
@@ -52,8 +52,8 @@ TEST(function_string_test, function_string_substr_test) {
 
 TEST(function_string_test, function_string_strright_test) {
     std::string func_name = "strright";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                      vectorized::TypeIndex::Int32};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                         vectorized::TypeIndex::Int32};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("asd"), 1}, std::string("d")},
@@ -68,8 +68,8 @@ TEST(function_string_test, function_string_strright_test) {
 
 TEST(function_string_test, function_string_strleft_test) {
     std::string func_name = "strleft";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                      vectorized::TypeIndex::Int32};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                         vectorized::TypeIndex::Int32};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("asd"), 1}, std::string("a")},
@@ -84,7 +84,7 @@ TEST(function_string_test, function_string_strleft_test) {
 
 TEST(function_string_test, function_string_lower_test) {
     std::string func_name = "lower";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("ASD")}, std::string("asd")},
             {{std::string("HELLO123")}, std::string("hello123")},
@@ -97,7 +97,7 @@ TEST(function_string_test, function_string_lower_test) {
 
 TEST(function_string_test, function_string_upper_test) {
     std::string func_name = "upper";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("asd")}, std::string("ASD")},
             {{std::string("hello123")}, std::string("HELLO123")},
@@ -109,7 +109,7 @@ TEST(function_string_test, function_string_upper_test) {
 }
 TEST(function_string_test, function_string_trim_test) {
     std::string func_name = "trim";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("a sd")}, std::string("a sd")},
             {{std::string("  hello 123  ")}, std::string("hello 123")},
@@ -123,7 +123,7 @@ TEST(function_string_test, function_string_trim_test) {
 
 TEST(function_string_test, function_string_ltrim_test) {
     std::string func_name = "ltrim";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("a sd")}, std::string("a sd")},
             {{std::string("  hello 123  ")}, std::string("hello 123  ")},
@@ -136,7 +136,7 @@ TEST(function_string_test, function_string_ltrim_test) {
 
 TEST(function_string_test, function_string_rtrim_test) {
     std::string func_name = "rtrim";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("a sd ")}, std::string("a sd")},
             {{std::string("  hello 123  ")}, std::string("  hello 123")},
@@ -148,8 +148,8 @@ TEST(function_string_test, function_string_rtrim_test) {
 }
 TEST(function_string_test, function_string_repeat_test) {
     std::string func_name = "repeat";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                      vectorized::TypeIndex::Int32};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                         vectorized::TypeIndex::Int32};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("a"), 3}, std::string("aaa")},
@@ -163,7 +163,7 @@ TEST(function_string_test, function_string_repeat_test) {
 
 TEST(function_string_test, function_string_reverse_test) {
     std::string func_name = "reverse";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("asd ")}, std::string(" dsa")},
             {{std::string("  hello 123  ")}, std::string("  321 olleh  ")},
@@ -176,7 +176,7 @@ TEST(function_string_test, function_string_reverse_test) {
 
 TEST(function_string_test, function_string_length_test) {
     std::string func_name = "length";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("asd ")}, int32_t(4)},
             {{std::string("  hello 123  ")}, int32_t(13)},
@@ -190,8 +190,8 @@ TEST(function_string_test, function_string_length_test) {
 TEST(function_string_test, function_append_trailing_char_if_absent_test) {
     std::string func_name = "append_trailing_char_if_absent";
 
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                      vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                         vectorized::TypeIndex::String};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("ASD"), std::string("D")}, std::string("ASD")},
@@ -205,8 +205,8 @@ TEST(function_string_test, function_append_trailing_char_if_absent_test) {
 TEST(function_string_test, function_starts_with_test) {
     std::string func_name = "starts_with";
 
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                      vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                         vectorized::TypeIndex::String};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("hello world"), std::string("hello")}, uint8_t(1)},
@@ -222,8 +222,8 @@ TEST(function_string_test, function_starts_with_test) {
 TEST(function_string_test, function_ends_with_test) {
     std::string func_name = "ends_with";
 
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                      vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                         vectorized::TypeIndex::String};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("hello world"), std::string("hello")}, uint8_t(0)},
@@ -239,9 +239,9 @@ TEST(function_string_test, function_ends_with_test) {
 TEST(function_string_test, function_lpad_test) {
     std::string func_name = "lpad";
 
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                      vectorized::TypeIndex::Int32,
-                                                      vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                         vectorized::TypeIndex::Int32,
+                                         vectorized::TypeIndex::String};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("hi"), 5, std::string("?")}, std::string("???hi")},
@@ -263,9 +263,9 @@ TEST(function_string_test, function_lpad_test) {
 TEST(function_string_test, function_rpad_test) {
     std::string func_name = "rpad";
 
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                      vectorized::TypeIndex::Int32,
-                                                      vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                         vectorized::TypeIndex::Int32,
+                                         vectorized::TypeIndex::String};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("hi"), 5, std::string("?")}, std::string("hi???")},
@@ -287,7 +287,7 @@ TEST(function_string_test, function_rpad_test) {
 TEST(function_string_test, function_ascii_test) {
     std::string func_name = "ascii";
 
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {{{std::string("")}, 0},
                                                                         {{std::string("aa")}, 97},
@@ -300,7 +300,7 @@ TEST(function_string_test, function_ascii_test) {
 TEST(function_string_test, function_char_length_test) {
     std::string func_name = "char_length";
 
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("")}, 0},    {{std::string("aa")}, 2},  {{std::string("我")}, 1},
@@ -313,7 +313,7 @@ TEST(function_string_test, function_char_length_test) {
 TEST(function_string_test, function_concat_test) {
     std::string func_name = "concat";
     {
-        std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+        std::vector<std::any> input_types = {vectorized::TypeIndex::String};
 
         std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
                 {{std::string("")}, std::string("")},
@@ -325,8 +325,8 @@ TEST(function_string_test, function_concat_test) {
     };
 
     {
-        std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                          vectorized::TypeIndex::String};
+        std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                             vectorized::TypeIndex::String};
 
         std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
                 {{std::string(""), std::string("")}, std::string("")},
@@ -338,9 +338,9 @@ TEST(function_string_test, function_concat_test) {
     };
 
     {
-        std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                          vectorized::TypeIndex::String,
-                                                          vectorized::TypeIndex::String};
+        std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                             vectorized::TypeIndex::String,
+                                             vectorized::TypeIndex::String};
 
         std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
                 {{std::string(""), std::string("1"), std::string("")}, std::string("1")},
@@ -356,8 +356,8 @@ TEST(function_string_test, function_concat_test) {
 TEST(function_string_test, function_concat_ws_test) {
     std::string func_name = "concat_ws";
     {
-        std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                          vectorized::TypeIndex::String};
+        std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                             vectorized::TypeIndex::String};
 
         std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
                 {{std::string("-"), std::string("")}, std::string("")},
@@ -371,9 +371,9 @@ TEST(function_string_test, function_concat_ws_test) {
     };
 
     {
-        std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                          vectorized::TypeIndex::String,
-                                                          vectorized::TypeIndex::String};
+        std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                             vectorized::TypeIndex::String,
+                                             vectorized::TypeIndex::String};
 
         std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
                 {{std::string("-"), std::string(""), std::string("")}, std::string("-")},
@@ -387,7 +387,7 @@ TEST(function_string_test, function_concat_ws_test) {
     };
 
     {
-        std::vector<vectorized::TypeIndex> input_types = {
+        std::vector<std::any> input_types = {
                 vectorized::TypeIndex::String, vectorized::TypeIndex::String,
                 vectorized::TypeIndex::String, vectorized::TypeIndex::String};
 
@@ -410,7 +410,7 @@ TEST(function_string_test, function_concat_ws_test) {
 TEST(function_string_test, function_null_or_empty_test) {
     std::string func_name = "null_or_empty";
 
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("")}, uint8(true)},
@@ -423,7 +423,7 @@ TEST(function_string_test, function_null_or_empty_test) {
 
 TEST(function_string_test, function_to_base64_test) {
     std::string func_name = "to_base64";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("asd你好")}, {std::string("YXNk5L2g5aW9")}},
@@ -438,7 +438,7 @@ TEST(function_string_test, function_to_base64_test) {
 
 TEST(function_string_test, function_from_base64_test) {
     std::string func_name = "from_base64";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("YXNk5L2g5aW9")}, {std::string("asd你好")}},
@@ -455,7 +455,7 @@ TEST(function_string_test, function_from_base64_test) {
 
 TEST(function_string_test, function_reverse_test) {
     std::string func_name = "reverse";
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("")}, {std::string("")}},
             {{std::string("a")}, {std::string("a")}},
@@ -471,8 +471,8 @@ TEST(function_string_test, function_reverse_test) {
 TEST(function_string_test, function_instr_test) {
     std::string func_name = "instr";
 
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                      vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                         vectorized::TypeIndex::String};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("abcdefg"), std::string("efg")}, 5},
@@ -489,8 +489,8 @@ TEST(function_string_test, function_instr_test) {
 TEST(function_string_test, function_find_in_set_test) {
     std::string func_name = "find_in_set";
 
-    std::vector<vectorized::TypeIndex> input_types = {vectorized::TypeIndex::String,
-                                                      vectorized::TypeIndex::String};
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String,
+                                         vectorized::TypeIndex::String};
 
     std::vector<std::pair<std::vector<std::any>, std::any>> data_set = {
             {{std::string("abcdefg"), std::string("a,b,c")}, 0},
