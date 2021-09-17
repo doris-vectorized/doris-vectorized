@@ -539,7 +539,7 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
     }
 
     return Status::OK();
-} // namespace doris
+}
 
 void ExecNode::set_debug_options(int node_id, TExecNodePhase::type phase, TDebugAction::type action,
                                  ExecNode* root) {
