@@ -371,6 +371,7 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         case TPlanNodeType::CROSS_JOIN_NODE:
         case TPlanNodeType::SORT_NODE:
         case TPlanNodeType::EXCHANGE_NODE:
+        case TPlanNodeType::ODBC_SCAN_NODE:
         case TPlanNodeType::MYSQL_SCAN_NODE:
             break;
         default: {
