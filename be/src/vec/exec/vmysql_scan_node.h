@@ -23,15 +23,12 @@
 #include "exec/scan_node.h"
 #include "runtime/descriptors.h"
 namespace doris {
-class ObjectPool;
-class TPlanNode;
-class DescriptorTbl;
-class RowBatch;
+
 class TextConverter;
 class TupleDescriptor;
 class RuntimeState;
-class MemPool;
 class Status;
+
 namespace vectorized {
 
 class VMysqlScanNode : public MysqlScanNode {
