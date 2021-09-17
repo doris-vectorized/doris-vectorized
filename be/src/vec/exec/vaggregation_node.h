@@ -139,6 +139,79 @@ private:
     AggregateDataPtr null_key_data = nullptr;
 };
 
+template <typename TData, bool has_nullable_keys_ = false>
+struct AggregationMethodKeysFixed {
+    using Data = TData;
+    using Key = typename Data::key_type;
+    using Mapped = typename Data::mapped_type;
+    using Iterator = typename Data::iterator;
+    static constexpr bool has_nullable_keys = has_nullable_keys_;
+
+    Data data;
+    Iterator iterator;
+    bool inited = false;
+
+    AggregationMethodKeysFixed() {}
+
+    template <typename Other>
+    AggregationMethodKeysFixed(const Other & other) : data(other.data) {}
+
+    using State = ColumnsHashing::HashMethodKeysFixed<typename Data::value_type, Key, Mapped, has_nullable_keys>;
+
+    static void insert_key_into_columns(const Key & key, MutableColumns & key_columns, const Sizes & key_sizes) {
+        size_t keys_size = key_columns.size();
+
+        static constexpr auto bitmap_size = has_nullable_keys ? std::tuple_size<KeysNullMap<Key>>::value : 0;
+        /// In any hash key value, column values to be read start just after the bitmap, if it exists.
+        size_t pos = bitmap_size;
+
+        for (size_t i = 0; i < keys_size; ++i) {
+            IColumn * observed_column;
+            ColumnUInt8 * null_map;
+
+            bool column_nullable = false;
+            if constexpr (has_nullable_keys)
+                column_nullable = is_column_nullable(*key_columns[i]);
+
+            /// If we have a nullable column, get its nested column and its null map.
+            if (column_nullable) {
+                ColumnNullable & nullable_col = assert_cast<ColumnNullable &>(*key_columns[i]);
+                observed_column = &nullable_col.get_nested_column();
+                null_map = assert_cast<ColumnUInt8 *>(&nullable_col.get_null_map_column());
+            } else {
+                observed_column = key_columns[i].get();
+                null_map = nullptr;
+            }
+
+            bool is_null = false;
+            if (column_nullable) {
+                /// The current column is nullable. Check if the value of the
+                /// corresponding key is nullable. Update the null map accordingly.
+                size_t bucket = i / 8;
+                size_t offset = i % 8;
+                UInt8 val = (reinterpret_cast<const UInt8 *>(&key)[bucket] >> offset) & 1;
+                null_map->insert_value(val);
+                is_null = val == 1;
+            }
+
+            if (has_nullable_keys && is_null)
+                observed_column->insert_default();
+            else {
+                size_t size = key_sizes[i];
+                observed_column->insert_data(reinterpret_cast<const char *>(&key) + pos, size);
+                pos += size;
+            }
+        }
+    }
+
+    void init_once() {
+        if (!inited) {
+            inited = true;
+            iterator = data.begin();
+        }
+    }
+};
+
 /// Single low cardinality column.
 template <typename SingleColumnMethod>
 struct AggregationMethodSingleNullableColumn : public SingleColumnMethod {
@@ -175,6 +248,7 @@ using AggregatedDataWithUInt16Key = FixedImplicitZeroHashMap<UInt16, AggregateDa
 using AggregatedDataWithUInt32Key = HashMap<UInt32, AggregateDataPtr, HashCRC32<UInt32>>;
 using AggregatedDataWithUInt64Key = HashMap<UInt64, AggregateDataPtr, HashCRC32<UInt64>>;
 using AggregatedDataWithUInt128Key = HashMap<UInt128, AggregateDataPtr, HashCRC32<UInt128>>;
+using AggregatedDataWithUInt256Key = HashMap<UInt256, AggregateDataPtr, UInt256HashCRC32>;
 
 using AggregatedDataWithNullableUInt8Key = AggregationDataWithNullKey<AggregatedDataWithUInt8Key>;
 using AggregatedDataWithNullableUInt16Key = AggregationDataWithNullKey<AggregatedDataWithUInt16Key>;
@@ -192,7 +266,13 @@ using AggregatedMethodVariants = std::variant<AggregationMethodSerialized<Aggreg
                                     AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt16, AggregatedDataWithNullableUInt16Key, false>>,
                                     AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt32, AggregatedDataWithNullableUInt32Key>>,
                                     AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt64, AggregatedDataWithNullableUInt64Key>>,
-                                    AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt128, AggregatedDataWithNullableUInt128Key>>>;
+                                    AggregationMethodSingleNullableColumn<AggregationMethodOneNumber<UInt128, AggregatedDataWithNullableUInt128Key>>,
+                                    AggregationMethodKeysFixed<AggregatedDataWithUInt64Key, false>,
+                                    AggregationMethodKeysFixed<AggregatedDataWithUInt64Key, true>,
+                                    AggregationMethodKeysFixed<AggregatedDataWithUInt128Key, false>,
+                                    AggregationMethodKeysFixed<AggregatedDataWithUInt128Key, true>,
+                                    AggregationMethodKeysFixed<AggregatedDataWithUInt256Key, false>,
+                                    AggregationMethodKeysFixed<AggregatedDataWithUInt256Key, true>>;
 
 struct AggregatedDataVariants {
     AggregatedDataVariants() = default;
@@ -201,6 +281,7 @@ struct AggregatedDataVariants {
     AggregatedDataWithoutKey without_key = nullptr;
     AggregatedMethodVariants _aggregated_method_variant;
 
+    // TODO: may we should support uint256 in the future
     enum class Type {
         EMPTY = 0,
         without_key,
@@ -209,8 +290,10 @@ struct AggregatedDataVariants {
         int16_key,
         int32_key,
         int64_key,
-        int128_key
-        // TODO: add more key optimize types
+        int128_key,
+        int64_keys,
+        int128_keys,
+        int256_keys
     };
 
     Type _type = Type::EMPTY;
@@ -218,6 +301,8 @@ struct AggregatedDataVariants {
     void init(Type type, bool is_nullable = false) {
         _type = type;
         switch (_type) {
+        case Type::without_key:
+            break;
         case Type::serialized:
             _aggregated_method_variant.emplace<AggregationMethodSerialized<AggregatedDataWithStringKey>>();
             break;
@@ -256,8 +341,29 @@ struct AggregatedDataVariants {
                 _aggregated_method_variant.emplace<AggregationMethodOneNumber<UInt128, AggregatedDataWithUInt128Key>>();
             }
             break;
-        default:
+        case Type::int64_keys:
+            if (is_nullable) {
+                _aggregated_method_variant.emplace<AggregationMethodKeysFixed<AggregatedDataWithUInt64Key, true>>();
+            } else {
+                _aggregated_method_variant.emplace<AggregationMethodKeysFixed<AggregatedDataWithUInt64Key, false>>();
+            }
             break;
+        case Type::int128_keys:
+            if (is_nullable) {
+                _aggregated_method_variant.emplace<AggregationMethodKeysFixed<AggregatedDataWithUInt128Key, true>>();
+            } else {
+                _aggregated_method_variant.emplace<AggregationMethodKeysFixed<AggregatedDataWithUInt128Key, false>>();
+            }
+            break;
+        case Type::int256_keys:
+            if (is_nullable) {
+                _aggregated_method_variant.emplace<AggregationMethodKeysFixed<AggregatedDataWithUInt256Key, true>>();
+            } else {
+                _aggregated_method_variant.emplace<AggregationMethodKeysFixed<AggregatedDataWithUInt256Key, false>>();
+            }
+            break;
+        default:
+            DCHECK(false) << "Do not have a rigth agg data type";
         }
     }
 };
@@ -281,6 +387,7 @@ public:
 private:
     // group by k1,k2
     std::vector<VExprContext*> _probe_expr_ctxs;
+    std::vector<size_t> _probe_key_sz;
 
     std::vector<AggFnEvaluator*> _aggregate_evaluators;
 
