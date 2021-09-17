@@ -162,12 +162,12 @@ struct HashMethodKeysFixed
     using BaseHashed = columns_hashing_impl::HashMethodBase<Self, Value, Mapped, use_cache>;
     using Base = columns_hashing_impl::BaseStateKeysFixed<Key, has_nullable_keys_>;
 
-    Sizes key_sizes;
+    const Sizes& key_sizes;
     size_t keys_size;
 
     HashMethodKeysFixed(const ColumnRawPtrs& key_columns, const Sizes& key_sizes_,
                         const HashMethodContextPtr&)
-            : Base(key_columns), key_sizes(std::move(key_sizes_)), keys_size(key_columns.size()) {}
+            : Base(key_columns), key_sizes(key_sizes_), keys_size(key_columns.size()) {}
 
     ALWAYS_INLINE Key get_key_holder(size_t row, Arena&) const {
         if constexpr (has_nullable_keys_) {
