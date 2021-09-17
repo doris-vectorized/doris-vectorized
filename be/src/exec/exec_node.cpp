@@ -66,11 +66,12 @@
 #include "vec/exec/vaggregation_node.h"
 #include "vec/exec/vcross_join_node.h"
 #include "vec/exec/vexchange_node.h"
+#include "vec/exec/vmysql_scan_node.h"
+#include "vec/exec/vodbc_scan_node.h"
 #include "vec/exec/volap_scan_node.h"
 #include "vec/exec/vsort_node.h"
 #include "vec/exec/vunion_node.h"
 #include "vec/exprs/vexpr.h"
-#include "vec/exec/vmysql_scan_node.h"
 namespace doris {
 
 const std::string ExecNode::ROW_THROUGHPUT_COUNTER = "RowsReturnedRate";
@@ -365,23 +366,26 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
 
     if (state->enable_vectorized_exec()) {
         switch (tnode.node_type) {
-            case TPlanNodeType::OLAP_SCAN_NODE:
-            case TPlanNodeType::HASH_JOIN_NODE:
-            case TPlanNodeType::AGGREGATION_NODE:
-            case TPlanNodeType::UNION_NODE:
-            case TPlanNodeType::CROSS_JOIN_NODE:
-            case TPlanNodeType::SORT_NODE:
-            case TPlanNodeType::EXCHANGE_NODE:
-            case TPlanNodeType::MYSQL_SCAN_NODE:
-                break;
-            default : {
-                const auto& i = _TPlanNodeType_VALUES_TO_NAMES.find(tnode.node_type);
-                const char* str = "unknown node type";
+        case TPlanNodeType::OLAP_SCAN_NODE:
+        case TPlanNodeType::HASH_JOIN_NODE:
+        case TPlanNodeType::AGGREGATION_NODE:
+        case TPlanNodeType::UNION_NODE:
+        case TPlanNodeType::CROSS_JOIN_NODE:
+        case TPlanNodeType::SORT_NODE:
+        case TPlanNodeType::EXCHANGE_NODE:
+        case TPlanNodeType::ODBC_SCAN_NODE:
+        case TPlanNodeType::MYSQL_SCAN_NODE:
+            break;
+        default: {
+            const auto& i = _TPlanNodeType_VALUES_TO_NAMES.find(tnode.node_type);
+            const char* str = "unknown node type";
 
-                if (i != _TPlanNodeType_VALUES_TO_NAMES.end()) { str = i->second; }
-                error_msg << "V" << str << " not implemented";
-                return Status::InternalError(error_msg.str());
+            if (i != _TPlanNodeType_VALUES_TO_NAMES.end()) {
+                str = i->second;
             }
+            error_msg << "V" << str << " not implemented";
+            return Status::InternalError(error_msg.str());
+        }
         }
     }
 
@@ -394,11 +398,14 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
     case TPlanNodeType::MYSQL_SCAN_NODE:
         if (state->enable_vectorized_exec()) {
             *node = pool->add(new vectorized::VMysqlScanNode(pool, tnode, descs));
-        }else
+        } else
             *node = pool->add(new MysqlScanNode(pool, tnode, descs));
         return Status::OK();
     case TPlanNodeType::ODBC_SCAN_NODE:
-        *node = pool->add(new OdbcScanNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new vectorized::VOdbcScanNode(pool, tnode, descs));
+        } else
+            *node = pool->add(new OdbcScanNode(pool, tnode, descs));
         return Status::OK();
 
     case TPlanNodeType::ES_SCAN_NODE:
