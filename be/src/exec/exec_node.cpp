@@ -70,7 +70,7 @@
 #include "vec/exec/vsort_node.h"
 #include "vec/exec/vunion_node.h"
 #include "vec/exprs/vexpr.h"
-
+#include "vec/exec/vmysql_scan_node.h"
 namespace doris {
 
 const std::string ExecNode::ROW_THROUGHPUT_COUNTER = "RowsReturnedRate";
@@ -368,6 +368,7 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
             case TPlanNodeType::CROSS_JOIN_NODE:
             case TPlanNodeType::SORT_NODE:
             case TPlanNodeType::EXCHANGE_NODE:
+            case TPlanNodeType::MYSQL_SCAN_NODE:
                 break;
             default : {
                 const auto& i = _TPlanNodeType_VALUES_TO_NAMES.find(tnode.node_type);
@@ -387,13 +388,11 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         return Status::OK();
 
     case TPlanNodeType::MYSQL_SCAN_NODE:
-#ifdef DORIS_WITH_MYSQL
-        *node = pool->add(new MysqlScanNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new vectorized::VMysqlScanNode(pool, tnode, descs));
+        }else
+            *node = pool->add(new MysqlScanNode(pool, tnode, descs));
         return Status::OK();
-#else
-        return Status::InternalError(
-                "Don't support MySQL table, you should rebuild Doris with WITH_MYSQL option ON");
-#endif
     case TPlanNodeType::ODBC_SCAN_NODE:
         *node = pool->add(new OdbcScanNode(pool, tnode, descs));
         return Status::OK();
