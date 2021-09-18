@@ -162,7 +162,7 @@ using FunctionCeil = FunctionMathUnary<UnaryFunctionVectorized<CeilName, std::ce
 
 template <typename A>
 struct SignImpl {
-    using ResultType = Float32;
+    using ResultType = Int8;
     static inline ResultType apply(A a) {
         if constexpr (IsDecimalNumber<A> || std::is_floating_point_v<A>)
             return static_cast<ResultType>(a < A(0) ? -1 : a == A(0) ? 0 : 1);
