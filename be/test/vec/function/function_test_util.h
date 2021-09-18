@@ -32,20 +32,28 @@
 namespace doris {
 namespace vectorized {
 
+using DataSet = std::vector<std::pair<std::vector<std::any>, std::any>>;
+
 template <typename ColumnType, typename Column, typename NullColumn>
 void insert_column_to_block(std::list<ColumnPtr>& columns, ColumnsWithTypeAndName& ctn,
-        Column&& col, NullColumn&& null_map, Block& block, const std::string& col_name, int i) {
+                            Column&& col, NullColumn&& null_map, Block& block,
+                            const std::string& col_name, int i, bool is_const, int row_size) {
     columns.emplace_back(ColumnNullable::create(std::move(col), std::move(null_map)));
-    ColumnWithTypeAndName type_and_name(columns.back()->get_ptr(),
-                                                make_nullable(std::make_shared<ColumnType>()),
-                                                col_name);
+    ColumnWithTypeAndName type_and_name(
+            is_const ? ColumnConst::create(columns.back()->get_ptr(), row_size)
+                     : columns.back()->get_ptr(),
+            make_nullable(std::make_shared<ColumnType>()), col_name);
     block.insert(i, type_and_name);
     ctn.emplace_back(type_and_name);
 }
 
+// Null values are represented by vectorized::Null()
+// The type of the constant column is represented as follows: vectorized::Consted {vectorized::TypeIndex::String}
+// A DataSet with a constant column can only have one row of data
+
 template <typename ReturnType, bool nullable = false>
-void check_function(const std::string& func_name, const std::vector<TypeIndex>& input_types,
-                    const std::vector<std::pair<std::vector<std::any>, std::any>>& data_set) {
+void check_function(const std::string& func_name, const std::vector<std::any>& input_types,
+                    const DataSet& data_set) {
     size_t row_size = data_set.size();
     size_t column_size = input_types.size();
 
@@ -56,7 +64,16 @@ void check_function(const std::string& func_name, const std::vector<TypeIndex>& 
 
     // 1. build block and column type and names
     for (int i = 0; i < column_size; i++) {
-        TypeIndex tp = input_types[i];
+        TypeIndex tp;
+        bool is_const;
+        if (input_types[i].type() == typeid(Consted)) {
+            tp = std::any_cast<Consted>(input_types[i]).tp;
+            is_const = true;
+        } else {
+            tp = std::any_cast<TypeIndex>(input_types[i]);
+            is_const = false;
+        }
+
         std::string col_name = "k" + std::to_string(i);
 
         auto null_map = ColumnUInt8::create(row_size, false);
@@ -67,28 +84,29 @@ void check_function(const std::string& func_name, const std::vector<TypeIndex>& 
             for (int j = 0; j < row_size; j++) {
                 if (data_set[j].first[i].type() == typeid(Null)) {
                     null_map_data[j] = true;
-                    col->insert("");
+                    col->insert_default();
                     continue;
                 }
                 auto str = std::any_cast<std::string>(data_set[j].first[i]);
                 col->insert_data(str.c_str(), str.size());
             }
             insert_column_to_block<DataTypeString>(columns, ctn, std::move(col),
-                    std::move(null_map), block, col_name, i);
+                                                   std::move(null_map), block, col_name, i,
+                                                   is_const, row_size);
         } else if (tp == TypeIndex::Int32) {
             auto col = ColumnInt32::create();
 
             for (int j = 0; j < row_size; j++) {
                 if (data_set[j].first[i].type() == typeid(Null)) {
                     null_map_data[j] = true;
-                    col->insert_value(0);
+                    col->insert_default();
                     continue;
                 }
                 auto value = std::any_cast<int>(data_set[j].first[i]);
                 col->insert_data(reinterpret_cast<char*>(&value), 0);
             }
-            insert_column_to_block<DataTypeInt32>(columns, ctn, std::move(col),
-                    std::move(null_map), block, col_name, i);
+            insert_column_to_block<DataTypeInt32>(columns, ctn, std::move(col), std::move(null_map),
+                                                  block, col_name, i, is_const, row_size);
         } else if (tp == TypeIndex::DateTime) {
             static std::string date_time_format("%Y-%m-%d %H:%i:%s");
             auto col = ColumnInt128::create();
@@ -102,12 +120,13 @@ void check_function(const std::string& func_name, const std::vector<TypeIndex>& 
                 auto datetime_str = std::any_cast<std::string>(data_set[j].first[i]);
                 DateTimeValue v;
                 v.from_date_format_str(date_time_format.c_str(), date_time_format.size(),
-                    datetime_str.c_str(), datetime_str.size());
+                                       datetime_str.c_str(), datetime_str.size());
                 v.to_datetime();
                 col->insert_data(reinterpret_cast<char*>(&v), 0);
             }
-            insert_column_to_block<DataTypeDateTime>(columns, ctn,
-                    std::move(col), std::move(null_map), block, col_name, i);
+            insert_column_to_block<DataTypeDateTime>(columns, ctn, std::move(col),
+                                                     std::move(null_map), block, col_name, i,
+                                                     is_const, row_size);
         } else if (tp == TypeIndex::Date) {
             static std::string date_time_format("%Y-%m-%d");
             auto col = ColumnInt128::create();
@@ -121,14 +140,15 @@ void check_function(const std::string& func_name, const std::vector<TypeIndex>& 
                 auto datetime_str = std::any_cast<std::string>(data_set[j].first[i]);
                 DateTimeValue v;
                 v.from_date_format_str(date_time_format.c_str(), date_time_format.size(),
-                    datetime_str.c_str(), datetime_str.size());
+                                       datetime_str.c_str(), datetime_str.size());
                 v.cast_to_date();
                 col->insert_data(reinterpret_cast<char*>(&v), 0);
             }
             insert_column_to_block<DataTypeDateTime>(columns, ctn, std::move(col),
-                    std::move(null_map), block, col_name, i);
+                                                     std::move(null_map), block, col_name, i,
+                                                     is_const, row_size);
         } else {
-            assert(false);
+            DCHECK(false);
         }
         arguments.push_back(i);
     }
@@ -142,8 +162,9 @@ void check_function(const std::string& func_name, const std::vector<TypeIndex>& 
     func->execute(block, arguments, block.columns() - 1, row_size);
 
     // 3. check the result of function
+    ColumnPtr column = block.get_columns()[block.columns() - 1];
+    DCHECK(column != nullptr);
     for (int i = 0; i < row_size; ++i) {
-        ColumnPtr column = block.get_columns()[block.columns() - 1];
         auto check_column_data = [&]() {
             vectorized::Field field;
             column->get(i, field);
