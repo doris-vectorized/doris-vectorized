@@ -32,6 +32,14 @@
 #include "runtime/memory/chunk.h"
 #include "util/bit_util.h"
 
+#define NEW_MEM_POOL 1
+
+#ifdef NEW_MEM_POOL
+
+#include "runtime/memory_pool.h"
+
+#else
+
 namespace doris {
 
 class MemTracker;
@@ -285,5 +293,7 @@ private:
 template uint8_t* MemPool::allocate<false>(int64_t size, int alignment);
 template uint8_t* MemPool::allocate<true>(int64_t size, int alignment);
 } // namespace doris
+
+#endif
 
 #endif
