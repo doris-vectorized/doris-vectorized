@@ -33,6 +33,16 @@ namespace doris {
 namespace vectorized {
 
 using DataSet = std::vector<std::pair<std::vector<std::any>, std::any>>;
+__int128 str_to_data_time(std::string datetime_str, bool data_time = true) {
+    DateTimeValue v;
+    v.from_date_str(datetime_str.c_str(), datetime_str.size());
+    if (data_time) { //bool data_time only to simplifly means data_time or data to cast, just use in time-functions uint test
+        v.to_datetime();
+    } else {
+        v.cast_to_date();
+    }
+    return binary_cast<doris::DateTimeValue, Int128>(v);
+}
 
 template <typename ColumnType, typename Column, typename NullColumn>
 void insert_column_to_block(std::list<ColumnPtr>& columns, ColumnsWithTypeAndName& ctn,
@@ -107,6 +117,22 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
             }
             insert_column_to_block<DataTypeInt32>(columns, ctn, std::move(col), std::move(null_map),
                                                   block, col_name, i, is_const, row_size);
+
+        } else if (tp == TypeIndex::Float64) {
+            auto col = ColumnFloat64::create();
+
+            for (int j = 0; j < row_size; j++) {
+                if (data_set[j].first[i].type() == typeid(Null)) {
+                    null_map_data[j] = true;
+                    col->insert_value(0);
+                    continue;
+                }
+                auto value = std::any_cast<double>(data_set[j].first[i]);
+                col->insert_data(reinterpret_cast<char*>(&value), 0);
+            }
+            insert_column_to_block<DataTypeFloat64>(columns, ctn, std::move(col),
+                                                    std::move(null_map), block, col_name, i,
+                                                    is_const, row_size);
         } else if (tp == TypeIndex::DateTime) {
             static std::string date_time_format("%Y-%m-%d %H:%i:%s");
             auto col = ColumnInt128::create();
