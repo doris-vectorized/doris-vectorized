@@ -546,7 +546,7 @@ visible_functions = [
     [['abs'], 'DECIMALV2', ['DECIMALV2'],
         '_ZN5doris13MathFunctions3absEPN9doris_udf15FunctionContextERKNS1_12DecimalV2ValE', '', '', 'vec', ''],
 
-    [['sign'], 'FLOAT', ['DOUBLE'],
+    [['sign'], 'TINYINT', ['DOUBLE'],
         '_ZN5doris13MathFunctions4signEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', '', '', 'vec', ''],
 
     [['sin'], 'DOUBLE', ['DOUBLE'],
@@ -567,10 +567,10 @@ visible_functions = [
     [['floor', 'dfloor'], 'BIGINT', ['DOUBLE'],
             '_ZN5doris13MathFunctions5floorEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', '', '', 'vec', ''],
     [['round', 'dround'], 'BIGINT', ['DOUBLE'],
-            '_ZN5doris13MathFunctions5roundEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', '', '', '', ''],
+            '_ZN5doris13MathFunctions5roundEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', '', '', 'vec', ''],
     [['round', 'dround'], 'DOUBLE', ['DOUBLE', 'INT'],
             '_ZN5doris13MathFunctions11round_up_toEPN9doris_udf'
-            '15FunctionContextERKNS1_9DoubleValERKNS1_6IntValE', '', '', '', ''],
+            '15FunctionContextERKNS1_9DoubleValERKNS1_6IntValE', '', '', 'vec', ''],
     [['truncate'], 'DOUBLE', ['DOUBLE', 'INT'],
             '_ZN5doris13MathFunctions8truncateEPN9doris_udf'
             '15FunctionContextERKNS1_9DoubleValERKNS1_6IntValE', '', '', 'vec', ''],

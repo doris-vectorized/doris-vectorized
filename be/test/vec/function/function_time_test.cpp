@@ -94,6 +94,84 @@ TEST(TimestampFunctionsTest, year_test) {
     vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
 }
 
+TEST(TimestampFunctionsTest, quarter_test) {
+    std::string func_name = "quarter";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime};
+
+    DataSet data_set = {{{std::string("2021-01-01 00:00:00")}, 1},
+                        {{std::string("")}, Null()},
+                        {{std::string("2021-01-32 00:00:00")}, Null()},
+                        {{std::string("2025-10-23 00:00:00")}, 4}};
+
+    vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
+}
+
+TEST(TimestampFunctionsTest, month_test) {
+    std::string func_name = "month";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime};
+
+    DataSet data_set = {{{std::string("2021-01-01 00:00:00")}, 1},
+                        {{std::string("")}, Null()},
+                        {{std::string("2021-01-32 00:00:00")}, Null()},
+                        {{std::string("2025-05-23 00:00:00")}, 5}};
+
+    vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
+}
+
+TEST(TimestampFunctionsTest, day_test) {
+    std::string func_name = "day";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime};
+
+    DataSet data_set = {{{std::string("2021-01-01 00:00:00")}, 1},
+                        {{std::string("")}, Null()},
+                        {{std::string("2021-01-32 00:00:00")}, Null()},
+                        {{std::string("2025-05-23 00:00:00")}, 23}};
+
+    vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
+}
+
+TEST(TimestampFunctionsTest, hour_test) {
+    std::string func_name = "hour";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime};
+
+    DataSet data_set = {{{std::string("2021-01-01 23:59:59")}, 23},
+                        {{std::string("2021-01-13 16:56:00")}, 16},
+                        {{std::string("")}, Null()},
+                        {{std::string("2025-05-23 24:00:00")}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
+}
+
+TEST(TimestampFunctionsTest, minute_test) {
+    std::string func_name = "minute";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime};
+
+    DataSet data_set = {{{std::string("2021-01-01 23:59:50")}, 59},
+                        {{std::string("2021-01-13 16:20:00")}, 20},
+                        {{std::string("")}, Null()},
+                        {{std::string("2025-05-23 24:00:00")}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
+}
+
+TEST(TimestampFunctionsTest, second_test) {
+    std::string func_name = "second";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime};
+
+    DataSet data_set = {{{std::string("2021-01-01 23:50:59")}, 59},
+                        {{std::string("2021-01-13 16:20:00")}, 0},
+                        {{std::string("")}, Null()},
+                        {{std::string("2025-05-23 24:00:00")}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
+}
+
 TEST(TimestampFunctionsTest, unix_timestamp_test) {
     std::string func_name = "unix_timestamp";
 
@@ -185,6 +263,297 @@ TEST(TimestampFunctionsTest, date_format_test) {
         vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
                                                                      data_set);
     }
+}
+TEST(TimestampFunctionsTest, years_add_test) {
+    std::string func_name = "years_add";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-05-23 00:00:00"), 5},
+                         vectorized::str_to_data_time("2025-05-23 00:00:00")},
+                        {{std::string("2020-05-23 00:00:00"), -5},
+                         vectorized::str_to_data_time("2015-05-23 00:00:00")},
+                        {{std::string(""), 5}, Null()},
+                        {{std::string("2020-05-23 00:00:00"), 8000}, Null()},
+                        {{Null(), 5}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, years_sub_test) {
+    std::string func_name = "years_sub";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-05-23 00:00:00"), 5},
+                         vectorized::str_to_data_time("2015-05-23 00:00:00")},
+                        {{std::string("2020-05-23 00:00:00"), -5},
+                         vectorized::str_to_data_time("2025-05-23 00:00:00")},
+                        {{std::string(""), 5}, Null()},
+                        {{std::string("2020-05-23 00:00:00"), 3000}, Null()},
+                        {{Null(), 5}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, months_add_test) {
+    std::string func_name = "months_add";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-10-23 00:00:00"), -4},
+                         vectorized::str_to_data_time("2020-06-23 00:00:00")},
+                        {{std::string("2020-05-23 00:00:00"), 4},
+                         vectorized::str_to_data_time("2020-09-23 00:00:00")},
+                        {{std::string(""), 4}, Null()},
+                        {{std::string("2020-05-23 00:00:00"), 10},
+                         vectorized::str_to_data_time("2021-03-23 00:00:00")},
+                        {{Null(), 4}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, months_sub_test) {
+    std::string func_name = "months_sub";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-05-23 00:00:00"), 4},
+                         vectorized::str_to_data_time("2020-01-23 00:00:00")},
+                        {{std::string("2020-05-23 00:00:00"), -4},
+                         vectorized::str_to_data_time("2020-09-23 00:00:00")},
+                        {{std::string(""), 4}, Null()},
+                        {{std::string("2020-05-23 00:00:00"), 10},
+                         vectorized::str_to_data_time("2019-07-23 00:00:00")},
+                        {{Null(), 4}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, days_add_test) {
+    std::string func_name = "days_add";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-10-23 00:00:00"), -4},
+                         vectorized::str_to_data_time("2020-10-19 00:00:00")},
+                        {{std::string("2020-05-23 00:00:00"), 4},
+                         vectorized::str_to_data_time("2020-05-27 00:00:00")},
+                        {{std::string(""), 4}, Null()},
+                        {{std::string("2020-05-23 00:00:00"), 10},
+                         vectorized::str_to_data_time("2020-06-2 00:00:00")},
+                        {{Null(), 4}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, days_sub_test) {
+    std::string func_name = "days_sub";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-05-23 00:00:00"), 4},
+                         vectorized::str_to_data_time("2020-05-19 00:00:00")},
+                        {{std::string("2020-05-23 00:00:00"), -4},
+                         vectorized::str_to_data_time("2020-05-27 00:00:00")},
+                        {{std::string(""), 4}, Null()},
+                        {{std::string("2020-05-23 00:00:00"), 31},
+                         vectorized::str_to_data_time("2020-04-22 00:00:00")},
+                        {{Null(), 4}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, hours_add_test) {
+    std::string func_name = "hours_add";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-10-23 10:00:00"), -4},
+                         vectorized::str_to_data_time("2020-10-23 06:00:00")},
+                        {{std::string("2020-05-23 10:00:00"), 4},
+                         vectorized::str_to_data_time("2020-05-23 14:00:00")},
+                        {{std::string(""), 4}, Null()},
+                        {{std::string("2020-05-23 10:00:00"), 100},
+                         vectorized::str_to_data_time("2020-05-27 14:00:00")},
+                        {{Null(), 4}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, hours_sub_test) {
+    std::string func_name = "hours_sub";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-05-23 10:00:00"), 4},
+                         vectorized::str_to_data_time("2020-05-23 06:00:00")},
+                        {{std::string("2020-05-23 10:00:00"), -4},
+                         vectorized::str_to_data_time("2020-05-23 14:00:00")},
+                        {{std::string(""), 4}, Null()},
+                        {{std::string("2020-05-23 10:00:00"), 31},
+                         vectorized::str_to_data_time("2020-05-22 03:00:00")},
+                        {{Null(), 4}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, minutes_add_test) {
+    std::string func_name = "minutes_add";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-10-23 10:00:00"), 40},
+                         vectorized::str_to_data_time("2020-10-23 10:40:00")},
+                        {{std::string("2020-05-23 10:00:00"), -40},
+                         vectorized::str_to_data_time("2020-05-23 09:20:00")},
+                        {{std::string(""), 4}, Null()},
+                        {{std::string("2020-05-23 10:00:00"), 100},
+                         vectorized::str_to_data_time("2020-05-23 11:40:00")},
+                        {{Null(), 4}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, minutes_sub_test) {
+    std::string func_name = "minutes_sub";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-05-23 10:00:00"), 40},
+                         vectorized::str_to_data_time("2020-05-23 09:20:00")},
+                        {{std::string("2020-05-23 10:00:00"), -40},
+                         vectorized::str_to_data_time("2020-05-23 10:40:00")},
+                        {{std::string(""), 4}, Null()},
+                        {{std::string("2020-05-23 10:00:00"), 100},
+                         vectorized::str_to_data_time("2020-05-23 08:20:00")},
+                        {{Null(), 4}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, seconds_add_test) {
+    std::string func_name = "seconds_add";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-10-23 10:00:00"), 40},
+                         vectorized::str_to_data_time("2020-10-23 10:00:40")},
+                        {{std::string("2020-05-23 10:00:00"), -40},
+                         vectorized::str_to_data_time("2020-05-23 09:59:20")},
+                        {{std::string(""), 4}, Null()},
+                        {{std::string("2020-05-23 10:00:00"), 100},
+                         vectorized::str_to_data_time("2020-05-23 10:01:40")},
+                        {{Null(), 4}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, seconds_sub_test) {
+    std::string func_name = "seconds_sub";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-05-23 10:00:00"), 40},
+                         vectorized::str_to_data_time("2020-05-23 09:59:20")},
+                        {{std::string("2020-05-23 10:00:00"), -40},
+                         vectorized::str_to_data_time("2020-05-23 10:00:40")},
+                        {{std::string(""), 4}, Null()},
+                        {{std::string("2020-05-23 10:00:00"), 100},
+                         vectorized::str_to_data_time("2020-05-23 09:58:20")},
+                        {{Null(), 4}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, weeks_add_test) {
+    std::string func_name = "weeks_add";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-10-23 10:00:00"), 5},
+                         vectorized::str_to_data_time("2020-11-27 10:00:00")},
+                        {{std::string("2020-05-23 10:00:00"), -5},
+                         vectorized::str_to_data_time("2020-04-18 10:00:00")},
+                        {{std::string(""), 4}, Null()},
+                        {{std::string("2020-05-23 10:00:00"), 100},
+                         vectorized::str_to_data_time("2022-04-23 10:00:00")},
+                        {{Null(), 4}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, weeks_sub_test) {
+    std::string func_name = "weeks_sub";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{std::string("2020-05-23 10:00:00"), 5},
+                         vectorized::str_to_data_time("2020-04-18 10:00:00")},
+                        {{std::string("2020-05-23 10:00:00"), -5},
+                         vectorized::str_to_data_time("2020-6-27 10:00:00")},
+                        {{std::string(""), 4}, Null()},
+                        {{std::string("2020-05-23 10:00:00"), 100},
+                         vectorized::str_to_data_time("2018-06-23 10:00:00")},
+                        {{Null(), 4}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDateTime, true>(func_name, input_types,
+                                                                   data_set);
+}
+
+TEST(TimestampFunctionsTest, to_days_test) {
+    std::string func_name = "to_days";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime};
+
+    DataSet data_set = {{{std::string("2021-01-01 00:00:00")}, 738156},
+                        {{std::string("")}, Null()},
+                        {{std::string("2021-01-32 00:00:00")}, Null()},
+                        {{std::string("0000-01-01 00:00:00")}, 1}};
+
+    vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
+}
+
+TEST(TimestampFunctionsTest, date_test) {
+    std::string func_name = "date";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::DateTime};
+
+    DataSet data_set = {{{std::string("2021-01-01 06:00:00")},
+                         vectorized::str_to_data_time("2021-01-01", false)},
+                        {{std::string("")}, Null()},
+                        {{Null()}, Null()},
+                        {{std::string("0000-01-01 00:00:00")},
+                         vectorized::str_to_data_time("0000-01-01", false)}};
+
+    vectorized::check_function<vectorized::DataTypeDate, true>(func_name, input_types, data_set);
 }
 
 } // namespace doris
