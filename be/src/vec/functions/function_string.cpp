@@ -250,7 +250,6 @@ struct NameReverse {
 struct ReverseImpl {
     static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
                          ColumnString::Chars& res_data, ColumnString::Offsets& res_offsets) {
-        
         auto rows_count = offsets.size();
         // allocate memory and memory align
         res_offsets.resize(rows_count);
