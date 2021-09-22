@@ -34,8 +34,6 @@ struct SerializedHashTableContext {
     using Mapped = RowRefList;
     using HashTable = HashMap<StringRef, Mapped>;
     using State = ColumnsHashing::HashMethodSerialized<typename HashTable::value_type, Mapped>;
-
-    static constexpr auto could_handle_asymmetric_null = false;
     HashTable hash_table;
 };
 
@@ -46,7 +44,6 @@ struct PrimaryTypeHashTableContext {
     using HashTable = HashMap<T, Mapped, HashCRC32<T>>;
     using State =
             ColumnsHashing::HashMethodOneNumber<typename HashTable::value_type, Mapped, T, false>;
-    static constexpr auto could_handle_asymmetric_null = false;
 
     HashTable hash_table;
 };
@@ -77,7 +74,6 @@ struct FixedKeyHashTableContext {
     using HashTable = HashMap<T, Mapped, typename HashTableFunc<T>::Func>;
     using State = ColumnsHashing::HashMethodKeysFixed<typename HashTable::value_type, T, Mapped,
                                                       has_null, false>;
-    static constexpr auto could_handle_asymmetric_null = true;
     HashTable hash_table;
 };
 
@@ -118,7 +114,13 @@ private:
     // other expr
     VExprContexts _other_join_conjunct_ctxs;
 
+    // mark the join column whether support null eq
     std::vector<bool> _is_null_safe_eq_join;
+
+    // mark the build hash table whether contain null column
+    std::vector<bool> _build_not_ignore_null;
+    // mark the probe table should dispose null column
+    std::vector<bool> _probe_not_ignore_null;
 
     DataTypes _right_table_data_types;
     DataTypes _left_table_data_types;
@@ -158,7 +160,7 @@ private:
     Block _probe_block;
     ColumnRawPtrs _probe_columns;
     ColumnUInt8::MutablePtr _null_map_column;
-    bool _probe_has_null = false;
+    bool _probe_ignore_null = false;
     int _probe_index = -1;
 
     Sizes _probe_key_sz;
@@ -168,9 +170,11 @@ private:
     Status _hash_table_build(RuntimeState* state);
     Status _process_build_block(Block& block);
 
-    template <bool asymmetric_null>
-    Status extract_eq_join_column(VExprContexts& exprs, Block& block, NullMap& null_map,
-                                  ColumnRawPtrs& raw_ptrs, bool& hash_null);
+    Status extract_build_join_column(Block& block, NullMap& null_map,
+                                  ColumnRawPtrs& raw_ptrs, bool& ignore_null);
+
+    Status extract_probe_join_column(Block& block, NullMap& null_map,
+                                  ColumnRawPtrs& raw_ptrs, bool& ignore_null);
 
     void _hash_table_init();
 

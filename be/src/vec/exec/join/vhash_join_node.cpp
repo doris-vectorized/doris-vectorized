@@ -28,7 +28,7 @@
 namespace doris::vectorized {
 
 using ProfileCounter = RuntimeProfile::Counter;
-template <class HashTableContext, bool has_null_map>
+template <class HashTableContext, bool ignore_null>
 struct ProcessHashTableBuild {
     ProcessHashTableBuild(int rows, Block& acquired_block, ColumnRawPtrs& build_raw_ptrs,
                           HashJoinNode* join_node)
@@ -51,7 +51,7 @@ struct ProcessHashTableBuild {
         SCOPED_TIMER(_join_node->_build_table_insert_timer);
         for (size_t k = 0; k < _rows; ++k) {
             // TODO: make this as constexpr
-            if constexpr (has_null_map) {
+            if constexpr (ignore_null) {
                 if ((*null_map)[k]) {
                     continue;
                 }
@@ -81,7 +81,7 @@ private:
     HashJoinNode* _join_node;
 };
 
-template <class HashTableContext, bool has_null_map>
+template <class HashTableContext, bool ignore_null>
 struct ProcessHashTableProbe {
     ProcessHashTableProbe(HashJoinNode* join_node, int batch_size, int probe_rows)
             : _join_node(join_node),
@@ -112,13 +112,15 @@ struct ProcessHashTableProbe {
 
         for (; _probe_index < _probe_rows;) {
             // ignore null rows
-            if constexpr (has_null_map) {
+            if constexpr (ignore_null) {
                 if ((*null_map)[_probe_index]) {
                     offset_data[_probe_index++] = current_offset;
                     continue;
                 }
             }
-            auto find_result = key_getter.find_key(hash_table_ctx.hash_table, _probe_index, _arena);
+            auto find_result = (*null_map)[_probe_index] ?
+                    decltype(key_getter.find_key(hash_table_ctx.hash_table, _probe_index, _arena)){nullptr, false} :
+                    key_getter.find_key(hash_table_ctx.hash_table, _probe_index, _arena);
 
             if (_probe_index + 1 < _probe_rows) {
                 key_getter.prefetch(hash_table_ctx.hash_table, _probe_index + 1, _arena);
@@ -196,20 +198,30 @@ Status HashJoinNode::init(const TPlanNode& tnode, RuntimeState* state) {
     if (tnode.hash_join_node.join_op != TJoinOp::INNER_JOIN) {
         return Status::InternalError("Do not support unless inner join");
     }
-    const std::vector<TEqJoinCondition>& eq_join_conjuncts = tnode.hash_join_node.eq_join_conjuncts;
+    const bool build_stores_null =
+            _join_op == TJoinOp::RIGHT_OUTER_JOIN || _join_op == TJoinOp::FULL_OUTER_JOIN ||
+            _join_op == TJoinOp::RIGHT_ANTI_JOIN || _join_op == TJoinOp::RIGHT_SEMI_JOIN;
+    const bool probe_dispose_null =
+            _join_op == TJoinOp::LEFT_OUTER_JOIN || _join_op == TJoinOp::FULL_OUTER_JOIN ||
+            _join_op == TJoinOp::LEFT_ANTI_JOIN || _join_op == TJoinOp::LEFT_SEMI_JOIN || _join_op == TJoinOp::NULL_AWARE_LEFT_ANTI_JOIN;
 
+    const std::vector<TEqJoinCondition>& eq_join_conjuncts = tnode.hash_join_node.eq_join_conjuncts;
     for (int i = 0; i < eq_join_conjuncts.size(); ++i) {
-        VExprContext* ctx = nullptr;
+        VExprContext *ctx = nullptr;
         RETURN_IF_ERROR(VExpr::create_expr_tree(_pool, eq_join_conjuncts[i].left, &ctx));
         _probe_expr_ctxs.push_back(ctx);
         RETURN_IF_ERROR(VExpr::create_expr_tree(_pool, eq_join_conjuncts[i].right, &ctx));
         _build_expr_ctxs.push_back(ctx);
-        if (eq_join_conjuncts[i].__isset.opcode &&
-            eq_join_conjuncts[i].opcode == TExprOpcode::EQ_FOR_NULL) {
-            _is_null_safe_eq_join.push_back(true);
-        } else {
-            _is_null_safe_eq_join.push_back(false);
-        }
+
+        bool null_aware = eq_join_conjuncts[i].__isset.opcode &&
+                          eq_join_conjuncts[i].opcode == TExprOpcode::EQ_FOR_NULL;
+        _is_null_safe_eq_join.push_back(null_aware);
+
+        // if is null aware, build join column and probe join column both need dispose null value
+        _build_not_ignore_null.emplace_back(null_aware ||
+                                            (_build_expr_ctxs.back()->root()->is_nullable() && build_stores_null));
+        _probe_not_ignore_null.emplace_back(null_aware ||
+                                            (_probe_expr_ctxs.back()->root()->is_nullable() && probe_dispose_null));
     }
 
     RETURN_IF_ERROR(VExpr::create_expr_trees(_pool, tnode.hash_join_node.other_join_conjuncts,
@@ -322,10 +334,8 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
                     using HashTableCtxType = std::decay_t<decltype(arg)>;
                     if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
                         auto& null_map_val = _null_map_column->get_data();
-                        return extract_eq_join_column<
-                                HashTableCtxType::could_handle_asymmetric_null>(
-                                _probe_expr_ctxs, _probe_block, null_map_val, _probe_columns,
-                                _probe_has_null);
+                        return extract_probe_join_column(_probe_block, null_map_val, _probe_columns,
+                                _probe_ignore_null);
                     } else {
                         LOG(FATAL) << "FATAL: uninited hash table";
                     }
@@ -345,7 +355,7 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
             [&](auto&& arg) {
                 using HashTableCtxType = std::decay_t<decltype(arg)>;
                 if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
-                    if (_probe_has_null) {
+                    if (_probe_ignore_null) {
                         ProcessHashTableProbe<HashTableCtxType, true> process_hashtable_ctx(
                                 this, state->batch_size(), probe_rows);
 
@@ -398,13 +408,12 @@ Status HashJoinNode::_hash_table_build(RuntimeState* state) {
     return Status::OK();
 }
 
-template <bool asymmetric_null>
-Status HashJoinNode::extract_eq_join_column(VExprContexts& exprs, Block& block, NullMap& null_map,
-                                            ColumnRawPtrs& raw_ptrs, bool& has_null) {
-    for (size_t i = 0; i < exprs.size(); ++i) {
+Status HashJoinNode::extract_build_join_column(Block& block, NullMap& null_map,
+                                            ColumnRawPtrs& raw_ptrs, bool& ignore_null) {
+    for (size_t i = 0; i < _build_expr_ctxs.size(); ++i) {
         int result_col_id = -1;
         // execute build column
-        RETURN_IF_ERROR(exprs[i]->execute(&block, &result_col_id));
+        RETURN_IF_ERROR(_build_expr_ctxs[i]->execute(&block, &result_col_id));
 
         if (_is_null_safe_eq_join[i]) {
             raw_ptrs[i] = block.get_by_position(result_col_id).column.get();
@@ -413,12 +422,12 @@ Status HashJoinNode::extract_eq_join_column(VExprContexts& exprs, Block& block, 
             if (auto* nullable = check_and_get_column<ColumnNullable>(*column)) {
                 auto& col_nested = nullable->get_nested_column();
                 auto& col_nullmap = nullable->get_null_map_data();
-                VectorizedUtils::update_null_map(null_map, col_nullmap);
-                has_null = true;
 
-                if constexpr (asymmetric_null) {
+                ignore_null |= !_build_not_ignore_null[i];
+                if (_build_not_ignore_null[i]) {
                     raw_ptrs[i] = nullable;
                 } else {
+                    VectorizedUtils::update_null_map(null_map, col_nullmap);
                     raw_ptrs[i] = &col_nested;
                 }
             } else {
@@ -428,6 +437,38 @@ Status HashJoinNode::extract_eq_join_column(VExprContexts& exprs, Block& block, 
     }
     return Status::OK();
 }
+
+Status HashJoinNode::extract_probe_join_column(Block& block, NullMap& null_map,
+                                            ColumnRawPtrs& raw_ptrs, bool& ignore_null) {
+    for (size_t i = 0; i < _probe_expr_ctxs.size(); ++i) {
+        int result_col_id = -1;
+        // execute build column
+        RETURN_IF_ERROR(_probe_expr_ctxs[i]->execute(&block, &result_col_id));
+
+        if (_is_null_safe_eq_join[i]) {
+            raw_ptrs[i] = block.get_by_position(result_col_id).column.get();
+        } else {
+            auto column = block.get_by_position(result_col_id).column.get();
+            if (auto* nullable = check_and_get_column<ColumnNullable>(*column)) {
+                auto& col_nested = nullable->get_nested_column();
+                auto& col_nullmap = nullable->get_null_map_data();
+
+                ignore_null |= !_probe_not_ignore_null[i];
+                if (_build_not_ignore_null[i]) {
+                    raw_ptrs[i] = nullable;
+                } else {
+                    VectorizedUtils::update_null_map(null_map, col_nullmap);
+                    raw_ptrs[i] = &col_nested;
+                }
+            } else {
+                raw_ptrs[i] = _build_not_ignore_null[i] ?
+                        make_nullable(block.get_by_position(result_col_id).column, false).get() :column;
+            }
+        }
+    }
+    return Status::OK();
+}
+
 
 Status HashJoinNode::_process_build_block(Block& block) {
     SCOPED_TIMER(_build_table_timer);
@@ -450,8 +491,7 @@ Status HashJoinNode::_process_build_block(Block& block) {
             [&](auto&& arg) -> Status {
                 using HashTableCtxType = std::decay_t<decltype(arg)>;
                 if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
-                    return extract_eq_join_column<HashTableCtxType::could_handle_asymmetric_null>(
-                            _build_expr_ctxs, acquired_block, null_map_val, raw_ptrs, has_null);
+                    return extract_build_join_column(acquired_block, null_map_val, raw_ptrs, has_null);
                 } else {
                     LOG(FATAL) << "FATAL: uninited hash table";
                 }
@@ -482,7 +522,7 @@ Status HashJoinNode::_process_build_block(Block& block) {
 }
 
 void HashJoinNode::_hash_table_init() {
-    if (_build_expr_ctxs.size() == 1 && !_is_null_safe_eq_join[0]) {
+    if (_build_expr_ctxs.size() == 1 && !_build_not_ignore_null[0]) {
         // Single column optimization
         switch (_build_expr_ctxs[0]->root()->result_type()) {
         case TYPE_TINYINT:
