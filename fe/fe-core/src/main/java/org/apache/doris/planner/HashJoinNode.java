@@ -26,6 +26,7 @@ import org.apache.doris.analysis.SlotDescriptor;
 import org.apache.doris.analysis.SlotId;
 import org.apache.doris.analysis.SlotRef;
 import org.apache.doris.analysis.TableRef;
+import org.apache.doris.analysis.TupleDescriptor;
 import org.apache.doris.analysis.TupleId;
 import org.apache.doris.catalog.ColumnStats;
 import org.apache.doris.catalog.OlapTable;
@@ -152,6 +153,10 @@ public class HashJoinNode extends PlanNode {
         // outSmap replace in outer join may cause NULL be replace by literal
         // so need replace the outsmap in nullableTupleID
         replaceOutputSmapForOuterJoin();
+        for (TupleId tupleId : nullableTupleIds) {
+            TupleDescriptor tupleDescriptor = analyzer.getTupleDesc(tupleId);
+            for (SlotDescriptor slotDescriptor : tupleDescriptor.getSlots()) slotDescriptor.setIsNullable(true);
+        }
         computeStats(analyzer);
 
         ExprSubstitutionMap combinedChildSmap = getCombinedChildWithoutTupleIsNullSmap();
