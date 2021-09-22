@@ -34,9 +34,19 @@ struct SerializedHashTableContext {
     using Mapped = RowRefList;
     using HashTable = HashMap<StringRef, Mapped>;
     using State = ColumnsHashing::HashMethodSerialized<typename HashTable::value_type, Mapped>;
+    using Iter = typename HashTable::iterator;
 
     static constexpr auto could_handle_asymmetric_null = false;
     HashTable hash_table;
+    Iter iter;
+    bool inited = false;
+
+    void init_once() {
+        if (!inited) {
+            inited = true;
+            iter = hash_table.begin();
+        }
+    }
 };
 
 // T should be UInt32 UInt64 UInt128
@@ -46,39 +56,48 @@ struct PrimaryTypeHashTableContext {
     using HashTable = HashMap<T, Mapped, HashCRC32<T>>;
     using State =
             ColumnsHashing::HashMethodOneNumber<typename HashTable::value_type, Mapped, T, false>;
-    static constexpr auto could_handle_asymmetric_null = false;
+    using Iter = typename HashTable::iterator;
 
+    static constexpr auto could_handle_asymmetric_null = false;
     HashTable hash_table;
+    Iter iter;
+    bool inited = false;
+
+    void init_once() {
+        if (!inited) {
+            inited = true;
+            iter = hash_table.begin();
+        }
+    }
 };
 
 // TODO: use FixedHashTable instead of HashTable
 using I8HashTableContext = PrimaryTypeHashTableContext<UInt8>;
 using I16HashTableContext = PrimaryTypeHashTableContext<UInt16>;
-
 using I32HashTableContext = PrimaryTypeHashTableContext<UInt32>;
 using I64HashTableContext = PrimaryTypeHashTableContext<UInt64>;
-
-template <class T>
-struct HashTableFunc;
-
-template <>
-struct HashTableFunc<UInt64> {
-    using Func = HashCRC32<UInt64>;
-};
-
-template <>
-struct HashTableFunc<UInt128> {
-    using Func = UInt128HashCRC32;
-};
+using I128HashTableContext = PrimaryTypeHashTableContext<UInt128>;
+using I256HashTableContext = PrimaryTypeHashTableContext<UInt256>;
 
 template <class T, bool has_null>
 struct FixedKeyHashTableContext {
     using Mapped = RowRefList;
-    using HashTable = HashMap<T, Mapped, typename HashTableFunc<T>::Func>;
+    using HashTable = HashMap<T, Mapped, HashCRC32<T>>;
     using State = ColumnsHashing::HashMethodKeysFixed<typename HashTable::value_type, T, Mapped,
                                                       has_null, false>;
+    using Iter = typename HashTable::iterator;
+
     static constexpr auto could_handle_asymmetric_null = true;
     HashTable hash_table;
+    Iter iter;
+    bool inited = false;
+
+    void init_once() {
+        if (!inited) {
+            inited = true;
+            iter = hash_table.begin();
+        }
+    }
 };
 
 template <bool has_null>
@@ -87,18 +106,23 @@ using I64FixedKeyHashTableContext = FixedKeyHashTableContext<UInt64, has_null>;
 template <bool has_null>
 using I128FixedKeyHashTableContext = FixedKeyHashTableContext<UInt128, has_null>;
 
+template <bool has_null>
+using I256FixedKeyHashTableContext = FixedKeyHashTableContext<UInt256, has_null>;
+
 using HashTableVariants =
         std::variant<std::monostate, SerializedHashTableContext, I8HashTableContext,
                      I16HashTableContext, I32HashTableContext, I64HashTableContext,
+                     I128HashTableContext, I256HashTableContext,
                      I64FixedKeyHashTableContext<true>, I64FixedKeyHashTableContext<false>,
-                     I128FixedKeyHashTableContext<true>, I128FixedKeyHashTableContext<false>>;
+                     I128FixedKeyHashTableContext<true>, I128FixedKeyHashTableContext<false>,
+                     I256FixedKeyHashTableContext<true>, I256FixedKeyHashTableContext<false>>;
 
 class VExprContext;
 
 class HashJoinNode : public ::doris::ExecNode {
 public:
     HashJoinNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs);
-    ~HashJoinNode();
+    ~HashJoinNode() override;
 
     virtual Status init(const TPlanNode& tnode, RuntimeState* state = nullptr);
     virtual Status prepare(RuntimeState* state);
@@ -159,7 +183,10 @@ private:
     ColumnRawPtrs _probe_columns;
     ColumnUInt8::MutablePtr _null_map_column;
     bool _probe_has_null = false;
+    bool _eq_for_null = false;
+
     int _probe_index = -1;
+    bool _probe_eos = false;
 
     Sizes _probe_key_sz;
     Sizes _build_key_sz;
