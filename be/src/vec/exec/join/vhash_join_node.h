@@ -170,7 +170,8 @@ private:
 
     template <bool asymmetric_null>
     Status extract_eq_join_column(VExprContexts& exprs, Block& block, NullMap& null_map,
-                                  ColumnRawPtrs& raw_ptrs, bool& hash_null);
+                                  ColumnRawPtrs& raw_ptrs, bool& hash_null,
+                                  RuntimeProfile::Counter& expr_call_timer);
 
     void _hash_table_init();
 

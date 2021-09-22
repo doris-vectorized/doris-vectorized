@@ -49,6 +49,8 @@ struct ProcessHashTableBuild {
         KeyGetter key_getter(_build_raw_ptrs, _join_node->_build_key_sz, nullptr);
 
         SCOPED_TIMER(_join_node->_build_table_insert_timer);
+        hash_table_ctx.hash_table.reset_hash_timer();
+
         for (size_t k = 0; k < _rows; ++k) {
             // TODO: make this as constexpr
             if constexpr (has_null_map) {
@@ -70,6 +72,9 @@ struct ProcessHashTableBuild {
                 emplace_result.get_mapped().insert({&_acquired_block, k}, _join_node->_arena);
             }
         }
+
+        COUNTER_UPDATE(_join_node->_build_hash_calc_timer,
+                       hash_table_ctx.hash_table.get_hash_timer_value());
 
         return Status::OK();
     }
@@ -110,6 +115,8 @@ struct ProcessHashTableProbe {
         int right_col_idx = _left_table_data_types.size();
         int current_offset = 0;
 
+        hash_table_ctx.hash_table.reset_hash_timer();
+
         for (; _probe_index < _probe_rows;) {
             // ignore null rows
             if constexpr (has_null_map) {
@@ -142,6 +149,9 @@ struct ProcessHashTableProbe {
                 break;
             }
         }
+
+        COUNTER_UPDATE(_join_node->_probe_hash_calc_timer,
+                       hash_table_ctx.hash_table.get_hash_timer_value());
 
         for (int i = _probe_index; i < _probe_rows; ++i) {
             offset_data[i] = current_offset;
@@ -232,27 +242,22 @@ Status HashJoinNode::prepare(RuntimeState* state) {
     _build_timer = ADD_TIMER(build_phase_profile, "BuildTime");
     _build_table_timer = ADD_TIMER(build_phase_profile, "BuildTableTime");
     _build_hash_calc_timer = ADD_TIMER(build_phase_profile, "BuildHashCalcTime");
-    _build_bucket_calc_timer = ADD_TIMER(build_phase_profile, "BuildBucketCalcTime");
     _build_expr_call_timer = ADD_TIMER(build_phase_profile, "BuildExprCallTime");
     _build_table_insert_timer = ADD_TIMER(build_phase_profile, "BuildTableInsertTime");
-    _build_table_spread_timer = ADD_TIMER(build_phase_profile, "BuildTableSpreadTime");
-    _build_table_expanse_timer = ADD_TIMER(build_phase_profile, "BuildTableExpanseTime");
+    _build_table_spread_timer = ADD_TIMER(build_phase_profile, "BuildTableExpanseTime");
     _build_acquire_block_timer = ADD_TIMER(build_phase_profile, "BuildAcquireBlockTime");
     _build_rows_counter = ADD_COUNTER(build_phase_profile, "BuildRows", TUnit::UNIT);
 
-    _push_down_timer = ADD_TIMER(runtime_profile(), "PushDownTime");
-    _push_compute_timer = ADD_TIMER(runtime_profile(), "PushDownComputeTime");
     // Probe phase
     auto probe_phase_profile = runtime_profile()->create_child("ProbePhase", true, true);
     _probe_timer = ADD_TIMER(probe_phase_profile, "ProbeTime");
-    _probe_gather_timer = ADD_TIMER(probe_phase_profile, "ProbeGatherTime");
     _probe_next_timer = ADD_TIMER(probe_phase_profile, "ProbeFindNextTime");
-    _probe_diff_timer = ADD_TIMER(probe_phase_profile, "ProbeDiffTime");
     _probe_expr_call_timer = ADD_TIMER(probe_phase_profile, "ProbeExprCallTime");
     _probe_hash_calc_timer = ADD_TIMER(probe_phase_profile, "ProbeHashCalcTime");
-    _probe_select_miss_timer = ADD_TIMER(probe_phase_profile, "ProbeSelectMissTime");
-    _probe_select_zero_timer = ADD_TIMER(probe_phase_profile, "ProbeSelectZeroTime");
     _probe_rows_counter = ADD_COUNTER(probe_phase_profile, "ProbeRows", TUnit::UNIT);
+
+    _push_down_timer = ADD_TIMER(runtime_profile(), "PushDownTime");           // Unrealized
+    _push_compute_timer = ADD_TIMER(runtime_profile(), "PushDownComputeTime"); // Unrealized
     _build_buckets_counter = ADD_COUNTER(runtime_profile(), "BuildBuckets", TUnit::UNIT);
 
     RETURN_IF_ERROR(
@@ -293,6 +298,7 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
         _probe_block.clear();
 
         do {
+            SCOPED_TIMER(_probe_next_timer);
             RETURN_IF_ERROR(child(0)->get_next(state, &_probe_block, eos));
         } while (_probe_block.rows() == 0 && !(*eos));
 
@@ -302,12 +308,17 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
             return Status::OK();
         }
 
+        COUNTER_UPDATE(_probe_rows_counter, probe_rows);
+
         int probe_expr_ctxs_sz = _probe_expr_ctxs.size();
         _probe_columns.resize(probe_expr_ctxs_sz);
 
         for (int i = 0; i < probe_expr_ctxs_sz; ++i) {
             int result_id = -1;
-            _probe_expr_ctxs[i]->execute(&_probe_block, &result_id);
+            {
+                SCOPED_TIMER(_probe_expr_call_timer);
+                _probe_expr_ctxs[i]->execute(&_probe_block, &result_id);
+            }
             DCHECK_GE(result_id, 0);
             _probe_columns[i] = _probe_block.get_by_position(result_id).column.get();
         }
@@ -325,7 +336,7 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
                         return extract_eq_join_column<
                                 HashTableCtxType::could_handle_asymmetric_null>(
                                 _probe_expr_ctxs, _probe_block, null_map_val, _probe_columns,
-                                _probe_has_null);
+                                _probe_has_null, *_probe_expr_call_timer);
                     } else {
                         LOG(FATAL) << "FATAL: uninited hash table";
                     }
@@ -400,11 +411,15 @@ Status HashJoinNode::_hash_table_build(RuntimeState* state) {
 
 template <bool asymmetric_null>
 Status HashJoinNode::extract_eq_join_column(VExprContexts& exprs, Block& block, NullMap& null_map,
-                                            ColumnRawPtrs& raw_ptrs, bool& has_null) {
+                                            ColumnRawPtrs& raw_ptrs, bool& has_null,
+                                            RuntimeProfile::Counter& expr_call_timer) {
     for (size_t i = 0; i < exprs.size(); ++i) {
         int result_col_id = -1;
         // execute build column
-        RETURN_IF_ERROR(exprs[i]->execute(&block, &result_col_id));
+        {
+            SCOPED_TIMER(&expr_call_timer);
+            RETURN_IF_ERROR(exprs[i]->execute(&block, &result_col_id));
+        }
 
         if (_is_null_safe_eq_join[i]) {
             raw_ptrs[i] = block.get_by_position(result_col_id).column.get();
@@ -435,9 +450,14 @@ Status HashJoinNode::_process_build_block(Block& block) {
     if (rows == 0) {
         return Status::OK();
     }
-    auto& acquired_block = _acquire_list.acquire(std::move(block));
+    COUNTER_UPDATE(_build_rows_counter, rows);
 
-    materialize_block_inplace(acquired_block);
+    Block* acquired_block;
+    {
+        SCOPED_TIMER(_build_acquire_block_timer);
+        acquired_block = &_acquire_list.acquire(std::move(block));
+    }
+    materialize_block_inplace(*acquired_block);
 
     ColumnRawPtrs raw_ptrs(_build_expr_ctxs.size());
 
@@ -451,7 +471,8 @@ Status HashJoinNode::_process_build_block(Block& block) {
                 using HashTableCtxType = std::decay_t<decltype(arg)>;
                 if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
                     return extract_eq_join_column<HashTableCtxType::could_handle_asymmetric_null>(
-                            _build_expr_ctxs, acquired_block, null_map_val, raw_ptrs, has_null);
+                            _build_expr_ctxs, *acquired_block, null_map_val, raw_ptrs, has_null,
+                            *_build_expr_call_timer);
                 } else {
                     LOG(FATAL) << "FATAL: uninited hash table";
                 }
@@ -465,11 +486,11 @@ Status HashJoinNode::_process_build_block(Block& block) {
                 if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
                     if (has_null) {
                         ProcessHashTableBuild<HashTableCtxType, true> hash_table_build_process(
-                                rows, acquired_block, raw_ptrs, this);
+                                rows, *acquired_block, raw_ptrs, this);
                         st = hash_table_build_process(arg, &null_map_val);
                     } else {
                         ProcessHashTableBuild<HashTableCtxType, false> hash_table_build_process(
-                                rows, acquired_block, raw_ptrs, this);
+                                rows, *acquired_block, raw_ptrs, this);
                         st = hash_table_build_process(arg, &null_map_val);
                     }
                 } else {
