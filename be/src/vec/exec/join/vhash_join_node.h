@@ -125,21 +125,13 @@ private:
 
     RuntimeProfile::Counter* _build_timer;
     RuntimeProfile::Counter* _build_table_timer;
-    RuntimeProfile::Counter* _build_hash_calc_timer;
-    RuntimeProfile::Counter* _build_bucket_calc_timer;
     RuntimeProfile::Counter* _build_expr_call_timer;
     RuntimeProfile::Counter* _build_table_insert_timer;
-    RuntimeProfile::Counter* _build_table_spread_timer;
     RuntimeProfile::Counter* _build_table_expanse_timer;
     RuntimeProfile::Counter* _build_acquire_block_timer;
     RuntimeProfile::Counter* _probe_timer;
     RuntimeProfile::Counter* _probe_expr_call_timer;
-    RuntimeProfile::Counter* _probe_hash_calc_timer;
-    RuntimeProfile::Counter* _probe_gather_timer;
     RuntimeProfile::Counter* _probe_next_timer;
-    RuntimeProfile::Counter* _probe_select_miss_timer;
-    RuntimeProfile::Counter* _probe_select_zero_timer;
-    RuntimeProfile::Counter* _probe_diff_timer;
     RuntimeProfile::Counter* _build_buckets_counter;
 
     RuntimeProfile::Counter* _push_down_timer;

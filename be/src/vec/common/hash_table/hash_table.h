@@ -360,7 +360,6 @@ protected:
     size_t m_size = 0; /// Amount of elements
     Cell* buf;         /// A piece of memory for all elements except the element with zero key.
     Grower grower;
-    int64_t _hash_timer_ns;
     int64_t _resize_timer_ns;
 #ifdef DBMS_HASH_MAP_COUNT_COLLISIONS
     mutable size_t collisions = 0;
@@ -405,7 +404,7 @@ protected:
 
     /// Increase the size of the buffer.
     void resize(size_t for_num_elems = 0, size_t for_buf_size = 0) {
-        SCOPED_RAW_TIMER(&_hash_timer_ns);
+        SCOPED_RAW_TIMER(&_resize_timer_ns);
 #ifdef DBMS_HASH_MAP_DEBUG_RESIZES
         Stopwatch watch;
 #endif
@@ -557,16 +556,11 @@ public:
     using LookupResult = Cell*;
     using ConstLookupResult = const Cell*;
 
-    void reset_hash_timer() { _hash_timer_ns = 0; }
     void reset_resize_timer() { _resize_timer_ns = 0; }
 
-    int64_t get_hash_timer_value() { return _hash_timer_ns / 1000000; }
-    int64_t get_resize_timer_value() { return _resize_timer_ns / 1000000; }
+    int64_t get_resize_timer_value() { return _resize_timer_ns; }
 
-    size_t hash(const Key& x) {
-        SCOPED_RAW_TIMER(&_hash_timer_ns);
-        return Hash::operator()(x);
-    }
+    size_t hash(const Key& x) { return Hash::operator()(x); }
 
     HashTable() {
         if (Cell::need_zero_value_storage) this->zero_value()->set_zero();
