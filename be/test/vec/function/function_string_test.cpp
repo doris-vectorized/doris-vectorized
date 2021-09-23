@@ -484,6 +484,22 @@ TEST(function_string_test, function_find_in_set_test) {
     vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
 }
 
+TEST(function_string_test, function_md5_test) {
+    std::string func_name = "md5";
+    std::vector<std::any> input_types = {TypeIndex::String};
+
+    DataSet data_set = {{{std::string("asd你好")}, {std::string("a38c15675555017e6b8ea042f2eb24f5")}},
+                        {{std::string("hello world")}, {std::string("5eb63bbbe01eeed093cb22bb8f5acdc3")}},
+                        {{std::string("HELLO,!^%")}, {std::string("b8e6e34d1cc3dc76b784ddfdfb7df800")}},
+                        {{std::string("")}, {"d41d8cd98f00b204e9800998ecf8427e"}},
+                        {{std::string(" ")}, {"7215ee9c7d9dc229d2921a40e899ec5f"}},
+                        {{Null()}, {Null()}},
+                        {{std::string("MYtestSTR")}, {std::string("cd24c90b3fc1192eb1879093029e87d4")}},
+                        {{std::string("ò&ø")}, {std::string("fd157b4cb921fa91acc667380184d59c")}}};
+
+    vectorized::check_function<vectorized::DataTypeString, false>(func_name, input_types, data_set);
+}
+
 } // namespace doris
 
 int main(int argc, char** argv) {

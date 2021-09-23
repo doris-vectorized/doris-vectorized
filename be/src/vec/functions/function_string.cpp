@@ -29,6 +29,7 @@
 #include "vec/functions/function_totype.h"
 #include "vec/functions/simple_function_factory.h"
 
+#include "util/md5.h"
 #include "util/url_coding.h"
 
 namespace doris::vectorized {
@@ -466,6 +467,31 @@ struct FromBase64Impl {
     }
 };
 
+struct NameMd5 {
+    static constexpr auto name = "md5";
+};
+
+struct Md5Impl {
+    static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
+                         ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets) {
+        auto rows_count = offsets.size();
+        dst_offsets.resize(rows_count);
+
+        for (int i = 0; i < rows_count; ++i) {
+            auto source = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            size_t srclen = offsets[i] - offsets[i - 1] - 1;
+
+            Md5Digest digest;
+            digest.update(source, srclen);
+            digest.digest();
+
+            StringOP::push_value_string(std::string_view(digest.hex().c_str(), digest.hex().size()),
+                                        i, dst_data, dst_offsets);
+        }
+        return Status::OK();
+    }
+};
+
 struct StringAppendTrailingCharIfAbsent {
     static constexpr auto name = "append_trailing_char_if_absent";
     using Chars = ColumnString::Chars;
@@ -561,6 +587,8 @@ using FunctionToBase64 = FunctionStringOperateToNullType<ToBase64Impl>;
 
 using FunctionFromBase64 = FunctionStringOperateToNullType<FromBase64Impl>;
 
+using FunctionMd5 = FunctionStringToString<Md5Impl, NameMd5>;
+
 using FunctionStringAppendTrailingCharIfAbsent =
         FunctionBinaryStringOperateToNullType<StringAppendTrailingCharIfAbsent>;
 
@@ -596,6 +624,7 @@ void register_function_string(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStringRPad>();
     factory.register_function<FunctionToBase64>();
     factory.register_function<FunctionFromBase64>();
+    factory.register_function<FunctionMd5>();
 
     factory.register_alias(FunctionLeft::name, "strleft");
     factory.register_alias(FunctionRight::name, "strright");
