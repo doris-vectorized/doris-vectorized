@@ -71,6 +71,7 @@
 #include "vec/exec/volap_scan_node.h"
 #include "vec/exec/vsort_node.h"
 #include "vec/exec/vunion_node.h"
+#include "vec/exec/vintersect_node.h"
 #include "vec/exprs/vexpr.h"
 namespace doris {
 
@@ -373,6 +374,7 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         case TPlanNodeType::EXCHANGE_NODE:
         case TPlanNodeType::ODBC_SCAN_NODE:
         case TPlanNodeType::MYSQL_SCAN_NODE:
+        case TPlanNodeType::INTERSECT_NODE:
             break;
         default: {
             const auto& i = _TPlanNodeType_VALUES_TO_NAMES.find(tnode.node_type);
@@ -512,7 +514,11 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         return Status::OK();
 
     case TPlanNodeType::INTERSECT_NODE:
-        *node = pool->add(new IntersectNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new vectorized::VIntersectNode(pool, tnode, descs));
+        } else {
+            *node = pool->add(new IntersectNode(pool, tnode, descs));
+        }
         return Status::OK();
 
     case TPlanNodeType::EXCEPT_NODE:
