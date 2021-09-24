@@ -557,10 +557,9 @@ public:
     using ConstLookupResult = const Cell*;
 
     void reset_resize_timer() { _resize_timer_ns = 0; }
+    int64_t get_resize_timer_value() const { return _resize_timer_ns; }
 
-    int64_t get_resize_timer_value() { return _resize_timer_ns; }
-
-    size_t hash(const Key& x) { return Hash::operator()(x); }
+    size_t hash(const Key& x) const { return Hash::operator()(x); }
 
     HashTable() {
         if (Cell::need_zero_value_storage) this->zero_value()->set_zero();
