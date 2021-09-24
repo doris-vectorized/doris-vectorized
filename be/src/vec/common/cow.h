@@ -17,6 +17,9 @@
 
 #pragma once
 
+#include <atomic>
+#include <assert.h>
+#include <memory>
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 #include <initializer_list>
@@ -89,51 +92,93 @@
   *   to use std::unique_ptr for it somehow.
   */
 template <typename Derived>
-class COW : public boost::intrusive_ref_counter<Derived> {
+class COW {
+public:
+    std::atomic_uint use_count = 0;
+
+    COW() = default;
+    COW(const COW& rhs) { use_count = 0; }
+    COW(COW&& rhs) { use_count = 0; }
+    COW& operator=(const COW& rhs) { return *this; }
+    COW& operator=(COW&& rhs) { return *this; }
+    ~COW() { assert(use_count == 0); }
+    
 private:
     Derived* derived() { return static_cast<Derived*>(this); }
     const Derived* derived() const { return static_cast<const Derived*>(this); }
 
-    template <typename T>
-    class IntrusivePtr : public boost::intrusive_ptr<T> {
-    public:
-        using boost::intrusive_ptr<T>::intrusive_ptr;
-
-        T& operator*() const& { return boost::intrusive_ptr<T>::operator*(); }
-        T&& operator*() const&& {
-            return const_cast<typename std::remove_const<T>::type&&>(
-                    *boost::intrusive_ptr<T>::get());
-        }
-    };
-
 protected:
     template <typename T>
-    class mutable_ptr : public IntrusivePtr<T> {
+    class base_ptr {
+    public:
+        T* ptr;
+        base_ptr(T* ptr) : ptr(ptr) {}
+
+        T* operator->() { return ptr; }
+        T* operator->() const { return ptr; }
+
+        T* get() { return ptr; }
+        T* get() const { return ptr; }
+
+        operator bool() const { return ptr != nullptr; }
+
+        T& operator*() const & { return *ptr; }
+        T&& operator*() const && { return const_cast<typename std::remove_const<T>::type&&>(*ptr); }
+
+        template <typename U> bool operator==(U* u) const { return ptr == u; }
+        template <typename U> bool operator!=(U* u) const { return ptr != u; }
+
+        bool operator==(std::nullptr_t) const { return ptr == nullptr; }
+        bool operator!=(std::nullptr_t) const { return ptr != nullptr; }
+    };
+
+    template <typename T>
+    class mutable_ptr : public base_ptr<T> {
     private:
-        using Base = IntrusivePtr<T>;
+        template <typename> friend class COW;
+        template <typename, typename> friend class COWHelper;
 
-        template <typename>
-        friend class COW;
-        template <typename, typename>
-        friend class COWHelper;
-
-        explicit mutable_ptr(T* ptr) : Base(ptr) {}
+        explicit mutable_ptr(T* ptr) : base_ptr<T>(ptr) {
+            assert(ptr->use_count == 0);
+            ptr->use_count++; 
+        }
 
     public:
-        /// Copy: not possible.
-        mutable_ptr(const mutable_ptr&) = delete;
+        mutable_ptr() : base_ptr<T>(nullptr) { }
 
-        /// Move: ok.
-        mutable_ptr(mutable_ptr&&) = default;
-        mutable_ptr& operator=(mutable_ptr&&) = default;
+        mutable_ptr(std::nullptr_t) : base_ptr<T>(nullptr) { }
+
+        mutable_ptr(const mutable_ptr& rhs) = delete;
+
+        mutable_ptr(mutable_ptr&& rhs) : base_ptr<T>(rhs.ptr) { rhs.ptr = nullptr; }
+
+        mutable_ptr& operator=(mutable_ptr& rhs) = delete;
+
+        mutable_ptr& operator=(mutable_ptr&& rhs) {
+            if (this != &rhs) {
+                if (this->template ptr->use_count.fetch_sub(1) == 1) {
+                    delete this->template ptr;
+                }
+
+                this->template ptr = rhs.ptr;
+                rhs.ptr = nullptr;
+                assert(this->template ptr->use_count == 1);
+            }
+            return *this;
+        }
+
+        ~mutable_ptr() {
+            if (this->template ptr->use_count.fetch_sub(1) == 1) {
+                delete this->template ptr;
+                this->template ptr = nullptr;
+            }
+        }
 
         /// Initializing from temporary of compatible type.
         template <typename U>
-        mutable_ptr(mutable_ptr<U>&& other) : Base(std::move(other)) {}
-
-        mutable_ptr() = default;
-
-        mutable_ptr(std::nullptr_t) {}
+        mutable_ptr(mutable_ptr<U>&& other) : base_ptr<T>(other.template ptr) {
+            other.template ptr = nullptr;
+        }
     };
 
 public:
@@ -141,44 +186,56 @@ public:
 
 protected:
     template <typename T>
-    class immutable_ptr : public IntrusivePtr<const T> {
+    class immutable_ptr : public base_ptr<const T> {
     private:
-        using Base = IntrusivePtr<const T>;
+        template <typename> friend class COW;
 
-        template <typename>
-        friend class COW;
-        template <typename, typename>
-        friend class COWHelper;
+        template <typename, typename> friend class COWHelper;
 
-        explicit immutable_ptr(const T* ptr) : Base(ptr) {}
+        explicit immutable_ptr(const T* ptr) : base_ptr<const T>(ptr) { ((T*)ptr)->use_count++; }
+
+        T* t_ptr() { return (T*)(this->template ptr); }
 
     public:
-        /// Copy from immutable ptr: ok.
-        immutable_ptr(const immutable_ptr&) = default;
-        immutable_ptr& operator=(const immutable_ptr&) = default;
+        immutable_ptr() : base_ptr<const T>(nullptr) {}
 
-        template <typename U>
-        immutable_ptr(const immutable_ptr<U>& other) : Base(other) {}
+        immutable_ptr(std::nullptr_t) : base_ptr<const T>(nullptr) {}
+
+        /// Copy from immutable ptr: ok.
+        immutable_ptr(const immutable_ptr& rhs) : base_ptr<const T>(rhs.ptr) { t_ptr()->use_count++; }
 
         /// Move: ok.
-        immutable_ptr(immutable_ptr&&) = default;
-        immutable_ptr& operator=(immutable_ptr&&) = default;
+        immutable_ptr(immutable_ptr&& rhs) : base_ptr<const T>(rhs.ptr) { rhs.ptr = nullptr; }
 
-        /// Initializing from temporary of compatible type.
         template <typename U>
-        immutable_ptr(immutable_ptr<U>&& other) : Base(std::move(other)) {}
+        immutable_ptr(mutable_ptr<U>&& other) : base_ptr<const T>(other.template ptr) { other.template ptr = nullptr; }
 
-        /// Move from mutable ptr: ok.
         template <typename U>
-        immutable_ptr(mutable_ptr<U>&& other) : Base(std::move(other)) {}
+        immutable_ptr(immutable_ptr<U>&& other) : base_ptr<const T>(other.template ptr) { other.template ptr = nullptr; }
 
-        /// Copy from mutable ptr: not possible.
-        template <typename U>
-        immutable_ptr(const mutable_ptr<U>&) = delete;
+        immutable_ptr& operator=(const immutable_ptr& rhs) {
+            if (this != &rhs) {
+                if (t_ptr()->use_count.fetch_sub(1) == 1) {
+                    delete this->template ptr;
+                }
 
-        immutable_ptr() = default;
+                this->template ptr = rhs.ptr;
+                t_ptr()->use_count++;
+            }
+            return *this;
+        }
 
-        immutable_ptr(std::nullptr_t) {}
+        immutable_ptr& operator=(immutable_ptr&& rhs) {
+            if (this != &rhs) {
+                if (t_ptr()->use_count.fetch_sub(1) == 1) {
+                    delete this->template ptr;
+                }
+                
+                this->template ptr = rhs.ptr;
+                rhs.ptr = nullptr;
+            }
+            return *this;
+        }
     };
 
 public:
@@ -195,12 +252,12 @@ public:
     }
 
 public:
-    Ptr get_ptr() const { return static_cast<Ptr>(derived()); }
-    MutablePtr get_ptr() { return static_cast<MutablePtr>(derived()); }
+    Ptr get_ptr() const { return Ptr(derived()); }
+    MutablePtr get_ptr() { return MutablePtr(derived()); }
 
 protected:
     MutablePtr shallow_mutate() const {
-        if (this->use_count() > 1)
+        if (this->use_count > 1)
             return derived()->clone();
         else
             return assume_mutable();
