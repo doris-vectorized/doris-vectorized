@@ -26,6 +26,7 @@
 #include "function_test_util.h"
 #include "runtime/row_batch.h"
 #include "runtime/tuple_row.h"
+#include "util/aes_util.h"
 #include "util/url_coding.h"
 #include "vec/core/field.h"
 #include "vec/functions/simple_function_factory.h"
@@ -549,6 +550,69 @@ TEST(function_string_test, function_md5sum_test) {
 
         vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
     }
+}
+
+TEST(function_string_test, function_aes_encrypt_test) {
+    std::string func_name = "aes_encrypt";
+
+    std::vector<std::any> input_types = {TypeIndex::String,
+                                         TypeIndex::String};
+
+    char* key = "doris";
+    char* src[6] = {"aaaaaa", "bbbbbb", "cccccc", "dddddd", "eeeeee", ""};
+    std::string r[5];
+
+    for (int i = 0; i < 5; i++) {
+
+        int cipher_len = strlen(src[i]) + 16;
+        char p[cipher_len];
+
+        int outlen = AesUtil::encrypt(AES_128_ECB, (unsigned char*)src[i], strlen(src[i]),
+                                      (unsigned char*)key, strlen(key), NULL, true, (unsigned char*)p);
+        r[i] = std::string(p, outlen);
+
+    }
+
+    DataSet data_set = {{{std::string(src[0]), std::string(key)}, r[0]},
+                        {{std::string(src[1]), std::string(key)}, r[1]},
+                        {{std::string(src[2]), std::string(key)}, r[2]},
+                        {{std::string(src[3]), std::string(key)}, r[3]},
+                        {{std::string(src[4]), std::string(key)}, r[4]},
+                        {{std::string(src[5]), std::string(key)}, Null()},
+                        {{Null(), std::string(key)}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
+TEST(function_string_test, function_aes_decrypt_test) {
+    std::string func_name = "aes_decrypt";
+
+    std::vector<std::any> input_types = {TypeIndex::String,
+                                         TypeIndex::String};
+
+    char* key = "doris";
+    char* src[5] = {"aaaaaa", "bbbbbb", "cccccc", "dddddd", "eeeeee"};
+    std::string r[5];
+
+    for (int i = 0; i < 5; i++) {
+
+        int cipher_len = strlen(src[i]) + 16;
+        char p[cipher_len];
+
+        int outlen = AesUtil::encrypt(AES_128_ECB, (unsigned char*)src[i], strlen(src[i]),
+                                      (unsigned char*)key, strlen(key), NULL, true, (unsigned char*)p);
+        r[i] = std::string(p, outlen);
+
+    }
+
+    DataSet data_set = {{{r[0], std::string(key)}, std::string(src[0])},
+                        {{r[1], std::string(key)}, std::string(src[1])},
+                        {{r[2], std::string(key)}, std::string(src[2])},
+                        {{r[3], std::string(key)}, std::string(src[3])},
+                        {{r[4], std::string(key)}, std::string(src[4])},
+                        {{Null(), std::string(key)}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
 } // namespace doris
