@@ -289,8 +289,6 @@ Status HashJoinNode::get_next(RuntimeState* state, RowBatch* row_batch, bool* eo
 }
 
 Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eos) {
-    RETURN_IF_LIMIT_EXCEEDED(state, "VHash join, while execute get_next.");
-
     SCOPED_TIMER(_runtime_profile->total_time_counter());
     SCOPED_TIMER(_probe_timer);
 
@@ -377,6 +375,11 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
             },
             _hash_table_variants);
 
+    // In most cases, no additional memory overhead will be applied for at this stage,
+    // but if the expression calculation in this node needs to apply for additional memory,
+    // it may cause the memory to exceed the limit.
+    RETURN_IF_LIMIT_EXCEEDED(state, "Hash join, while execute get_next.");
+
     return st;
 }
 
@@ -407,7 +410,9 @@ Status HashJoinNode::_hash_table_build(RuntimeState* state) {
         RETURN_IF_CANCELLED(state);
         RETURN_IF_ERROR(child(1)->get_next(state, &block, &eos));
         _mem_tracker->Consume(block.allocated_bytes());
+        RETURN_IF_LIMIT_EXCEEDED(state, "Hash join, while getting next from the child 1.");
         RETURN_IF_ERROR(_process_build_block(block));
+        RETURN_IF_LIMIT_EXCEEDED(state, "Hash join, while constructing the hash table.");
     }
     return Status::OK();
 }
@@ -497,7 +502,6 @@ Status HashJoinNode::_process_build_block(Block& block) {
                 }
             },
             _hash_table_variants);
-
     return st;
 }
 
