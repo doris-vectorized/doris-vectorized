@@ -41,18 +41,18 @@ struct ProcessHashTableBuild {
     Status operator()(HashTableContext& hash_table_ctx, ConstNullMapPtr null_map) {
         using KeyGetter = typename HashTableContext::State;
         using Mapped = typename HashTableContext::Mapped;
+        int64_t old_bucket_bytes = hash_table_ctx.hash_table.get_buffer_size_in_bytes();
 
         Defer defer {[&]() {
             int64_t bucket_size = hash_table_ctx.hash_table.get_buffer_size_in_cells();
             int64_t bucket_bytes = hash_table_ctx.hash_table.get_buffer_size_in_bytes();
-            _join_node->_mem_tracker->Consume(bucket_bytes);
+            _join_node->_mem_tracker->Consume(bucket_bytes - old_bucket_bytes);
+            _join_node->_hash_table_bytes += bucket_bytes - old_bucket_bytes;
             COUNTER_SET(_join_node->_build_buckets_counter, bucket_size);
         }};
 
         KeyGetter key_getter(_build_raw_ptrs, _join_node->_build_key_sz, nullptr);
 
-        int64_t bucket_bytes = hash_table_ctx.hash_table.get_buffer_size_in_bytes();
-        _join_node->_mem_tracker->Release(bucket_bytes);
         SCOPED_TIMER(_join_node->_build_table_insert_timer);
         hash_table_ctx.hash_table.reset_resize_timer();
 
@@ -243,7 +243,6 @@ Status HashJoinNode::prepare(RuntimeState* state) {
     _build_table_insert_timer = ADD_TIMER(build_phase_profile, "BuildTableInsertTime");
     _build_expr_call_timer = ADD_TIMER(build_phase_profile, "BuildExprCallTime");
     _build_table_expanse_timer = ADD_TIMER(build_phase_profile, "BuildTableExpanseTime");
-    _build_acquire_block_timer = ADD_TIMER(build_phase_profile, "BuildAcquireBlockTime");
     _build_rows_counter = ADD_COUNTER(build_phase_profile, "BuildRows", TUnit::UNIT);
 
     // Probe phase
@@ -279,6 +278,9 @@ Status HashJoinNode::close(RuntimeState* state) {
     if (is_closed()) {
         return Status::OK();
     }
+    _mem_tracker->Release(_hash_table_bytes);
+    _mem_tracker->Release(_acquire_list.element_bytes());
+    _hash_table_bytes = 0;
     return ExecNode::close(state);
 }
 
@@ -287,8 +289,11 @@ Status HashJoinNode::get_next(RuntimeState* state, RowBatch* row_batch, bool* eo
 }
 
 Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eos) {
+    RETURN_IF_LIMIT_EXCEEDED(state, "VHash join, while execute get_next.");
+
     SCOPED_TIMER(_runtime_profile->total_time_counter());
     SCOPED_TIMER(_probe_timer);
+
     size_t probe_rows = _probe_block.rows();
     if (probe_rows == 0 || _probe_index == probe_rows) {
         _probe_index = 0;
@@ -450,12 +455,8 @@ Status HashJoinNode::_process_build_block(Block& block) {
     }
     COUNTER_UPDATE(_build_rows_counter, rows);
 
-    Block* acquired_block;
-    {
-        SCOPED_TIMER(_build_acquire_block_timer);
-        acquired_block = &_acquire_list.acquire(std::move(block));
-    }
-    materialize_block_inplace(*acquired_block);
+    auto& acquired_block = _acquire_list.acquire(std::move(block));
+    materialize_block_inplace(acquired_block);
 
     ColumnRawPtrs raw_ptrs(_build_expr_ctxs.size());
 
@@ -469,7 +470,7 @@ Status HashJoinNode::_process_build_block(Block& block) {
                 using HashTableCtxType = std::decay_t<decltype(arg)>;
                 if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
                     return extract_eq_join_column<HashTableCtxType::could_handle_asymmetric_null>(
-                            _build_expr_ctxs, *acquired_block, null_map_val, raw_ptrs, has_null,
+                            _build_expr_ctxs, acquired_block, null_map_val, raw_ptrs, has_null,
                             *_build_expr_call_timer);
                 } else {
                     LOG(FATAL) << "FATAL: uninited hash table";
@@ -484,11 +485,11 @@ Status HashJoinNode::_process_build_block(Block& block) {
                 if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
                     if (has_null) {
                         ProcessHashTableBuild<HashTableCtxType, true> hash_table_build_process(
-                                rows, *acquired_block, raw_ptrs, this);
+                                rows, acquired_block, raw_ptrs, this);
                         st = hash_table_build_process(arg, &null_map_val);
                     } else {
                         ProcessHashTableBuild<HashTableCtxType, false> hash_table_build_process(
-                                rows, *acquired_block, raw_ptrs, this);
+                                rows, acquired_block, raw_ptrs, this);
                         st = hash_table_build_process(arg, &null_map_val);
                     }
                 } else {

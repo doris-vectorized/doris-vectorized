@@ -128,12 +128,11 @@ private:
     RuntimeProfile::Counter* _build_expr_call_timer;
     RuntimeProfile::Counter* _build_table_insert_timer;
     RuntimeProfile::Counter* _build_table_expanse_timer;
-    RuntimeProfile::Counter* _build_acquire_block_timer;
     RuntimeProfile::Counter* _probe_timer;
     RuntimeProfile::Counter* _probe_expr_call_timer;
     RuntimeProfile::Counter* _probe_next_timer;
-    RuntimeProfile::Counter* _build_buckets_counter;
 
+    RuntimeProfile::Counter* _build_buckets_counter;
     RuntimeProfile::Counter* _push_down_timer;
     RuntimeProfile::Counter* _push_compute_timer;
     RuntimeProfile::Counter* _build_rows_counter;
@@ -142,6 +141,7 @@ private:
     bool _build_unique;
 
     int64_t _hash_table_rows;
+    int64_t _hash_table_bytes = 0;
 
     Arena _arena;
     HashTableVariants _hash_table_variants;
@@ -156,7 +156,6 @@ private:
     Sizes _probe_key_sz;
     Sizes _build_key_sz;
 
-private:
     Status _hash_table_build(RuntimeState* state);
     Status _process_build_block(Block& block);
 
