@@ -610,7 +610,7 @@ visible_functions = [
             '15FunctionContextENS2_18FunctionStateScopeE', '', ''],
 
     [['bin'], 'VARCHAR', ['BIGINT'],
-            '_ZN5doris13MathFunctions3binEPN9doris_udf15FunctionContextERKNS1_9BigIntValE', '', '', '', ''],
+            '_ZN5doris13MathFunctions3binEPN9doris_udf15FunctionContextERKNS1_9BigIntValE', '', '', 'vec', ''],
     [['hex'], 'VARCHAR', ['BIGINT'],
             '_ZN5doris13MathFunctions7hex_intEPN9doris_udf15FunctionContextERKNS1_9BigIntValE', '', '', '', ''],
     [['hex'], 'VARCHAR', ['VARCHAR'],
