@@ -39,7 +39,7 @@ public:
 
     bool use_default_implementation_for_nulls() const override { return false; }
 
-    // ifnull(col_left, col_right) == if(isnotnull(col_left), col_left, col_right)
+    // ifnull(col_left, col_right) == if(isnull(col_left), col_right, col_left)
     Status execute_impl(Block &block, const ColumnNumbers &arguments, size_t result,
                         size_t input_rows_count) override {
         const ColumnWithTypeAndName& col_left = block.get_by_position(arguments[0]);
@@ -54,18 +54,9 @@ public:
         const ColumnWithTypeAndName new_column {
             col_left,
         };
-        /// compute isnotnull(col_left)
+        /// compute isnull(col_left)
         if (auto* nullable = check_and_get_column<ColumnNullable>(*col_left.column)) {
-            /// Return the negated null map.
-            auto res_column = ColumnUInt8::create(input_rows_count);
-            const auto& src_data = nullable->get_null_map_data();
-            auto& res_data = assert_cast<ColumnUInt8&>(*res_column).get_data();
-
-            for (size_t i = 0; i < input_rows_count; ++i) {
-                res_data[i] = !src_data[i];
-            }
-
-            block.replace_by_position(arguments[0], std::move(res_column));
+            block.get_by_position(arguments[0]).column = nullable->get_null_map_column_ptr();
         } else {
             block.get_by_position(arguments[0]).column = col_left.column;
             return Status::OK();
@@ -80,8 +71,8 @@ public:
 
         Block temporary_block(
                 {block.get_by_position(arguments[0]),
-                 new_column,
                  block.get_by_position(arguments[1]),
+                 new_column,
                  new_result_column
                 });
         auto func_if = SimpleFunctionFactory::instance().get_function("if", if_columns, new_result_column.type);
