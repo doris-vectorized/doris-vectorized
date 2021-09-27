@@ -47,7 +47,9 @@ class RowCursor;
 class RowBlock;
 class CollectIterator;
 class RuntimeState;
-
+namespace vectorized {
+class VCollectIterator;
+}
 // Params for Reader,
 // mainly include tablet, data version and fetch range.
 struct ReaderParams {
@@ -120,6 +122,7 @@ public:
 
 protected:
     friend class CollectIterator;
+    friend class vectorized::VCollectIterator;
     friend class DeleteHandler;
 
     OLAPStatus _init_params(const ReaderParams& read_params);
