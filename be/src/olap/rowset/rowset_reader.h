@@ -38,6 +38,7 @@ using RowsetReaderSharedPtr = std::shared_ptr<RowsetReader>;
 class RowsetReader {
 public:
     enum RowsetReaderType { ALPHA, BETA };
+
     virtual ~RowsetReader() {}
 
     // reader init
