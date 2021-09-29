@@ -47,7 +47,7 @@ public:
 
         // random()/rand() without seed
         if (arguments.size() == 0) {
-            std::mt19937 generator(std::random_device{}());
+            std::mt19937_64 generator(std::random_device{}());
             std::uniform_real_distribution<double> distribution(min, max);
             for (int i = 0; i < input_rows_count; i++) {
                 res_data[i] = distribution(generator);
@@ -58,7 +58,7 @@ public:
                     (block.get_by_position(arguments[0]).column.get());
             if (const_col) {
                 Int64 seed = const_col->get_data()[0];
-                std::mt19937 generator(seed);
+                std::mt19937_64 generator(seed);
                 std::uniform_real_distribution<double> distribution(min, max);
                 for (int i = 0; i < input_rows_count; i++) {
                     res_data[i] = distribution(generator);
