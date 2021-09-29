@@ -47,15 +47,27 @@ Status VSetOperationNode::close(RuntimeState* state) {
 Status VSetOperationNode::init(const TPlanNode& tnode, RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::init(tnode, state));
     DCHECK_EQ(_conjunct_ctxs.size(), 0);
-    // Create const_expr_ctx_lists_ from thrift exprs.
-    auto& const_texpr_lists = tnode.union_node.const_expr_lists;
+    std::vector<std::vector< ::doris::TExpr> >  result_texpr_lists;
+    std::vector<std::vector< ::doris::TExpr> >  const_texpr_lists;
+    // Create const_expr_ctx_lists_ 、result_expr_ctx_lists_ from thrift exprs.
+    if (tnode.node_type == TPlanNodeType::type::UNION_NODE) {
+        const_texpr_lists = tnode.union_node.const_expr_lists;
+        result_texpr_lists = tnode.union_node.result_expr_lists;
+    }else if(tnode.node_type == TPlanNodeType::type::INTERSECT_NODE){
+        const_texpr_lists = tnode.intersect_node.const_expr_lists;
+        result_texpr_lists = tnode.intersect_node.result_expr_lists;
+    }
+    else{
+        const_texpr_lists = tnode.except_node.const_expr_lists;
+        result_texpr_lists = tnode.except_node.result_expr_lists;
+    }
+
     for (auto& texprs : const_texpr_lists) {
         std::vector<VExprContext*> ctxs;
         RETURN_IF_ERROR(VExpr::create_expr_trees(_pool, texprs, &ctxs));
         _const_expr_lists.push_back(ctxs);
     }
-    // Create result_expr_ctx_lists_ from thrift exprs.
-    auto& result_texpr_lists = tnode.union_node.result_expr_lists;
+    
     for (auto& texprs : result_texpr_lists) {
         std::vector<VExprContext*> ctxs;
         RETURN_IF_ERROR(VExpr::create_expr_trees(_pool, texprs, &ctxs));

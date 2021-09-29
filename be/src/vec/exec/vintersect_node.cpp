@@ -27,38 +27,30 @@
 namespace doris {
 namespace vectorized {
 
-template <class HashTableContext, bool has_null_map>
-struct ProcessHashTableBuild {
-    ProcessHashTableBuild(int rows, Block& acquired_block, ColumnRawPtrs& build_raw_ptrs, VIntersectNode* join_node)
+template <class HashTableContext>
+struct ProcessHashTableBuild2 {
+    ProcessHashTableBuild2(int rows, Block& acquired_block, ColumnRawPtrs& build_raw_ptrs, VIntersectNode* join_node)
             : _rows(rows),
               _acquired_block(acquired_block),
               _build_raw_ptrs(build_raw_ptrs),
               _join_node(join_node) {}
 
-    Status operator()(HashTableContext& hash_table_ctx, ConstNullMapPtr null_map) {
+    Status operator()(HashTableContext& hash_table_ctx) {
         using KeyGetter = typename HashTableContext::State;
         using Mapped = typename HashTableContext::Mapped;
-
-        // Defer defer {[&]() {
-        //     int64_t bucket_size = hash_table_ctx.hash_table.get_buffer_size_in_cells();
-        //     COUNTER_SET(_join_node->_build_buckets_counter, bucket_size);
-        // }};
 
         KeyGetter key_getter(_build_raw_ptrs, _join_node->_build_key_sz, nullptr);
         LOG(INFO)<<"ProcessHashTableBuild:_row: "<<_rows;
         for (size_t k = 0; k < _rows; ++k) {
             // TODO: make this as constexpr
-            if constexpr (has_null_map) {
-                if ((*null_map)[k]) {
-                    continue;
-                }
-            }
 
             auto emplace_result = key_getter.emplace_key(hash_table_ctx.hash_table, k, _join_node->_arena);
 
             if (emplace_result.is_inserted()) {
                 new (&emplace_result.get_mapped()) Mapped({&_acquired_block, k});  //RowRef(&_acquired_block, k)
+                LOG(INFO)<<"is_inserted :"<<_acquired_block.get_by_position(0).to_string(k);
             } else {
+                LOG(INFO)<<"emplace_result :"<<_acquired_block.get_by_position(0).to_string(0);
                 /// The first element of the list is stored in the value of the hash table, the rest in the pool.
                 emplace_result.get_mapped().insert({&_acquired_block, k}, _join_node->_arena);
             }
@@ -75,9 +67,9 @@ private:
 };
 
 
-template <class HashTableContext, bool has_null_map>
-struct ProcessHashTableProbe {
-    ProcessHashTableProbe(VIntersectNode* join_node, int batch_size, int probe_rows)
+template <class HashTableContext>
+struct ProcessHashTableProbe2 {
+    ProcessHashTableProbe2(VIntersectNode* join_node, int batch_size, int probe_rows)
             : _join_node(join_node),
               _left_table_data_types(join_node->_left_table_data_types),
               _right_table_data_types(join_node->_right_table_data_types),
@@ -89,7 +81,7 @@ struct ProcessHashTableProbe {
               _probe_raw_ptrs(join_node->_probe_columns),
               _arena(join_node->_arena) {}
 
-    Status operator()(HashTableContext& hash_table_ctx, ConstNullMapPtr null_map,
+    Status operator()(HashTableContext& hash_table_ctx,
                       MutableBlock& mutable_block, Block* output_block) {
         using KeyGetter = typename HashTableContext::State;
         using Mapped = typename HashTableContext::Mapped;
@@ -101,32 +93,50 @@ struct ProcessHashTableProbe {
         LOG(INFO)<<"mcol size: "<<mcol.size();
         offset_data.assign(_probe_rows, (uint32_t)0);
 
-        int right_col_idx = _left_table_data_types.size();
+        //int right_col_idx = _left_table_data_types.size();
         int right_col_len = _right_table_data_types.size();
         int current_offset = 0;
+        for(int i=0;i<_probe_raw_ptrs.size();++i)
+        {
+            LOG(INFO)<<"_probe_raw_ptrs["<<i<<"]->is_nullable(): "<<" "<<(_probe_raw_ptrs[i]->is_nullable());
+            if (auto* nullable = check_and_get_column<ColumnNullable>(_probe_raw_ptrs[i])) {
+                LOG(INFO)<<"check_and_get_column  nullable";
+            }
+            else
+            {
+                LOG(INFO)<<"Can NOT convert nullable";
+            }
+            if(is_column_nullable(*_probe_raw_ptrs[i]))
+                LOG(INFO)<<"is_column_nullable true";
+            else
+                LOG(INFO)<<"is_column_nullable false";
+
+        }
+            
 
         for (; _probe_index < _probe_rows;) {
             // ignore null rows
-            if constexpr (has_null_map) {
-                if ((*null_map)[_probe_index]) {
-                    offset_data[_probe_index++] = current_offset;
-                    continue;
-                }
-            }
+            LOG(INFO)<<"_probe_rows: "<<_probe_rows<<"  _probe_index: "<<_probe_index;
+            
             auto find_result = key_getter.find_key(hash_table_ctx.hash_table, _probe_index, _arena);
+            LOG(INFO)<<"find_key find_result.is_found(): "<<find_result.is_found();
+
 
             if (find_result.is_found()) {
                 auto& mapped = find_result.get_mapped();
-                for (auto it = mapped.begin(); it.ok(); ++it) {
+                auto it = mapped.begin();
+                //if(!(it->visited)){
+                if(!mapped.is_visited()){
                     for (size_t j = 0; j < right_col_len; ++j) {
                         auto& column = *it->block->get_by_position(j).column;
-           //这里有问题             ///mcol[j + right_col_idx]->insert_from(column, it->row_num);
                         for(int jj=0;jj<(it->block->columns());++jj)
-                            LOG(INFO)<<"probe_data: "<<(it->block->get_by_position(jj)).to_string(0);
+                            LOG(INFO)<<"matched probe_data: "<<(it->block->get_by_position(jj)).to_string(0);
                         mcol[j]->insert_from(column, it->row_num);
                     }
                     ++current_offset;
                 }
+                //it->visited=true;
+                mapped.set_visited();
             }
 
             offset_data[_probe_index++] = current_offset;
@@ -141,17 +151,18 @@ struct ProcessHashTableProbe {
         }
 
         output_block->swap(mutable_block.to_block());
-        for (int i = 0; i < right_col_idx; ++i) {
-            auto& column = _probe_block.get_by_position(i).column;
-            output_block->get_by_position(i).column = column->replicate(offset_data);
-        }
 
-        if (_join_node->_vconjunct_ctx_ptr) {
-            int result_column_id = -1;
-            int orig_columns = output_block->columns();
-            (*_join_node->_vconjunct_ctx_ptr)->execute(output_block, &result_column_id);
-            Block::filter_block(output_block, result_column_id, orig_columns);
-        }
+        // for (int i = 0; i < right_col_idx; ++i) {
+        //     auto& column = _probe_block.get_by_position(i).column;
+        //     output_block->get_by_position(i).column = column->replicate(offset_data);
+        // }
+
+        // if (_join_node->_vconjunct_ctx_ptr) {
+        //     int result_column_id = -1;
+        //     int orig_columns = output_block->columns();
+        //     (*_join_node->_vconjunct_ctx_ptr)->execute(output_block, &result_column_id);
+        //     Block::filter_block(output_block, result_column_id, orig_columns);
+        // }
 
         int64_t m = output_block->rows();
         _num_rows_returned += m;
@@ -168,25 +179,18 @@ private:
     const Block& _probe_block;
     int& _probe_index;
     int64_t& _num_rows_returned;
-    ColumnRawPtrs& _probe_raw_ptrs;
+    ColumnRawPtrs& _probe_raw_ptrs; //using ColumnRawPtrs = std::vector<const IColumn*>;
     Arena& _arena;
 };
 
 VIntersectNode::VIntersectNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
         : VSetOperationNode(pool, tnode, descs) {}
 Status VIntersectNode::init(const TPlanNode& tnode, RuntimeState* state) {
-    //RETURN_IF_ERROR(VSetOperationNode::init(tnode, state));
-    //DCHECK(tnode.__isset.union_node);
+    RETURN_IF_ERROR(VSetOperationNode::init(tnode, state));
     DCHECK(tnode.__isset.intersect_node);
-    RETURN_IF_ERROR(ExecNode::init(tnode, state));
-    DCHECK_EQ(_conjunct_ctxs.size(), 0);
-    auto& result_texpr_lists = tnode.intersect_node.result_expr_lists;
-    for (auto& texprs : result_texpr_lists) {
-        std::vector<VExprContext*> ctxs;
-        RETURN_IF_ERROR(VExpr::create_expr_trees(_pool, texprs, &ctxs));
-        _child_expr_lists.push_back(ctxs);
-    }
+
     for (int i = 0; i < _child_expr_lists.size(); ++i) {
+        LOG(INFO)<<"debug string: "<<doris::vectorized::VExpr::debug_string(_child_expr_lists[i]);
         LOG(INFO) << "i: " << i;
         for (int j = 0; j < _child_expr_lists[i].size(); ++j) 
             LOG(INFO) << "j: " << j;
@@ -195,58 +199,32 @@ Status VIntersectNode::init(const TPlanNode& tnode, RuntimeState* state) {
 }
 
 Status VIntersectNode::prepare(RuntimeState* state) {
-    //return VSetOperationNode::prepare(state);
-    RETURN_IF_ERROR(ExecNode::prepare(state));
-    for (int i = 0; i < _child_expr_lists.size(); ++i) {
-        RETURN_IF_ERROR(VExpr::prepare(_child_expr_lists[i], state, child(i)->row_desc(),
-                                       expr_mem_tracker()));
-    }
-    _find_nulls = std::vector<bool>();
-    for (auto ctx : _child_expr_lists[0]) {
-        _find_nulls.push_back(!ctx->root()->is_slot_ref() || ctx->root()->is_nullable());
-    }
-    for(int i=0;i<_find_nulls.size();++i)
-        LOG(INFO)<<"_find_nulls: "<<_find_nulls[i];
-    _hash_table_variants.emplace<SerializedHashTableContext2>();
-    bool use_fixed_key = true;
-    bool has_null = false;
-    int key_byte_size = 0;
+    RETURN_IF_ERROR(VSetOperationNode::prepare(state));
 
-    _probe_key_sz.resize(_child_expr_lists[1].size());
-    _build_key_sz.resize(_child_expr_lists[0].size());
-    LOG(INFO)<<"_probe_key_sz: size: "<<_probe_key_sz.size()<<" _build_key_sz: "<<_build_key_sz.size();
+    for (auto ctx : _child_expr_lists[0]) {
+        _build_not_ignore_null.push_back(ctx->root()->is_nullable());
+        //_build_not_ignore_null.push_back(0);
+        LOG(INFO)<<"_build_not_ignore_null::prepare: "<<_build_not_ignore_null.back();
+    }
+    for (auto ctx : _child_expr_lists[1]) {
+        _probe_not_ignore_null.push_back(ctx->root()->is_nullable());
+        //_probe_not_ignore_null.push_back(0);
+        LOG(INFO)<<"_probe_not_ignore_null::prepare: "<<_probe_not_ignore_null.back();
+    }
+
     _right_table_data_types = VectorizedUtils::get_data_types(child(1)->row_desc());
     _left_table_data_types = VectorizedUtils::get_data_types(child(0)->row_desc());
     LOG(INFO)<<"_right_table_data_types: size: "<<_right_table_data_types.size()<<" _left_table_data_types: "<<_left_table_data_types.size();
     for(int i=0;i<_right_table_data_types.size();++i)
-        LOG(INFO)<<_right_table_data_types[i]->get_name()<<" left: "<<_left_table_data_types[i]->get_name();
+        LOG(INFO)<<"right: "<<_right_table_data_types[i]->get_name()<<" left: "<<_left_table_data_types[i]->get_name();
 
-    for (int i = 0; i < _child_expr_lists[0].size(); ++i) {
-        const auto vexpr = _child_expr_lists[0][i]->root();
-        const auto& data_type = vexpr->data_type();
-        auto result_type = vexpr->result_type();
-        LOG(INFO)<<"vexpr->: "<<vexpr->debug_string();
-        has_null |= data_type->is_nullable();
-        _build_key_sz[i] = get_real_byte_size(result_type);
-        _probe_key_sz[i] = _build_key_sz[i];
-
-        key_byte_size += _build_key_sz[i];
-
-        if (has_variable_type(result_type)) {
-            use_fixed_key = false;
-            break;
-        }
-    }
+    _hash_table_init();
     return Status::OK();
 }
 
 Status VIntersectNode::open(RuntimeState* state) {
-    //return VSetOperationNode::open(state);
-    RETURN_IF_ERROR(ExecNode::open(state));
-    RETURN_IF_CANCELLED(state);
-    for (const std::vector<VExprContext*>& exprs : _child_expr_lists) {
-        RETURN_IF_ERROR(VExpr::open(exprs, state));
-    }
+    RETURN_IF_ERROR(VSetOperationNode::open(state));
+
     RETURN_IF_ERROR(_hash_table_build(state));
     RETURN_IF_ERROR(child(1)->open(state));
     return Status::OK();
@@ -260,9 +238,12 @@ Status VIntersectNode::get_next(RuntimeState* state, Block* output_block, bool* 
         int i=0;
         do {
             RETURN_IF_ERROR(child(1)->get_next(state, &_probe_block, eos));
-            LOG(INFO)<<i++<<"probe: "<<_probe_block.columns()<<" rows: "<<_probe_block.rows();
-            for(int j=0;j<_probe_block.columns();++j)
-                LOG(INFO)<<"data: "<<_probe_block.get_by_position(j).to_string(0);
+            LOG(INFO)<<i++<<" probe: "<<_probe_block.columns()<<" rows: "<<_probe_block.rows()<<" ------------------------------";
+            for(int k=0;k<_probe_block.rows();++k)
+            {
+                for(int j=0;j<_probe_block.columns();++j)
+                    LOG(INFO)<<"data: "<<_probe_block.get_by_position(j).to_string(k);
+            }
         } while (_probe_block.rows() == 0 && !(*eos));
 
         probe_rows = _probe_block.rows();
@@ -282,19 +263,11 @@ Status VIntersectNode::get_next(RuntimeState* state, Block* output_block, bool* 
             _probe_columns[i] = _probe_block.get_by_position(result_id).column.get();
         }
 
-        if (_null_map_column == nullptr) {
-            _null_map_column = ColumnUInt8::create();
-        }
-        _null_map_column->get_data().assign(probe_rows, (uint8_t)0);
-
         Status st = std::visit(
                 [&](auto&& arg) -> Status {
                     using HashTableCtxType = std::decay_t<decltype(arg)>;
                     if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
-                        auto& null_map_val = _null_map_column->get_data();
-                        return extract_eq_join_column<HashTableCtxType::could_handle_asymmetric_null>(
-                                _child_expr_lists[1], _probe_block, null_map_val, _probe_columns,
-                                _probe_has_null);
+                        return extract_probe_join_column( _probe_block, _probe_columns);
                     } else {
                         LOG(FATAL) << "FATAL: uninited hash table";
                     }
@@ -304,7 +277,7 @@ Status VIntersectNode::get_next(RuntimeState* state, Block* output_block, bool* 
 
         RETURN_IF_ERROR(st);
     }
-    LOG(INFO)<<"_probe_has_null: "<<_probe_has_null;
+
     MutableBlock mutable_block(VectorizedUtils::create_empty_columnswithtypename(row_desc()));
     output_block->clear();
 
@@ -314,19 +287,11 @@ Status VIntersectNode::get_next(RuntimeState* state, Block* output_block, bool* 
             [&](auto&& arg) {
                 using HashTableCtxType = std::decay_t<decltype(arg)>;
                 if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
-                    if (_probe_has_null) {
-                        ProcessHashTableProbe<HashTableCtxType, true> process_hashtable_ctx(
+                        ProcessHashTableProbe2<HashTableCtxType> process_hashtable_ctx(
                                 this, state->batch_size(), probe_rows);
 
-                        st = process_hashtable_ctx(arg, &_null_map_column->get_data(),
+                        st = process_hashtable_ctx(arg,
                                                    mutable_block, output_block);
-                    } else {
-                        ProcessHashTableProbe<HashTableCtxType, false> process_hashtable_ctx(
-                                this, state->batch_size(), probe_rows);
-
-                        st = process_hashtable_ctx(arg, &_null_map_column->get_data(),
-                                                   mutable_block, output_block);
-                    }
                 } else {
                     LOG(FATAL) << "FATAL: uninited hash table";
                 }
@@ -337,14 +302,7 @@ Status VIntersectNode::get_next(RuntimeState* state, Block* output_block, bool* 
 }
 
 Status VIntersectNode::close(RuntimeState* state) {
-    //return VSetOperationNode::close(state);
-    if (is_closed()) {
-        return Status::OK();
-    }
-    for (auto& exprs : _child_expr_lists) {
-        VExpr::close(exprs, state);
-    }
-    return ExecNode::close(state);
+    return VSetOperationNode::close(state);
 }
 
 void VIntersectNode::debug_string(int indentation_level, std::stringstream* out) const {
@@ -367,9 +325,10 @@ Status VIntersectNode::_hash_table_build(RuntimeState* state) {
         block.clear();
         RETURN_IF_CANCELLED(state);
         RETURN_IF_ERROR(child(0)->get_next(state, &block, &eos));
-        LOG(INFO)<<i++<<"build: "<<block.columns()<<" rows: "<<block.rows();
-        for(int j=0;j<block.columns();++j)
-            LOG(INFO)<<"data: "<<block.get_by_position(j).to_string(0);
+        LOG(INFO)<<"i is: "<<i++<<" build: "<<block.columns()<<" rows: "<<block.rows()<<" ----------------------------";
+        for(int k=0;k<block.rows();++k)
+            for(int j=0;j<block.columns();++j)
+                LOG(INFO)<<"data: "<<block.get_by_position(j).to_string(k);
         RETURN_IF_ERROR(_process_build_block(block));
     }
     return Status::OK();
@@ -388,17 +347,12 @@ Status VIntersectNode::_process_build_block(Block& block) {
 
     ColumnRawPtrs raw_ptrs(_child_expr_lists[0].size());
 
-    NullMap null_map_val(rows);
-    null_map_val.assign(rows, (uint8_t)0);
-    bool has_null = false;
-
     // Get the key column that needs to be built
     Status st = std::visit(
             [&](auto&& arg) -> Status {
                 using HashTableCtxType = std::decay_t<decltype(arg)>;
                 if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
-                    return extract_eq_join_column<HashTableCtxType::could_handle_asymmetric_null>(
-                            _child_expr_lists[0], acquired_block, null_map_val, raw_ptrs, has_null);
+                    return extract_build_join_column(acquired_block,raw_ptrs);
                 } else {
                     LOG(FATAL) << "FATAL: uninited hash table";
                 }
@@ -410,15 +364,10 @@ Status VIntersectNode::_process_build_block(Block& block) {
             [&](auto&& arg) {
                 using HashTableCtxType = std::decay_t<decltype(arg)>;
                 if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
-                    if (has_null) {
-                        ProcessHashTableBuild<HashTableCtxType, true> hash_table_build_process(
+                        ProcessHashTableBuild2<HashTableCtxType> hash_table_build_process(
                                 rows, acquired_block, raw_ptrs, this);
-                        st = hash_table_build_process(arg, &null_map_val);
-                    } else {
-                        ProcessHashTableBuild<HashTableCtxType, false> hash_table_build_process(
-                                rows, acquired_block, raw_ptrs, this);
-                        st = hash_table_build_process(arg, &null_map_val);
-                    }
+
+                        st = hash_table_build_process(arg);
                 } else {
                     LOG(FATAL) << "FATAL: uninited hash table";
                 }
@@ -427,36 +376,162 @@ Status VIntersectNode::_process_build_block(Block& block) {
 
     return st;
 }
-template <bool asymmetric_null>
-Status VIntersectNode::extract_eq_join_column(std::vector<VExprContext*>& exprs, Block& block, NullMap& null_map,
-                                            ColumnRawPtrs& raw_ptrs, bool& has_null) {
-    for (size_t i = 0; i < exprs.size(); ++i) {
+
+Status VIntersectNode::extract_build_join_column(Block& block, 
+                                            ColumnRawPtrs& raw_ptrs) {
+    for (size_t i = 0; i < _child_expr_lists[0].size(); ++i) {
         int result_col_id = -1;
         // execute build column
-        RETURN_IF_ERROR(exprs[i]->execute(&block, &result_col_id));
-        LOG(INFO)<<"result_col_id: "<<result_col_id;
-        if (_find_nulls[i]) {
-            LOG(INFO)<<"_find_nulls[i]: "<<i<<" "<<_find_nulls[i];
-            raw_ptrs[i] = block.get_by_position(result_col_id).column.get();
-        } else {
-            auto column = block.get_by_position(result_col_id).column.get();
-            if (auto* nullable = check_and_get_column<ColumnNullable>(*column)) {
-                auto& col_nested = nullable->get_nested_column();
-                auto& col_nullmap = nullable->get_null_map_data();
-                VectorizedUtils::update_null_map(null_map, col_nullmap);
-                has_null = true;
+        RETURN_IF_ERROR(_child_expr_lists[0][i]->execute(&block, &result_col_id));
+        LOG(INFO)<<"_build_not_ignore_null::build[i]: "<<i<<" "<<_build_not_ignore_null[i];
 
-                if constexpr (asymmetric_null) {
+        auto column = block.get_by_position(result_col_id).column.get();
+        if (auto* nullable = check_and_get_column<ColumnNullable>(*column)) 
+        {
+                auto& col_nested = nullable->get_nested_column();
+
+                if (_build_not_ignore_null[i]) {
                     raw_ptrs[i] = nullable;
                 } else {
+                    LOG(INFO)<<"build: I am update_null_map";
                     raw_ptrs[i] = &col_nested;
                 }
-            } else {
-                raw_ptrs[i] = column;
-            }
+        } 
+        else 
+        {
+            raw_ptrs[i] = _probe_not_ignore_null[i] ?
+                    make_nullable(block.get_by_position(result_col_id).column, false).get() : column;
+            LOG(INFO)<<"build: NotNullable: "<<_probe_not_ignore_null[i];
+            LOG(INFO)<<"build: NotNullable: build_data: "<<block.get_by_position(result_col_id).to_string(0);
         }
+
     }
     return Status::OK();
+}
+Status VIntersectNode::extract_probe_join_column(Block& block, 
+                                            ColumnRawPtrs& raw_ptrs) {
+    for (size_t i = 0; i < _child_expr_lists[1].size(); ++i) {
+        int result_col_id = -1;
+        // execute build column
+        RETURN_IF_ERROR(_child_expr_lists[1][i]->execute(&block, &result_col_id));
+        LOG(INFO)<<"_probe_not_ignore_null::probe[i]: "<<i<<" "<<_probe_not_ignore_null[i];
+        auto column = block.get_by_position(result_col_id).column.get();
+        if (auto* nullable = check_and_get_column<ColumnNullable>(*column)) {
+            auto& col_nested = nullable->get_nested_column();
+
+            LOG(INFO)<<"probe could nullable: data: "<<block.get_by_position(result_col_id).to_string(0);;
+
+            if (_build_not_ignore_null[i]) {
+                raw_ptrs[i] = nullable;
+            } else {
+                LOG(INFO)<<"probe: I am update_null_map";
+
+                raw_ptrs[i] = &col_nested;
+            }
+        } else {
+            if(_build_not_ignore_null[i]==1)
+            {
+                LOG(INFO)<<"probe: NotNullable: "<<_build_not_ignore_null[i];
+                auto column_ptr = make_nullable(block.get_by_position(result_col_id).column, false);
+                block.insert({column_ptr, make_nullable(block.get_by_position(result_col_id).type), ""});
+                column = column_ptr.get();
+            }
+            raw_ptrs[i] = column;
+            if(is_column_nullable(*raw_ptrs[i]))
+                LOG(INFO)<<"is_column_nullable make_nullable true";
+            else
+                LOG(INFO)<<"is_column_nullable make_nullable false";
+            LOG(INFO)<<"probe: NotNullable: probe_data: "<<block.get_by_position(result_col_id).to_string(0);
+        }
+        
+    }
+    return Status::OK();
+}
+void VIntersectNode::_hash_table_init() {
+    _hash_table_variants.emplace<SerializedHashTableContext>();
+    /*
+    if (_child_expr_lists[0].size() == 1 && !_build_not_ignore_null[0]) {
+        // Single column optimization
+        LOG(INFO)<<_child_expr_lists[0][0]->root()->result_type();
+        switch (_child_expr_lists[0][0]->root()->result_type()) {
+        case TYPE_BOOLEAN:
+        case TYPE_TINYINT:
+            _hash_table_variants.emplace<I8HashTableContext>();
+            break;
+        case TYPE_SMALLINT:
+            _hash_table_variants.emplace<I16HashTableContext>();
+            break;
+        case TYPE_INT:
+        case TYPE_FLOAT:
+            _hash_table_variants.emplace<I32HashTableContext>();
+            break;
+        case TYPE_BIGINT:
+        case TYPE_DOUBLE:
+            _hash_table_variants.emplace<I64HashTableContext>();
+            break;
+        case TYPE_LARGEINT:
+        case TYPE_DATETIME:
+        case TYPE_DATE:
+        case TYPE_DECIMALV2:
+            _hash_table_variants.emplace<I128HashTableContext>();
+            break;
+        default:
+            _hash_table_variants.emplace<SerializedHashTableContext>();
+        }
+        return;
+    }
+    */
+    bool use_fixed_key = true;
+    bool has_null = false;
+    int key_byte_size = 0;
+
+    _probe_key_sz.resize(_child_expr_lists[1].size());
+    _build_key_sz.resize(_child_expr_lists[0].size());
+    LOG(INFO)<<"_probe_key_sz: size: "<<_probe_key_sz.size()<<" _build_key_sz: "<<_build_key_sz.size();
+    for (int i = 0; i < _child_expr_lists[0].size(); ++i) {
+        const auto vexpr = _child_expr_lists[0][i]->root();
+        const auto& data_type = vexpr->data_type();
+        auto result_type = vexpr->result_type();
+        LOG(INFO)<<"vexpr->: "<<vexpr->debug_string();
+        has_null |= data_type->is_nullable();
+        _build_key_sz[i] = get_real_byte_size(result_type);
+        _probe_key_sz[i] = _build_key_sz[i];
+
+        key_byte_size += _build_key_sz[i];
+
+        if (has_variable_type(result_type)) {
+            use_fixed_key = false;
+            break;
+        }
+    }
+    /*
+    if (std::tuple_size<KeysNullMap<UInt256>>::value + key_byte_size > sizeof(UInt256)) {
+        use_fixed_key = false;
+    }
+
+    if (use_fixed_key) {
+        // TODO: may we should support uint256 in the future
+        if (has_null) {
+            if (std::tuple_size<KeysNullMap<UInt64>>::value + key_byte_size <= sizeof(UInt64)) {
+                _hash_table_variants.emplace<I64FixedKeyHashTableContext<true>>();
+            } else if (std::tuple_size<KeysNullMap<UInt128>>::value + key_byte_size <= sizeof(UInt128)) {
+                _hash_table_variants.emplace<I128FixedKeyHashTableContext<true>>();
+            } else {
+                _hash_table_variants.emplace<I256FixedKeyHashTableContext<true>>();
+            }
+        } else {
+            if (key_byte_size <= sizeof(UInt64)) {
+                _hash_table_variants.emplace<I64FixedKeyHashTableContext<false>>();
+            } else if (key_byte_size <= sizeof(UInt128)) {
+                _hash_table_variants.emplace<I128FixedKeyHashTableContext<false>>();
+            } else {
+                _hash_table_variants.emplace<I256FixedKeyHashTableContext<false>>();
+            }
+        }
+    } else {
+        _hash_table_variants.emplace<SerializedHashTableContext>();
+    }
+    */
 }
 } // namespace vectorized
 } // namespace doris

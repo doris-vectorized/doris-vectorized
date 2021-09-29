@@ -26,6 +26,7 @@
 #include "vec/core/materialize_block.h"
 #include "vec/functions/function.h"
 #include "vec/utils/util.hpp"
+#include "vec/exec/join/vhash_join_node.h"
 namespace doris {
 namespace vectorized {
 
@@ -33,11 +34,19 @@ struct SerializedHashTableContext2 {
     using Mapped = RowRefList;
     using HashTable = HashMap<StringRef, Mapped>;
     using State = ColumnsHashing::HashMethodSerialized<typename HashTable::value_type, Mapped>;
-
-    static constexpr auto could_handle_asymmetric_null = false;
+    //using Iter = typename HashTable::iterator;
+    static constexpr auto could_handle_asymmetric_null = false;  //
     HashTable hash_table;
+    // bool inited = false;
+
+    // void init_once() {
+    //     if (!inited) {
+    //         inited = true;
+    //         iter = hash_table.begin();
+    //     }
+    // }
 };
-using HashTableVariants2 = std::variant<std::monostate, SerializedHashTableContext2>;
+//using HashTableVariants2 = std::variant<std::monostate, SerializedHashTableContext2>;
 class VExprContext;
 
 class VIntersectNode : public VSetOperationNode {
@@ -53,31 +62,34 @@ private:
     void debug_string(int indentation_level, std::stringstream* out) const;
     Status _hash_table_build(RuntimeState* state);
     Status _process_build_block(Block& block); 
-    template <bool asymmetric_null>
-    Status extract_eq_join_column(std::vector<VExprContext*>& exprs, Block& block, NullMap& null_map,
-                                  ColumnRawPtrs& raw_ptrs, bool& hash_null);
+
+    Status extract_build_join_column(Block& block,
+                                  ColumnRawPtrs& raw_ptrs);
+
+    Status extract_probe_join_column(Block& block, 
+                                  ColumnRawPtrs& raw_ptrs);
+    void _hash_table_init();
 private:
 
     int64_t _hash_table_rows;
     Arena _arena;
-    HashTableVariants2 _hash_table_variants;
+    HashTableVariants _hash_table_variants;
     AcquireList<Block> _acquire_list;
     Block _probe_block;
     ColumnRawPtrs _probe_columns;
-    ColumnUInt8::MutablePtr _null_map_column;
-    bool _probe_has_null = false;
+
     int _probe_index = -1;
 
-    std::vector<bool> _find_nulls;
+    std::vector<bool> _build_not_ignore_null;
+    std::vector<bool> _probe_not_ignore_null;
     std::vector<size_t> _probe_key_sz;
     std::vector<size_t> _build_key_sz;
     DataTypes _right_table_data_types;
     DataTypes _left_table_data_types;
-    template <class HashTableContext, bool has_null_map>
-    friend class ProcessHashTableBuild;
-    template <class HashTableContext, bool has_null_map>
-    friend class ProcessHashTableProbe;
+    template <class HashTableContext>
+    friend class ProcessHashTableBuild2;
+    template <class HashTableContext>
+    friend class ProcessHashTableProbe2;
 };
 } // namespace vectorized
 } // namespace doris
-// std::vector<std::vector<VExprContext*>> _child_expr_lists;
