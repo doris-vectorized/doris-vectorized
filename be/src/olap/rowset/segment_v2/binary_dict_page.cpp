@@ -19,9 +19,10 @@
 
 #include "common/logging.h"
 #include "gutil/strings/substitute.h" // for Substitute
-#include "olap/rowset/segment_v2/bitshuffle_page.h"
 #include "runtime/mem_pool.h"
 #include "util/slice.h" // for Slice
+#include "vec/columns/column_vector.h"
+#include "vec/columns/column_string.h"
 
 namespace doris {
 namespace segment_v2 {
@@ -220,6 +221,11 @@ Status BinaryDictPageDecoder::init() {
     return Status::OK();
 }
 
+BinaryDictPageDecoder::~BinaryDictPageDecoder() {
+    delete[] _start_offset_array;
+    delete[] _len_array;
+}
+
 Status BinaryDictPageDecoder::seek_to_position_in_page(size_t pos) {
     return _data_page_decoder->seek_to_position_in_page(pos);
 }
@@ -230,7 +236,66 @@ bool BinaryDictPageDecoder::is_dict_encoding() const {
 
 void BinaryDictPageDecoder::set_dict_decoder(PageDecoder* dict_decoder) {
     _dict_decoder = (BinaryPlainPageDecoder*)dict_decoder;
+    _start_offset_array = new uint32_t[_dict_decoder->_num_elems];
+    _len_array = new uint32_t[_dict_decoder->_num_elems];
+    for (int i = 0; i < _dict_decoder->_num_elems; i++) {
+        const uint32_t start_offset = _dict_decoder->offset(i);
+        uint32_t len = _dict_decoder->offset(i + 1) - start_offset;
+        _start_offset_array[i] = start_offset;
+        _len_array[i] = len;
+    }
+    _bit_shuffle_ptr = reinterpret_cast<BitShufflePageDecoder<OLAP_FIELD_TYPE_INT>*>(_data_page_decoder.get());
 };
+
+Status BinaryDictPageDecoder::next_batch(size_t* n, vectorized::MutableColumnPtr &dst) {
+    if (_encoding_type == PLAIN_ENCODING) {
+        return _data_page_decoder->next_batch(n, dst);
+    }
+    // dictionary encoding
+    DCHECK(_parsed);
+    DCHECK(_dict_decoder != nullptr) << "dict decoder pointer is nullptr";
+ 
+    if (PREDICT_FALSE(*n == 0)) {
+        return Status::OK();
+    }
+ 
+    if (_bit_shuffle_ptr->_cur_index > _bit_shuffle_ptr->_num_elements) {
+        *n = 0;
+        return Status::OK();
+    }
+ 
+     size_t max_fetch = std::min(*n, static_cast<size_t>(_bit_shuffle_ptr->_num_elements - _bit_shuffle_ptr->_cur_index));
+ 
+    uint32_t total_len = 0;
+    const int32_t* data_array = reinterpret_cast<const int32_t*>(_bit_shuffle_ptr->_decoded.data());
+ 
+    size_t start_index = _bit_shuffle_ptr->_cur_index;
+    for (int i = 0; i < max_fetch; i++, start_index++) {
+        int32_t codeword = data_array[start_index];
+        total_len += _len_array[codeword];
+    }
+ 
+    vectorized::ColumnString& column_str = reinterpret_cast<vectorized::ColumnString&>(*dst);
+ 
+    size_t old_chars_size = column_str.get_chars().size();
+    column_str.get_chars().resize(old_chars_size + total_len + max_fetch);
+ 
+    start_index = _bit_shuffle_ptr->_cur_index;
+    for (int i = 0; i < max_fetch; i++, start_index++) {
+         int32_t codeword = data_array[start_index];
+        const uint32_t start_offset = _start_offset_array[codeword];
+        const uint32_t str_len = _len_array[codeword];
+        if (str_len) {
+            memcpy(column_str.get_chars().data() + old_chars_size, &_dict_decoder->_data[start_offset], str_len);
+        }
+        column_str.get_chars()[old_chars_size + str_len] = 0;
+        old_chars_size = old_chars_size + str_len + 1;
+        column_str.get_offsets().push_back(old_chars_size);
+    }
+ 
+    return Status::OK();
+ 
+}
 
 Status BinaryDictPageDecoder::next_batch(size_t* n, ColumnBlockView* dst) {
     if (_encoding_type == PLAIN_ENCODING) {
