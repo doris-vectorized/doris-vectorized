@@ -23,6 +23,8 @@
 
 #include <string_view>
 
+#include "util/md5.h"
+
 #include "vec/columns/column_nullable.h"
 #include "vec/columns/column_string.h"
 #include "vec/columns/columns_number.h"
@@ -818,4 +820,66 @@ public:
     }
 };
 
+class FunctionStringMd5sum : public IFunction {
+public:
+    static constexpr auto name = "md5sum";
+    static FunctionPtr create() { return std::make_shared<FunctionStringMd5sum>(); }
+    String get_name() const override { return name; }
+    size_t get_number_of_arguments() const override { return 0; }
+    bool is_variadic() const override { return true; }
+
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
+        return std::make_shared<DataTypeString>();
+    }
+    bool use_default_implementation_for_nulls() const override { return true; }
+
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
+                        size_t input_rows_count) override {
+        DCHECK_GE(arguments.size(), 1);
+
+        int argument_size = arguments.size();
+        ColumnPtr argument_columns[argument_size];
+
+        std::vector<const ColumnString::Offsets*> offsets_list(argument_size);
+        std::vector<const ColumnString::Chars*> chars_list(argument_size);
+
+        for (int i = 0; i < argument_size; ++i) {
+            argument_columns[i] = block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
+            if (auto col_str = assert_cast<const ColumnString*>(argument_columns[i].get())) {
+                offsets_list[i] = &col_str->get_offsets();
+                chars_list[i] = &col_str->get_chars();
+            } else {
+                return Status::RuntimeError(fmt::format(
+                        "Illegal column {} of argument of function {}",
+                        block.get_by_position(arguments[0]).column->get_name(), get_name()));
+            }
+        }
+
+        auto res = ColumnString::create();
+        auto& res_data = res->get_chars();
+        auto& res_offset = res->get_offsets();
+
+        res_offset.resize(input_rows_count);
+        for (size_t i = 0; i < input_rows_count; ++i) {
+            Md5Digest digest;
+            for (size_t j = 0; j < offsets_list.size(); ++j) {
+                auto& current_offsets = *offsets_list[j];
+                auto& current_chars = *chars_list[j];
+
+                int size = current_offsets[i] - current_offsets[i - 1] - 1;
+                if (size < 1) {
+                    continue;
+                }
+                digest.update(&current_chars[current_offsets[i - 1]], size);
+            }
+            digest.digest();
+
+            StringOP::push_value_string(std::string_view(digest.hex().c_str(), digest.hex().size()),
+                                        i, res_data, res_offset);
+        }
+
+        block.replace_by_position(result, std::move(res));
+        return Status::OK();
+    }
+};
 } // namespace doris::vectorized
