@@ -52,13 +52,19 @@ public:
         DCHECK_LT(i, _fn_contexts.size());
         return _fn_contexts[i];
     }
-    
+
     static Status filter_block(VExprContext* vexpr_ctx, Block* block, int column_to_keep);
     static Status filter_block(const std::unique_ptr<VExprContext*>& vexpr_ctx_ptr, Block* block,
                                int column_to_keep);
 
     static Block get_output_block_after_execute_exprs(const std::vector<vectorized::VExprContext*>&,
-            const Block&, Status&);
+                                                      const Block&, Status&);
+
+    int get_last_result_column_id() {
+        DCHECK(_last_result_column_id != -1);
+        return _last_result_column_id;
+    }
+
 private:
     friend class VExpr;
 
@@ -79,5 +85,7 @@ private:
 
     /// Pool backing fn_contexts_. Counts against the runtime state's UDF mem tracker.
     std::unique_ptr<MemPool> _pool;
+
+    int _last_result_column_id;
 };
 } // namespace doris::vectorized

@@ -18,6 +18,7 @@
 #pragma once
 
 #include "exec/olap_scan_node.h"
+#include "exprs/runtime_filter.h"
 
 namespace doris {
 class ObjectPool;
