@@ -126,6 +126,22 @@ DEFINE_HASH(doris::vectorized::Float64)
 
 #undef DEFINE_HASH
 
+template <>
+struct HashCRC32<doris::vectorized::UInt256> {
+    size_t operator()(const doris::vectorized::UInt256& x) const {
+#ifdef __SSE4_2__
+        doris::vectorized::UInt64 crc = -1ULL;
+        crc = _mm_crc32_u64(crc, x.a);
+        crc = _mm_crc32_u64(crc, x.b);
+        crc = _mm_crc32_u64(crc, x.c);
+        crc = _mm_crc32_u64(crc, x.d);
+        return crc;
+#else
+        return Hash128to64({Hash128to64({x.a, x.b}), Hash128to64({x.c, x.d})});
+#endif
+    }
+};
+
 /// It is reasonable to use for UInt8, UInt16 with sufficient hash table size.
 struct TrivialHash {
     template <typename T>
