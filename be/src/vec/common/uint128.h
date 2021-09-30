@@ -200,33 +200,6 @@ struct UInt256 {
         return *this;
     }
 };
-
-struct UInt256Hash {
-    size_t operator()(UInt256 x) const {
-        /// NOTE suboptimal
-        return Hash128to64({Hash128to64({x.a, x.b}), Hash128to64({x.c, x.d})});
-    }
-};
-
-#ifdef __SSE4_2__
-
-struct UInt256HashCRC32 {
-    size_t operator()(UInt256 x) const {
-        UInt64 crc = -1ULL;
-        crc = _mm_crc32_u64(crc, x.a);
-        crc = _mm_crc32_u64(crc, x.b);
-        crc = _mm_crc32_u64(crc, x.c);
-        crc = _mm_crc32_u64(crc, x.d);
-        return crc;
-    }
-};
-
-#else
-
-/// We do not need to use CRC32 on other platforms. NOTE This can be confusing.
-struct UInt256HashCRC32 : public UInt256Hash {};
-
-#endif
 } // namespace doris::vectorized
 
 /// Overload hash for type casting

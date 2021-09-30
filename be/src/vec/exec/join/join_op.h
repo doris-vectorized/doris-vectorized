@@ -108,8 +108,13 @@ struct RowRefList : RowRef {
         next = next->insert(std::move(row_ref), pool);
     }
 
+    inline void set_visited() { visited = true; }
+
+    inline bool is_visited() { return visited; }
+
 private:
     Batch* next = nullptr;
+    bool visited = false;
 };
 
 // using MapI32 = doris::vectorized::HashMap<UInt32, MappedAll, HashCRC32<UInt32>>;

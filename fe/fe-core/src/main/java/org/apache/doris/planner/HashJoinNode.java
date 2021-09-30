@@ -26,6 +26,7 @@ import org.apache.doris.analysis.SlotDescriptor;
 import org.apache.doris.analysis.SlotId;
 import org.apache.doris.analysis.SlotRef;
 import org.apache.doris.analysis.TableRef;
+import org.apache.doris.analysis.TupleDescriptor;
 import org.apache.doris.analysis.TupleId;
 import org.apache.doris.catalog.ColumnStats;
 import org.apache.doris.catalog.OlapTable;
@@ -84,7 +85,14 @@ public class HashJoinNode extends PlanNode {
         this.joinOp = innerRef.getJoinOp();
         for (Expr eqJoinPredicate : eqJoinConjuncts) {
             Preconditions.checkArgument(eqJoinPredicate instanceof BinaryPredicate);
-            this.eqJoinConjuncts.add((BinaryPredicate) eqJoinPredicate);
+            BinaryPredicate eqJoin = (BinaryPredicate) eqJoinPredicate;
+            if (eqJoin.getOp().equals(BinaryPredicate.Operator.EQ_FOR_NULL)) {
+                Preconditions.checkArgument(eqJoin.getChildren().size() == 2);
+                if (!eqJoin.getChild(0).isNullable() || !eqJoin.getChild(1).isNullable()) {
+                    eqJoin.setOp(BinaryPredicate.Operator.EQ);
+                }
+            }
+            this.eqJoinConjuncts.add(eqJoin);
         }
         this.distrMode = DistributionMode.NONE;
         this.otherJoinConjuncts = otherJoinConjuncts;
@@ -145,6 +153,10 @@ public class HashJoinNode extends PlanNode {
         // outSmap replace in outer join may cause NULL be replace by literal
         // so need replace the outsmap in nullableTupleID
         replaceOutputSmapForOuterJoin();
+        for (TupleId tupleId : nullableTupleIds) {
+            TupleDescriptor tupleDescriptor = analyzer.getTupleDesc(tupleId);
+            for (SlotDescriptor slotDescriptor : tupleDescriptor.getSlots()) slotDescriptor.setIsNullable(true);
+        }
         computeStats(analyzer);
 
         ExprSubstitutionMap combinedChildSmap = getCombinedChildWithoutTupleIsNullSmap();
