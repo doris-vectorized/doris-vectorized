@@ -88,7 +88,6 @@ struct HashMapCell {
     bool is_deleted() const { return false; }
 
     void set_mapped(const value_type& value_) { value.second = value_.second; }
-
 };
 
 template <typename Key, typename Mapped, typename Hash, typename State>
@@ -190,6 +189,14 @@ public:
     template <typename Func>
     void for_each_mapped(Func&& func) {
         for (auto& v : *this) func(v.get_second());
+    }
+
+    size_t get_size() {
+        size_t count = 0;
+        for (auto& v : *this) {
+            count += v.get_second().get_row_count();
+        }
+        return count;
     }
 
     mapped_type& ALWAYS_INLINE operator[](Key x) {

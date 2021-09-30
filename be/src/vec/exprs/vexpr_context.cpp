@@ -21,10 +21,16 @@
 
 namespace doris::vectorized {
 VExprContext::VExprContext(VExpr* expr)
-        : _root(expr), _prepared(false), _opened(false), _closed(false) {}
+        : _root(expr),
+          _prepared(false),
+          _opened(false),
+          _closed(false),
+          _last_result_column_id(-1) {}
 
 doris::Status VExprContext::execute(doris::vectorized::Block* block, int* result_column_id) {
-    return _root->execute(block, result_column_id);
+    Status st = _root->execute(block, result_column_id);
+    _last_result_column_id = *result_column_id;
+    return st;
 }
 
 doris::Status VExprContext::prepare(doris::RuntimeState* state,
@@ -41,20 +47,20 @@ void VExprContext::close(doris::RuntimeState* state) {
 }
 
 doris::Status VExprContext::clone(RuntimeState* state, VExprContext** new_ctx) {
-//    DCHECK(_prepared);
-//    DCHECK(_opened);
+    //    DCHECK(_prepared);
+    //    DCHECK(_opened);
     DCHECK(*new_ctx == NULL);
 
     *new_ctx = state->obj_pool()->add(new VExprContext(_root));
-//    (*new_ctx)->_pool.reset(new MemPool(_pool->mem_tracker()));
-//    for (int i = 0; i < _fn_contexts.size(); ++i) {
-//        (*new_ctx)->_fn_contexts.push_back(_fn_contexts[i]->impl()->clone((*new_ctx)->_pool.get()));
-//    }
-//    (*new_ctx)->_fn_contexts_ptr = &((*new_ctx)->_fn_contexts[0]);
+    //    (*new_ctx)->_pool.reset(new MemPool(_pool->mem_tracker()));
+    //    for (int i = 0; i < _fn_contexts.size(); ++i) {
+    //        (*new_ctx)->_fn_contexts.push_back(_fn_contexts[i]->impl()->clone((*new_ctx)->_pool.get()));
+    //    }
+    //    (*new_ctx)->_fn_contexts_ptr = &((*new_ctx)->_fn_contexts[0]);
 
-//    (*new_ctx)->_is_clone = true;
-//    (*new_ctx)->_prepared = true;
-//    (*new_ctx)->_opened = true;
+    //    (*new_ctx)->_is_clone = true;
+    //    (*new_ctx)->_prepared = true;
+    //    (*new_ctx)->_opened = true;
 
     return _root->open(state, *new_ctx);
 }

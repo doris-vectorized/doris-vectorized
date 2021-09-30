@@ -25,6 +25,7 @@
 #include "vec/common/hash_table/hash_table.h"
 #include "vec/exec/join/join_op.h"
 #include "vec/exec/join/vacquire_list.hpp"
+#include "vec/exprs/vruntime_filter.h"
 #include "vec/functions/function.h"
 
 namespace doris {
@@ -127,6 +128,7 @@ public:
     virtual Status get_next(RuntimeState* state, RowBatch* row_batch, bool* eos);
     virtual Status get_next(RuntimeState* state, Block* block, bool* eos);
     virtual Status close(RuntimeState* state);
+    HashTableVariants& get_hash_table_variants() { return _hash_table_variants; }
 
 private:
     using VExprContexts = std::vector<VExprContext*>;
@@ -197,7 +199,7 @@ private:
 
 private:
     Status _hash_table_build(RuntimeState* state);
-    Status _process_build_block(Block& block);
+    Status _process_build_block(RuntimeState* state, Block& block);
 
     Status extract_build_join_column(Block& block, NullMap& null_map, ColumnRawPtrs& raw_ptrs,
                                      bool& ignore_null, RuntimeProfile::Counter& expr_call_timer);
@@ -207,11 +209,17 @@ private:
 
     void _hash_table_init();
 
-    template <class HashTableContext, bool ignore_null, bool build_unique>
+    template <class HashTableContext, bool ignore_null, bool build_unique, bool has_runtime_filter>
     friend class ProcessHashTableBuild;
 
     template <class HashTableContext, bool ignore_null>
     friend class ProcessHashTableProbe;
+
+    template <class HashTableContext>
+    friend class ProcessRuntimeFilterBuild;
+
+    std::vector<TRuntimeFilterDesc> _runtime_filter_descs;
+    std::unordered_map<const Block*, std::vector<int>> _inserted_rows;
 };
 } // namespace vectorized
 } // namespace doris

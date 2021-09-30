@@ -19,23 +19,23 @@
 
 #include <string_view>
 
-#include "vec/core/field.h"
 #include "vec/columns/column_set.h"
-#include "vec/data_types/data_type_nullable.h"
+#include "vec/core/field.h"
 #include "vec/data_types/data_type_factory.hpp"
+#include "vec/data_types/data_type_nullable.h"
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
 
 VInPredicate::VInPredicate(const TExprNode& node)
-     : VExpr(node),
-       _is_not_in(node.in_predicate.is_not_in),
-       _is_prepare(false),
-       _null_in_set(false),
-       _hybrid_set() {}
+        : VExpr(node),
+          _is_not_in(node.in_predicate.is_not_in),
+          _is_prepare(false),
+          _null_in_set(false),
+          _hybrid_set() {}
 
 doris::Status VInPredicate::prepare(doris::RuntimeState* state, const doris::RowDescriptor& desc,
-                                 VExprContext* context) {
+                                    VExprContext* context) {
     RETURN_IF_ERROR(VExpr::prepare(state, desc, context));
 
     if (_is_prepare) {
@@ -49,7 +49,8 @@ doris::Status VInPredicate::prepare(doris::RuntimeState* state, const doris::Row
         return Status::InternalError("Unknown column type.");
     }
 
-    _expr_name = fmt::format("({} {} set)", _children[0]->expr_name(), _is_not_in ? "not_in" : "in");
+    _expr_name =
+            fmt::format("({} {} set)", _children[0]->expr_name(), _is_not_in ? "not_in" : "in");
     _is_prepare = true;
     return Status::OK();
 }
@@ -79,7 +80,7 @@ doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* conte
             continue;
         }
         const auto& ref_data = column->get_data_at(0);
-        _hybrid_set->insert((void*)(ref_data.data), ref_data.size);
+        _hybrid_set->insert(ref_data);
     }
     _set_param = COWHelper<IColumn, ColumnSet>::create(1, _hybrid_set);
 
@@ -97,7 +98,8 @@ doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* conte
     std::string head(_is_not_in ? "not_" : "");
     std::string tail(_null_in_set ? "_null_in_set" : "");
     std::string real_function_name = head + std::string(function_name) + tail;
-    _function = SimpleFunctionFactory::instance().get_function(real_function_name, argument_template, _data_type);
+    _function = SimpleFunctionFactory::instance().get_function(real_function_name,
+                                                               argument_template, _data_type);
     if (_function == nullptr) {
         return Status::NotSupported(
                 fmt::format("Function {} is not implemented", _fn.name.function_name));

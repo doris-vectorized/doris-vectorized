@@ -227,7 +227,6 @@ struct DateTimeFindOp : public CommonFindOp<DateTimeValue, BloomFilterAdaptor> {
 
 // avoid violating C/C++ aliasing rules.
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101684
-
 template <class BloomFilterAdaptor>
 struct DateFindOp : public CommonFindOp<DateTimeValue, BloomFilterAdaptor> {
     bool find_olap_engine(const BloomFilterAdaptor& bloom_filter, const void* data) const {
@@ -358,5 +357,6 @@ private:
     // if filter rate less than this, bloom filter will set always true
     constexpr static double _expect_filter_rate = 0.2;
 };
+
 } // namespace doris
 #endif
