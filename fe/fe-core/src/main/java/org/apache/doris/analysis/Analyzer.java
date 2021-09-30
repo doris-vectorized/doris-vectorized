@@ -802,10 +802,14 @@ public class Analyzer {
 
     /**
      * Register tids as being outer-joined by Join clause represented by rhsRef.
+     * All tuple of outer join should be null in slot desc
      */
     public void registerOuterJoinedTids(List<TupleId> tids, TableRef rhsRef) {
         for (TupleId tid: tids) {
             globalState.outerJoinedTupleIds.put(tid, rhsRef);
+            for (SlotDescriptor slotDescriptor : getTupleDesc(tid).getSlots()) {
+                slotDescriptor.setIsNullable(true);
+            }
         }
         if (LOG.isDebugEnabled()) {
             LOG.debug("registerOuterJoinedTids: " +
