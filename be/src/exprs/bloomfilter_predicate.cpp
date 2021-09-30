@@ -28,7 +28,12 @@
 namespace doris {
 
 IBloomFilterFuncBase* IBloomFilterFuncBase::create_bloom_filter(MemTracker* tracker,
-                                                                PrimitiveType type) {
+                                                                PrimitiveType type,
+                                                                bool vectorized_enable) {
+    if (vectorized_enable) {
+        return new VBloomFilterFunc<CurrentBloomFilterAdaptor>(tracker);
+    }
+
     switch (type) {
     case TYPE_BOOLEAN:
         return new BloomFilterFunc<TYPE_BOOLEAN, CurrentBloomFilterAdaptor>(tracker);
@@ -40,26 +45,31 @@ IBloomFilterFuncBase* IBloomFilterFuncBase::create_bloom_filter(MemTracker* trac
         return new BloomFilterFunc<TYPE_INT, CurrentBloomFilterAdaptor>(tracker);
     case TYPE_BIGINT:
         return new BloomFilterFunc<TYPE_BIGINT, CurrentBloomFilterAdaptor>(tracker);
+    case TYPE_LARGEINT:
+        return new BloomFilterFunc<TYPE_LARGEINT, CurrentBloomFilterAdaptor>(tracker);
+
     case TYPE_FLOAT:
         return new BloomFilterFunc<TYPE_FLOAT, CurrentBloomFilterAdaptor>(tracker);
     case TYPE_DOUBLE:
         return new BloomFilterFunc<TYPE_DOUBLE, CurrentBloomFilterAdaptor>(tracker);
+
+    case TYPE_DECIMALV2:
+        return new BloomFilterFunc<TYPE_DECIMALV2, CurrentBloomFilterAdaptor>(tracker);
+
     case TYPE_DATE:
         return new BloomFilterFunc<TYPE_DATE, CurrentBloomFilterAdaptor>(tracker);
     case TYPE_DATETIME:
         return new BloomFilterFunc<TYPE_DATETIME, CurrentBloomFilterAdaptor>(tracker);
-    case TYPE_DECIMALV2:
-        return new BloomFilterFunc<TYPE_DECIMALV2, CurrentBloomFilterAdaptor>(tracker);
-    case TYPE_LARGEINT:
-        return new BloomFilterFunc<TYPE_LARGEINT, CurrentBloomFilterAdaptor>(tracker);
+
     case TYPE_CHAR:
         return new BloomFilterFunc<TYPE_CHAR, CurrentBloomFilterAdaptor>(tracker);
     case TYPE_VARCHAR:
         return new BloomFilterFunc<TYPE_VARCHAR, CurrentBloomFilterAdaptor>(tracker);
     case TYPE_STRING:
-        return new BloomFilterFunc<TYPE_STRING, CurrentBloomFilterAdaptor>(tracker); 
+        return new BloomFilterFunc<TYPE_STRING, CurrentBloomFilterAdaptor>(tracker);
+
     default:
-        return nullptr;
+        DCHECK(false) << "Invalid type.";
     }
 
     return nullptr;

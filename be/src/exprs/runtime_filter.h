@@ -120,11 +120,12 @@ public:
 
     // insert data to build filter
     // only used for producer
-    void insert(void* data);
+    void insert(const void* data);
+    void insert(const StringRef& data);
 
     // publish filter
     // push filter to remote node or push down it to scan_node
-    Status publish(HashJoinNode* hash_join_node, ExprContext* probe_ctx);
+    Status publish();
 
     void publish_finally();
 
@@ -209,7 +210,6 @@ protected:
     static Status _create_wrapper(const T* param, MemTracker* tracker, ObjectPool* pool,
                                   std::unique_ptr<RuntimePredicateWrapper>* wrapper);
 
-protected:
     RuntimeState* _state;
     MemTracker* _mem_tracker;
     ObjectPool* _pool;
@@ -311,7 +311,7 @@ public:
     // should call this method after insert
     void ready_for_publish();
     // publish runtime filter
-    void publish(HashJoinNode* hash_join_node);
+    void publish();
 
 private:
     const std::vector<ExprContext*>& _probe_expr_context;

@@ -37,10 +37,16 @@ public:
     VExpr* root() { return _root; }
     void set_root(VExpr* expr) { _root = expr; }
 
+    int get_last_result_column_id() {
+        DCHECK(_last_result_column_id != -1);
+        return _last_result_column_id;
+    }
+
 private:
     VExpr* _root;
     bool _prepared;
     bool _opened;
     bool _closed;
+    int _last_result_column_id;
 };
 } // namespace doris::vectorized

@@ -252,7 +252,7 @@ Status HashJoinNode::open(RuntimeState* state) {
         COUNTER_UPDATE(_build_timer, _push_compute_timer->value());
         {
             SCOPED_TIMER(_push_down_timer);
-            runtime_filter_slots.publish(this);
+            runtime_filter_slots.publish();
         }
         Status open_status = child(0)->open(state);
         RETURN_IF_ERROR(open_status);

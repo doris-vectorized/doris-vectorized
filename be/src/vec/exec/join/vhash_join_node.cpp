@@ -19,6 +19,7 @@
 
 #include "gen_cpp/PlanNodes_types.h"
 #include "runtime/mem_tracker.h"
+#include "runtime/runtime_filter_mgr.h"
 #include "util/defer_op.h"
 #include "vec/core/materialize_block.h"
 #include "vec/exprs/vexpr.h"
@@ -89,6 +90,8 @@ struct ProcessHashTableBuild {
                 _join_node->_acquire_list.remove_last_element();
             }
         }
+        COUNTER_UPDATE(_join_node->_build_table_expanse_timer,
+                       hash_table_ctx.hash_table.get_resize_timer_value());
 
         COUNTER_UPDATE(_join_node->_build_table_expanse_timer,
                        hash_table_ctx.hash_table.get_resize_timer_value());
@@ -101,6 +104,32 @@ private:
     int _skip_rows;
     Block& _acquired_block;
     ColumnRawPtrs& _build_raw_ptrs;
+    HashJoinNode* _join_node;
+};
+
+template <class HashTableContext>
+struct ProcessRuntimeFilterBuild {
+    ProcessRuntimeFilterBuild(HashJoinNode* join_node) : _join_node(join_node) {}
+
+    Status operator()(RuntimeState* state, HashTableContext& hash_table_ctx) {
+        if (_join_node->_runtime_filter_descs.empty()) {
+            return Status::OK();
+        }
+
+        VRuntimeFilterSlots* runtime_filter_slots =
+                new VRuntimeFilterSlots(_join_node->_probe_expr_ctxs, _join_node->_build_expr_ctxs,
+                                        _join_node->_runtime_filter_descs);
+        RETURN_IF_ERROR(runtime_filter_slots->init(state, hash_table_ctx.hash_table.get_size()));
+
+        auto func = [&](RowRefList& rows) { runtime_filter_slots->insert(rows); };
+        hash_table_ctx.hash_table.for_each_mapped(func);
+
+        runtime_filter_slots->publish();
+
+        return Status::OK();
+    }
+
+private:
     HashJoinNode* _join_node;
 };
 
@@ -473,7 +502,9 @@ HashJoinNode::HashJoinNode(ObjectPool* pool, const TPlanNode& tnode, const Descr
                              _join_op == TJoinOp::LEFT_SEMI_JOIN),
           _is_right_semi_anti(_join_op == TJoinOp::RIGHT_ANTI_JOIN ||
                               _join_op == TJoinOp::RIGHT_SEMI_JOIN),
-          _is_outer_join(_match_all_build || _match_all_probe) {}
+          _is_outer_join(_match_all_build || _match_all_probe) {
+    _runtime_filter_descs = tnode.runtime_filters;
+}
 
 HashJoinNode::~HashJoinNode() = default;
 
@@ -521,6 +552,11 @@ Status HashJoinNode::init(const TPlanNode& tnode, RuntimeState* state) {
         // build table should not be deduplicated.
         _build_unique = false;
         _have_other_join_conjunct = true;
+    }
+
+    for (const auto& filter_desc : _runtime_filter_descs) {
+        RETURN_IF_ERROR(state->runtime_filter_mgr()->regist_filter(RuntimeFilterRole::PRODUCER,
+                                                                   filter_desc));
     }
 
     return Status::OK();
@@ -749,7 +785,18 @@ Status HashJoinNode::_hash_table_build(RuntimeState* state) {
         RETURN_IF_ERROR(_process_build_block(block));
         RETURN_IF_LIMIT_EXCEEDED(state, "Hash join, while constructing the hash table.");
     }
-    return Status::OK();
+
+    return std::visit(
+            [&](auto&& arg) -> Status {
+                using HashTableCtxType = std::decay_t<decltype(arg)>;
+                if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
+                    ProcessRuntimeFilterBuild<HashTableCtxType> runtime_filter_build_process(this);
+                    return runtime_filter_build_process(state, arg);
+                } else {
+                    LOG(FATAL) << "FATAL: uninited hash table";
+                }
+            },
+            _hash_table_variants);
 }
 
 Status HashJoinNode::extract_build_join_column(Block& block, NullMap& null_map,
@@ -834,7 +881,6 @@ Status HashJoinNode::_process_build_block(Block& block) {
     COUNTER_UPDATE(_build_rows_counter, rows);
 
     auto& acquired_block = _acquire_list.acquire(std::move(block));
-
     materialize_block_inplace(acquired_block);
 
     ColumnRawPtrs raw_ptrs(_build_expr_ctxs.size());
@@ -879,7 +925,6 @@ Status HashJoinNode::_process_build_block(Block& block) {
                 }
             },
             _hash_table_variants);
-
     return st;
 }
 

@@ -33,8 +33,8 @@ struct RowRef {
     bool visited = false;
 
     RowRef() {}
-    RowRef(const Block* block_ptr, size_t row_num_count, bool is_visited = false) :
-        block(block_ptr), row_num(row_num_count), visited(is_visited) {}
+    RowRef(const Block* block_ptr, size_t row_num_count, bool is_visited = false)
+            : block(block_ptr), row_num(row_num_count), visited(is_visited) {}
 };
 
 /// Single linked list of references to rows. Used for ALL JOINs (non-unique JOINs)
@@ -68,11 +68,24 @@ struct RowRefList : RowRef {
     public:
         ForwardIterator(RowRefList* begin)
                 : root(begin), first(true), batch(root->next), position(0) {}
+        ForwardIterator() : root(nullptr), first(false), batch(nullptr), position(0) {}
 
-        RowRef* operator->() {
-            if (first) return root;
-            return &batch->row_refs[position];
+        RowRef& operator*() {
+            if (first) return *root;
+            return batch->row_refs[position];
         }
+        RowRef* operator->() { return &(**this); }
+
+        bool operator==(const ForwardIterator& rhs) const {
+            if (first) {
+                return rhs.first;
+            }
+            if (batch == nullptr) {
+                return rhs.batch == nullptr;
+            }
+            return batch == rhs.batch && position == rhs.position;
+        }
+        bool operator!=(const ForwardIterator& rhs) const { return !(*this == rhs); }
 
         void operator++() {
             if (first) {
@@ -102,9 +115,12 @@ struct RowRefList : RowRef {
     RowRefList(const Block* block_, size_t row_num_) : RowRef(block_, row_num_) {}
 
     ForwardIterator begin() { return ForwardIterator(this); }
+    ForwardIterator end() { return ForwardIterator(); }
 
     /// insert element after current one
     void insert(RowRef&& row_ref, Arena& pool) {
+        row_size++;
+
         if (!next) {
             next = pool.alloc<Batch>();
             *next = Batch(nullptr);
@@ -112,8 +128,11 @@ struct RowRefList : RowRef {
         next = next->insert(std::move(row_ref), pool);
     }
 
+    int get_row_size() { return row_size; }
+
 private:
     Batch* next = nullptr;
+    int row_size = 1;
 };
 
 // using MapI32 = doris::vectorized::HashMap<UInt32, MappedAll, HashCRC32<UInt32>>;

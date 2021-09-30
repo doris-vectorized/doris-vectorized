@@ -84,6 +84,10 @@ public:
     virtual bool find(const void* data) const = 0;
     virtual bool find_olap_engine(const void* data) const = 0;
 
+    virtual void insert(const StringRef& value) = 0;
+    virtual bool find(const StringRef& value) const = 0;
+    virtual bool find_olap_engine(const StringRef& value) const = 0;
+
     virtual Status merge(IBloomFilterFuncBase* bloomfilter_func) = 0;
     virtual Status assign(const char* data, int len) = 0;
 
@@ -91,7 +95,8 @@ public:
     virtual MemTracker* tracker() = 0;
     virtual void light_copy(IBloomFilterFuncBase* other) = 0;
 
-    static IBloomFilterFuncBase* create_bloom_filter(MemTracker* tracker, PrimitiveType type);
+    static IBloomFilterFuncBase* create_bloom_filter(MemTracker* tracker, PrimitiveType type,
+                                                     bool vectorized_enable = false);
 };
 
 template <class BloomFilterAdaptor>
@@ -317,8 +322,65 @@ public:
         return dummy.find_olap_engine(*this->_bloom_filter, data);
     }
 
+    void insert(const StringRef& value) { DCHECK(false) << "Invalid call."; }
+
+    bool find(const StringRef& value) const {
+        DCHECK(false) << "Invalid call.";
+        return true;
+    }
+
+    bool find_olap_engine(const StringRef& value) const {
+        DCHECK(false) << "Invalid call.";
+        return true;
+    }
+
 private:
     typename BloomFilterTypeTraits<type, BloomFilterAdaptor>::FindOp dummy;
+};
+
+template <class BloomFilterAdaptor>
+struct StringRefFindOp {
+    ALWAYS_INLINE void insert(BloomFilterAdaptor& bloom_filter, const StringRef& value) const {
+        bloom_filter.add_bytes(value.data, value.size);
+    }
+    ALWAYS_INLINE bool find(const BloomFilterAdaptor& bloom_filter, const StringRef& value) const {
+        return bloom_filter.test_bytes(value.data, value.size);
+    }
+    ALWAYS_INLINE bool find_olap_engine(const BloomFilterAdaptor& bloom_filter,
+                                        const StringRef& value) const {
+        return find(bloom_filter, value);
+    }
+};
+
+template <class BloomFilterAdaptor>
+class VBloomFilterFunc final : public BloomFilterFuncBase<BloomFilterAdaptor> {
+public:
+    VBloomFilterFunc(MemTracker* tracker) : BloomFilterFuncBase<BloomFilterAdaptor>(tracker) {}
+
+    ~VBloomFilterFunc() = default;
+
+    void insert(const void* data) { DCHECK(false) << "Invalid call."; }
+
+    bool find(const void* data) const override {
+        DCHECK(false) << "Invalid call.";
+        return true;
+    }
+
+    bool find_olap_engine(const void* data) const override {
+        DCHECK(false) << "Invalid call.";
+        return true;
+    }
+
+    void insert(const StringRef& value) { dummy.insert(*this->_bloom_filter, value); }
+
+    bool find(const StringRef& value) const { return dummy.find(*this->_bloom_filter, value); }
+
+    bool find_olap_engine(const StringRef& value) const {
+        return dummy.find_olap_engine(*this->_bloom_filter, value);
+    }
+
+private:
+    StringRefFindOp<BloomFilterAdaptor> dummy;
 };
 
 // BloomFilterPredicate only used in runtime filter

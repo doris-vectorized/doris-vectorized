@@ -296,6 +296,12 @@ public class ArithmeticExpr extends Expr {
                     fn = getBuiltinFunction(analyzer, op.name, collectChildReturnTypes(),
                             Function.CompareMode.IS_IDENTICAL);
                     break;
+                case INT_DIVIDE:
+                    // Must be bigint
+                    if (t1.isDateType() || t2.isDateType()) castBinaryOp(Type.BIGINT);
+                    fn = getBuiltinFunction(analyzer, op.name, collectChildReturnTypes(),
+                            Function.CompareMode.IS_IDENTICAL);
+                    break;
                 case DIVIDE:
                     t1 = getChild(0).getType().getNumResultType();
                     t2 = getChild(1).getType().getNumResultType();

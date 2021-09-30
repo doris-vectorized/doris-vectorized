@@ -33,7 +33,6 @@
 #include "util/binary_cast.hpp"
 #include "util/stopwatch.hpp"
 
-
 namespace doris {
 
 // Define macros for updating counters.  The macros make it very easy to disable

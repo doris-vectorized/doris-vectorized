@@ -214,7 +214,6 @@ Status OlapScanNode::open(RuntimeState* state) {
 
     // acquire runtime filter
     _runtime_filter_ctxs.resize(_runtime_filter_descs.size());
-
     for (size_t i = 0; i < _runtime_filter_descs.size(); ++i) {
         auto& filter_desc = _runtime_filter_descs[i];
         IRuntimeFilter* runtime_filter = nullptr;
@@ -1421,12 +1420,14 @@ void OlapScanNode::transfer_thread(RuntimeState* state) {
         auto iter = olap_scanners.begin();
         if (thread_token != nullptr) {
             while (iter != olap_scanners.end()) {
-                auto s = thread_token->submit_func(std::bind(&OlapScanNode::scanner_thread, this, *iter));
+                auto s = thread_token->submit_func(
+                        std::bind(&OlapScanNode::scanner_thread, this, *iter));
                 if (s.ok()) {
                     (*iter)->start_wait_worker_timer();
                     olap_scanners.erase(iter++);
                 } else {
-                    LOG(FATAL) << "Failed to assign scanner task to thread pool! " << s.get_error_msg();
+                    LOG(FATAL) << "Failed to assign scanner task to thread pool! "
+                               << s.get_error_msg();
                 }
                 ++_total_assign_num;
             }
