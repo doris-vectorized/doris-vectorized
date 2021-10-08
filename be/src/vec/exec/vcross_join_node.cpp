@@ -79,6 +79,8 @@ Status VCrossJoinNode::construct_build_side(RuntimeState* state) {
     }
 
     COUNTER_UPDATE(_build_row_counter, _build_rows);
+    // If right table in join is empty, the node is eos
+    _eos = _build_rows == 0;
     return Status::OK();
 }
 
@@ -96,47 +98,59 @@ Status VCrossJoinNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         return Status::OK();
     }
 
+    auto dst_columns = get_mutable_columns(block);
     ScopedTimer<MonotonicStopWatch> timer(_left_child_timer);
-    // Check to see if we're done processing the current left child batch
-    if (_current_build_pos == _build_blocks.size()) {
-        _current_build_pos = 0;
-        _left_block_pos++;
-        
-        if (_left_block_pos == _left_block.rows()) {
-            _left_block_pos = 0;
 
-            if (_left_side_eos) {
-                *eos = _eos = true;
-            } else {
-                do {
-                    _left_block.clear_column_data();
-                    timer.stop();
-                    RETURN_IF_ERROR(child(0)->get_next(state, &_left_block, &_left_side_eos));
-                    timer.start();
-                } while (_left_block.rows() == 0 && !_left_side_eos);
-                COUNTER_UPDATE(_left_child_row_counter, _left_block.rows());
-                *eos = _eos = _left_side_eos;
+    while (block->rows() < state->batch_size() && !_eos) {
+        // Check to see if we're done processing the current left child batch
+        if (_current_build_pos == _build_blocks.size()) {
+            _current_build_pos = 0;
+            _left_block_pos++;
+
+            if (_left_block_pos == _left_block.rows()) {
+                _left_block_pos = 0;
+
+                if (_left_side_eos) {
+                    *eos = _eos = true;
+                } else {
+                    do {
+                        _left_block.clear_column_data();
+                        timer.stop();
+                        RETURN_IF_ERROR(child(0)->get_next(state, &_left_block, &_left_side_eos));
+                        timer.start();
+                    } while (_left_block.rows() == 0 && !_left_side_eos);
+                    COUNTER_UPDATE(_left_child_row_counter, _left_block.rows());
+                    *eos = _eos = _left_side_eos;
+                }
             }
         }
+
+        if (!_eos) {
+            do {
+                const auto &now_process_build_block = _build_blocks[_current_build_pos++];
+                process_left_child_block(dst_columns, now_process_build_block);
+            } while (block->rows() < state->batch_size() && _current_build_pos < _build_blocks.size());
+        }
+    }
+    dst_columns.clear();
+
+    if (_vconjunct_ctx_ptr) {
+        int result_column_id = -1;
+        int orig_columns = block->columns();
+        (*_vconjunct_ctx_ptr)->execute(block, &result_column_id);
+        Block::filter_block(block, result_column_id, orig_columns);
     }
 
-    if (!_eos) {
-        auto block_nums = 0;
-        do {
-            // Compute max rows that should be added to block
-            const auto &now_process_build_block = _build_blocks[_current_build_pos++];
-            int64_t max_added_rows = now_process_build_block.rows();
+    if (_limit != -1 && _limit - _num_rows_returned < block->rows()) {
+        block->set_num_rows(_limit - _num_rows_returned);
+    }
 
-            if (limit() != -1) {
-                max_added_rows = std::min(max_added_rows, limit() - rows_returned());
-            }
-            block_nums = process_left_child_block(block, now_process_build_block, max_added_rows);
-        } while (block_nums == 0 && _current_build_pos < _build_blocks.size());
+    _num_rows_returned += block->rows();
+    COUNTER_SET(_rows_returned_counter, _num_rows_returned);
 
-        _num_rows_returned += block_nums;
-        COUNTER_SET(_rows_returned_counter, _num_rows_returned);
-
-        *eos = _eos = reached_limit();
+    if (_limit != -1) {
+        _eos = reached_limit();
+        *eos = _eos;
     }
 
     return Status::OK();
@@ -152,51 +166,32 @@ std::string VCrossJoinNode::build_list_debug_string() {
     return out.str();
 }
 
-int VCrossJoinNode::process_left_child_block(Block* block, const Block& now_process_build_block,
-                                            int max_added_rows) {
-    MutableColumns dst_columns(_num_existing_columns + _num_columns_to_add);
-
+MutableColumns VCrossJoinNode::get_mutable_columns(Block* block) {
     bool mem_reuse = block->mem_reuse();
-    for (size_t i = 0; i < _num_existing_columns; ++i) {
-        const ColumnWithTypeAndName & src_column = _left_block.get_by_position(i);
-        if (mem_reuse) {
-            dst_columns[i] = std::move(*block->get_by_position(i).column).mutate();
-        } else {
-            dst_columns[i] = src_column.type->create_column();
-            block->insert(src_column);
+    if (!mem_reuse) {
+        for (size_t i = 0; i < _num_existing_columns; ++i) {
+            const ColumnWithTypeAndName& src_column = _left_block.get_by_position(i);
+            block->insert({nullptr, src_column.type, src_column.name});
         }
+
+        for (size_t i = 0; i < _num_columns_to_add; ++i) {
+            const ColumnWithTypeAndName& src_column = _build_blocks[0].get_by_position(i);
+            block->insert({nullptr, src_column.type, src_column.name});
+        }
+    }
+    return block->mutate_columns();
+}
+
+void VCrossJoinNode::process_left_child_block(MutableColumns& dst_columns, const Block& now_process_build_block) {
+    const int max_added_rows = now_process_build_block.rows();
+    for (size_t i = 0; i < _num_existing_columns; ++i) {
+        const ColumnWithTypeAndName& src_column = _left_block.get_by_position(i);
         dst_columns[i]->insert_many_from(*src_column.column, _left_block_pos, max_added_rows);
     }
-
     for (size_t i = 0; i < _num_columns_to_add; ++i) {
-        const ColumnWithTypeAndName &src_column = now_process_build_block.get_by_position(i);
-        if (mem_reuse) {
-            dst_columns[_num_existing_columns + i] =
-                    std::move(*block->get_by_position(_num_existing_columns + i).column).mutate();
-        } else {
-            dst_columns[_num_existing_columns + i] = src_column.column->clone_empty();
-            block->insert(src_column);
-        }
+        const ColumnWithTypeAndName& src_column = now_process_build_block.get_by_position(i);
         dst_columns[_num_existing_columns + i]->insert_range_from(*src_column.column.get(), 0, max_added_rows);
     }
-
-    if (!mem_reuse) {
-        *block = block->clone_with_columns(std::move(dst_columns));
-    } else {
-        dst_columns.clear();
-    }
-
-    if (_vconjunct_ctx_ptr) {
-        int result_column_id = -1;
-        int orig_columns = block->columns();
-        (*_vconjunct_ctx_ptr)->execute(block, &result_column_id);
-        Block::filter_block(block, result_column_id, orig_columns);
-    }
-
-    if (block->rows() > max_added_rows) {
-        block->set_num_rows(max_added_rows);
-    }
-
-    return block->rows();
 }
+
 } // namespace doris
