@@ -596,6 +596,7 @@ void register_function_string(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStringRPad>();
     factory.register_function<FunctionToBase64>();
     factory.register_function<FunctionFromBase64>();
+    factory.register_function<FunctionSplitPart>();
 
     factory.register_alias(FunctionLeft::name, "strleft");
     factory.register_alias(FunctionRight::name, "strright");
