@@ -698,4 +698,124 @@ public:
     }
 };
 
+class FunctionSplitPart : public IFunction {
+public:
+    static constexpr auto name = "split_part";
+    static FunctionPtr create() { return std::make_shared<FunctionSplitPart>(); }
+    String get_name() const override { return name; }
+    size_t get_number_of_arguments() const override { return 3; }
+
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
+        return make_nullable(std::make_shared<DataTypeString>());
+    }
+
+    bool use_default_implementation_for_nulls() const override { return false; }
+    bool use_default_implementation_for_constants() const override { return true; }
+
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
+                        size_t input_rows_count) override {
+        DCHECK_EQ(arguments.size(), 3);
+
+        auto null_map = ColumnUInt8::create(input_rows_count, 0);
+        // Create a zero column to simply implement
+        auto const_null_map = ColumnUInt8::create(input_rows_count, 0);
+        auto res = ColumnString::create();
+
+        auto& null_map_data = null_map->get_data();
+        auto& res_offsets = res->get_offsets();
+        auto& res_chars = res->get_chars();
+        res_offsets.resize(input_rows_count);
+
+        size_t argument_size = arguments.size();
+        ColumnPtr argument_columns[argument_size];
+        for (size_t i = 0; i < argument_size; ++i) {
+            argument_columns[i] =
+                    block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
+            if (auto* nullable = check_and_get_column<const ColumnNullable>(*argument_columns[i])) {
+                argument_columns[i] = nullable->get_nested_column_ptr();
+                VectorizedUtils::update_null_map(null_map->get_data(),
+                                                 nullable->get_null_map_data());
+            }
+        }
+
+        auto str_col = assert_cast<const ColumnString*>(argument_columns[0].get());
+
+        auto delimiter_col = assert_cast<const ColumnString*>(argument_columns[1].get());
+
+        auto part_num_col = assert_cast<const ColumnInt32*>(argument_columns[2].get());
+        auto& part_num_col_data = part_num_col->get_data();
+
+        for (size_t i = 0; i < input_rows_count; ++i) {
+            if (part_num_col_data[i] <= 0) {
+                StringOP::push_null_string(i, res_chars, res_offsets, null_map_data);
+                continue;
+            }
+
+            auto delimiter = delimiter_col->get_data_at(i);
+            auto delimiter_str = delimiter_col->get_data_at(i).to_string();
+            auto part_number = part_num_col_data[i];
+            auto str = str_col->get_data_at(i);
+            if (delimiter.size == 0) {
+                StringOP::push_empty_string(i, res_chars, res_offsets);
+            } else if (delimiter.size == 1) {
+                // If delimiter is a char, use memchr to split
+                int32_t pre_offset = -1;
+                int32_t offset = -1;
+                int32_t num = 0;
+                while (num < part_number) {
+                    pre_offset = offset;
+                    size_t n = str.size - offset - 1;
+                    const char* pos = reinterpret_cast<const char*>(memchr(str.data + offset + 1, delimiter_str[0], n));
+                    if (pos != nullptr) {
+                        offset = pos - str.data;
+                        num++;
+                    } else {
+                        offset = str.size;
+                        num = (num == 0) ? 0 : num + 1;
+                        break;
+                    }
+                }
+
+                if (num == part_number) {
+                    StringOP::push_value_string(
+                            std::string_view {reinterpret_cast<const char*>(str.data + pre_offset + 1), (size_t)offset - pre_offset - 1}, i, res_chars,
+                            res_offsets);
+                } else {
+                    StringOP::push_null_string(i, res_chars, res_offsets, null_map_data);
+                }
+            } else {
+                // If delimiter is a string, use memmem to split
+                int32_t pre_offset = -delimiter.size;
+                int32_t offset = -delimiter.size;
+                int32_t num = 0;
+                while (num < part_number) {
+                    pre_offset = offset;
+                    size_t n = str.size - offset - delimiter.size;
+                    char* pos = reinterpret_cast<char*>(
+                            memmem(str.data + offset + delimiter.size, n, delimiter.data, delimiter.size));
+                    if (pos != nullptr) {
+                        offset = pos - str.data;
+                        num++;
+                    } else {
+                        offset = str.size;
+                        num = (num == 0) ? 0 : num + 1;
+                        break;
+                    }
+                }
+
+                if (num == part_number) {
+                    StringOP::push_value_string(
+                            std::string_view {reinterpret_cast<const char*>(str.data + pre_offset + delimiter.size), (size_t)offset - pre_offset - delimiter.size}, i, res_chars,
+                            res_offsets);
+                } else {
+                    StringOP::push_null_string(i, res_chars, res_offsets, null_map_data);
+                }
+            }
+        }
+        block.get_by_position(result).column =
+                ColumnNullable::create(std::move(res), std::move(null_map));
+        return Status::OK();
+    }
+};
+
 } // namespace doris::vectorized
