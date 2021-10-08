@@ -942,7 +942,7 @@ visible_functions = [
         '', '', '', ''],
     [['split_part'], 'VARCHAR', ['VARCHAR', 'VARCHAR', 'INT'],
         '_ZN5doris15StringFunctions10split_partEPN9doris_udf15FunctionContextERKNS1_9StringValES6_RKNS1_6IntValE',
-        '', '', '', ''],
+        '', '', 'vec', 'ALWAYS_NULLABLE'],
 
     # Longtext function
     [['substr', 'substring'], 'STRING', ['STRING', 'INT'],
@@ -1064,7 +1064,7 @@ visible_functions = [
         '', '', '', ''],
     [['split_part'], 'STRING', ['STRING', 'STRING', 'INT'],
         '_ZN5doris15StringFunctions10split_partEPN9doris_udf15FunctionContextERKNS1_9StringValES6_RKNS1_6IntValE',
-        '', '', '', ''],
+        '', '', 'vec', 'ALWAYS_NULLABLE'],
 
     # Utility functions
     [['sleep'], 'BOOLEAN', ['INT'],
