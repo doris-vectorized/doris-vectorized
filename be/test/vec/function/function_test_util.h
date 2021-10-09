@@ -118,6 +118,21 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
             insert_column_to_block<DataTypeInt32>(columns, ctn, std::move(col), std::move(null_map),
                                                   block, col_name, i, is_const, row_size);
 
+        } else if (tp == TypeIndex::Int64) {
+            auto col = ColumnInt64::create();
+
+            for (int j = 0; j < row_size; j++) {
+                if (data_set[j].first[i].type() == typeid(Null)) {
+                    null_map_data[j] = true;
+                    col->insert_default();
+                    continue;
+                }
+                auto value = std::any_cast<int64>(data_set[j].first[i]);
+                col->insert_data(reinterpret_cast<char*>(&value), 0);
+            }
+            insert_column_to_block<DataTypeInt64>(columns, ctn, std::move(col), std::move(null_map),
+                                                  block, col_name, i, is_const, row_size);
+
         } else if (tp == TypeIndex::Float64) {
             auto col = ColumnFloat64::create();
 
