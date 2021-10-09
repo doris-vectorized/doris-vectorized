@@ -308,6 +308,7 @@ struct TypeDescriptor {
         case TYPE_DOUBLE:
             return std::make_shared<vectorized::DataTypeFloat64>();
 
+        case TYPE_STRING:
         case TYPE_CHAR:
         case TYPE_VARCHAR:
         case TYPE_HLL:
