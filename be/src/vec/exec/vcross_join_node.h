@@ -54,7 +54,7 @@ protected:
     Status construct_build_side(RuntimeState *state) override;
 
 private:
-    // List of build batches, constructed in prepare()
+    // List of build blocks, constructed in prepare()
     Blocks _build_blocks;
     size_t _current_build_pos = 0;
 
@@ -63,14 +63,16 @@ private:
 
     uint64_t _build_rows = 0;
     uint64_t _total_mem_usage = 0;
-    // Processes a batch from the left child.
-    //  output_batch: the batch for resulting tuple rows
-    //  batch: the batch from the left child to process.  This function can be called to
-    //    continue processing a batch in the middle
-    //  max_added_rows: maximum rows that can be added to output_batch
-    // return the number of rows added to output_batch
-    int process_left_child_block(Block* block, const Block& now_process_build_block,
-                                            int max_added_rows);
+
+    // Build mutable columns to insert data.
+    // if block can mem reuse, just clear data in block
+    // else build a new block and alloc mem of column from left and right child block
+    MutableColumns get_mutable_columns(Block* block);
+    
+    // Processes a block from the left child.
+    //  dst_columns: left_child_row and now_process_build_block to construct a bundle column of new block
+    //  now_process_build_block: right child block now to process
+    void process_left_child_block(MutableColumns& dst_columns, const Block& now_process_build_block);
 
     // Returns a debug string for _build_rows. This is used for debugging during the
     // build list construction and before doing the join.
