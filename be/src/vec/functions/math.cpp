@@ -257,11 +257,6 @@ struct FloorName {
 };
 using FunctionFloor = FunctionMathUnary<UnaryFunctionVectorized<FloorName, std::floor, DataTypeInt64>>;
 
-struct RoundName {
-    static constexpr auto name = "round";
-};
-using FunctionRound = FunctionMathUnary<UnaryFunctionVectorized<RoundName, std::round, DataTypeInt64>>;
-
 struct PowName {
     static constexpr auto name = "pow";
 };
@@ -366,6 +361,63 @@ private:
             result[--index] = '0' + (n & 1);
         } while (n >>= 1);
         return std::string(result + index, max_bits - index);
+    }
+};
+
+class FunctionRound : public IFunction {
+public:
+    static constexpr auto name = "round";
+    static FunctionPtr create() { return std::make_shared<FunctionRound>(); }
+
+private:
+    String get_name() const override { return name; }
+    size_t get_number_of_arguments() const override { return 2; }
+    bool is_variadic() const override { return true; }
+    bool use_default_implementation_for_constants() const override { return true; }
+
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
+        if (arguments.size() == 1) {
+            return std::make_shared<DataTypeInt64>();
+        } else if (arguments.size() == 2) {
+            return std::make_shared<DataTypeFloat64>();
+        } else {
+            DCHECK(false) << "error about round function arguments size, it should be 1 or 2";
+            return nullptr;
+        }
+    }
+
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
+                        size_t input_rows_count) override {
+        DCHECK_GE(arguments.size(), 1);
+        int argument_size = arguments.size();
+        ColumnPtr argument_column[argument_size];
+        for (int i = 0; i < argument_size; ++i) {
+            argument_column[i] =
+                    block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
+        }
+        auto data_column = assert_cast<const ColumnVector<Float64>*>(argument_column[0].get());
+        if (arguments.size() == 1) { //round(double)-->int64
+            auto res_column = ColumnInt64::create(input_rows_count);
+            auto& res_data = assert_cast<ColumnInt64&>(*res_column).get_data();
+
+            for (int i = 0; i < input_rows_count; ++i) {
+                res_data[i] = std::round(data_column->get_data()[i]);
+            }
+            block.replace_by_position(result, std::move(res_column));
+        } else {                     //round(double,int)-->double
+            auto specific_data_column =
+                    assert_cast<const ColumnVector<Int32>*>(argument_column[1].get());
+            auto res_column = ColumnFloat64::create(input_rows_count);
+            auto& res_data = assert_cast<ColumnFloat64&>(*res_column).get_data();
+
+            for (int i = 0; i < input_rows_count; ++i) {
+                res_data[i] = my_double_round(data_column->get_data()[i],
+                                              specific_data_column->get_data()[i], false, false);
+            }
+            block.replace_by_position(result, std::move(res_column));
+        }
+
+        return Status::OK();
     }
 };
 
