@@ -273,12 +273,35 @@ struct BitmapHasAny {
     }
 };
 
+struct NameBitmapMin {
+    static constexpr auto name = "bitmap_min";
+};
+
+struct BitmapMin {
+    using ReturnType = DataTypeInt64;
+    static constexpr auto TYPE_INDEX = TypeIndex::BitMap;
+    using Type = DataTypeBitMap::FieldType;
+    using ReturnColumnType = ColumnVector<Int64>;
+    using ReturnColumnContainer = ColumnVector<Int64>::Container;
+
+    static Status vector(const std::vector<BitmapValue>& data, ReturnColumnContainer& res) {
+        int size = data.size();
+        res.reserve(size);
+        for (int i = 0; i < size; ++i) {
+            auto min = const_cast<std::vector<BitmapValue>&>(data)[i].minimum();
+            res.push_back(min.val);
+        }
+        return Status::OK();
+    }
+};
+
 using FunctionBitmapEmpty = FunctionConst<BitmapEmpty, false>;
 using FunctionToBitmap = FunctionUnaryToType<ToBitmapImpl, NameToBitmap>;
 using FunctionBitmapFromString = FunctionUnaryToType<BitmapFromString,NameBitmapFromString>;
 using FunctionBitmapHash = FunctionUnaryToType<BitmapHash, NameBitmapHash>;
 
 using FunctionBitmapCount = FunctionUnaryToType<BitmapCount, NameBitmapCount>;
+using FunctionBitmapMin = FunctionUnaryToType<BitmapMin, NameBitmapMin>;
 
 using FunctionBitmapAnd =
         FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapAnd, NameBitmapAnd>;
@@ -301,6 +324,7 @@ void register_function_bitmap(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionBitmapFromString>();
     factory.register_function<FunctionBitmapHash>();
     factory.register_function<FunctionBitmapCount>();
+    factory.register_function<FunctionBitmapMin>();
     factory.register_function<FunctionBitmapAnd>();
     factory.register_function<FunctionBitmapOr>();
     factory.register_function<FunctionBitmapXor>();
