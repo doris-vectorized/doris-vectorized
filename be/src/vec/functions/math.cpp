@@ -374,14 +374,14 @@ private:
     size_t get_number_of_arguments() const override { return 2; }
     bool is_variadic() const override { return true; }
     bool use_default_implementation_for_constants() const override { return true; }
-    
+
     DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         if (arguments.size() == 1) {
             return std::make_shared<DataTypeInt64>();
         } else if (arguments.size() == 2) {
             return std::make_shared<DataTypeFloat64>();
         } else {
-            DCHECK(false)<<"error about round function arguments size, it should be 1 or 2";
+            DCHECK(false) << "error about round function arguments size, it should be 1 or 2";
             return nullptr;
         }
     }
