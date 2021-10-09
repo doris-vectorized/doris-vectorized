@@ -352,6 +352,19 @@ TEST(MathFunctionTest, round_test) {
     vectorized::check_function<vectorized::DataTypeInt64, true>(func_name, input_types, data_set);
 }
 
+TEST(MathFunctionTest, bin_test) {
+    std::string func_name = "bin";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::Int64};
+
+    DataSet data_set = {{{(int64_t) 10}, std::string("1010")},
+                        {{(int64_t) 1}, std::string("1")},
+                        {{(int64_t) 0}, std::string("0")},
+                        {{Null()}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
 } // namespace doris
 
 int main(int argc, char** argv) {
