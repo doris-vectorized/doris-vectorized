@@ -25,6 +25,8 @@
 #include "exec/schema_scanner.h"
 #include "runtime/row_batch.h"
 #include "runtime/tuple_row.h"
+#include "util/bitmap_value.h"
+#include "vec/columns/column_complex.h"
 #include "vec/functions/function_string.h"
 #include "vec/functions/function_string_to_string.h"
 #include "vec/functions/simple_function_factory.h"
@@ -101,6 +103,20 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
                 col->insert_data(str.c_str(), str.size());
             }
             insert_column_to_block<DataTypeString>(columns, ctn, std::move(col),
+                                                   std::move(null_map), block, col_name, i,
+                                                   is_const, row_size);
+        } else if (tp == TypeIndex::BitMap) {
+            auto col = ColumnBitmap::create();
+            for (int j = 0; j < row_size; j++) {
+                if (data_set[j].first[i].type() == typeid(Null)) {
+                    null_map_data[j] = true;
+                    col->insert_default();
+                    continue;
+                }
+                BitmapValue* bitmap = std::any_cast<BitmapValue*>(data_set[j].first[i]);
+                col->insert_value(*bitmap);
+            }
+            insert_column_to_block<DataTypeBitMap>(columns, ctn, std::move(col),
                                                    std::move(null_map), block, col_name, i,
                                                    is_const, row_size);
         } else if (tp == TypeIndex::Int32) {
