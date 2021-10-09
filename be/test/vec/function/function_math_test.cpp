@@ -339,17 +339,34 @@ TEST(MathFunctionTest, sign_test) {
 }
 
 TEST(MathFunctionTest, round_test) {
-    std::string func_name = "round"; // radians(x) C--->rad
+    std::string func_name = "round"; // round(double) && round(double, int)
 
-    std::vector<std::any> input_types = {vectorized::TypeIndex::Float64};
+    {
+        std::vector<std::any> input_types = {vectorized::TypeIndex::Float64};
 
-    DataSet data_set = {{{30.1}, (int64_t)30},
-                        {{90.6}, (int64_t)91},
-                        {{0.0}, (int64_t)0},
-                        {{-1.1}, (int64_t)-1},
-                        {{-60.7}, (int64_t)-61}};
+        DataSet data_set = {{{30.1}, (int64_t)30},
+                            {{90.6}, (int64_t)91},
+                            {{0.0}, (int64_t)0},
+                            {{-1.1}, (int64_t)-1},
+                            {{-60.7}, (int64_t)-61}};
 
-    vectorized::check_function<vectorized::DataTypeInt64, true>(func_name, input_types, data_set);
+        vectorized::check_function<vectorized::DataTypeInt64, true>(func_name, input_types,
+                                                                    data_set);
+    }
+    {
+        std::vector<std::any> input_types = {vectorized::TypeIndex::Float64,
+                                             vectorized::TypeIndex::Int32};
+
+        DataSet data_set = {{{3.1415926, 2}, 3.14},
+                            {{3.1415926, 3}, 3.142},
+                            {{Null(), -2}, Null()},
+                            {{193.0, -2}, 200.0},
+                            {{193.0, -1}, 190.0},
+                            {{193.0, -3}, 0.0}};
+
+        vectorized::check_function<vectorized::DataTypeFloat64, true>(func_name, input_types,
+                                                                      data_set);
+    }
 }
 
 TEST(MathFunctionTest, bin_test) {
