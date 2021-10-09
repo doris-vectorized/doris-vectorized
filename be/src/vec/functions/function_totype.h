@@ -67,6 +67,15 @@ private:
                 block.replace_by_position(result, std::move(col_res));
                 return Status::OK();
             }
+        } else if constexpr (is_complex_v<typename Impl::Type>) {
+            if (const auto* col = check_and_get_column<ColumnComplexType<typename Impl::Type>>(
+                        column.get())) {
+                auto col_res = Impl::ReturnColumnType::create();
+                RETURN_IF_ERROR(Impl::vector(col->get_data(), col_res->get_chars(),
+                                             col_res->get_offsets()));
+                block.replace_by_position(result, std::move(col_res));
+                return Status::OK();
+            }
         }
 
         return Status::RuntimeError(
