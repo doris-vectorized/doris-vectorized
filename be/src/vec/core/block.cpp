@@ -510,10 +510,8 @@ MutableColumns Block::mutate_columns() {
     size_t num_columns = data.size();
     MutableColumns columns(num_columns);
     for (size_t i = 0; i < num_columns; ++i) {
-        if (!data[i].column) {
-            data[i].column = data[i].type->create_column();
-        }
-        columns[i] = (*std::move(data[i].column)).mutate();
+        columns[i] = data[i].column ? (*std::move(data[i].column)).mutate()
+                                    : data[i].type->create_column();
     }
     return columns;
 }
