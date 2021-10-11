@@ -28,16 +28,22 @@ class Random : public IFunction {
 public:
     static constexpr auto name = "random";
 
-    static FunctionPtr create() { return std::make_shared<Random>(); }
+    static FunctionPtr create() {
+        return std::make_shared<Random>();
+    }
 
     String get_name() const override { return name; }
 
-    size_t get_number_of_arguments() const override { return 1; }
+    bool use_default_implementation_for_constants() const override { return false; }
 
-    bool use_default_implementation_for_constants() const override { return true; }
+    size_t get_number_of_arguments() const override { return 0; }
 
-    bool use_default_implementation_for_nulls() const override { return true; }
+    bool is_variadic() const override { return true; }
 
+    bool use_default_implementation_for_nulls() const override { return false; }
+    // TODO: Currently seed is ignored, rand(seed) is the same as rand()
+    // Because this function will be called multiple times for one query,
+    // rand(seed) will return duplicated results
     Status execute_impl(Block &block, const ColumnNumbers &arguments, size_t result,
                         size_t input_rows_count) override {
         static const double min = 0.0;
@@ -45,27 +51,10 @@ public:
         auto res_column = ColumnFloat64::create(input_rows_count);
         auto& res_data = assert_cast<ColumnFloat64&>(*res_column).get_data();
 
-        // random()/rand() without seed
-        if (arguments.size() == 0) {
-            std::mt19937_64 generator(std::random_device{}());
-            std::uniform_real_distribution<double> distribution(min, max);
-            for (int i = 0; i < input_rows_count; i++) {
-                res_data[i] = distribution(generator);
-            }
-        } else {
-            const ColumnInt64* const_col =
-                    check_and_get_column<ColumnVector<Int64>>
-                    (block.get_by_position(arguments[0]).column.get());
-            if (const_col) {
-                Int64 seed = const_col->get_data()[0];
-                std::mt19937_64 generator(seed);
-                std::uniform_real_distribution<double> distribution(min, max);
-                for (int i = 0; i < input_rows_count; i++) {
-                    res_data[i] = distribution(generator);
-                }
-            } else {
-                return Status::RuntimeError("seed must be int64 const");
-            }
+        std::mt19937_64 generator(std::random_device{}());
+        std::uniform_real_distribution<double> distribution(min, max);
+        for (int i = 0; i < input_rows_count; i++) {
+            res_data[i] = distribution(generator);
         }
         block.replace_by_position(result, std::move(res_column));
         return Status::OK();
