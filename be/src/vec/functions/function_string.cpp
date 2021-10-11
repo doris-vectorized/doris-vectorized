@@ -597,11 +597,13 @@ void register_function_string(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionToBase64>();
     factory.register_function<FunctionFromBase64>();
     factory.register_function<FunctionSplitPart>();
+    factory.register_function<FunctionStringMd5sum>();
 
     factory.register_alias(FunctionLeft::name, "strleft");
     factory.register_alias(FunctionRight::name, "strright");
     factory.register_alias(FunctionSubstring::name, "substr");
     factory.register_alias(FunctionToLower::name, "lcase");
+    factory.register_alias(FunctionStringMd5sum::name, "md5");
 }
 
 } // namespace doris::vectorized
