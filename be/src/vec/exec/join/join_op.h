@@ -33,7 +33,8 @@ struct RowRef {
     bool visited = false;
 
     RowRef() {}
-    RowRef(const Block* block_, size_t row_num_, bool visited_ = false) : block(block_), row_num(row_num_), visited(visited_) {}
+    RowRef(const Block* block_ptr, size_t row_num_count, bool is_visited = false) :
+        block(block_ptr), row_num(row_num_count), visited(is_visited) {}
 };
 
 /// Single linked list of references to rows. Used for ALL JOINs (non-unique JOINs)

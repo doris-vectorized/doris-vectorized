@@ -110,7 +110,7 @@ struct ProcessHashTableProbe {
               _rows_returned_counter(join_node->_rows_returned_counter) {}
 
     // Only process the join with no other join conjunt, because of no other join conjunt
-    // the output block strcut is same with mutable block. we can do more opt on it and simplify
+    // the output block struct is same with mutable block. we can do more opt on it and simplify
     // the logic of probe
     // TODO: opt the visited here to reduce the size of hash table
     Status do_process(HashTableContext& hash_table_ctx, ConstNullMapPtr null_map,

@@ -570,7 +570,7 @@ visible_functions = [
             '_ZN5doris13MathFunctions5roundEPN9doris_udf15FunctionContextERKNS1_9DoubleValE', '', '', 'vec', ''],
     [['round', 'dround'], 'DOUBLE', ['DOUBLE', 'INT'],
             '_ZN5doris13MathFunctions11round_up_toEPN9doris_udf'
-            '15FunctionContextERKNS1_9DoubleValERKNS1_6IntValE', '', '', '', ''],
+            '15FunctionContextERKNS1_9DoubleValERKNS1_6IntValE', '', '', 'vec', ''],
     [['truncate'], 'DOUBLE', ['DOUBLE', 'INT'],
             '_ZN5doris13MathFunctions8truncateEPN9doris_udf'
             '15FunctionContextERKNS1_9DoubleValERKNS1_6IntValE', '', '', 'vec', ''],
