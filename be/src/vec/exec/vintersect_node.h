@@ -18,15 +18,16 @@
 #pragma once
 
 #include "exec/exec_node.h"
-#include "vec/exec/vset_operation_node.h"
 #include "vec/common/columns_hashing.h"
 #include "vec/common/hash_table/hash_table.h"
+#include "vec/core/materialize_block.h"
 #include "vec/exec/join/join_op.h"
 #include "vec/exec/join/vacquire_list.hpp"
-#include "vec/core/materialize_block.h"
+#include "vec/exec/join/vhash_join_node.h"
+#include "vec/exec/vset_operation_node.h"
 #include "vec/functions/function.h"
 #include "vec/utils/util.hpp"
-#include "vec/exec/join/vhash_join_node.h"
+
 namespace doris {
 namespace vectorized {
 
@@ -41,16 +42,13 @@ public:
     virtual Status close(RuntimeState* state);
 
 private:
-
     Block _probe_block;
     ColumnRawPtrs _probe_columns;
     int _probe_index = -1;
-
-    DataTypes _right_table_data_types;
     DataTypes _left_table_data_types;
 
     template <class HashTableContext>
-    friend class ProcessHashTableProbe2;
+    friend class HashTableProbeIntersect;
 };
 } // namespace vectorized
 } // namespace doris

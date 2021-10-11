@@ -30,20 +30,16 @@ public:
     virtual Status open(RuntimeState* state);
     virtual Status get_next(RuntimeState* state, vectorized::Block* output_block, bool* eos);
     virtual Status close(RuntimeState* state);
+
 private:
-
-
     Block _probe_block;
     ColumnRawPtrs _probe_columns;
-
     int _probe_index = -1;
     bool _probe_eos = false;
-
-    DataTypes _right_table_data_types;
     DataTypes _left_table_data_types;
 
     template <class HashTableContext>
-    friend class ProcessHashTableProbe3;
+    friend class HashTableProbeExcept;
 };
 } // namespace vectorized
 } // namespace doris

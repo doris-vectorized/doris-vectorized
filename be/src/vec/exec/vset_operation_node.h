@@ -21,13 +21,12 @@
 #include "exec/exec_node.h"
 #include "runtime/row_batch.h"
 #include "runtime/runtime_state.h"
-
+#include "vec/core/materialize_block.h"
 #include "vec/exec/join/join_op.h"
 #include "vec/exec/join/vacquire_list.hpp"
-#include "vec/core/materialize_block.h"
+#include "vec/exec/join/vhash_join_node.h"
 #include "vec/functions/function.h"
 #include "vec/utils/util.hpp"
-#include "vec/exec/join/vhash_join_node.h"
 
 namespace doris {
 
@@ -46,11 +45,12 @@ public:
     virtual Status close(RuntimeState* state);
     virtual void debug_string(int indentation_level, std::stringstream* out) const;
 
-    virtual void   hash_table_init();
-    virtual Status hash_table_build(RuntimeState* state);    
-    virtual Status process_build_block(Block& block); 
+    virtual void hash_table_init();
+    virtual Status hash_table_build(RuntimeState* state);
+    virtual Status process_build_block(Block& block);
     virtual Status extract_build_join_column(Block& block, ColumnRawPtrs& raw_ptrs);
     virtual Status extract_probe_join_column(Block& block, ColumnRawPtrs& raw_ptrs);
+
 protected:
     HashTableVariants _hash_table_variants;
 
@@ -63,6 +63,7 @@ protected:
     Arena _arena;
     AcquireList<Block> _acquire_list;
     bool _has_init_hash_table;
+
 protected:
     /// Const exprs materialized by this node. These exprs don't refer to any children.
     /// Only materialized by the first fragment instance to avoid duplication.
@@ -93,7 +94,7 @@ protected:
     RuntimeProfile::Counter* _probe_timer; // time to probe
 
     template <class HashTableContext>
-    friend class ProcessHashTableBuild2;
+    friend class HashTableBuild;
 };
 
 } // namespace vectorized
