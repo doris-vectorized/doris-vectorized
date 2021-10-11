@@ -19,6 +19,7 @@
 #include "vec/functions/function_totype.h"
 #include "vec/functions/function_const.h"
 #include "vec/functions/simple_function_factory.h"
+#include "vec/functions/function_string.h"
 #include "gutil/strings/numbers.h"
 #include "gutil/strings/split.h"
 
@@ -135,7 +136,7 @@ struct BitmapCount {
     using ReturnColumnContainer = ColumnVector<Int64>::Container;
 
     static Status vector(const std::vector<BitmapValue>& data, ReturnColumnContainer& res) {
-        int size = data.size();
+        size_t size = data.size();
         res.reserve(size);
         for (int i = 0; i < size; ++i) {
             res.push_back(data[i].cardinality());
@@ -285,11 +286,34 @@ struct BitmapMin {
     using ReturnColumnContainer = ColumnVector<Int64>::Container;
 
     static Status vector(const std::vector<BitmapValue>& data, ReturnColumnContainer& res) {
-        int size = data.size();
+        size_t size = data.size();
         res.reserve(size);
         for (int i = 0; i < size; ++i) {
             auto min = const_cast<std::vector<BitmapValue>&>(data)[i].minimum();
             res.push_back(min.val);
+        }
+        return Status::OK();
+    }
+};
+
+struct NameBitmapToString {
+    static constexpr auto name = "bitmap_to_string";
+};
+
+struct BitmapToString {
+    using ReturnType = DataTypeString;
+    static constexpr auto TYPE_INDEX = TypeIndex::BitMap;
+    using Type = DataTypeBitMap::FieldType;
+    using ReturnColumnType = ColumnString;
+    using Chars = ColumnString::Chars;
+    using Offsets = ColumnString::Offsets;
+
+    static Status vector(const std::vector<BitmapValue>& data, Chars& chars, Offsets& offsets) {
+        size_t size = data.size();
+        offsets.resize(size);
+        chars.reserve(size);
+        for (int i = 0; i < size; ++i) {
+            StringOP::push_value_string(const_cast<std::vector<BitmapValue>&>(data)[i].to_string(), i, chars, offsets);
         }
         return Status::OK();
     }
@@ -302,6 +326,7 @@ using FunctionBitmapHash = FunctionUnaryToType<BitmapHash, NameBitmapHash>;
 
 using FunctionBitmapCount = FunctionUnaryToType<BitmapCount, NameBitmapCount>;
 using FunctionBitmapMin = FunctionUnaryToType<BitmapMin, NameBitmapMin>;
+using FunctionBitmapToString = FunctionUnaryToType<BitmapToString, NameBitmapToString>;
 
 using FunctionBitmapAnd =
         FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapAnd, NameBitmapAnd>;
@@ -325,6 +350,7 @@ void register_function_bitmap(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionBitmapHash>();
     factory.register_function<FunctionBitmapCount>();
     factory.register_function<FunctionBitmapMin>();
+    factory.register_function<FunctionBitmapToString>();
     factory.register_function<FunctionBitmapAnd>();
     factory.register_function<FunctionBitmapOr>();
     factory.register_function<FunctionBitmapXor>();
