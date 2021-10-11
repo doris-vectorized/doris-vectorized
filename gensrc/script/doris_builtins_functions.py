@@ -1250,13 +1250,13 @@ visible_functions = [
 
     # for compatable with MySQL
     [['md5'], 'VARCHAR', ['VARCHAR'],
-        '_ZN5doris19EncryptionFunctions3md5EPN9doris_udf15FunctionContextERKNS1_9StringValE', '', '', '', ''],
+        '_ZN5doris19EncryptionFunctions3md5EPN9doris_udf15FunctionContextERKNS1_9StringValE', '', '', 'vec', ''],
     [['md5sum'], 'VARCHAR', ['VARCHAR', '...'],
-        '_ZN5doris19EncryptionFunctions6md5sumEPN9doris_udf15FunctionContextEiPKNS1_9StringValE', '', '', '', ''],
+        '_ZN5doris19EncryptionFunctions6md5sumEPN9doris_udf15FunctionContextEiPKNS1_9StringValE', '', '', 'vec', ''],
     [['md5'], 'VARCHAR', ['STRING'],
-        '_ZN5doris19EncryptionFunctions3md5EPN9doris_udf15FunctionContextERKNS1_9StringValE', '', '', '', ''],
+        '_ZN5doris19EncryptionFunctions3md5EPN9doris_udf15FunctionContextERKNS1_9StringValE', '', '', 'vec', ''],
     [['md5sum'], 'VARCHAR', ['STRING', '...'],
-        '_ZN5doris19EncryptionFunctions6md5sumEPN9doris_udf15FunctionContextEiPKNS1_9StringValE', '', '', '', ''],
+        '_ZN5doris19EncryptionFunctions6md5sumEPN9doris_udf15FunctionContextEiPKNS1_9StringValE', '', '', 'vec', ''],
 
     # geo functions
     [['ST_Point'], 'VARCHAR', ['DOUBLE', 'DOUBLE'],
