@@ -63,6 +63,8 @@ set(VEC_FILES
   data_types/data_type_date.cpp
   data_types/data_type_date_time.cpp
   exec/vaggregation_node.cpp
+  exec/ves_http_scan_node.cpp
+  exec/ves_http_scanner.cpp
   exec/volap_scan_node.cpp
   exec/vsort_node.cpp
   exec/vsort_exec_exprs.cpp
