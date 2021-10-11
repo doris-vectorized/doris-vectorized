@@ -39,7 +39,8 @@ struct ProcessHashTableProbe2 {
               _probe_index(join_node->_probe_index),
               _num_rows_returned(join_node->_num_rows_returned),
               _probe_raw_ptrs(join_node->_probe_columns),
-              _arena(join_node->_arena) {}
+              _arena(join_node->_arena),
+              _rows_returned_counter(join_node->_rows_returned_counter) {}
 
     Status operator()(HashTableContext& hash_table_ctx, MutableBlock& mutable_block, Block* output_block) {
         using KeyGetter = typename HashTableContext::State;
@@ -79,7 +80,10 @@ struct ProcessHashTableProbe2 {
             
             auto find_result = key_getter.find_key(hash_table_ctx.hash_table, _probe_index, _arena);
             LOG(INFO)<<"find_key find_result.is_found(): "<<find_result.is_found();
-
+            
+            if (_probe_index + 1 < _probe_rows) {
+                key_getter.prefetch(hash_table_ctx.hash_table, _probe_index + 1, _arena);
+            }
 
             if (find_result.is_found()) {
                 auto& mapped = find_result.get_mapped();
@@ -112,6 +116,7 @@ struct ProcessHashTableProbe2 {
         output_block->swap(mutable_block.to_block());
 
         int64_t m = output_block->rows();
+        COUNTER_UPDATE(_rows_returned_counter, m);
         _num_rows_returned += m;
         LOG(INFO)<<"output_block_rows: "<<m;
         return Status::OK();
@@ -128,6 +133,7 @@ private:
     int64_t& _num_rows_returned;
     ColumnRawPtrs& _probe_raw_ptrs; //using ColumnRawPtrs = std::vector<const IColumn*>;
     Arena& _arena;
+    RuntimeProfile::Counter* _rows_returned_counter;
 };
 
 VIntersectNode::VIntersectNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
@@ -150,6 +156,7 @@ Status VIntersectNode::prepare(RuntimeState* state) {
 
     _right_table_data_types = VectorizedUtils::get_data_types(child(1)->row_desc());
     _left_table_data_types = VectorizedUtils::get_data_types(child(0)->row_desc());
+    _probe_timer = ADD_TIMER(runtime_profile(), "ProbeTime");
     LOG(INFO)<<"_right_table_data_types: size: "<<_right_table_data_types.size()<<" _left_table_data_types: "<<_left_table_data_types.size();
     for(int i=0;i<_right_table_data_types.size();++i)
         LOG(INFO)<<"right: "<<_right_table_data_types[i]->get_name()<<" left: "<<_left_table_data_types[i]->get_name();
@@ -167,6 +174,7 @@ Status VIntersectNode::open(RuntimeState* state) {
 }
 
 Status VIntersectNode::get_next(RuntimeState* state, Block* output_block, bool* eos) {
+    SCOPED_TIMER(_probe_timer);
     size_t probe_rows = _probe_block.rows();
     if (probe_rows == 0 || _probe_index == probe_rows) {
         _probe_index = 0;

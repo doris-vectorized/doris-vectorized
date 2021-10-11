@@ -38,7 +38,8 @@ struct ProcessHashTableProbe3 {
               _probe_index(join_node->_probe_index),
               _num_rows_returned(join_node->_num_rows_returned),
               _probe_raw_ptrs(join_node->_probe_columns),
-              _arena(join_node->_arena) {}
+              _arena(join_node->_arena),
+              _rows_returned_counter(join_node->_rows_returned_counter) {}
 
     Status mark_data_in_hashtable(HashTableContext& hash_table_ctx) {
         using KeyGetter = typename HashTableContext::State;
@@ -73,7 +74,9 @@ struct ProcessHashTableProbe3 {
             auto find_result = key_getter.find_key(hash_table_ctx.hash_table, _probe_index, _arena);
             LOG(INFO)<<"find_key find_result.is_found(): "<<find_result.is_found();
 
-
+            if (_probe_index + 1 < _probe_rows) {
+                key_getter.prefetch(hash_table_ctx.hash_table, _probe_index + 1, _arena);
+            }
             if (find_result.is_found()) {
                 auto& mapped = find_result.get_mapped();
                 auto it = mapped.begin();
@@ -131,11 +134,31 @@ Status get_data_in_hashtable(HashTableContext& hash_table_ctx, MutableBlock& mut
         // select *  from table6 except select *  from table7;
         // select *  from table5 except select *  from table6;
         // select *  from table6 except select *  from table5;
+        // select k7 from test_mysql_vec except select k7 from test_mysql_vec2; 
+        // select k4 from test_mysql_vec except select k4 from test_mysql_vec2; 
+        // select k5 from test_mysql_vec except select k5 from test_mysql_vec2;
+        // select k11 from test_mysql_vec except select k11 from test_mysql_vec2;
+
+
+        // select citycode from table6 intersect select citycode from table5;
+        // select citycode from table6 intersect select citycode from table7;
+        // select username from table6 intersect select username from table7;
+        // select username from table5 intersect select username from table6;
+        // select username from table6 intersect select username from table5;
+        // select *  from table6 intersect select *  from table7;
+        // select *  from table5 intersect select *  from table6;
+        // select *  from table6 intersect select *  from table5;    
+        // select k7 from test_mysql_vec intersect select k7 from test_mysql_vec2; 
+        // select k4 from test_mysql_vec intersect select k4 from test_mysql_vec2; 
+        // select k5 from test_mysql_vec intersect select k5 from test_mysql_vec2;
+        // select k11 from test_mysql_vec intersect select k11 from test_mysql_vec2;        
+
         *eos = iter == hash_table_ctx.hash_table.end();
 
         output_block->swap(mutable_block.to_block());
 
         int64_t m = output_block->rows();
+        COUNTER_UPDATE(_rows_returned_counter, m);
         _num_rows_returned += m;
         LOG(INFO)<<"output_block_rows: "<<m;
         return Status::OK();
@@ -150,6 +173,7 @@ private:
     int64_t& _num_rows_returned;
     ColumnRawPtrs& _probe_raw_ptrs; //using ColumnRawPtrs = std::vector<const IColumn*>;
     Arena& _arena;
+    RuntimeProfile::Counter* _rows_returned_counter;
 };
 
 VExceptNode::VExceptNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
@@ -170,6 +194,7 @@ Status VExceptNode::init(const TPlanNode& tnode, RuntimeState* state) {
 
 Status VExceptNode::prepare(RuntimeState* state) {
     RETURN_IF_ERROR(VSetOperationNode::prepare(state));
+    _probe_timer = ADD_TIMER(runtime_profile(), "ProbeTime");
     _right_table_data_types = VectorizedUtils::get_data_types(child(1)->row_desc());
     _left_table_data_types = VectorizedUtils::get_data_types(child(0)->row_desc());
 
@@ -186,6 +211,7 @@ Status VExceptNode::open(RuntimeState* state) {
 }
 
 Status VExceptNode::get_next(RuntimeState* state, Block* output_block, bool* eos) {
+    SCOPED_TIMER(_probe_timer);
     size_t probe_rows = _probe_block.rows();
     if ((probe_rows == 0 || _probe_index == probe_rows)&& !_probe_eos ) 
     {

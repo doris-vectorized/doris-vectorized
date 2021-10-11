@@ -89,7 +89,8 @@ protected:
 
     // Time spent to evaluates exprs and materializes the results
     RuntimeProfile::Counter* _materialize_exprs_evaluate_timer = nullptr;
-
+    RuntimeProfile::Counter* _build_timer; // time to build hash table
+    RuntimeProfile::Counter* _probe_timer; // time to probe
 
     template <class HashTableContext>
     friend class ProcessHashTableBuild2;

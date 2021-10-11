@@ -41,7 +41,9 @@ struct ProcessHashTableBuild2 {
             // TODO: make this as constexpr
 
             auto emplace_result = key_getter.emplace_key(hash_table_ctx.hash_table, k, _operation_node->_arena);
-
+            if (k + 1 < _rows) {
+                key_getter.prefetch(hash_table_ctx.hash_table, k + 1, _operation_node->_arena);
+            }
             if (emplace_result.is_inserted()) {
                 new (&emplace_result.get_mapped()) Mapped({&_acquired_block, k});  //RowRef(&_acquired_block, k)
                 LOG(INFO)<<"is_inserted :"<<_acquired_block.get_by_position(0).to_string(k);
@@ -65,11 +67,11 @@ private:
 VSetOperationNode::VSetOperationNode(ObjectPool* pool, const TPlanNode& tnode,
                                      const DescriptorTbl& descs)
         : ExecNode(pool, tnode, descs),
+          _has_init_hash_table(false),
           _const_expr_list_idx(0),
           _child_idx(0),
           _child_row_idx(0),
           _child_eos(false),
-          _has_init_hash_table(false),
           _to_close_child_idx(-1) {}
 
 Status VSetOperationNode::close(RuntimeState* state) {
@@ -152,8 +154,9 @@ Status VSetOperationNode::open(RuntimeState* state) {
     return Status::OK();
 }
 Status VSetOperationNode::prepare(RuntimeState* state) {
-    SCOPED_TIMER(_runtime_profile->total_time_counter());
     RETURN_IF_ERROR(ExecNode::prepare(state));
+    SCOPED_TIMER(_runtime_profile->total_time_counter());
+    _build_timer = ADD_TIMER(runtime_profile(), "BuildTime");
     _materialize_exprs_evaluate_timer =
             ADD_TIMER(_runtime_profile, "MaterializeExprsEvaluateTimer");
     // Prepare const expr lists.
@@ -170,8 +173,8 @@ Status VSetOperationNode::prepare(RuntimeState* state) {
 }
 
 void VSetOperationNode::hash_table_init() {
-    _hash_table_variants.emplace<SerializedHashTableContext>();
-    /*
+    //_hash_table_variants.emplace<SerializedHashTableContext>();
+    
     if (_child_expr_lists[0].size() == 1 && !_build_not_ignore_null[0]) {
         // Single column optimization
         LOG(INFO)<<_child_expr_lists[0][0]->root()->result_type();
@@ -202,7 +205,7 @@ void VSetOperationNode::hash_table_init() {
         }
         return;
     }
-    */
+    
     bool use_fixed_key = true;
     bool has_null = false;
     int key_byte_size = 0;
@@ -226,7 +229,7 @@ void VSetOperationNode::hash_table_init() {
             break;
         }
     }
-    /*
+    
     if (std::tuple_size<KeysNullMap<UInt256>>::value + key_byte_size > sizeof(UInt256)) {
         use_fixed_key = false;
     }
@@ -253,7 +256,7 @@ void VSetOperationNode::hash_table_init() {
     } else {
         _hash_table_variants.emplace<SerializedHashTableContext>();
     }
-    */
+    
 }
 Status VSetOperationNode::hash_table_build(RuntimeState* state) {
     RETURN_IF_ERROR(child(0)->open(state));
@@ -262,6 +265,7 @@ Status VSetOperationNode::hash_table_build(RuntimeState* state) {
     bool eos = false;
     while (!eos) {
         block.clear();
+        SCOPED_TIMER(_build_timer);
         RETURN_IF_CANCELLED(state);
         RETURN_IF_ERROR(child(0)->get_next(state, &block, &eos));
         LOG(INFO)<<"i is: "<<i++<<" build: "<<block.columns()<<" rows: "<<block.rows()<<" ----------------------------";
