@@ -34,7 +34,7 @@ public:
     String get_name() const override { return name; }
 
     size_t get_number_of_arguments() const override { return 2; }
-    //TODO:
+
     bool use_default_implementation_for_constants() const override { return false; }
 
     bool use_default_implementation_for_nulls() const override { return false; }
@@ -54,7 +54,7 @@ public:
         const ColumnWithTypeAndName new_column {
             col_left,
         };
-        /// compute isnull(col_left)
+        /// implement isnull(col_left) logic
         if (auto* nullable = check_and_get_column<ColumnNullable>(*col_left.column)) {
             block.get_by_position(arguments[0]).column = nullable->get_null_map_column_ptr();
         } else {
