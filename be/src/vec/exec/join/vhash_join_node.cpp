@@ -326,7 +326,8 @@ struct ProcessHashTableProbe {
                 output_block->get_by_position(result_column_id).column = std::move(new_filter_column);
             } else if (_join_node->_join_op == TJoinOp::RIGHT_OUTER_JOIN) {
                 for (int i = 0; i < column->size(); ++i) {
-                    if (visited_map[i]) *visited_map[i] |= column->get_bool(i);
+                    DCHECK(visited_map[i]);
+                    *visited_map[i] |= column->get_bool(i);
                 }
             } else if (_join_node->_join_op == TJoinOp::LEFT_SEMI_JOIN) {
                 auto new_filter_column = ColumnVector<UInt8>::create();
