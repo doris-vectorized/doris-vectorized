@@ -575,14 +575,6 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
         if (probe_rows != 0) {
             int probe_expr_ctxs_sz = _probe_expr_ctxs.size();
             _probe_columns.resize(probe_expr_ctxs_sz);
-
-            for (int i = 0; i < probe_expr_ctxs_sz; ++i) {
-                int result_id = -1;
-                _probe_expr_ctxs[i]->execute(&_probe_block, &result_id);
-                DCHECK_GE(result_id, 0);
-                _probe_columns[i] = _probe_block.get_by_position(result_id).column.get();
-            }
-
             if (_null_map_column == nullptr) {
                 _null_map_column = ColumnUInt8::create();
             }
