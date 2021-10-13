@@ -30,7 +30,6 @@
 #include "util/block_compression.h"
 #include "util/coding.h"       // for get_varint32
 #include "util/rle_encoding.h" // for RleDecoder
-#include "util/rle_encoding.h" // for RleDecoder
 #include "vec/core/types.h"
 
 namespace doris {
