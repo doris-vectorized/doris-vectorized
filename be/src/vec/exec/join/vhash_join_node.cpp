@@ -313,9 +313,11 @@ struct ProcessHashTableProbe {
                     }
 
                     if (join_hit) {
-                        if (visited_map[i]) *visited_map[i] |= other_hit;
+                        *visited_map[i] |= other_hit;
                         filter_map.push_back(
                                 other_hit || !same_to_prev[i] || (!column->get_bool(i - 1) && filter_map.back()));
+                        // Here to keep only hit join conjunt and other join conjunt is true need to be output.
+                        // if not, only some key must keep one row will output will null right table column
                         if (same_to_prev[i] && filter_map.back() && !column->get_bool(i - 1)) filter_map[i - 1] = false;
                     } else {
                         filter_map.push_back(true);
