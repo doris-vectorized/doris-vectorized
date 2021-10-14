@@ -28,9 +28,13 @@ struct RowRef {
 
     const Block* block = nullptr;
     SizeT row_num = 0;
+    // Use in right join to mark row is visited
+    // TODO: opt the varaible to use it only need
+    bool visited = false;
 
     RowRef() {}
-    RowRef(const Block* block_, size_t row_num_) : block(block_), row_num(row_num_) {}
+    RowRef(const Block* block_ptr, size_t row_num_count, bool is_visited = false) :
+        block(block_ptr), row_num(row_num_count), visited(is_visited) {}
 };
 
 /// Single linked list of references to rows. Used for ALL JOINs (non-unique JOINs)
@@ -62,10 +66,10 @@ struct RowRefList : RowRef {
 
     class ForwardIterator {
     public:
-        ForwardIterator(const RowRefList* begin)
+        ForwardIterator(RowRefList* begin)
                 : root(begin), first(true), batch(root->next), position(0) {}
 
-        const RowRef* operator->() const {
+        RowRef* operator->() {
             if (first) return root;
             return &batch->row_refs[position];
         }
@@ -88,7 +92,7 @@ struct RowRefList : RowRef {
         bool ok() const { return first || (batch && position < batch->size); }
 
     private:
-        const RowRefList* root;
+        RowRefList* root;
         bool first;
         Batch* batch;
         size_t position;
@@ -97,7 +101,7 @@ struct RowRefList : RowRef {
     RowRefList() {}
     RowRefList(const Block* block_, size_t row_num_) : RowRef(block_, row_num_) {}
 
-    ForwardIterator begin() const { return ForwardIterator(this); }
+    ForwardIterator begin() { return ForwardIterator(this); }
 
     /// insert element after current one
     void insert(RowRef&& row_ref, Arena& pool) {
@@ -108,13 +112,8 @@ struct RowRefList : RowRef {
         next = next->insert(std::move(row_ref), pool);
     }
 
-    inline void set_visited() { visited = true; }
-
-    inline bool is_visited() { return visited; }
-
 private:
     Batch* next = nullptr;
-    bool visited = false;
 };
 
 // using MapI32 = doris::vectorized::HashMap<UInt32, MappedAll, HashCRC32<UInt32>>;
