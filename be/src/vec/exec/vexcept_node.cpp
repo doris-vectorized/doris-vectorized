@@ -54,12 +54,9 @@ struct HashTableProbeExcept {
             }
 
             if (find_result.is_found()) { //if found, marked visited
-                auto& mapped = find_result.get_mapped();
-                //auto it = mapped.begin();
-                //if(!(it->visited)) {
-                if (!mapped.is_visited()) {
-                    mapped.set_visited();
-                    //it->visited=true;
+                auto it = find_result.get_mapped().begin();
+                if (!(it->visited)) {
+                    it->visited = true;
                 }
             }
             _probe_index++;
@@ -74,12 +71,10 @@ struct HashTableProbeExcept {
         int left_col_len = _left_table_data_types.size();
         auto& iter = hash_table_ctx.iter;
         auto block_size = 0;
-        
+
         for (; iter != hash_table_ctx.hash_table.end() && block_size < _batch_size; ++iter) {
-            auto& mapped = iter->get_second();
-            auto it = mapped.begin();
-            //if (!it->visited) {
-            if (!mapped.is_visited()) { //have done probe, so no visited values it's the result
+            auto it = iter->get_second().begin();
+            if (!it->visited) { //have done probe, so no visited values it's the result
                 block_size++;
                 for (size_t j = 0; j < left_col_len; ++j) {
                     auto& column = *it->block->get_by_position(j).column;
@@ -87,36 +82,6 @@ struct HashTableProbeExcept {
                 }
             }
         }
-        // select citycode from table6 except select citycode from table5;            Not   null
-        // select citycode from table6 except select citycode from table7;            Not   Not
-        // select username from table6 except select username from table7;            null  Not
-        // select username from table5 except select username from table6;            null  null
-        // select username from table5 except select username from table7;            Not   null
-        // select *  from table6 except select *  from table7;
-        // select *  from table5 except select *  from table6;
-        // select *  from table6 except select *  from table5;
-        // select k7 from test_mysql_vec except select k7 from test_mysql_vec2;
-        // select k4 from test_mysql_vec except select k4 from test_mysql_vec2;
-        // select k5 from test_mysql_vec except select k5 from test_mysql_vec2;
-        // select k11 from test_mysql_vec except select k11 from test_mysql_vec2;
-        // select * from test_mysql_vec except select * from test_mysql_vec2;
-        // select k4 from test_mysql_vec2 except select k4 from test_mysql_vec;
-        // select k7 from test_mysql_vec2 except select k7 from test_mysql_vec;
-
-        // select citycode from table6 intersect select citycode from table5;
-        // select citycode from table6 intersect select citycode from table7;
-        // select username from table6 intersect select username from table7;
-        // select username from table5 intersect select username from table6;
-        // select username from table7 intersect select username from table5;
-        // select *  from table6 intersect select *  from table7;
-        // select *  from table5 intersect select *  from table6;
-        // select *  from table6 intersect select *  from table5;
-        // select k7 from test_mysql_vec intersect select k7 from test_mysql_vec2;
-        // select k4 from test_mysql_vec intersect select k4 from test_mysql_vec2;
-        // select k5 from test_mysql_vec intersect select k5 from test_mysql_vec2;
-        // select k11 from test_mysql_vec intersect select k11 from test_mysql_vec2;
-        // select * from test_mysql_vec intersect select * from test_mysql_vec2;
-
         *eos = iter == hash_table_ctx.hash_table.end();
         output_block->swap(mutable_block.to_block());
 
@@ -175,13 +140,6 @@ Status VExceptNode::get_next(RuntimeState* state, Block* output_block, bool* eos
         if (probe_rows != 0) {
             int probe_expr_ctxs_sz = _child_expr_lists[1].size();
             _probe_columns.resize(probe_expr_ctxs_sz);
-
-            for (int i = 0; i < probe_expr_ctxs_sz; ++i) {
-                int result_id = -1;
-                _child_expr_lists[1][i]->execute(&_probe_block, &result_id);
-                DCHECK_GE(result_id, 0);
-                _probe_columns[i] = _probe_block.get_by_position(result_id).column.get();
-            }
 
             Status st = std::visit(
                     [&](auto&& arg) -> Status {

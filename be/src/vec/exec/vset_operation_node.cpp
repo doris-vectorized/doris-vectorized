@@ -120,7 +120,7 @@ Status VSetOperationNode::init(const TPlanNode& tnode, RuntimeState* state) {
     }
     //now used for INTERSECT/EXCEPT NODE
     if (tnode.node_type != TPlanNodeType::type::UNION_NODE) {
-        hash_table_init();  
+        hash_table_init();
         _has_init_hash_table = true;
     }
     return Status::OK();

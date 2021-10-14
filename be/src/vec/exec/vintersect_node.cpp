@@ -58,18 +58,15 @@ struct HashTableProbeIntersect {
             }
 
             if (find_result.is_found()) { //if found it, that's the values needed
-                auto& mapped = find_result.get_mapped();
-                auto it = mapped.begin();
-                //if(!(it->visited)){
-                if (!mapped.is_visited()) {
+                auto it = find_result.get_mapped().begin();
+                if (!(it->visited)) {
                     for (size_t j = 0; j < left_col_len; ++j) {
                         auto& column = *it->block->get_by_position(j).column;
                         mcol[j]->insert_from(column, it->row_num);
                     }
                     ++current_offset;
                 }
-                //it->visited=true;
-                mapped.set_visited(); //mark visited,could skip the same key
+                it->visited = true; //mark visited,could skip the same key
             }
             _probe_index++;
             if (current_offset >= _batch_size) {
@@ -137,13 +134,6 @@ Status VIntersectNode::get_next(RuntimeState* state, Block* output_block, bool* 
 
         int probe_expr_ctxs_sz = _child_expr_lists[1].size();
         _probe_columns.resize(probe_expr_ctxs_sz);
-
-        for (int i = 0; i < probe_expr_ctxs_sz; ++i) {
-            int result_id = -1;
-            _child_expr_lists[1][i]->execute(&_probe_block, &result_id);
-            DCHECK_GE(result_id, 0);
-            _probe_columns[i] = _probe_block.get_by_position(result_id).column.get();
-        }
 
         Status st = std::visit(
                 [&](auto&& arg) -> Status {
