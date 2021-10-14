@@ -354,9 +354,9 @@ struct ProcessHashTableProbe {
                                 filter_map[--loc] = false;
                             } while (same_to_prev[loc]);
                         }
-                    }
-                    else
+                    } else {
                         filter_map.push_back(false);
+                    }
                 }
                 output_block->get_by_position(result_column_id).column = std::move(new_filter_column);
             }  else if (_join_node->_is_right_semi_anti) {
