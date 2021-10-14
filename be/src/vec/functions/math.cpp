@@ -21,6 +21,7 @@
 #include "vec/functions/function_math_binary_float64.h"
 #include "vec/functions/function_math_unary.h"
 #include "vec/functions/function_string.h"
+#include "vec/functions/function_totype.h"
 #include "vec/functions/function_unary_arithmetic.h"
 #include "vec/functions/simple_function_factory.h"
 
@@ -309,49 +310,15 @@ struct NameDegrees {
 
 using FunctionDegrees = FunctionUnaryArithmetic<DegreesImpl, NameDegrees, false>;
 
-class FunctionBin : public IFunction {
-public:
+struct NameBin {
     static constexpr auto name = "bin";
-    static FunctionPtr create() { return std::make_shared<FunctionBin>(); }
-    String get_name() const override { return name; }
-    size_t get_number_of_arguments() const override { return 1; }
-
-    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
-        return std::make_shared<DataTypeString>();
-    }
-
-    bool use_default_implementation_for_constants() const override { return true; }
-
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
-        bin_execute(block, arguments, result, input_rows_count);
-        return Status::OK();
-    }
-
-    static void bin_execute(Block& block, const ColumnNumbers& arguments, size_t result,
-                            size_t input_rows_count) {
-        DCHECK_EQ(arguments.size(), 1);
-
-        auto res = ColumnString::create();
-
-        auto col_vec = check_and_get_column<ColumnVector<Int64>>(block.get_by_position(arguments[0]).column.get());
-        auto& res_offsets = res->get_offsets();
-        auto& res_chars = res->get_chars();
-        auto& data = col_vec->get_data();
-        const size_t size = data.size();
-
-        res_offsets.resize(size);
-        res_chars.reserve(size);
-        std::vector<size_t> index;
-
-        for (int i = 0; i < size; ++i) {
-            StringOP::push_value_string(bin_impl(data[i]), i, res_chars, res_offsets);
-        }
-
-        block.get_by_position(result).column = std::move(res);
-    }
-
-private:
+};
+struct BinImpl {
+    using ReturnType = DataTypeString;
+    static constexpr auto TYPE_INDEX = TypeIndex::Int64;
+    using Type = Int64;
+    using ReturnColumnType = ColumnString;
+    
     static std::string bin_impl(Int64 value) {
         uint64_t n = static_cast<uint64_t>(value);
         const size_t max_bits = sizeof(uint64_t) * 8;
@@ -362,7 +329,21 @@ private:
         } while (n >>= 1);
         return std::string(result + index, max_bits - index);
     }
+    
+    static Status vector(const ColumnInt64::Container& data, ColumnString::Chars& res_data,
+                         ColumnString::Offsets& res_offsets) {
+        
+        res_offsets.resize(data.size());
+        size_t input_size = res_offsets.size();
+        
+        for (size_t i = 0; i < input_size; ++i) {
+            StringOP::push_value_string(bin_impl(data[i]), i, res_data, res_offsets);
+        }
+        return Status::OK();
+    }
 };
+
+using FunctionBin = FunctionUnaryToType<BinImpl, NameBin>;
 
 class FunctionRound : public IFunction {
 public:
