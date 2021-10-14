@@ -71,7 +71,7 @@ public:
     bool use_default_implementation_for_nulls() const override { return false; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t /*input_rows_count*/) override {
+                        size_t input_rows_count) override {
         /// NOTE: after updating this code, check that FunctionIgnoreExceptNull returns the same type of column.
 
         /// Second argument must be ColumnSet.
@@ -89,7 +89,7 @@ public:
 
         auto res = ColumnUInt8::create();
         ColumnUInt8::Container& vec_res = res->get_data();
-        vec_res.resize(left_arg.column->size());
+        vec_res.resize(input_rows_count);
 
         ColumnUInt8::MutablePtr col_null_map_to;
         col_null_map_to = ColumnUInt8::create(left_arg.column->size());
@@ -102,13 +102,12 @@ public:
                 memset(vec_res.data(), 0, vec_res.size());
         } else {
             auto materialized_column = left_arg.column->convert_to_full_column_if_const();
-            auto size = materialized_column->size();
 
             if (auto* nullable = check_and_get_column<ColumnNullable>(*materialized_column)) {
                 const auto& nested_column = nullable->get_nested_column();
                 const auto& null_map = nullable->get_null_map_column().get_data();
 
-                for (size_t i = 0; i < size; ++i) {
+                for (size_t i = 0; i < input_rows_count; ++i) {
                     vec_null_map_to[i] = null_map[i];
                     if (null_map[i]) {
                         continue;
@@ -121,7 +120,7 @@ public:
                 }
             } else {
                 /// For all rows
-                for (size_t i = 0; i < size; ++i) {
+                for (size_t i = 0; i < input_rows_count; ++i) {
                     const auto& ref_data = materialized_column->get_data_at(i);
                     vec_res[i] = negative ^ set->find((void*)ref_data.data, ref_data.size);
                     if constexpr (null_in_set) {

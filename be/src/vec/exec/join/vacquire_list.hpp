@@ -42,6 +42,8 @@ struct AcquireList {
         return ref;
     }
 
+    void remove_last_element() { _current_offset--; }
+
 private:
     bool current_full() { return _current_offset == batch_size; }
     std::vector<std::unique_ptr<Element[]>> _lst;

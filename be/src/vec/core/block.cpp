@@ -692,9 +692,7 @@ Status Block::filter_block(Block* block, int filter_column_id, int column_to_kee
         filter_block_internal(block, filter, column_to_keep);
     }
 
-    for (size_t i = block->columns() - 1; i >= column_to_keep; --i) {
-        block->erase(i);
-    }
+    erase_useless_column(block, column_to_keep);
     return Status::OK();
 }
 
@@ -738,9 +736,13 @@ void MutableBlock::add_row(const Block* block, int row) {
     }
 }
 
-Block MutableBlock::to_block() {
+Block MutableBlock::to_block(int start_column) {
+    return to_block(start_column, _columns.size());
+}
+
+Block MutableBlock::to_block(int start_column, int end_column) {
     ColumnsWithTypeAndName columns_with_schema;
-    for (size_t i = 0; i < _columns.size(); ++i) {
+    for (size_t i = start_column; i < end_column; ++i) {
         columns_with_schema.emplace_back(std::move(_columns[i]), _data_types[i], "");
     }
     return {columns_with_schema};
