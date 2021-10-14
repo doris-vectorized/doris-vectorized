@@ -26,7 +26,6 @@ import org.apache.doris.analysis.SlotDescriptor;
 import org.apache.doris.analysis.SlotId;
 import org.apache.doris.analysis.SlotRef;
 import org.apache.doris.analysis.TableRef;
-import org.apache.doris.analysis.TupleDescriptor;
 import org.apache.doris.analysis.TupleId;
 import org.apache.doris.catalog.ColumnStats;
 import org.apache.doris.catalog.OlapTable;
@@ -34,6 +33,7 @@ import org.apache.doris.catalog.Table;
 import org.apache.doris.common.CheckedMath;
 import org.apache.doris.common.Pair;
 import org.apache.doris.common.UserException;
+import org.apache.doris.common.util.VectorizedUtil;
 import org.apache.doris.thrift.TEqJoinCondition;
 import org.apache.doris.thrift.TExplainLevel;
 import org.apache.doris.thrift.THashJoinNode;
@@ -67,6 +67,10 @@ public class HashJoinNode extends PlanNode {
     private List<BinaryPredicate> eqJoinConjuncts = Lists.newArrayList();
     // join conjuncts from the JOIN clause that aren't equi-join predicates
     private List<Expr> otherJoinConjuncts;
+    // join conjunct from the JOIN clause that aren't equi-join predicates, only use in
+    // vec exec engine
+    private Expr votherJoinConjunct = null;
+
     private DistributionMode distrMode;
     private boolean isColocate = false; //the flag for colocate join
     private String colocateReason = ""; // if can not do colocate join, set reason here
@@ -77,12 +81,27 @@ public class HashJoinNode extends PlanNode {
         super(id, "HASH JOIN");
         Preconditions.checkArgument(eqJoinConjuncts != null && !eqJoinConjuncts.isEmpty());
         Preconditions.checkArgument(otherJoinConjuncts != null);
-        tupleIds.addAll(outer.getTupleIds());
-        tupleIds.addAll(inner.getTupleIds());
         tblRefIds.addAll(outer.getTblRefIds());
         tblRefIds.addAll(inner.getTblRefIds());
         this.innerRef = innerRef;
         this.joinOp = innerRef.getJoinOp();
+
+        // TODO: Support not vec exec engine cut unless tupleid in semi/anti join
+        if (VectorizedUtil.isVectorized()) {
+            if (joinOp.equals(JoinOperator.LEFT_ANTI_JOIN) || joinOp.equals(JoinOperator.LEFT_SEMI_JOIN)
+                    || joinOp.equals(JoinOperator.NULL_AWARE_LEFT_ANTI_JOIN)) {
+                tupleIds.addAll(outer.getTupleIds());
+            } else if (joinOp.equals(JoinOperator.RIGHT_ANTI_JOIN) || joinOp.equals(JoinOperator.RIGHT_SEMI_JOIN)){
+                tupleIds.addAll(inner.getTupleIds());
+            } else {
+                tupleIds.addAll(outer.getTupleIds());
+                tupleIds.addAll(inner.getTupleIds());
+            }
+        } else {
+            tupleIds.addAll(outer.getTupleIds());
+            tupleIds.addAll(inner.getTupleIds());
+        }
+
         for (Expr eqJoinPredicate : eqJoinConjuncts) {
             Preconditions.checkArgument(eqJoinPredicate instanceof BinaryPredicate);
             BinaryPredicate eqJoin = (BinaryPredicate) eqJoinPredicate;
@@ -153,10 +172,6 @@ public class HashJoinNode extends PlanNode {
         // outSmap replace in outer join may cause NULL be replace by literal
         // so need replace the outsmap in nullableTupleID
         replaceOutputSmapForOuterJoin();
-        for (TupleId tupleId : nullableTupleIds) {
-            TupleDescriptor tupleDescriptor = analyzer.getTupleDesc(tupleId);
-            for (SlotDescriptor slotDescriptor : tupleDescriptor.getSlots()) slotDescriptor.setIsNullable(true);
-        }
         computeStats(analyzer);
 
         ExprSubstitutionMap combinedChildSmap = getCombinedChildWithoutTupleIsNullSmap();
@@ -587,6 +602,11 @@ public class HashJoinNode extends PlanNode {
         for (Expr e : otherJoinConjuncts) {
             msg.hash_join_node.addToOtherJoinConjuncts(e.treeToThrift());
         }
+
+        // use in vec exec engine to replace otherJoinConjuncts
+        if (votherJoinConjunct != null) {
+            msg.hash_join_node.setVotherJoinConjunct(votherJoinConjunct.treeToThrift());
+        }
     }
 
     @Override
@@ -646,5 +666,14 @@ public class HashJoinNode extends PlanNode {
         public String toString() {
             return description;
         }
+    }
+
+    @Override
+    void convertToVectoriezd() {
+        if (!otherJoinConjuncts.isEmpty()) {
+            votherJoinConjunct = convertConjunctsToAndCompoundPredicate(otherJoinConjuncts);
+            initCompoundPredicate(votherJoinConjunct);
+        }
+        super.convertToVectoriezd();
     }
 }

@@ -192,6 +192,10 @@ public:
 
     static Status filter_block(Block* block, int filter_conlumn_id, int column_to_keep);
 
+    static inline void erase_useless_column(Block* block, int column_to_keep) {
+        for (size_t i = block->columns() - 1; i >= column_to_keep; --i) { block->erase(i); }
+    }
+
     // serialize block to PBlock
     size_t serialize(PBlock* pblock) const;
     /** Compares (*this) n-th row and rhs m-th row. 
@@ -311,7 +315,9 @@ public:
         }
     }
 
-    Block to_block();
+    Block to_block(int start_column = 0);
+
+    Block to_block(int start_column, int end_column);
 
     void add_row(const Block* block, int row);
     std::string dump_data(size_t row_limit = 100) const;
