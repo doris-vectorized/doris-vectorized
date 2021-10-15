@@ -280,8 +280,19 @@ public class ArithmeticExpr extends Expr {
                 case ADD:
                 case SUBTRACT:
                 case MOD:
+                    if (t1.isDecimalV2() || t2.isDecimalV2()) {
+                        castBinaryOp(findCommonType(t1, t2));
+                    }
+                    fn = getBuiltinFunction(analyzer, op.name, collectChildReturnTypes(),
+                            Function.CompareMode.IS_IDENTICAL);
+                    break;
                 case INT_DIVIDE:
-                    if (t1.isDecimalV2() || t2.isDecimalV2()) castBinaryOp(findCommonType(t1, t2));
+                    if (t1.isDecimalV2() || t2.isDecimalV2()) {
+                        castBinaryOp(findCommonType(t1, t2));
+                    }
+                    else if (t1.isDateType() || t2.isDateType()) {
+                        castBinaryOp(Type.BIGINT);
+                    }
                     fn = getBuiltinFunction(analyzer, op.name, collectChildReturnTypes(),
                             Function.CompareMode.IS_IDENTICAL);
                     break;
