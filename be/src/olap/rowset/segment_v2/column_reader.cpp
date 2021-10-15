@@ -761,7 +761,11 @@ Status DefaultValueColumnIterator::next_batch(size_t* n, ColumnBlockView* dst, b
     return Status::OK();
 }
 
-std::string DefaultValueColumnIterator::get_insert_data() const {
+void DefaultValueColumnIterator::insert_default_data(vectorized::MutableColumnPtr &dst, size_t n) {
+    vectorized::Int128 int128;
+    char* data_ptr = (char*)&int128;
+    size_t data_len = sizeof(int128);
+
     auto type = _type_info->type();
     if (type == OLAP_FIELD_TYPE_DATE) {
         assert(_type_size == sizeof(FieldTypeTraits<OLAP_FIELD_TYPE_DATE>::CppType)); //uint24_t
@@ -771,8 +775,7 @@ std::string DefaultValueColumnIterator::get_insert_data() const {
         value.from_date_str(str.c_str(), str.length());
         value.cast_to_date();
 
-        vectorized::Int128 x = binary_cast<DateTimeValue, vectorized::Int128>(value);
-        return std::string((char*)&x, sizeof(x));
+        int128 = binary_cast<DateTimeValue, vectorized::Int128>(value);
     } else if (type == OLAP_FIELD_TYPE_DATETIME) {
         assert(_type_size == sizeof(FieldTypeTraits<OLAP_FIELD_TYPE_DATETIME>::CppType)); //int64_t
         std::string str = FieldTypeTraits<OLAP_FIELD_TYPE_DATETIME>::to_string(_mem_value);
@@ -781,19 +784,19 @@ std::string DefaultValueColumnIterator::get_insert_data() const {
         value.from_date_str(str.c_str(), str.length());
         value.to_datetime();
 
-        vectorized::Int128 x = binary_cast<DateTimeValue, vectorized::Int128>(value);
-        return std::string((char*)&x, sizeof(x));
+        int128 = binary_cast<DateTimeValue, vectorized::Int128>(value);
     } else if (type == OLAP_FIELD_TYPE_DECIMAL) {
         assert(_type_size == sizeof(FieldTypeTraits<OLAP_FIELD_TYPE_DECIMAL>::CppType)); //decimal12_t
         decimal12_t* d = (decimal12_t*)_mem_value;
-        DecimalV2Value data(d->integer, d->fraction);
-        vectorized::Int128 &x = data.value();
-        return std::string((char*)&x, sizeof(x));
+        int128 = DecimalV2Value(d->integer, d->fraction).value();
     } else {
-        return std::string((char*)_mem_value, _type_size);
+        data_ptr = (char*)_mem_value;
+        data_len = _type_size;
     }
 
-    return std::string();
+    for (size_t i = 0; i < n; ++i) {
+        dst->insert_data(data_ptr, data_len);
+    }
 }
 
 Status DefaultValueColumnIterator::next_batch(size_t* n, vectorized::MutableColumnPtr &dst, bool* has_null) {
@@ -802,10 +805,7 @@ Status DefaultValueColumnIterator::next_batch(size_t* n, vectorized::MutableColu
         dst->insert_many_defaults(*n);
     } else {
         *has_null = false;
-        std::string data = get_insert_data();
-        for (size_t i = 0; i < *n; ++i) {
-            dst->insert_data(data.data(), data.size());
-        }
+        insert_default_data(dst, *n);
     }
 
     return Status::OK();

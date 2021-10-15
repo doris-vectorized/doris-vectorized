@@ -424,7 +424,7 @@ public:
     ordinal_t get_current_ordinal() const override { return _current_rowid; }
 
 private:
-    std::string get_insert_data() const;
+    void insert_default_data(vectorized::MutableColumnPtr &dst, size_t n);
 
     bool _has_default_value;
     std::string _default_value;
