@@ -26,9 +26,7 @@ template <typename Element, int batch_size = 8>
 struct AcquireList {
     using Batch = Element[batch_size];
 
-public:
     Element& acquire(Element&& element) {
-        _element_bytes += element.allocated_bytes();
         if (_current_batch == nullptr) {
             _current_batch.reset(new Element[batch_size]);
         }
@@ -44,7 +42,6 @@ public:
         _current_offset++;
         return ref;
     }
-    int64_t element_bytes() { return _element_bytes; }
 
     void remove_last_element() { _current_offset--; }
 
@@ -53,6 +50,5 @@ private:
     std::vector<std::unique_ptr<Element[]>> _lst;
     std::unique_ptr<Element[]> _current_batch;
     int _current_offset = 0;
-    int64_t _element_bytes = 0;
 };
 } // namespace doris::vectorized

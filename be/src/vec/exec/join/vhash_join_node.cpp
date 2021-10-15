@@ -48,7 +48,7 @@ struct ProcessHashTableBuild {
             int64_t bucket_size = hash_table_ctx.hash_table.get_buffer_size_in_cells();
             int64_t bucket_bytes = hash_table_ctx.hash_table.get_buffer_size_in_bytes();
             _join_node->_mem_tracker->Consume(bucket_bytes - old_bucket_bytes);
-            _join_node->_hash_table_bytes += bucket_bytes - old_bucket_bytes;
+            _join_node->_mem_used += bucket_bytes - old_bucket_bytes;
             COUNTER_SET(_join_node->_build_buckets_counter, bucket_size);
         }};
 
@@ -462,7 +462,7 @@ HashJoinNode::HashJoinNode(ObjectPool* pool, const TPlanNode& tnode, const Descr
         : ExecNode(pool, tnode, descs),
           _join_op(tnode.hash_join_node.join_op),
           _hash_table_rows(0),
-          _hash_table_bytes(0),
+          _mem_used(0),
           _match_all_probe(_join_op == TJoinOp::LEFT_OUTER_JOIN ||
                            _join_op == TJoinOp::FULL_OUTER_JOIN),
           _match_one_build(_join_op == TJoinOp::LEFT_SEMI_JOIN),
@@ -577,9 +577,7 @@ Status HashJoinNode::close(RuntimeState* state) {
 
     if (_vother_join_conjunct_ptr) (*_vother_join_conjunct_ptr)->close(state);
 
-    _mem_tracker->Release(_hash_table_bytes);
-    _mem_tracker->Release(_acquire_list.element_bytes());
-    _hash_table_bytes = 0;
+    _mem_tracker->Release(_mem_used);
 
     return ExecNode::close(state);
 }
@@ -745,6 +743,7 @@ Status HashJoinNode::_hash_table_build(RuntimeState* state) {
 
         RETURN_IF_ERROR(child(1)->get_next(state, &block, &eos));
         _mem_tracker->Consume(block.allocated_bytes());
+        _mem_used += block.allocated_bytes();
         RETURN_IF_LIMIT_EXCEEDED(state, "Hash join, while getting next from the child 1.");
 
         RETURN_IF_ERROR(_process_build_block(block));

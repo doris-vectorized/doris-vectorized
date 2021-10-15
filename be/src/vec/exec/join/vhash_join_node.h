@@ -165,7 +165,7 @@ private:
     RuntimeProfile::Counter* _probe_rows_counter;
 
     int64_t _hash_table_rows;
-    int64_t _hash_table_bytes;
+    int64_t _mem_used;
 
     Arena _arena;
     HashTableVariants _hash_table_variants;
