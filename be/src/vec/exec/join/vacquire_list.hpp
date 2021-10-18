@@ -25,6 +25,7 @@ namespace doris::vectorized {
 template <typename Element, int batch_size = 8>
 struct AcquireList {
     using Batch = Element[batch_size];
+
     Element& acquire(Element&& element) {
         if (_current_batch == nullptr) {
             _current_batch.reset(new Element[batch_size]);

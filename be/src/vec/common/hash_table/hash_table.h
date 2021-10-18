@@ -24,6 +24,7 @@
 #include <utility>
 
 #include "common/status.h"
+#include "util/runtime_profile.h"
 #include "vec/common/exception.h"
 #include "vec/common/hash_table/hash_table_allocator.h"
 #include "vec/common/hash_table/hash_table_key_holder.h"
@@ -116,11 +117,9 @@ void set(T& x) {
   * default verision that takes a generic pointer-like object.
   */
 struct VoidKey {};
-struct VoidMapped
-{
+struct VoidMapped {
     template <typename T>
-    auto & operator=(const T &)
-    {
+    auto& operator=(const T&) {
         return *this;
     }
 };
@@ -361,7 +360,7 @@ protected:
     size_t m_size = 0; /// Amount of elements
     Cell* buf;         /// A piece of memory for all elements except the element with zero key.
     Grower grower;
-
+    int64_t _resize_timer_ns;
 #ifdef DBMS_HASH_MAP_COUNT_COLLISIONS
     mutable size_t collisions = 0;
 #endif
@@ -405,6 +404,7 @@ protected:
 
     /// Increase the size of the buffer.
     void resize(size_t for_num_elems = 0, size_t for_buf_size = 0) {
+        SCOPED_RAW_TIMER(&_resize_timer_ns);
 #ifdef DBMS_HASH_MAP_DEBUG_RESIZES
         Stopwatch watch;
 #endif
@@ -520,7 +520,7 @@ protected:
         }
 
         auto& operator*() const { return *ptr; }
-        auto* operator-> () const { return ptr; }
+        auto* operator->() const { return ptr; }
 
         auto get_ptr() const { return ptr; }
         size_t get_hash() const { return ptr->get_hash(*container); }
@@ -555,6 +555,9 @@ public:
     // Use lookup_result_get_mapped/Key to work with these values.
     using LookupResult = Cell*;
     using ConstLookupResult = const Cell*;
+
+    void reset_resize_timer() { _resize_timer_ns = 0; }
+    int64_t get_resize_timer_value() const { return _resize_timer_ns; }
 
     size_t hash(const Key& x) const { return Hash::operator()(x); }
 
