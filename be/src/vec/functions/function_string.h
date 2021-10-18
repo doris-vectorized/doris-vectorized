@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include "exprs/anyval_util.h"
+
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
