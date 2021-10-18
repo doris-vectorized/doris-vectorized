@@ -109,10 +109,10 @@ using I256FixedKeyHashTableContext = FixedKeyHashTableContext<UInt256, has_null>
 using HashTableVariants =
         std::variant<std::monostate, SerializedHashTableContext, I8HashTableContext,
                      I16HashTableContext, I32HashTableContext, I64HashTableContext,
-                     I128HashTableContext, I256HashTableContext,
-                     I64FixedKeyHashTableContext<true>, I64FixedKeyHashTableContext<false>,
-                     I128FixedKeyHashTableContext<true>, I128FixedKeyHashTableContext<false>,
-                     I256FixedKeyHashTableContext<true>, I256FixedKeyHashTableContext<false>>;
+                     I128HashTableContext, I256HashTableContext, I64FixedKeyHashTableContext<true>,
+                     I64FixedKeyHashTableContext<false>, I128FixedKeyHashTableContext<true>,
+                     I128FixedKeyHashTableContext<false>, I256FixedKeyHashTableContext<true>,
+                     I256FixedKeyHashTableContext<false>>;
 
 class VExprContext;
 
@@ -152,29 +152,20 @@ private:
 
     RuntimeProfile::Counter* _build_timer;
     RuntimeProfile::Counter* _build_table_timer;
-    RuntimeProfile::Counter* _build_hash_calc_timer;
-    RuntimeProfile::Counter* _build_bucket_calc_timer;
     RuntimeProfile::Counter* _build_expr_call_timer;
     RuntimeProfile::Counter* _build_table_insert_timer;
-    RuntimeProfile::Counter* _build_table_spread_timer;
     RuntimeProfile::Counter* _build_table_expanse_timer;
-    RuntimeProfile::Counter* _build_acquire_block_timer;
     RuntimeProfile::Counter* _probe_timer;
     RuntimeProfile::Counter* _probe_expr_call_timer;
-    RuntimeProfile::Counter* _probe_hash_calc_timer;
-    RuntimeProfile::Counter* _probe_gather_timer;
     RuntimeProfile::Counter* _probe_next_timer;
-    RuntimeProfile::Counter* _probe_select_miss_timer;
-    RuntimeProfile::Counter* _probe_select_zero_timer;
-    RuntimeProfile::Counter* _probe_diff_timer;
     RuntimeProfile::Counter* _build_buckets_counter;
-
     RuntimeProfile::Counter* _push_down_timer;
     RuntimeProfile::Counter* _push_compute_timer;
     RuntimeProfile::Counter* _build_rows_counter;
     RuntimeProfile::Counter* _probe_rows_counter;
 
     int64_t _hash_table_rows;
+    int64_t _mem_used;
 
     Arena _arena;
     HashTableVariants _hash_table_variants;
@@ -193,7 +184,7 @@ private:
     const bool _match_all_probe; // output all rows coming from the probe input. Full/Left Join
     const bool _match_one_build; // match at most one build row to each probe row. Left semi Join
     const bool _match_all_build; // output all rows coming from the build input. Full/Right Join
-    bool _build_unique;    // build a hash table without duplicated rows. Left semi/anti Join
+    bool _build_unique;          // build a hash table without duplicated rows. Left semi/anti Join
 
     const bool _is_left_semi_anti;
     const bool _is_right_semi_anti;
@@ -201,16 +192,16 @@ private:
     bool _have_other_join_conjunct = false;
 
     RowDescriptor _row_desc_for_other_join_conjunt;
-private:
 
+private:
     Status _hash_table_build(RuntimeState* state);
     Status _process_build_block(Block& block);
 
-    Status extract_build_join_column(Block& block, NullMap& null_map,
-                                  ColumnRawPtrs& raw_ptrs, bool& ignore_null);
+    Status extract_build_join_column(Block& block, NullMap& null_map, ColumnRawPtrs& raw_ptrs,
+                                     bool& ignore_null, RuntimeProfile::Counter& expr_call_timer);
 
-    Status extract_probe_join_column(Block& block, NullMap& null_map,
-                                  ColumnRawPtrs& raw_ptrs, bool& ignore_null);
+    Status extract_probe_join_column(Block& block, NullMap& null_map, ColumnRawPtrs& raw_ptrs,
+                                     bool& ignore_null, RuntimeProfile::Counter& expr_call_timer);
 
     void _hash_table_init();
 

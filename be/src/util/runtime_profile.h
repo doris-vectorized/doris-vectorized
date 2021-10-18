@@ -54,8 +54,9 @@ namespace doris {
     ScopedTimer<ThreadCpuStopWatch> MACRO_CONCAT(SCOPED_TIMER, __COUNTER__)(c)
 #define CANCEL_SAFE_SCOPED_TIMER(c, is_cancelled) \
     ScopedTimer<MonotonicStopWatch> MACRO_CONCAT(SCOPED_TIMER, __COUNTER__)(c, is_cancelled)
-#define SCOPED_RAW_TIMER(c) \
-    ScopedRawTimer<MonotonicStopWatch, int64_t> MACRO_CONCAT(SCOPED_RAW_TIMER, __COUNTER__)(c)
+#define SCOPED_RAW_TIMER(c)                                                                  \
+    doris::ScopedRawTimer<doris::MonotonicStopWatch, int64_t> MACRO_CONCAT(SCOPED_RAW_TIMER, \
+                                                                           __COUNTER__)(c)
 #define SCOPED_ATOMIC_TIMER(c)                                                                 \
     ScopedRawTimer<MonotonicStopWatch, std::atomic<int64_t>> MACRO_CONCAT(SCOPED_ATOMIC_TIMER, \
                                                                           __COUNTER__)(c)
@@ -112,7 +113,7 @@ public:
 
         virtual void set(double value) {
             DCHECK_EQ(sizeof(value), sizeof(int64_t));
-            _value.store(binary_cast<double,int64_t>(value));
+            _value.store(binary_cast<double, int64_t>(value));
         }
 
         virtual int64_t value() const { return _value.load(); }
