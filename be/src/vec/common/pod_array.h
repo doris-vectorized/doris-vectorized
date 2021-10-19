@@ -358,6 +358,18 @@ public:
         this->c_end += this->byte_size(1);
     }
 
+    template <typename U, typename... TAllocatorParams>
+    void add_num_element(U&& x, uint32_t num, TAllocatorParams&&... allocator_params) {
+        if (num != 0) {
+            const auto new_end = this->c_end + this->byte_size(num);
+            if (UNLIKELY( new_end > this->c_end_of_storage)) {
+                this->reserve(this->size() + num);
+            }
+            std::fill(t_end(), t_end() + num, x);
+            this->c_end = new_end;
+        }
+    }
+
     /** This method doesn't allow to pass parameters for Allocator,
       *  and it couldn't be used if Allocator requires custom parameters.
       */
