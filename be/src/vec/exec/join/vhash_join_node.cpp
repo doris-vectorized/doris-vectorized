@@ -152,10 +152,6 @@ struct ProcessHashTableProbe {
                                                            _arena)) {nullptr, false}
                             : key_getter.find_key(hash_table_ctx.hash_table, _probe_index, _arena);
 
-            if (_probe_index + 1 < _probe_rows) {
-                key_getter.prefetch(hash_table_ctx.hash_table, _probe_index + 1, _arena);
-            }
-
             if (find_result.is_found()) {
                 // left semi join only need one match, do not need insert the data of right table
                 if (_join_node->_join_op == TJoinOp::LEFT_SEMI_JOIN) {
@@ -251,10 +247,6 @@ struct ProcessHashTableProbe {
                             ? decltype(key_getter.find_key(hash_table_ctx.hash_table, _probe_index,
                                                            _arena)) {nullptr, false}
                             : key_getter.find_key(hash_table_ctx.hash_table, _probe_index, _arena);
-
-            if (_probe_index + 1 < _probe_rows) {
-                key_getter.prefetch(hash_table_ctx.hash_table, _probe_index + 1, _arena);
-            }
 
             if (find_result.is_found()) {
                 auto& mapped = find_result.get_mapped();
@@ -511,6 +503,7 @@ Status HashJoinNode::init(const TPlanNode& tnode, RuntimeState* state) {
                 null_aware ||
                 (_probe_expr_ctxs.back()->root()->is_nullable() && probe_dispose_null));
     }
+    _probe_column_disguise_null.reserve(eq_join_conjuncts.size());
 
     if (tnode.hash_join_node.__isset.vother_join_conjunct) {
         _vother_join_conjunct_ptr.reset(new doris::vectorized::VExprContext*);
@@ -593,11 +586,18 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
     size_t probe_rows = _probe_block.rows();
     if ((probe_rows == 0 || _probe_index == probe_rows) && !_probe_eos) {
         _probe_index = 0;
-        // TODO: support mem reuse and need remove when probe column is not nullale
-        // and build column is nullable. The new created nullable column in probe block
-        // need to be removed before call _probe_block.clear_column_data();
-        _probe_block.clear();
-
+        // clear_column_data of _probe_block
+        {
+            if (!_probe_column_disguise_null.empty()) {
+                for (int i = 0; i < _probe_column_disguise_null.size(); ++i) {
+                    auto column_to_erase = _probe_column_disguise_null[i];
+                    _probe_block.erase(column_to_erase - i);
+                }
+                _probe_column_disguise_null.clear();
+            }
+            _probe_block.clear_column_data();
+        }
+        
         do {
             SCOPED_TIMER(_probe_next_timer);
             RETURN_IF_ERROR(child(0)->get_next(state, &_probe_block, &_probe_eos));
@@ -609,9 +609,7 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
 
             int probe_expr_ctxs_sz = _probe_expr_ctxs.size();
             _probe_columns.resize(probe_expr_ctxs_sz);
-            if (_null_map_column == nullptr) {
-                _null_map_column = ColumnUInt8::create();
-            }
+            if (_null_map_column == nullptr) { _null_map_column = ColumnUInt8::create();}
             _null_map_column->get_data().assign(probe_rows, (uint8_t)0);
 
             Status st = std::visit(
@@ -639,7 +637,6 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
     if (_probe_index < _probe_block.rows()) {
         MutableBlock mutable_block(VectorizedUtils::create_empty_columnswithtypename(
                 _have_other_join_conjunct ? _row_desc_for_other_join_conjunt : row_desc()));
-
         std::visit(
                 [&](auto&& arg) {
                     using HashTableCtxType = std::decay_t<decltype(arg)>;
@@ -649,25 +646,25 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
                                     this, state->batch_size(), probe_rows);
 
                             st = _have_other_join_conjunct
-                                         ? process_hashtable_ctx
-                                                   .do_process_with_other_join_conjunts(
-                                                           arg, &_null_map_column->get_data(),
-                                                           mutable_block, output_block)
-                                         : process_hashtable_ctx.do_process(
-                                                   arg, &_null_map_column->get_data(),
-                                                   mutable_block, output_block);
+                                 ? process_hashtable_ctx
+                                         .do_process_with_other_join_conjunts(
+                                                 arg, &_null_map_column->get_data(),
+                                                 mutable_block, output_block)
+                                 : process_hashtable_ctx.do_process(
+                                            arg, &_null_map_column->get_data(),
+                                            mutable_block, output_block);
                         } else {
                             ProcessHashTableProbe<HashTableCtxType, false> process_hashtable_ctx(
                                     this, state->batch_size(), probe_rows);
 
                             st = _have_other_join_conjunct
-                                         ? process_hashtable_ctx
-                                                   .do_process_with_other_join_conjunts(
-                                                           arg, &_null_map_column->get_data(),
-                                                           mutable_block, output_block)
-                                         : process_hashtable_ctx.do_process(
-                                                   arg, &_null_map_column->get_data(),
-                                                   mutable_block, output_block);
+                                 ? process_hashtable_ctx
+                                         .do_process_with_other_join_conjunts(
+                                                 arg, &_null_map_column->get_data(),
+                                                 mutable_block, output_block)
+                                 : process_hashtable_ctx.do_process(
+                                            arg, &_null_map_column->get_data(),
+                                            mutable_block, output_block);
                         }
                     } else {
                         LOG(FATAL) << "FATAL: uninited hash table";
@@ -814,6 +811,7 @@ Status HashJoinNode::extract_probe_join_column(Block& block, NullMap& null_map,
                 if (_build_not_ignore_null[i]) {
                     auto column_ptr =
                             make_nullable(block.get_by_position(result_col_id).column, false);
+                    _probe_column_disguise_null.emplace_back(block.columns());
                     block.insert({column_ptr,
                                   make_nullable(block.get_by_position(result_col_id).type), ""});
                     column = column_ptr.get();

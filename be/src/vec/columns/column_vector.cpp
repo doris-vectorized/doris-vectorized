@@ -304,12 +304,14 @@ ColumnPtr ColumnVector<T>::replicate(const IColumn::Offsets& offsets) const {
     typename Self::Container& res_data = res->get_data();
     res_data.reserve(offsets.back());
 
-    IColumn::Offset prev_offset = 0;
+    // vectorized this code to speed up
+    IColumn::Offset counts[size];
     for (size_t i = 0; i < size; ++i) {
-        size_t size_to_replicate = offsets[i] - prev_offset;
-        prev_offset = offsets[i];
+        counts[i] = offsets[i] - offsets[i - 1];
+    }
 
-        for (size_t j = 0; j < size_to_replicate; ++j) res_data.push_back(data[i]);
+    for (size_t i = 0; i < size; ++i) {
+        res_data.add_num_element(data[i], counts[i]);
     }
 
     return res;
