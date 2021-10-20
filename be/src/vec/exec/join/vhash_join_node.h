@@ -147,6 +147,8 @@ private:
     // mark the probe table should dispose null column
     std::vector<bool> _probe_not_ignore_null;
 
+    std::vector<uint16_t> _probe_column_disguise_null;
+
     DataTypes _right_table_data_types;
     DataTypes _left_table_data_types;
 
