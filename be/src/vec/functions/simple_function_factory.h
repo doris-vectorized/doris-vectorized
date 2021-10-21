@@ -52,6 +52,7 @@ void register_function_date_time_computation(SimpleFunctionFactory& factory);
 void register_function_str_to_date(SimpleFunctionFactory& factory);
 void register_function_json(SimpleFunctionFactory& factory);
 void register_function_function_hash(SimpleFunctionFactory& factory);
+void register_function_function_ifnull(SimpleFunctionFactory& factory);
 
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
@@ -121,6 +122,7 @@ public:
             register_function_date_time_string_to_string(instance);
             register_function_json(instance);
             register_function_function_hash(instance);
+            register_function_function_ifnull(instance);
         });
         return instance;
     }
