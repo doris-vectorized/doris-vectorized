@@ -29,6 +29,7 @@
 #include "vec/functions/function_totype.h"
 #include "vec/functions/simple_function_factory.h"
 
+#include "util/aes_util.h"
 #include "util/url_coding.h"
 
 namespace doris::vectorized {
@@ -389,6 +390,88 @@ struct StringSpace {
     }
 };
 
+
+struct AesEncryptImpl {
+    static constexpr auto name = "aes_encrypt";
+    using Chars = ColumnString::Chars;
+    using Offsets = ColumnString::Offsets;
+    using ReturnType = DataTypeString;
+    using ColumnType = ColumnString;
+    static void vector_vector(const Chars& ldata, const Offsets& loffsets, const Chars& rdata,
+                              const Offsets& roffsets, Chars& res_data, Offsets& res_offsets,
+                              NullMap& null_map_data) {
+        DCHECK_EQ(loffsets.size(), roffsets.size());
+        size_t input_rows_count = loffsets.size();
+        res_offsets.resize(input_rows_count);
+
+        for (size_t i = 0; i < input_rows_count; ++i) {
+            int l_size = loffsets[i] - loffsets[i - 1] - 1;
+            const auto l_raw = reinterpret_cast<const char*>(&ldata[loffsets[i - 1]]);
+
+            int r_size = roffsets[i] - roffsets[i - 1] - 1;
+            const auto r_raw = reinterpret_cast<const char*>(&rdata[roffsets[i - 1]]);
+
+            if (*l_raw == '\0' || l_size == 0) {
+                StringOP::push_null_string(i, res_data, res_offsets, null_map_data);
+                continue;
+            }
+
+            int cipher_len = l_size + 16;
+            char p[cipher_len];
+
+            int outlen =
+                    AesUtil::encrypt(AES_128_ECB, (unsigned char*)l_raw, l_size, (unsigned char*)r_raw,
+                                     r_size, NULL, true, (unsigned char*)p);
+            if (outlen < 0) {
+                StringOP::push_null_string(i, res_data, res_offsets, null_map_data);
+            } else {
+                StringOP::push_value_string(std::string_view(p, outlen), i, res_data, res_offsets);
+            }
+        }
+    }
+};
+
+struct AesDecryptImpl {
+    static constexpr auto name = "aes_decrypt";
+    using Chars = ColumnString::Chars;
+    using Offsets = ColumnString::Offsets;
+    using ReturnType = DataTypeString;
+    using ColumnType = ColumnString;
+    static void vector_vector(const Chars& ldata, const Offsets& loffsets, const Chars& rdata,
+                              const Offsets& roffsets, Chars& res_data, Offsets& res_offsets,
+                              NullMap& null_map_data) {
+        DCHECK_EQ(loffsets.size(), roffsets.size());
+        size_t input_rows_count = loffsets.size();
+        res_offsets.resize(input_rows_count);
+
+        for (size_t i = 0; i < input_rows_count; ++i) {
+            int l_size = loffsets[i] - loffsets[i - 1] - 1;
+            const auto l_raw = reinterpret_cast<const char*>(&ldata[loffsets[i - 1]]);
+
+            int r_size = roffsets[i] - roffsets[i - 1] - 1;
+            const auto r_raw = reinterpret_cast<const char*>(&rdata[roffsets[i - 1]]);
+
+            if (*l_raw == '\0' || l_size == 0) {
+                StringOP::push_null_string(i, res_data, res_offsets, null_map_data);
+                continue;
+            }
+
+            int cipher_len = l_size;
+            char p[cipher_len];
+
+            int outlen =
+                    AesUtil::decrypt(AES_128_ECB, (unsigned char*)l_raw, l_size, (unsigned char*)r_raw,
+                                     r_size, NULL, true, (unsigned char*)p);
+            if (outlen < 0) {
+                StringOP::push_null_string(i, res_data, res_offsets, null_map_data);
+            } else {
+                StringOP::push_value_string(std::string_view(p, outlen), i, res_data, res_offsets);
+            }
+        }
+    }
+};
+
+
 struct ToBase64Impl {
     static constexpr auto name = "to_base64";
     using ReturnType = DataTypeString;
@@ -557,6 +640,10 @@ using FunctionRTrim = FunctionStringToString<TrimImpl<false, true>, NameRTrim>;
 
 using FunctionTrim = FunctionStringToString<TrimImpl<true, true>, NameTrim>;
 
+using FunctionAesEncrypt = FunctionBinaryStringOperateToNullType<AesEncryptImpl>;
+
+using FunctionAesDecrypt = FunctionBinaryStringOperateToNullType<AesDecryptImpl>;
+
 using FunctionToBase64 = FunctionStringOperateToNullType<ToBase64Impl>;
 
 using FunctionFromBase64 = FunctionStringOperateToNullType<FromBase64Impl>;
@@ -594,6 +681,8 @@ void register_function_string(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStringRepeat>();
     factory.register_function<FunctionStringLPad>();
     factory.register_function<FunctionStringRPad>();
+    factory.register_function<FunctionAesEncrypt>();
+    factory.register_function<FunctionAesDecrypt>();
     factory.register_function<FunctionToBase64>();
     factory.register_function<FunctionFromBase64>();
     factory.register_function<FunctionSplitPart>();
