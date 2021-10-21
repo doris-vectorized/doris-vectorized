@@ -41,10 +41,7 @@ class VStringFunctions {
 #endif
 public:
     static StringVal rtrim(const StringVal& str) {
-        if (str.is_null) {
-            return StringVal::null();
-        }
-        if (str.len == 0) {
+        if (str.is_null || str.len == 0) {
             return str;
         }
         auto begin = 0;
@@ -76,10 +73,7 @@ public:
     }
 
     static StringVal ltrim(const StringVal& str) {
-        if (str.is_null) {
-            return StringVal::null();
-        }
-        if (str.len == 0) {
+        if (str.is_null || str.len == 0) {
             return str;
         }
         auto begin = 0;
@@ -111,10 +105,7 @@ public:
     }
 
     static StringVal trim(const StringVal& str) {
-        if (str.is_null) {
-            return StringVal::null();
-        }
-        if (str.len == 0) {
+        if (str.is_null || str.len == 0) {
             return str;
         }
         return rtrim(ltrim(str));
