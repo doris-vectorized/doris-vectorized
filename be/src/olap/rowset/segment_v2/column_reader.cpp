@@ -30,6 +30,7 @@
 #include "util/block_compression.h"
 #include "util/coding.h"       // for get_varint32
 #include "util/rle_encoding.h" // for RleDecoder
+#include "vec/core/types.h"
 
 namespace doris {
 namespace segment_v2 {
@@ -759,6 +760,56 @@ Status DefaultValueColumnIterator::next_batch(size_t* n, ColumnBlockView* dst, b
             dst->advance(1);
         }
     }
+    return Status::OK();
+}
+
+void DefaultValueColumnIterator::insert_default_data(vectorized::MutableColumnPtr &dst, size_t n) {
+    vectorized::Int128 int128;
+    char* data_ptr = (char*)&int128;
+    size_t data_len = sizeof(int128);
+
+    auto type = _type_info->type();
+    if (type == OLAP_FIELD_TYPE_DATE) {
+        assert(_type_size == sizeof(FieldTypeTraits<OLAP_FIELD_TYPE_DATE>::CppType)); //uint24_t
+        std::string str = FieldTypeTraits<OLAP_FIELD_TYPE_DATE>::to_string(_mem_value);
+
+        DateTimeValue value;
+        value.from_date_str(str.c_str(), str.length());
+        value.cast_to_date();
+
+        int128 = binary_cast<DateTimeValue, vectorized::Int128>(value);
+    } else if (type == OLAP_FIELD_TYPE_DATETIME) {
+        assert(_type_size == sizeof(FieldTypeTraits<OLAP_FIELD_TYPE_DATETIME>::CppType)); //int64_t
+        std::string str = FieldTypeTraits<OLAP_FIELD_TYPE_DATETIME>::to_string(_mem_value);
+
+        DateTimeValue value;
+        value.from_date_str(str.c_str(), str.length());
+        value.to_datetime();
+
+        int128 = binary_cast<DateTimeValue, vectorized::Int128>(value);
+    } else if (type == OLAP_FIELD_TYPE_DECIMAL) {
+        assert(_type_size == sizeof(FieldTypeTraits<OLAP_FIELD_TYPE_DECIMAL>::CppType)); //decimal12_t
+        decimal12_t* d = (decimal12_t*)_mem_value;
+        int128 = DecimalV2Value(d->integer, d->fraction).value();
+    } else {
+        data_ptr = (char*)_mem_value;
+        data_len = _type_size;
+    }
+
+    for (size_t i = 0; i < n; ++i) {
+        dst->insert_data(data_ptr, data_len);
+    }
+}
+
+Status DefaultValueColumnIterator::next_batch(size_t* n, vectorized::MutableColumnPtr &dst, bool* has_null) {
+    if (_is_default_value_null) {
+        *has_null = true;
+        dst->insert_many_defaults(*n);
+    } else {
+        *has_null = false;
+        insert_default_data(dst, *n);
+    }
+
     return Status::OK();
 }
 
