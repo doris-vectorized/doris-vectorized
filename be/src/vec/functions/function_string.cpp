@@ -24,6 +24,7 @@
 #include <string_view>
 
 #include "runtime/string_search.hpp"
+#include "exprs/v_string_functions.h"
 #include "vec/common/pod_array_fwd.h"
 #include "vec/functions/function_string_to_string.h"
 #include "vec/functions/function_totype.h"
@@ -329,31 +330,17 @@ struct TrimImpl {
                          ColumnString::Chars& res_data, ColumnString::Offsets& res_offsets) {
         size_t offset_size = offsets.size();
         res_offsets.resize(offsets.size());
-        res_data.reserve(data.size());
 
         for (size_t i = 0; i < offset_size; ++i) {
             const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
-            int str_size = offsets[i] - offsets[i - 1] - 1;
-
-            int32_t begin = 0;
+            StringVal str(raw_str);
             if constexpr (is_ltrim) {
-                while (begin < str_size && raw_str[begin] == ' ') {
-                    ++begin;
-                }
+                str = VStringFunctions::ltrim(str);
             }
-
-            int32_t end = str_size - 1;
             if constexpr (is_rtrim) {
-                while (end > begin && raw_str[end] == ' ') {
-                    --end;
-                }
+                str = VStringFunctions::rtrim(str);
             }
-
-            int nstr_size = end - begin + 1;
-            res_offsets[i] = res_offsets[i - 1] + nstr_size + 1;
-            res_data.insert_assume_reserved(raw_str + begin, raw_str + begin + nstr_size);
-            // memcpy(reinterpret_cast<char*>(&res_data[res_offsets[i - 1]]) ,raw_str + begin, nstr_size);
-            res_data.push_back('0');
+            StringOP::push_value_string(std::string_view((char*)str.ptr, str.len), i, res_data, res_offsets);
         }
         return Status::OK();
     }
