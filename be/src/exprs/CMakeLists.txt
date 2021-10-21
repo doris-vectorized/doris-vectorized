@@ -70,4 +70,5 @@ add_library(Exprs
   bitmap_function.cpp
   hll_function.cpp
   grouping_sets_functions.cpp
-  topn_function.cpp)
+  topn_function.cpp 
+  v_string_functions.h)
