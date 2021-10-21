@@ -106,6 +106,7 @@ TEST(function_string_test, function_string_upper_test) {
 
     vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
+
 TEST(function_string_test, function_string_trim_test) {
     std::string func_name = "trim";
     std::vector<std::any> input_types = {TypeIndex::String};
@@ -125,9 +126,8 @@ TEST(function_string_test, function_string_ltrim_test) {
     DataSet data_set = {{{std::string("a sd")}, std::string("a sd")},
                         {{std::string("  hello 123  ")}, std::string("hello 123  ")},
                         {{std::string("  HELLO,!^%")}, std::string("HELLO,!^%")},
-                        {{std::string("  MY test Str你好  ")}, std::string("MY test Str你好  ")},
+                        {{std::string("  你好MY test Str你好  ")}, std::string("你好MY test Str你好  ")},
                         {{std::string("")}, std::string("")}};
-
     vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
@@ -135,7 +135,7 @@ TEST(function_string_test, function_string_rtrim_test) {
     std::string func_name = "rtrim";
     std::vector<std::any> input_types = {TypeIndex::String};
     DataSet data_set = {{{std::string("a sd ")}, std::string("a sd")},
-                        {{std::string("  hello 123  ")}, std::string("  hello 123")},
+                        {{std::string("hello 123  ")}, std::string("hello 123")},
                         {{std::string("  HELLO,!^%")}, std::string("  HELLO,!^%")},
                         {{std::string("  MY test Str你好  ")}, std::string("  MY test Str你好")},
                         {{std::string("")}, std::string("")}};
