@@ -14,22 +14,17 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-#include "vec/functions/function_string.h"
 
 #include <gtest/gtest.h>
 #include <time.h>
 
-#include <iostream>
 #include <string>
 
-#include "exec/schema_scanner.h"
 #include "function_test_util.h"
-#include "runtime/row_batch.h"
 #include "runtime/tuple_row.h"
 #include "util/aes_util.h"
 #include "util/url_coding.h"
 #include "vec/core/field.h"
-#include "vec/functions/simple_function_factory.h"
 
 namespace doris {
 
@@ -615,9 +610,74 @@ TEST(function_string_test, function_aes_decrypt_test) {
     vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
+TEST(function_string_test, function_parse_url_test) {
+        std::string func_name = "parse_url";
+
+    {
+        std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String};
+        DataSet data_set = {
+                {{std::string("zhangsan"),                                std::string("HOST")},
+                        {Null()}},
+                {{std::string("facebook.com/path/p1"),                    std::string("HOST")},
+                        {Null()}},
+                {{std::string("http://fb.com/path/p1.p?q=1#f"),           std::string("HOST")},
+                        {std::string("fb.com")}},
+                {{std::string("http://facebook.com/path/p1.php?query=1"), std::string("AUTHORITY")},
+                        {std::string("facebook.com")}},
+                {{std::string("http://facebook.com/path/p1.php?query=1"), std::string("authority")},
+                        {std::string("facebook.com")}},
+                {{std::string("http://www.baidu.com:9090/a/b/c.php"),     std::string("FILE")},
+                        {std::string("/a/b/c.php")}},
+                {{std::string("http://www.baidu.com:9090/a/b/c.php"),     std::string("file")},
+                        {std::string("/a/b/c.php")}},
+                {{std::string("http://www.baidu.com:9090/a/b/c.php"),     std::string("PATH")},
+                        {std::string("/a/b/c.php")}},
+                {{std::string("http://www.baidu.com:9090/a/b/c.php"),     std::string("path")},
+                        {std::string("/a/b/c.php")}},
+                {{std::string("http://facebook.com/path/p1.php?query=1"), std::string("PROTOCOL")},
+                        {std::string("http")}},
+                {{std::string("http://facebook.com/path/p1.php?query=1"), std::string("protocol")},
+                        {std::string("http")}},
+                {{std::string("http://www.baidu.com:9090?a=b"),           std::string("QUERY")},
+                        {std::string("a=b")}},
+                {{std::string("http://www.baidu.com:9090?a=b"),           std::string("query")},
+                        {std::string("a=b")}},
+                {{std::string("http://www.baidu.com:9090?a=b"),           std::string("REF")},
+                        {Null()}},
+                {{std::string("http://www.baidu.com:9090?a=b"),           std::string("ref")},
+                        {Null()}},
+                {{std::string("http://www.baidu.com:9090/a/b/c?a=b"),     std::string("PORT")},
+                        {std::string("9090")}},
+                {{std::string("http://www.baidu.com/a/b/c?a=b"),          std::string("PORT")},
+                        {Null()}},
+                {{std::string("http://fb.com/path/p1.p?q=1#f"),           std::string("QUERY")},
+                        {std::string("q=1")}}
+        };
+
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+    }
+
+    {
+        std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String, TypeIndex::String};
+        DataSet data_set = {
+                {{std::string("http://fb.com/path/p1.p?q=1#f"), std::string("QUERY"), std::string("q")},
+                        {std::string("1")}},
+                {{std::string("fb.com/path/p1.p?q=1#f"),        std::string("QUERY"), std::string("q")},
+                        {std::string("1")}},
+                {{std::string("http://facebook.com/path/p1"),   std::string("QUERY"), std::string("q")},
+                        {Null()}},
+                {{std::string("http://fb.com/path/p1.p?q=1#f"), std::string("HOST"),  std::string("q")},
+                        {Null()}}
+        };
+
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+    }
+}
+
 } // namespace doris
 
 int main(int argc, char** argv) {
+    doris::CpuInfo::init();
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
