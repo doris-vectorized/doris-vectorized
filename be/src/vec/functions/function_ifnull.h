@@ -39,6 +39,7 @@ public:
     bool use_default_implementation_for_constants() const override { return false; }
 
     DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
+        DCHECK(arguments[0]->get_type_id() == arguments[1]->get_type_id());
         if (arguments[0]->only_null())
             return arguments[1];
 
