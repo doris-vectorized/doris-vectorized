@@ -17,13 +17,18 @@
 
 #pragma once
 
+#include "exprs/anyval_util.h"
+
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
+#include "runtime/string_value.hpp"
+
 #include <string_view>
 
 #include "util/md5.h"
+#include "util/url_parser.h"
 
 #include "vec/columns/column_nullable.h"
 #include "vec/columns/column_string.h"
@@ -882,4 +887,96 @@ public:
         return Status::OK();
     }
 };
+
+class FunctionStringParseUrl : public IFunction {
+public:
+    static constexpr auto name = "parse_url";
+    static FunctionPtr create() { return std::make_shared<FunctionStringParseUrl>(); }
+    String get_name() const override { return name; }
+    size_t get_number_of_arguments() const override { return 0; }
+    bool is_variadic() const override { return true; }
+
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
+        return make_nullable(std::make_shared<DataTypeString>());
+    }
+    bool use_default_implementation_for_nulls() const override { return false; }
+
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
+                        size_t input_rows_count) override {
+        auto null_map = ColumnUInt8::create(input_rows_count, 0);
+        auto& null_map_data = null_map->get_data();
+
+        auto res = ColumnString::create();
+        auto& res_offsets = res->get_offsets();
+        auto& res_chars = res->get_chars();
+        res_offsets.resize(input_rows_count);
+
+        size_t argument_size = arguments.size();
+        bool has_key = argument_size >= 3;
+
+        ColumnPtr argument_columns[argument_size];
+        for (size_t i = 0; i < argument_size; ++i) {
+            argument_columns[i] =
+                    block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
+            if (auto* nullable = check_and_get_column<const ColumnNullable>(*argument_columns[i])) {
+                argument_columns[i] = nullable->get_nested_column_ptr();
+                VectorizedUtils::update_null_map(null_map_data, nullable->get_null_map_data());
+            }
+        }
+
+        auto url_col = assert_cast<const ColumnString*>(argument_columns[0].get());
+        auto part_col = assert_cast<const ColumnString*>(argument_columns[1].get());
+        const ColumnString* key_col;
+        if (has_key) {
+            key_col = assert_cast<const ColumnString*>(argument_columns[2].get());
+        }
+
+        for (size_t i = 0; i < input_rows_count; ++i) {
+            if (null_map_data[i]) {
+                StringOP::push_null_string(i, res_chars, res_offsets, null_map_data);
+                continue;
+            }
+
+            auto part = part_col->get_data_at(i);
+            StringValue p(const_cast<char *>(part.data), part.size);
+            UrlParser::UrlPart url_part = UrlParser::get_url_part(p);
+            StringValue url_key;
+            if (has_key) {
+                auto key = key_col->get_data_at(i);
+                url_key = StringValue(const_cast<char *>(key.data), key.size);
+            }
+
+            auto source = url_col->get_data_at(i);
+            StringValue url_val(const_cast<char *>(source.data), source.size);
+
+            StringValue parse_res;
+            bool success = false;
+            if (has_key) {
+                success = UrlParser::parse_url_key(url_val, url_part, url_key, &parse_res);
+            } else {
+                success = UrlParser::parse_url(url_val, url_part, &parse_res);
+            }
+
+            if (!success) {
+                // url is malformed, or url_part is invalid.
+                if (url_part == UrlParser::INVALID) {
+                    return Status::RuntimeError(fmt::format(
+                            "Invalid URL part: {}\n{}", std::string(part.data, part.size),
+                            "(Valid URL parts are 'PROTOCOL', 'HOST', 'PATH', 'REF', 'AUTHORITY', "
+                            "'FILE', 'USERINFO', 'PORT' and 'QUERY')"));
+                } else {
+                    StringOP::push_null_string(i, res_chars, res_offsets, null_map_data);
+                    continue;
+                }
+            }
+
+            StringOP::push_value_string(std::string_view(parse_res.ptr, parse_res.len),
+                                        i, res_chars, res_offsets);
+        }
+        block.get_by_position(result).column =
+                ColumnNullable::create(std::move(res), std::move(null_map));
+        return Status::OK();
+    }
+};
+
 } // namespace doris::vectorized

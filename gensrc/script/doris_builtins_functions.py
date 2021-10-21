@@ -920,14 +920,14 @@ visible_functions = [
             '_ZN5doris15StringFunctions17parse_url_prepareEPN9doris_udf'
             '15FunctionContextENS2_18FunctionStateScopeE',
             '_ZN5doris15StringFunctions15parse_url_closeEPN9doris_udf'
-            '15FunctionContextENS2_18FunctionStateScopeE', '', ''],
+            '15FunctionContextENS2_18FunctionStateScopeE', 'vec', 'ALWAYS_NULLABLE'],
     [['parse_url'], 'VARCHAR', ['VARCHAR', 'VARCHAR', 'VARCHAR'],
             '_ZN5doris15StringFunctions13parse_url_keyEPN9doris_udf'
             '15FunctionContextERKNS1_9StringValES6_S6_',
             '_ZN5doris15StringFunctions17parse_url_prepareEPN9doris_udf'
             '15FunctionContextENS2_18FunctionStateScopeE',
             '_ZN5doris15StringFunctions15parse_url_closeEPN9doris_udf'
-            '15FunctionContextENS2_18FunctionStateScopeE', '', ''],
+            '15FunctionContextENS2_18FunctionStateScopeE', 'vec', 'ALWAYS_NULLABLE'],
     [['money_format'], 'VARCHAR', ['BIGINT'],
         '_ZN5doris15StringFunctions12money_formatEPN9doris_udf15FunctionContextERKNS1_9BigIntValE',
         '', '', '', ''],
@@ -1240,7 +1240,7 @@ visible_functions = [
         '15FunctionContextERKNS1_9StringValES6_', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['from_base64'], 'STRING', ['STRING'],
         '_ZN5doris19EncryptionFunctions11from_base64EPN9doris_udf'
-        '15FunctionContextERKNS1_9StringValE', '', '', '', ''],
+        '15FunctionContextERKNS1_9StringValE', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['to_base64'], 'STRING', ['STRING'],
         '_ZN5doris19EncryptionFunctions9to_base64EPN9doris_udf'
         '15FunctionContextERKNS1_9StringValE', '', '', 'vec', 'ALWAYS_NULLABLE'],
