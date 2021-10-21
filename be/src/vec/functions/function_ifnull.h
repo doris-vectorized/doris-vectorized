@@ -40,13 +40,7 @@ public:
 
     DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         DCHECK(arguments[0]->get_type_id() == arguments[1]->get_type_id());
-        if (arguments[0]->only_null())
-            return arguments[1];
-
-        if (!arguments[0]->is_nullable())
-            return arguments[0];
-
-        return get_least_supertype({remove_nullable(arguments[0]), arguments[1]});
+        return arguments[1];
     }
 
     bool use_default_implementation_for_nulls() const override { return false; }
@@ -69,7 +63,7 @@ public:
         if (auto* nullable = check_and_get_column<ColumnNullable>(*col_left.column)) {
             block.get_by_position(arguments[0]).column = nullable->get_null_map_column_ptr();
         } else {
-            block.get_by_position(arguments[0]).column = col_left.column;
+            block.get_by_position(result).column = col_left.column;
             return Status::OK();
         }
         const ColumnsWithTypeAndName if_columns
