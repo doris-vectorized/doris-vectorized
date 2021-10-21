@@ -16,6 +16,7 @@
 // under the License.
 
 #include "exprs/string_functions.h"
+#include "exprs/v_string_functions.h"
 #include "util/vectorized-tool/lower.h"
 #include "util/vectorized-tool/upper.h"
 
@@ -388,48 +389,15 @@ StringVal StringFunctions::reverse(FunctionContext* context, const StringVal& st
 }
 
 StringVal StringFunctions::trim(FunctionContext* context, const StringVal& str) {
-    if (str.is_null) {
-        return StringVal::null();
-    }
-    // Find new starting position.
-    int32_t begin = 0;
-    while (begin < str.len && str.ptr[begin] == ' ') {
-        ++begin;
-    }
-    // Find new ending position.
-    int32_t end = str.len - 1;
-    while (end > begin && str.ptr[end] == ' ') {
-        --end;
-    }
-    return StringVal(str.ptr + begin, end - begin + 1);
+    return VStringFunctions::trim(str);
 }
 
 StringVal StringFunctions::ltrim(FunctionContext* context, const StringVal& str) {
-    if (str.is_null) {
-        return StringVal::null();
-    }
-    // Find new starting position.
-    int32_t begin = 0;
-    while (begin < str.len && str.ptr[begin] == ' ') {
-        ++begin;
-    }
-    return StringVal(str.ptr + begin, str.len - begin);
+    return VStringFunctions::ltrim(str);
 }
 
 StringVal StringFunctions::rtrim(FunctionContext* context, const StringVal& str) {
-    if (str.is_null) {
-        return StringVal::null();
-    }
-    if (str.len == 0) {
-        return str;
-    }
-    // Find new ending position.
-    int32_t end = str.len - 1;
-    while (end > 0 && str.ptr[end] == ' ') {
-        --end;
-    }
-    DCHECK_GE(end, 0);
-    return StringVal(str.ptr, (str.ptr[end] == ' ') ? end : end + 1);
+    return VStringFunctions::rtrim(str);
 }
 
 IntVal StringFunctions::ascii(FunctionContext* context, const StringVal& str) {
