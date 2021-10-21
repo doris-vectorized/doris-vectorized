@@ -1225,19 +1225,19 @@ visible_functions = [
     # aes and base64 function
     [['aes_encrypt'], 'VARCHAR', ['VARCHAR', 'VARCHAR'],
         '_ZN5doris19EncryptionFunctions11aes_encryptEPN9doris_udf'
-        '15FunctionContextERKNS1_9StringValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_9StringValES6_', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['aes_decrypt'], 'VARCHAR', ['VARCHAR', 'VARCHAR'],
         '_ZN5doris19EncryptionFunctions11aes_decryptEPN9doris_udf'
-        '15FunctionContextERKNS1_9StringValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_9StringValES6_', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['from_base64'], 'VARCHAR', ['VARCHAR'],
         '_ZN5doris19EncryptionFunctions11from_base64EPN9doris_udf'
         '15FunctionContextERKNS1_9StringValE', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['aes_encrypt'], 'STRING', ['STRING', 'STRING'],
         '_ZN5doris19EncryptionFunctions11aes_encryptEPN9doris_udf'
-        '15FunctionContextERKNS1_9StringValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_9StringValES6_', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['aes_decrypt'], 'STRING', ['STRING', 'STRING'],
         '_ZN5doris19EncryptionFunctions11aes_decryptEPN9doris_udf'
-        '15FunctionContextERKNS1_9StringValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_9StringValES6_', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['from_base64'], 'STRING', ['STRING'],
         '_ZN5doris19EncryptionFunctions11from_base64EPN9doris_udf'
         '15FunctionContextERKNS1_9StringValE', '', '', '', ''],
