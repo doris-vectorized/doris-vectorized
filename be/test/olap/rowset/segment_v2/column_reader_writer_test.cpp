@@ -573,10 +573,8 @@ void test_v_read_default_value(string value, void* result) {
             ASSERT_TRUE(st.ok());
             for (int j = 0; j < rows_read; ++j) {
                 if (type == OLAP_FIELD_TYPE_CHAR) {
-                    //ASSERT_EQ(*(string*)result, reinterpret_cast<const Slice*>(col.cell_ptr(j))->to_string()) << "j:" << j;
                 } else if (type == OLAP_FIELD_TYPE_VARCHAR || type == OLAP_FIELD_TYPE_HLL ||
                            type == OLAP_FIELD_TYPE_OBJECT) {
-                    //ASSERT_EQ(value, reinterpret_cast<const Slice*>(col.cell_ptr(j))->to_string()) << "j:" << j;
                 } else if (type == OLAP_FIELD_TYPE_DATE || type == OLAP_FIELD_TYPE_DATETIME) {
                     StringRef sr = mcp->get_data_at(j);
                     ASSERT_EQ(sr.size, sizeof(vectorized::Int128));
@@ -585,7 +583,6 @@ void test_v_read_default_value(string value, void* result) {
                     DateTimeValue value = binary_cast<vectorized::Int128, DateTimeValue>(x);
                     char buf[64] = {};
                     value.to_string(buf);
-                    //LOG(INFO) << buf << std::endl;
                     int ret = strcmp(buf, (char*)result);
                     ASSERT_EQ(ret, 0);
                 } else if (type == OLAP_FIELD_TYPE_DECIMAL) {
