@@ -382,6 +382,24 @@ TEST(MathFunctionTest, bin_test) {
     vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
+TEST(MathFunctionTest, hex_test) {
+    std::string func_name = "hex"; // hex(int)
+    
+    std::vector<std::any> input_types = {vectorized::TypeIndex::Int64};
+
+    DataSet data_set = {{{Null()}, Null()},
+                        {{(int64_t)-1}, std::string("FFFFFFFFFFFFFFFF")},
+                        {{(int64_t)-2}, std::string("FFFFFFFFFFFFFFFE")},
+                        {{(int64_t)12}, std::string("C")},
+                        {{(int64_t)144}, std::string("90")},
+                        {{(int64_t)151233}, std::string("24EC1")},
+                        {{(int64_t)0}, std::string("0")},
+                        {{(int64_t)9223372036854775807}, std::string("7FFFFFFFFFFFFFFF")},
+                        {{(int64_t)-7453337203775808}, std::string("FFE5853AB393E6C0")}};
+
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
 } // namespace doris
 
 int main(int argc, char** argv) {
