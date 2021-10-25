@@ -553,8 +553,8 @@ TEST(function_string_test, function_aes_encrypt_test) {
     std::vector<std::any> input_types = {TypeIndex::String,
                                          TypeIndex::String};
 
-    char* key = "doris";
-    char* src[6] = {"aaaaaa", "bbbbbb", "cccccc", "dddddd", "eeeeee", ""};
+    const char* key = "doris";
+    const char* src[6] = {"aaaaaa", "bbbbbb", "cccccc", "dddddd", "eeeeee", ""};
     std::string r[5];
 
     for (int i = 0; i < 5; i++) {
@@ -585,8 +585,8 @@ TEST(function_string_test, function_aes_decrypt_test) {
     std::vector<std::any> input_types = {TypeIndex::String,
                                          TypeIndex::String};
 
-    char* key = "doris";
-    char* src[5] = {"aaaaaa", "bbbbbb", "cccccc", "dddddd", "eeeeee"};
+    const char* key = "doris";
+    const char* src[5] = {"aaaaaa", "bbbbbb", "cccccc", "dddddd", "eeeeee"};
     std::string r[5];
 
     for (int i = 0; i < 5; i++) {
