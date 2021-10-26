@@ -749,6 +749,14 @@ TEST_F(StringFunctionsTest, rtrim) {
     ASSERT_EQ(StringVal("12345678910"), res);
 }
 
+TEST_F(StringFunctionsTest, is_ascii) {
+    ASSERT_EQ(true, VStringFunctions::is_ascii(StringVal("hello123")));
+    ASSERT_EQ(true, VStringFunctions::is_ascii(StringVal("hello123fwrewerwerwerwrsfqrwerwefwfwrwfsfwe")));
+    ASSERT_EQ(false, VStringFunctions::is_ascii(StringVal("运维组123")));
+    ASSERT_EQ(false, VStringFunctions::is_ascii(StringVal("hello123运维组fwrewerwerwerwrsfqrwerwefwfwrwfsfwe")));
+    ASSERT_EQ(true, VStringFunctions::is_ascii(StringVal::null()));
+    ASSERT_EQ(true, VStringFunctions::is_ascii(StringVal("")));
+}
 } // namespace doris
 
 int main(int argc, char** argv) {
