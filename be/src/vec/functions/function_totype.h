@@ -35,7 +35,7 @@ namespace doris::vectorized {
 // support string->complex/primary
 // support primary/complex->primary/complex
 // support primary -> string
-template <typename Impl, typename Name, typename argument_types = defaultDataTypes>
+template <typename Impl, typename Name, typename argument_types = DefaultDataTypes>
 class FunctionUnaryToType : public IFunction {
 public:
     static constexpr auto name = Name::name;
@@ -314,7 +314,7 @@ public:
 };
 
 // func(string) -> nullable(type)
-template<typename Impl, typename argument_types = defaultDataTypes>
+template<typename Impl, typename argument_types = DefaultDataTypes>
 class FunctionStringOperateToNullType : public IFunction {
 public:
     static constexpr auto name = Impl::name;

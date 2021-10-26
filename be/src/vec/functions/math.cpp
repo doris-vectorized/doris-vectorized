@@ -206,12 +206,12 @@ struct HexIntImpl {
         return Status::OK();
     }
 };
-struct hexIntDataTypes{
+struct HexIntDataTypes{
     static DataTypes types;
 };
-DataTypes hexIntDataTypes::types = { make_nullable(std::make_shared<vectorized::DataTypeInt64>()) };
+DataTypes HexIntDataTypes::types = { make_nullable(std::make_shared<vectorized::DataTypeInt64>()) };
 // support hex variadic
-using FunctionHexInt = FunctionUnaryToType<HexIntImpl, HexIntName, hexIntDataTypes>;
+using FunctionHexInt = FunctionUnaryToType<HexIntImpl, HexIntName, HexIntDataTypes>;
 
 template <typename A>
 struct SignImpl {

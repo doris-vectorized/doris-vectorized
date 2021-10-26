@@ -33,7 +33,7 @@
 
 namespace doris::vectorized {
 
-DataTypes defaultDataTypes::types;
+DataTypes DefaultDataTypes::types;
 
 IDataType::IDataType() {}
 

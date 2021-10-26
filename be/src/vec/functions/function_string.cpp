@@ -344,7 +344,7 @@ struct HexStringImpl {
             *res = hexDigits[(src_str[i] >> 4) & 0x0F];
             std::copy(res, res + 2, dst_str + 2 * i);
         }
-        return 2*length;
+        return 2 * length;
     }
 
     static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
@@ -366,7 +366,7 @@ struct HexStringImpl {
                 continue;
             }
 
-            size_t cipher_len = 2*srclen;
+            size_t cipher_len = 2 * srclen;
             char dst[cipher_len];
             int outlen = hex_encode(source, srclen, dst);
 
@@ -382,10 +382,10 @@ struct HexStringImpl {
 };
 
 // support hex variadic
-struct hexStringDataTypes{
+struct HexStringDataTypes{
     static DataTypes types;
 };
-DataTypes hexStringDataTypes::types = { make_nullable(std::make_shared<vectorized::DataTypeString>()) };
+DataTypes HexStringDataTypes::types = { make_nullable(std::make_shared<vectorized::DataTypeString>()) };
 
 struct UnHexImpl{
     static constexpr auto name = "unhex";
@@ -436,7 +436,7 @@ struct UnHexImpl{
             }
             *(dst_str + dst_index) = c;
         }
-        return src_len/2;
+        return src_len / 2;
     }
 
     static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
@@ -458,7 +458,7 @@ struct UnHexImpl{
                 continue;
             }
 
-            int cipher_len = srclen/2;
+            int cipher_len = srclen / 2;
             char dst[cipher_len];
             int outlen = hex_decode(source, srclen, dst);
 
@@ -743,7 +743,7 @@ using FunctionStringFindInSet =
 
 using FunctionReverse = FunctionStringToString<ReverseImpl, NameReverse>;
 
-using FunctionHexString = FunctionStringOperateToNullType<HexStringImpl, hexStringDataTypes>;
+using FunctionHexString = FunctionStringOperateToNullType<HexStringImpl, HexStringDataTypes>;
 
 using FunctionUnHex = FunctionStringOperateToNullType<UnHexImpl>;
 
