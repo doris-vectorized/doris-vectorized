@@ -15,7 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#include "vec/functions/function_binary_arithmetic.h"
+
+#include "vec/functions/function_binary_arithmetic_to_null_type.h"
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
@@ -26,7 +27,11 @@ struct DivideFloatingImpl {
     static const constexpr bool allow_decimal = true;
 
     template <typename Result = ResultType>
-    static inline Result apply(A a, B b) {
+    static inline Result apply(A a, B b, NullMap& null_map, size_t index) {
+        if (UNLIKELY(b == 0)) {
+            null_map[index] = 1;
+            return 0;
+        }
         return static_cast<Result>(a) / b;
     }
 };
@@ -34,7 +39,7 @@ struct DivideFloatingImpl {
 struct NameDivide {
     static constexpr auto name = "divide";
 };
-using FunctionDivide = FunctionBinaryArithmetic<DivideFloatingImpl, NameDivide>;
+using FunctionDivide = FunctionBinaryArithmeticToNullType<DivideFloatingImpl, NameDivide>;
 
 void register_function_divide(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionDivide>();

@@ -24,6 +24,7 @@
 #include <libdivide.h>
 
 #include "vec/functions/function_binary_arithmetic.h"
+#include "vec/functions/function_binary_arithmetic_to_null_type.h"
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
@@ -140,7 +141,7 @@ struct BinaryOperationImpl<Int32, Int64, DivideIntegralImpl<Int32, Int64>>
 struct NameIntDiv {
     static constexpr auto name = "int_divide";
 };
-using FunctionIntDiv = FunctionBinaryArithmetic<DivideIntegralImpl, NameIntDiv, false>;
+using FunctionIntDiv = FunctionBinaryArithmeticToNullType<DivideIntegralImpl, NameIntDiv, false>;
 
 void register_function_int_div(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionIntDiv>();

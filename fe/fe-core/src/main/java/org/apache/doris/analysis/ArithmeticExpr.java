@@ -141,20 +141,20 @@ public class ArithmeticExpr extends Expr {
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DOUBLE, Type.DOUBLE),
-                Type.DOUBLE, Function.NullableMode.DEPEND_ON_ARGUMENT));
+                Type.DOUBLE, Function.NullableMode.ALWAYS_NULLABLE));
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DECIMALV2, Type.DECIMALV2),
-                Type.DECIMALV2, Function.NullableMode.DEPEND_ON_ARGUMENT));
+                Type.DECIMALV2, Function.NullableMode.ALWAYS_NULLABLE));
 
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                 Operator.MOD.getName(),
                 Lists.<Type>newArrayList(Type.DOUBLE, Type.DOUBLE),
-                Type.DOUBLE, Function.NullableMode.DEPEND_ON_ARGUMENT));
+                Type.DOUBLE, Function.NullableMode.ALWAYS_NULLABLE));
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                 Operator.MOD.getName(),
                 Lists.<Type>newArrayList(Type.DECIMALV2, Type.DECIMALV2),
-                Type.DECIMALV2, Function.NullableMode.DEPEND_ON_ARGUMENT));
+                Type.DECIMALV2, Function.NullableMode.ALWAYS_NULLABLE));
 
         for (int i = 0; i < Type.getIntegerTypes().size(); i++) {
             Type t1 = Type.getIntegerTypes().get(i);
@@ -164,11 +164,11 @@ public class ArithmeticExpr extends Expr {
                 functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                         Operator.INT_DIVIDE.getName(), Lists.newArrayList(t1, t2),
                         Type.getAssignmentCompatibleType(t1, t2, false),
-                        Function.NullableMode.DEPEND_ON_ARGUMENT));
+                        Function.NullableMode.ALWAYS_NULLABLE));
                 functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                         Operator.MOD.getName(), Lists.newArrayList(t1, t2),
                         Type.getAssignmentCompatibleType(t1, t2, false),
-                        Function.NullableMode.DEPEND_ON_ARGUMENT));
+                        Function.NullableMode.ALWAYS_NULLABLE));
             }
         }
     }
@@ -279,22 +279,27 @@ public class ArithmeticExpr extends Expr {
                 case MULTIPLY:
                 case ADD:
                 case SUBTRACT:
-                case MOD:
                     if (t1.isDecimalV2() || t2.isDecimalV2()) {
                         castBinaryOp(findCommonType(t1, t2));
                     }
                     fn = getBuiltinFunction(analyzer, op.name, collectChildReturnTypes(),
                             Function.CompareMode.IS_IDENTICAL);
                     break;
-                case INT_DIVIDE:
+                case MOD:
                     if (t1.isDecimalV2() || t2.isDecimalV2()) {
                         castBinaryOp(findCommonType(t1, t2));
                     }
-                    else if (t1.isDateType() || t2.isDateType()) {
+                    fn = getBuiltinFunction(analyzer, op.name, collectChildReturnTypes(),
+                            Function.CompareMode.IS_IDENTICAL, Function.NullableMode.ALWAYS_NULLABLE);
+                    break;
+                case INT_DIVIDE:
+                    if (t1.isDecimalV2() || t2.isDecimalV2()) {
+                        castBinaryOp(findCommonType(t1, t2));
+                    } else if (t1.isDateType() || t2.isDateType()) {
                         castBinaryOp(Type.BIGINT);
                     }
                     fn = getBuiltinFunction(analyzer, op.name, collectChildReturnTypes(),
-                            Function.CompareMode.IS_IDENTICAL);
+                            Function.CompareMode.IS_IDENTICAL, Function.NullableMode.ALWAYS_NULLABLE);
                     break;
                 case DIVIDE:
                     t1 = getChild(0).getType().getNumResultType();
@@ -306,7 +311,7 @@ public class ArithmeticExpr extends Expr {
                     }
                     castBinaryOp(commonType);
                     fn = getBuiltinFunction(analyzer, op.name, collectChildReturnTypes(),
-                            Function.CompareMode.IS_IDENTICAL);
+                            Function.CompareMode.IS_IDENTICAL, Function.NullableMode.ALWAYS_NULLABLE);
                     break;
             }
 
