@@ -106,7 +106,7 @@ public:
         if (iter != function_creators.end()) {
             return iter->second()->build(arguments, return_type);
         }
-        LOG(INFO) << "get_function() return nullptr in simple_function_factory.h";
+        DCHECK(iter != nullptr);
         return nullptr;
     }
 
