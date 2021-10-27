@@ -99,14 +99,13 @@ public:
             for (auto arg : arguments) {
                 key_str.append(make_nullable(arg.type)->get_name());
             }
-            LOG(INFO) << "get_function() key_str: " << key_str;
         }
 
         auto iter = function_creators.find(key_str);
         if (iter != function_creators.end()) {
             return iter->second()->build(arguments, return_type);
         }
-        DCHECK(iter != nullptr);
+        
         return nullptr;
     }
 
