@@ -100,7 +100,15 @@ struct RowRefList : RowRef {
 
     RowRefList() {}
     RowRefList(const Block* block_, size_t row_num_) : RowRef(block_, row_num_) {}
-
+    ~RowRefList() {
+        auto head = next;
+        while (head) {
+            next = head->next;
+            delete head;
+            head = next;
+        }
+        next = nullptr;
+    }
     ForwardIterator begin() { return ForwardIterator(this); }
 
     /// insert element after current one

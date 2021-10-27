@@ -35,8 +35,7 @@ private:
     Block _probe_block;
     ColumnRawPtrs _probe_columns;
     int _probe_index = -1;
-    bool _probe_eos = false;
-    DataTypes _left_table_data_types;
+    std::vector<MutableColumnPtr> mutable_cols;
 
     template <class HashTableContext>
     friend class HashTableProbeExcept;

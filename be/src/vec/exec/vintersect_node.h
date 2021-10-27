@@ -44,9 +44,8 @@ public:
 private:
     Block _probe_block;
     ColumnRawPtrs _probe_columns;
+    std::vector<MutableColumnPtr> mutable_cols; 
     int _probe_index = -1;
-    DataTypes _left_table_data_types;
-
     template <class HashTableContext>
     friend class HashTableProbeIntersect;
 };

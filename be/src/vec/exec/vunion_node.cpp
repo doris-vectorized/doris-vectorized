@@ -31,21 +31,70 @@ namespace doris {
 namespace vectorized {
 
 VUnionNode::VUnionNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
-        : VSetOperationNode(pool, tnode, descs),
-          _first_materialized_child_idx(tnode.union_node.first_materialized_child_idx) {}
+        : ExecNode(pool, tnode, descs),
+          _first_materialized_child_idx(tnode.union_node.first_materialized_child_idx),
+          _const_expr_list_idx(0),
+          _child_idx(0),
+          _child_row_idx(0),
+          _child_eos(false),
+          _to_close_child_idx(-1) {}
 
 Status VUnionNode::init(const TPlanNode& tnode, RuntimeState* state) {
-    RETURN_IF_ERROR(VSetOperationNode::init(tnode, state));
+    RETURN_IF_ERROR(ExecNode::init(tnode, state));
     DCHECK(tnode.__isset.union_node);
+    DCHECK_EQ(_conjunct_ctxs.size(), 0);
+    // Create const_expr_ctx_lists_ from thrift exprs.
+    auto& const_texpr_lists = tnode.union_node.const_expr_lists;
+    for (auto& texprs : const_texpr_lists) {
+        std::vector<VExprContext*> ctxs;
+        RETURN_IF_ERROR(VExpr::create_expr_trees(_pool, texprs, &ctxs));
+        _const_expr_lists.push_back(ctxs);
+    }
+    // Create result_expr_ctx_lists_ from thrift exprs.
+    auto& result_texpr_lists = tnode.union_node.result_expr_lists;
+    for (auto& texprs : result_texpr_lists) {
+        std::vector<VExprContext*> ctxs;
+        RETURN_IF_ERROR(VExpr::create_expr_trees(_pool, texprs, &ctxs));
+        _child_expr_lists.push_back(ctxs);
+    }
     return Status::OK();
 }
 
 Status VUnionNode::prepare(RuntimeState* state) {
-    return VSetOperationNode::prepare(state);
+    SCOPED_TIMER(_runtime_profile->total_time_counter());
+    RETURN_IF_ERROR(ExecNode::prepare(state));
+    _materialize_exprs_evaluate_timer =
+            ADD_TIMER(_runtime_profile, "MaterializeExprsEvaluateTimer");
+    // Prepare const expr lists.
+    for (const std::vector<VExprContext*>& exprs : _const_expr_lists) {
+        RETURN_IF_ERROR(VExpr::prepare(exprs, state, row_desc(), expr_mem_tracker()));
+    }
+
+    // Prepare result expr lists.
+    for (int i = 0; i < _child_expr_lists.size(); ++i) {
+        RETURN_IF_ERROR(VExpr::prepare(_child_expr_lists[i], state, child(i)->row_desc(),
+                                       expr_mem_tracker()));
+    }
+    return Status::OK();
 }
 
 Status VUnionNode::open(RuntimeState* state) {
-    return VSetOperationNode::open(state);
+    SCOPED_TIMER(_runtime_profile->total_time_counter());
+    RETURN_IF_ERROR(ExecNode::open(state));
+    // open const expr lists.
+    for (const std::vector<VExprContext*>& exprs : _const_expr_lists) {
+        RETURN_IF_ERROR(VExpr::open(exprs, state));
+    }
+    // open result expr lists.
+    for (const std::vector<VExprContext*>& exprs : _child_expr_lists) {
+        RETURN_IF_ERROR(VExpr::open(exprs, state));
+    }
+
+    // Ensures that rows are available for clients to fetch after this open() has
+    // succeeded.
+    if (!_children.empty()) RETURN_IF_ERROR(child(_child_idx)->open(state));
+
+    return Status::OK();
 }
 
 Status VUnionNode::get_next_pass_through(RuntimeState* state, Block* block) {
@@ -192,7 +241,16 @@ Status VUnionNode::get_next(RuntimeState* state, Block* block, bool* eos) {
 }
 
 Status VUnionNode::close(RuntimeState* state) {
-    return VSetOperationNode::close(state);
+    if (is_closed()) {
+        return Status::OK();
+    }
+    for (auto& exprs : _const_expr_lists) {
+        VExpr::close(exprs, state);
+    }
+    for (auto& exprs : _child_expr_lists) {
+        VExpr::close(exprs, state);
+    }
+    return ExecNode::close(state);
 }
 
 void VUnionNode::debug_string(int indentation_level, std::stringstream* out) const {

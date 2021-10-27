@@ -22,21 +22,47 @@
 namespace doris {
 namespace vectorized {
 
-class VUnionNode : public VSetOperationNode {
+class VUnionNode : public ExecNode {
 public:
     VUnionNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs);
     virtual Status init(const TPlanNode& tnode, RuntimeState* state = nullptr);
     virtual Status prepare(RuntimeState* state);
     virtual Status open(RuntimeState* state);
     virtual Status get_next(RuntimeState* state, vectorized::Block* block, bool* eos);
+    virtual Status get_next(RuntimeState* state, RowBatch* row_batch, bool* eos) {
+        return Status::NotSupported("Not Implemented get RowBatch in vecorized execution.");
+    }
     virtual Status close(RuntimeState* state);
 
 private:
+    /// Const exprs materialized by this node. These exprs don't refer to any children.
+    /// Only materialized by the first fragment instance to avoid duplication.
+    std::vector<std::vector<VExprContext*>> _const_expr_lists;
+
+    /// Exprs materialized by this node. The i-th result expr list refers to the i-th child.
+    std::vector<std::vector<VExprContext*>> _child_expr_lists;
     /// Index of the first non-passthrough child; i.e. a child that needs materialization.
     /// 0 when all children are materialized, '_children.size()' when no children are
     /// materialized.
     const int _first_materialized_child_idx;
+    /// Index of current const result expr list.
+    int _const_expr_list_idx;
 
+    /// Index of current child.
+    int _child_idx;
+
+    /// Index of current row in child_row_block_.
+    int _child_row_idx;
+
+    /// Saved from the last to GetNext() on the current child.
+    bool _child_eos;
+
+    /// Index of the child that needs to be closed on the next GetNext() call. Should be set
+    /// to -1 if no child needs to be closed.
+    int _to_close_child_idx;
+
+    // Time spent to evaluates exprs and materializes the results
+    RuntimeProfile::Counter* _materialize_exprs_evaluate_timer = nullptr;
     /// GetNext() for the passthrough case. We pass 'block' directly into the GetNext()
     /// call on the child.
     Status get_next_pass_through(RuntimeState* state, Block* block);
