@@ -373,8 +373,9 @@ public:
     void replicate(uint32_t total, const T* from, const uint32_t* numbers, uint32_t numbers_len) {
         this->reserve(this->size() + total);
         T* t = t_end();
+        uint32_t n = 0;
         for (uint32_t i = 0; i < numbers_len; ++i) {
-            if (LIKELY(uint32_t n = numbers[i])) {
+            if (LIKELY(n = numbers[i])) {
                 std::fill(t, t + n, from[i]);
                 t += n;
             }
