@@ -318,7 +318,7 @@ ColumnPtr ColumnVector<T>::replicate(const IColumn::Offsets& offsets) const {
 }
 
 template <typename T>
-ColumnPtr ColumnVector<T>::replicate(unsigned int total, const unsigned int* numbers, unsigned int numbers_len) const {
+ColumnPtr ColumnVector<T>::replicate(uint32_t total, const uint32_t* numbers, uint32_t numbers_len) const {
     size_t size = data.size();
     if (size != numbers_len) {
         LOG(FATAL) << "numbers_len doesn't match size of column.";

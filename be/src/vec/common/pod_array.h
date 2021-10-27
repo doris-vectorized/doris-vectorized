@@ -370,11 +370,11 @@ public:
         }
     }
 
-    void replicate(unsigned int total, const T* from, const unsigned int* numbers, unsigned int numbers_len) {
+    void replicate(uint32_t total, const T* from, const uint32_t* numbers, uint32_t numbers_len) {
         this->reserve(this->size() + total);
         T* t = t_end();
-        for (unsigned int i = 0; i < numbers_len; ++i) {
-            if (unsigned int n = numbers[i]) {
+        for (uint32_t i = 0; i < numbers_len; ++i) {
+            if (LIKELY(uint32_t n = numbers[i])) {
                 std::fill(t, t + n, from[i]);
                 t += n;
             }

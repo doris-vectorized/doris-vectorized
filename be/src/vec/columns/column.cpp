@@ -43,12 +43,12 @@ void IColumn::insert_from(const IColumn& src, size_t n) {
     insert(src[n]);
 }
 
-IColumn::Ptr IColumn::replicate(unsigned int total, const unsigned int* numbers, unsigned int numbers_len) const {
+IColumn::Ptr IColumn::replicate(uint32_t total, const uint32_t* numbers, uint32_t numbers_len) const {
     Offsets offsets;
     offsets.reserve(numbers_len);
 
-    unsigned int base = 0;
-    for (unsigned int i = 0; i < numbers_len; ++i) {
+    uint32_t base = 0;
+    for (uint32_t i = 0; i < numbers_len; ++i) {
         offsets.push_back((base += numbers[i]));
     }
     assert(base == total);
