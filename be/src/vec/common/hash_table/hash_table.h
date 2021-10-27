@@ -192,6 +192,10 @@ struct HashTableCell {
     bool is_zero(const State& state) const { return is_zero(key, state); }
     static bool is_zero(const Key& key, const State& /*state*/) { return ZeroTraits::check(key); }
 
+    bool find(const Key& key_, size_t hash_value, const State& state) const {
+        return (key == key_) || ZeroTraits::check(key);
+    }
+
     /// Set the key value to zero.
     void set_zero() { ZeroTraits::set(key); }
 
@@ -241,27 +245,29 @@ template <size_t initial_size_degree = 8>
 struct HashTableGrower {
     /// The state of this structure is enough to get the buffer size of the hash table.
     doris::vectorized::UInt8 size_degree = initial_size_degree;
+    size_t mask = buf_size() - 1;
 
     /// The size of the hash table in the cells.
     size_t buf_size() const { return 1ULL << size_degree; }
 
     size_t max_fill() const { return 1ULL << (size_degree - 1); }
-    size_t mask() const { return buf_size() - 1; }
 
     /// From the hash value, get the cell number in the hash table.
-    size_t place(size_t x) const { return x & mask(); }
+    size_t place(size_t x) const { return x & mask; }
 
     /// The next cell in the collision resolution chain.
-    size_t next(size_t pos) const {
-        ++pos;
-        return pos & mask();
+    inline size_t next(size_t pos) const {
+        return (pos + 1) & mask;
     }
 
     /// Whether the hash table is sufficiently full. You need to increase the size of the hash table, or remove something unnecessary from it.
     bool overflow(size_t elems) const { return elems > max_fill(); }
 
     /// Increase the size of the hash table.
-    void increase_size() { size_degree += size_degree >= 23 ? 1 : 2; }
+    void increase_size() { 
+        size_degree += size_degree >= 23 ? 1 : 2; 
+        mask = buf_size() - 1;
+    }
 
     /// Set the buffer size by the number of elements in the hash table. Used when deserializing a hash table.
     void set(size_t num_elems) {
@@ -271,10 +277,12 @@ struct HashTableGrower {
                         : ((initial_size_degree > static_cast<size_t>(log2(num_elems - 1)) + 2)
                                    ? initial_size_degree
                                    : (static_cast<size_t>(log2(num_elems - 1)) + 2));
+        mask = buf_size() - 1;
     }
 
     void set_buf_size(size_t buf_size_) {
         size_degree = static_cast<size_t>(log2(buf_size_ - 1) + 1);
+        mask = buf_size() - 1;
     }
 };
 
@@ -367,8 +375,7 @@ protected:
 
     /// Find a cell with the same key or an empty cell, starting from the specified position and further along the collision resolution chain.
     size_t ALWAYS_INLINE find_cell(const Key& x, size_t hash_value, size_t place_value) const {
-        while (!buf[place_value].is_zero(*this) &&
-               !buf[place_value].key_equals(x, hash_value, *this)) {
+        while (!buf[place_value].find(x, hash_value, *this)) {
             place_value = grower.next(place_value);
 #ifdef DBMS_HASH_MAP_COUNT_COLLISIONS
             ++collisions;

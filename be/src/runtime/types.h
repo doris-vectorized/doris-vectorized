@@ -280,48 +280,67 @@ struct TypeDescriptor {
 
     inline doris::vectorized::DataTypePtr get_data_type_ptr() const {
         switch (type) {
-        case TYPE_BOOLEAN:
-            return std::make_shared<vectorized::DataTypeUInt8>();
-
-        case TYPE_TINYINT:
-            return std::make_shared<vectorized::DataTypeInt8>();
-
-        case TYPE_SMALLINT:
-            return std::make_shared<vectorized::DataTypeInt16>();
-
-        case TYPE_INT:
-            return std::make_shared<vectorized::DataTypeInt32>();
-
-        case TYPE_FLOAT:
-            return std::make_shared<vectorized::DataTypeFloat32>();
-
-        case TYPE_BIGINT:
-            return std::make_shared<vectorized::DataTypeInt64>();
-
-        case TYPE_LARGEINT:
-            return std::make_shared<vectorized::DataTypeInt128>();
-        case TYPE_DATE:
-            return std::make_shared<vectorized::DataTypeDate>();
-        case TYPE_DATETIME:
-            return std::make_shared<vectorized::DataTypeDateTime>();
+        case TYPE_BOOLEAN: {
+            static auto sp = std::make_shared<vectorized::DataTypeUInt8>();
+            return sp;
+        }
+        case TYPE_TINYINT: {
+            static auto sp = std::make_shared<vectorized::DataTypeInt8>();
+            return sp;
+        }
+        case TYPE_SMALLINT: {
+            static auto sp = std::make_shared<vectorized::DataTypeInt16>();
+            return sp;
+        }
+        case TYPE_INT: {
+            static auto sp = std::make_shared<vectorized::DataTypeInt32>();
+            return sp;
+        }
+        case TYPE_FLOAT: {
+            static auto sp = std::make_shared<vectorized::DataTypeFloat32>();
+            return sp;
+        }
+        case TYPE_BIGINT: {
+            static auto sp = std::make_shared<vectorized::DataTypeInt64>();
+            return sp;
+        }
+        case TYPE_LARGEINT: {
+            static auto sp = std::make_shared<vectorized::DataTypeInt128>();
+            return sp;
+        }
+        case TYPE_DATE: {
+            static auto sp = std::make_shared<vectorized::DataTypeDate>();
+            return sp;
+        }
+        case TYPE_DATETIME: {
+            static auto sp = std::make_shared<vectorized::DataTypeDateTime>();
+            return sp;
+        }
         case TYPE_TIME:
-        case TYPE_DOUBLE:
-            return std::make_shared<vectorized::DataTypeFloat64>();
-
+        case TYPE_DOUBLE: {
+            static auto sp= std::make_shared<vectorized::DataTypeFloat64>();
+            return sp;
+        }
         case TYPE_STRING:
         case TYPE_CHAR:
         case TYPE_VARCHAR:
-        case TYPE_HLL:
-            return std::make_shared<vectorized::DataTypeString>();
-        case TYPE_OBJECT:
-            return std::make_shared<vectorized::DataTypeBitMap>();
-
-        case TYPE_DECIMALV2:
-            return std::make_shared<vectorized::DataTypeDecimal<vectorized::Decimal128>>(27, 9);
+        case TYPE_HLL: {
+            static auto sp = std::make_shared<vectorized::DataTypeString>();
+            return sp;
+        }
+        case TYPE_OBJECT: {
+            static auto sp = std::make_shared<vectorized::DataTypeBitMap>();
+            return sp;
+        }
+        case TYPE_DECIMALV2: {
+            static auto sp = std::make_shared<vectorized::DataTypeDecimal<vectorized::Decimal128>>(27, 9);
+            return sp;
+        }
         // Just Mock A NULL Type in Vec Exec Engine
-        case TYPE_NULL:
-            return std::make_shared<vectorized::DataTypeUInt8>();
-
+        case TYPE_NULL: {
+            static auto sp = std::make_shared<vectorized::DataTypeUInt8>();
+            return sp;
+        }
         case INVALID_TYPE:
         default:
             DCHECK(false);

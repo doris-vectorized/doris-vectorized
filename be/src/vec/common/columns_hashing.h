@@ -66,7 +66,8 @@ struct HashMethodOneNumber : public columns_hashing_impl::HashMethodBase<
 
     /// Is used for default implementation in HashMethodBase.
     FieldType get_key_holder(size_t row, Arena&) const {
-        return unaligned_load<FieldType>(vec + row * sizeof(FieldType));
+        return *(FieldType*)(vec + row * sizeof(FieldType));
+        //return unaligned_load<FieldType>(vec + row * sizeof(FieldType));
     }
 };
 

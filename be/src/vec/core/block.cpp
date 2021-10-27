@@ -621,6 +621,16 @@ void Block::clear_column_data() noexcept {
     }
 }
 
+void Block::set_data(MutableColumns& columns, DataTypes& data_types) {
+    data.clear();
+
+    assert(columns.size() == data_types.size());
+    size_t n = columns.size();
+    for (size_t i = 0; i < n; ++i) {
+        data.emplace_back(std::move(columns[i]), data_types[i], "");
+    }
+}
+
 void Block::swap(Block& other) noexcept {
     std::swap(info, other.info);
     data.swap(other.data);

@@ -16,6 +16,7 @@
 // under the License.
 
 #pragma once
+#include <memory>
 #include <thrift/protocol/TJSONProtocol.h>
 
 #include <boost/shared_ptr.hpp>
@@ -27,6 +28,21 @@
 namespace doris::vectorized {
 class VectorizedUtils {
 public:
+    static std::unique_ptr<MutableBlock> create_mutable_block(const RowDescriptor& row_desc) {
+        std::unique_ptr<MutableBlock> mutable_block(new MutableBlock);
+        MutableColumns& columns = mutable_block->mutable_columns();
+        DataTypes& data_types = mutable_block->data_types();
+
+        for (const auto& tuple_desc : row_desc.tuple_descriptors()) {
+            for (const auto& slot_desc : tuple_desc->slots()) {
+                auto data_type_ptr = slot_desc->get_data_type_ptr();
+                columns.emplace_back(data_type_ptr->create_column());
+                data_types.emplace_back(data_type_ptr);
+            }
+        }
+        return mutable_block;
+    }
+
     static Block create_empty_columnswithtypename(const RowDescriptor& row_desc) {
         // Block block;
         return create_columns_with_type_and_name(row_desc);

@@ -150,6 +150,9 @@ public:
     /** Get the same block, but empty. */
     Block clone_empty() const;
 
+    Container& get_data() { return data; }
+    const Container& get_data() const { return data; }
+
     Columns get_columns() const;
     void set_columns(const Columns& columns);
     Block clone_with_columns(const Columns& columns) const;
@@ -172,6 +175,8 @@ public:
     void swap(Block& other) noexcept;
     void swap(Block&& other) noexcept;
     void clear_column_data() noexcept;
+
+    void set_data(MutableColumns& columns, DataTypes& data_types);
 
     bool mem_reuse() {
         return !data.empty();
