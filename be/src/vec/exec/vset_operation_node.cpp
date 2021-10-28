@@ -17,8 +17,8 @@
 
 #include "vec/exec/vset_operation_node.h"
 
+#include "util/defer_op.h"
 #include "vec/exprs/vexpr.h"
-
 namespace doris {
 namespace vectorized {
 
@@ -35,6 +35,12 @@ struct HashTableBuild {
     Status operator()(HashTableContext& hash_table_ctx) {
         using KeyGetter = typename HashTableContext::State;
         using Mapped = typename HashTableContext::Mapped;
+        int64_t old_bucket_bytes = hash_table_ctx.hash_table.get_buffer_size_in_bytes();
+        Defer defer {[&]() {
+            int64_t bucket_bytes = hash_table_ctx.hash_table.get_buffer_size_in_bytes();
+            _operation_node->_mem_tracker->Consume(bucket_bytes - old_bucket_bytes);
+            _operation_node->_mem_used += bucket_bytes - old_bucket_bytes;
+        }};
 
         KeyGetter key_getter(_build_raw_ptrs, _operation_node->_build_key_sz, nullptr);
 
@@ -61,7 +67,7 @@ private:
 
 VSetOperationNode::VSetOperationNode(ObjectPool* pool, const TPlanNode& tnode,
                                      const DescriptorTbl& descs)
-        : ExecNode(pool, tnode, descs), _valid_element_in_hash_tbl(0) {}
+        : ExecNode(pool, tnode, descs), _valid_element_in_hash_tbl(0), _mem_used(0) {}
 
 Status VSetOperationNode::close(RuntimeState* state) {
     if (is_closed()) {
@@ -70,6 +76,7 @@ Status VSetOperationNode::close(RuntimeState* state) {
     for (auto& exprs : _child_expr_lists) {
         VExpr::close(exprs, state);
     }
+    _mem_tracker->Release(_mem_used);
     return ExecNode::close(state);
 }
 Status VSetOperationNode::init(const TPlanNode& tnode, RuntimeState* state) {
@@ -212,7 +219,11 @@ Status VSetOperationNode::hash_table_build(RuntimeState* state) {
         SCOPED_TIMER(_build_timer);
         RETURN_IF_CANCELLED(state);
         RETURN_IF_ERROR(child(0)->get_next(state, &block, &eos));
+        _mem_tracker->Consume(block.allocated_bytes());
+        _mem_used += block.allocated_bytes();
+        RETURN_IF_LIMIT_EXCEEDED(state, "Set Operation Node, while getting next from the child 0.");
         RETURN_IF_ERROR(process_build_block(block));
+        RETURN_IF_LIMIT_EXCEEDED(state, "Set Operation Node, while constructing the hash table.");
     }
     return Status::OK();
 }
@@ -270,7 +281,6 @@ Status VSetOperationNode::extract_probe_column(Block& block, ColumnRawPtrs& raw_
         auto column = block.get_by_position(result_col_id).column.get();
         if (auto* nullable = check_and_get_column<ColumnNullable>(*column)) {
             auto& col_nested = nullable->get_nested_column();
-
             if (_build_not_ignore_null[i]) { //same as build column
                 raw_ptrs[i] = nullable;
             } else {

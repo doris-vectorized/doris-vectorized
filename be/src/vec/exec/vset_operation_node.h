@@ -73,7 +73,8 @@ protected:
     //first:column_id, could point to origin column or cast column
     //second:idx mapped to column types
     std::unordered_map<int, int> _build_col_idx;
-
+    //record memory during running
+    int64_t _mem_used;
     RuntimeProfile::Counter* _build_timer; // time to build hash table
     RuntimeProfile::Counter* _probe_timer; // time to probe
 
@@ -106,7 +107,6 @@ void VSetOperationNode::refresh_hash_table() {
                             } else {
                                 arg.hash_table.delete_zero_key(iter->get_first());
                                 iter->set_zero();
-                                mapped.~RowRefList();
                             }
                         } else {
                             if (!it->visited && is_need_shrink) {
