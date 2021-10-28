@@ -57,9 +57,27 @@ void register_function_function_ifnull(SimpleFunctionFactory& factory);
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
     using FunctionCreators = std::unordered_map<std::string, Creator>;
+    using FunctionIsVariadic = std::unordered_map<std::string, bool>;
 
 public:
-    void register_function(const std::string& name, Creator ptr) { function_creators[name] = ptr; }
+    void register_function(const std::string& name, Creator ptr) {
+        DataTypes types = ptr()->get_variadic_argument_types();
+        // types.empty() means function is not variadic
+        if (types.empty()) {
+            function_variadic_map[name] = false;
+        } else {
+            function_variadic_map[name] = true;
+        }
+
+        std::string key_str = name;
+        if (!types.empty()) {
+            for (auto type : types) {
+                key_str.append(type->get_name());
+            }
+            LOG(INFO) << "register_function() key_str: " << key_str;
+        }
+        function_creators[key_str] = ptr;
+    }
 
     template <class Function>
     void register_function() {
@@ -75,15 +93,25 @@ public:
 
     FunctionBasePtr get_function(const std::string& name, const ColumnsWithTypeAndName& arguments,
                                  const DataTypePtr& return_type) {
-        auto iter = function_creators.find(name);
+        std::string key_str = name;
+        // if function is variadic, added types_str as key
+        if (function_variadic_map.count(name) && function_variadic_map[name]) {
+            for (auto arg : arguments) {
+                key_str.append(make_nullable(arg.type)->get_name());
+            }
+        }
+
+        auto iter = function_creators.find(key_str);
         if (iter != function_creators.end()) {
             return iter->second()->build(arguments, return_type);
         }
+        
         return nullptr;
     }
 
 private:
     FunctionCreators function_creators;
+    FunctionIsVariadic function_variadic_map;
 
     template <typename Function>
     static FunctionBuilderPtr createDefaultFunction() {

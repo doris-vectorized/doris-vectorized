@@ -243,7 +243,7 @@ public:
     /// For higher-order functions (functions, that have lambda expression as at least one argument).
     /// You pass data types with empty DataTypeFunction for lambda arguments.
     /// This function will replace it with DataTypeFunction containing actual types.
-    virtual void get_lambda_argument_types(DataTypes& arguments) const = 0;
+    virtual DataTypes get_variadic_argument_types() const = 0;
 
     /// Returns indexes of arguments, that must be ColumnConst
     virtual ColumnNumbers get_arguments_that_are_always_constant() const = 0;
@@ -274,9 +274,8 @@ public:
 
     DataTypePtr get_return_type(const ColumnsWithTypeAndName& arguments) const;
 
-    void get_lambda_argument_types(DataTypes& arguments) const override {
-        check_number_of_arguments(arguments.size());
-        get_lambda_argument_types_impl(arguments);
+    DataTypes get_variadic_argument_types() const override {
+        return get_variadic_argument_types_impl();
     }
 
     ColumnNumbers get_arguments_that_are_always_constant() const override { return {}; }
@@ -320,10 +319,9 @@ protected:
 
     virtual FunctionBasePtr build_impl(const ColumnsWithTypeAndName& arguments,
                                        const DataTypePtr& return_type) const = 0;
-
-    virtual void get_lambda_argument_types_impl(DataTypes& /*arguments*/) const {
-        LOG(FATAL) << fmt::format("Function {} can't have lambda-expressions as arguments",
-                                  get_name());
+    
+    virtual DataTypes get_variadic_argument_types_impl() const {
+        return DataTypes();
     }
 
 private:
@@ -360,7 +358,7 @@ public:
     using PreparedFunctionImpl::execute;
     using PreparedFunctionImpl::execute_impl_dry_run;
     using FunctionBuilderImpl::get_return_type_impl;
-    using FunctionBuilderImpl::get_lambda_argument_types_impl;
+    using FunctionBuilderImpl::get_variadic_argument_types_impl;
     using FunctionBuilderImpl::get_return_type;
 
     [[noreturn]] PreparedFunctionPtr prepare(const Block& /*sample_block*/,
@@ -526,8 +524,8 @@ protected:
         return std::make_shared<DefaultFunction>(function, data_types, return_type);
     }
 
-    void get_lambda_argument_types_impl(DataTypes& arguments) const override {
-        return function->get_lambda_argument_types_impl(arguments);
+    DataTypes get_variadic_argument_types_impl() const override {
+        return function->get_variadic_argument_types_impl();
     }
 
 private:
