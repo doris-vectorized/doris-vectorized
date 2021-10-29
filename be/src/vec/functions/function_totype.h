@@ -250,6 +250,72 @@ private:
     }
 };
 
+// func(type,type) -> nullable(type)
+template <typename LeftDataType, typename RightDataType,
+        template <typename, typename> typename Impl, typename Name>
+class FunctionBinaryToNullType : public IFunction {
+public:
+    static constexpr auto name = Name::name;
+    static FunctionPtr create() { return std::make_shared<FunctionBinaryToNullType>(); }
+    String get_name() const override { return name; }
+    size_t get_number_of_arguments() const override { return 2; }
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
+        using ResultDataType = typename Impl<LeftDataType, RightDataType>::ResultDataType;
+        return make_nullable(std::make_shared<ResultDataType>());
+    }
+
+    bool use_default_implementation_for_constants() const override { return true; }
+
+    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
+                        size_t input_rows_count) override {
+        auto null_map = ColumnUInt8::create(input_rows_count, 0);
+        DCHECK_EQ(arguments.size(), 2);
+        ColumnPtr argument_columns[2];
+        for (int i = 0; i < 2; ++i) {
+            argument_columns[i] =
+                    block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
+            if (auto* nullable = check_and_get_column<ColumnNullable>(*argument_columns[i])) {
+                argument_columns[i] = nullable->get_nested_column_ptr();
+                VectorizedUtils::update_null_map(null_map->get_data(),
+                                                 nullable->get_null_map_data());
+            }
+        }
+
+        using ResultDataType = typename Impl<LeftDataType, RightDataType>::ResultDataType;
+
+        using T0 = typename LeftDataType::FieldType;
+        using T1 = typename RightDataType::FieldType;
+        using ResultType = typename ResultDataType::FieldType;
+
+        using ColVecLeft =
+        std::conditional_t<is_complex_v<T0>, ColumnComplexType<T0>, ColumnVector<T0>>;
+        using ColVecRight =
+        std::conditional_t<is_complex_v<T1>, ColumnComplexType<T1>, ColumnVector<T1>>;
+
+        using ColVecResult =
+        std::conditional_t<is_complex_v<ResultType>, ColumnComplexType<ResultType>,
+        ColumnVector<ResultType>>;
+
+        typename ColVecResult::MutablePtr col_res = nullptr;
+
+        col_res = ColVecResult::create();
+        auto& vec_res = col_res->get_data();
+        vec_res.resize(block.rows());
+
+        if (auto col_left = check_and_get_column<ColVecLeft>(argument_columns[0].get())) {
+            if (auto col_right = check_and_get_column<ColVecRight>(argument_columns[1].get())) {
+                Impl<LeftDataType, RightDataType>::vector_vector(col_left->get_data(),
+                                                                 col_right->get_data(), vec_res,
+                                                                 null_map->get_data());
+                block.get_by_position(result).column =
+                        ColumnNullable::create(std::move(col_res), std::move(null_map));
+                return Status::OK();
+            }
+        }
+        return Status::RuntimeError(fmt::format("unimplements function {}", get_name()));
+    }
+};
+
 // func(string,string) -> nullable(type)
 template <typename Impl>
 class FunctionBinaryStringOperateToNullType : public IFunction {

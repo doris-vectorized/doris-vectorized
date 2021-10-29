@@ -222,7 +222,7 @@ visible_functions = [
 
     [['makedate'], 'DATETIME', ['INT', 'INT'],
         '_ZN5doris18TimestampFunctions9make_dateEPN9doris_udf15FunctionContextERKNS1_6IntValES6_',
-        '', '', '', 'ALWAYS_NULLABLE'],
+        '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['years_add'], 'DATETIME', ['DATETIME', 'INT'],
         '_ZN5doris18TimestampFunctions9years_addEPN9doris_udf'
         '15FunctionContextERKNS1_11DateTimeValERKNS1_6IntValE',

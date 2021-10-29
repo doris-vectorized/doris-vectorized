@@ -556,6 +556,23 @@ TEST(TimestampFunctionsTest, date_test) {
     vectorized::check_function<vectorized::DataTypeDate, true>(func_name, input_types, data_set);
 }
 
+TEST(TimestampFunctionsTest, makedate_test) {
+    std::string func_name = "makedate";
+
+    std::vector<std::any> input_types = {vectorized::TypeIndex::Int32,
+                                         vectorized::TypeIndex::Int32};
+
+    DataSet data_set = {{{2021, 3}, vectorized::str_to_data_time("2021-01-03", false)},
+                        {{2021, 95}, vectorized::str_to_data_time("2021-04-05", false)},
+                        {{2021, 400}, vectorized::str_to_data_time("2022-02-04", false)},
+                        {{2021, 0}, Null()},
+                        {{2021, -10}, Null()},
+                        {{-1, 3}, Null()},
+                        {{12345, 3}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeDate, true>(func_name, input_types, data_set);
+}
+
 } // namespace doris
 
 int main(int argc, char** argv) {
