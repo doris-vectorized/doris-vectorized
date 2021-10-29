@@ -437,3 +437,13 @@ bool is_column_const(const IColumn& column);
 bool is_column_nullable(const IColumn& column);
 
 } // namespace doris::vectorized
+
+namespace doris {
+struct ColumnPtrWrapper {
+    vectorized::ColumnPtr _column_ptr;
+
+    ColumnPtrWrapper(vectorized::ColumnPtr col) {
+        _column_ptr = col;
+    }
+};
+} // namespace doris

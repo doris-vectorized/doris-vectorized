@@ -250,7 +250,7 @@ TEST(TEST_VEXPR, LITERALTEST) {
         VLiteral literal(create_literal<TYPE_BOOLEAN>(true));
         Block block;
         int ret = -1;
-        literal.execute(&block, &ret);
+        literal.execute(nullptr, &block, &ret);
         auto ctn = block.safe_get_by_position(ret);
         bool v = ctn.column->get_bool(0);
         ASSERT_EQ(v, true);
@@ -259,7 +259,7 @@ TEST(TEST_VEXPR, LITERALTEST) {
         VLiteral literal(create_literal<TYPE_SMALLINT>(1024));
         Block block;
         int ret = -1;
-        literal.execute(&block, &ret);
+        literal.execute(nullptr, &block, &ret);
         auto ctn = block.safe_get_by_position(ret);
         auto v = ctn.column->get64(0);
         ASSERT_EQ(v, 1024);
@@ -268,7 +268,7 @@ TEST(TEST_VEXPR, LITERALTEST) {
         VLiteral literal(create_literal<TYPE_INT>(1024));
         Block block;
         int ret = -1;
-        literal.execute(&block, &ret);
+        literal.execute(nullptr, &block, &ret);
         auto ctn = block.safe_get_by_position(ret);
         auto v = ctn.column->get64(0);
         ASSERT_EQ(v, 1024);
@@ -277,7 +277,7 @@ TEST(TEST_VEXPR, LITERALTEST) {
         VLiteral literal(create_literal<TYPE_BIGINT>(1024));
         Block block;
         int ret = -1;
-        literal.execute(&block, &ret);
+        literal.execute(nullptr, &block, &ret);
         auto ctn = block.safe_get_by_position(ret);
         auto v = ctn.column->get64(0);
         ASSERT_EQ(v, 1024);
@@ -286,7 +286,7 @@ TEST(TEST_VEXPR, LITERALTEST) {
         VLiteral literal(create_literal<TYPE_LARGEINT, __int128_t>(1024));
         Block block;
         int ret = -1;
-        literal.execute(&block, &ret);
+        literal.execute(nullptr, &block, &ret);
         auto ctn = block.safe_get_by_position(ret);
         auto v = (*ctn.column)[0].get<__int128_t>();
         ASSERT_EQ(v, 1024);
@@ -295,7 +295,7 @@ TEST(TEST_VEXPR, LITERALTEST) {
         VLiteral literal(create_literal<TYPE_FLOAT, float>(1024.0f));
         Block block;
         int ret = -1;
-        literal.execute(&block, &ret);
+        literal.execute(nullptr, &block, &ret);
         auto ctn = block.safe_get_by_position(ret);
         auto v = (*ctn.column)[0].get<double>();
         ASSERT_FLOAT_EQ(v, 1024.0f);
@@ -304,7 +304,7 @@ TEST(TEST_VEXPR, LITERALTEST) {
         VLiteral literal(create_literal<TYPE_DOUBLE, double>(1024.0));
         Block block;
         int ret = -1;
-        literal.execute(&block, &ret);
+        literal.execute(nullptr, &block, &ret);
         auto ctn = block.safe_get_by_position(ret);
         auto v = (*ctn.column)[0].get<double>();
         ASSERT_FLOAT_EQ(v, 1024.0);
@@ -318,7 +318,7 @@ TEST(TEST_VEXPR, LITERALTEST) {
         VLiteral literal(create_literal<TYPE_DATETIME, std::string>(std::string(date)));
         Block block;
         int ret = -1;
-        literal.execute(&block, &ret);
+        literal.execute(nullptr, &block, &ret);
         auto ctn = block.safe_get_by_position(ret);
         auto v = (*ctn.column)[0].get<__int128_t>();
         ASSERT_EQ(v, dt);
@@ -327,7 +327,7 @@ TEST(TEST_VEXPR, LITERALTEST) {
         VLiteral literal(create_literal<TYPE_DECIMALV2, std::string>(std::string("1234.56")));
         Block block;
         int ret = -1;
-        literal.execute(&block, &ret);
+        literal.execute(nullptr, &block, &ret);
         auto ctn = block.safe_get_by_position(ret);
         auto v = (*ctn.column)[0].get<DecimalField<Decimal128>>();
         ASSERT_FLOAT_EQ(((double)v.get_value()) / (std::pow(10, v.get_scale())), 1234.56);

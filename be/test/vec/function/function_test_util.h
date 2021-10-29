@@ -25,7 +25,10 @@
 #include "exec/schema_scanner.h"
 #include "runtime/row_batch.h"
 #include "runtime/tuple_row.h"
+#include "testutil/function_utils.h"
 #include "util/bitmap_value.h"
+#include "udf/udf.h"
+#include "udf/udf_internal.h"
 #include "vec/columns/column_complex.h"
 #include "vec/functions/function_string.h"
 #include "vec/functions/function_string_to_string.h"
@@ -73,6 +76,8 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
     Block block;
     ColumnNumbers arguments;
     ColumnsWithTypeAndName ctn;
+    std::vector<std::shared_ptr<ColumnPtrWrapper>> constant_col_ptrs;
+    std::vector<ColumnPtrWrapper*> constant_cols;
 
     // 1. build block and column type and names
     for (int i = 0; i < column_size; i++) {
@@ -208,15 +213,34 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
             DCHECK(false);
         }
         arguments.push_back(i);
+
+        if (is_const) {
+            const auto& column = block.get_by_position(i).column;
+            std::shared_ptr<ColumnPtrWrapper> constant_col = std::make_shared<ColumnPtrWrapper>(column);
+            constant_col_ptrs.push_back(constant_col);
+            constant_cols.push_back(constant_col.get());
+        } else {
+            constant_cols.push_back(nullptr);
+        }
     }
 
     // 2. execute function
     auto return_type = nullable ? make_nullable(std::make_shared<ReturnType>())
                                 : std::make_shared<ReturnType>();
     auto func = SimpleFunctionFactory::instance().get_function(func_name, ctn, return_type);
+
+    FunctionUtils fn_utils;
+    auto* fn_ctx = fn_utils.get_fn_ctx();
+    fn_ctx->impl()->set_constant_cols(constant_cols);
+    func->prepare(fn_ctx, FunctionContext::FRAGMENT_LOCAL);
+    func->prepare(fn_ctx, FunctionContext::THREAD_LOCAL);
+
     block.insert({nullptr, return_type, "result"});
     DCHECK(func != nullptr);
-    func->execute(block, arguments, block.columns() - 1, row_size);
+    func->execute(fn_ctx, block, arguments, block.columns() - 1, row_size);
+
+    func->close(fn_ctx, FunctionContext::THREAD_LOCAL);
+    func->close(fn_ctx, FunctionContext::FRAGMENT_LOCAL);
 
     // 3. check the result of function
     ColumnPtr column = block.get_columns()[block.columns() - 1];

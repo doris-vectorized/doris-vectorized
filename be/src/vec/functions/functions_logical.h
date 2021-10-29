@@ -115,8 +115,8 @@ public:
     /// Get result types by argument types. If the function does not apply to these arguments, throw an exception.
     DataTypePtr get_return_type_impl(const DataTypes& arguments) const override;
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result_index,
-                        size_t input_rows_count) override;
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override;
 };
 
 template <template <typename> class Impl, typename Name>
@@ -134,8 +134,8 @@ public:
 
     bool use_default_implementation_for_constants() const override { return true; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t /*input_rows_count*/) override;
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override;
 };
 
 } // namespace FunctionsLogicalDetail
