@@ -36,6 +36,7 @@ struct HashTableBuild {
         using KeyGetter = typename HashTableContext::State;
         using Mapped = typename HashTableContext::Mapped;
         int64_t old_bucket_bytes = hash_table_ctx.hash_table.get_buffer_size_in_bytes();
+        
         Defer defer {[&]() {
             int64_t bucket_bytes = hash_table_ctx.hash_table.get_buffer_size_in_bytes();
             _operation_node->_mem_tracker->Consume(bucket_bytes - old_bucket_bytes);
@@ -47,9 +48,11 @@ struct HashTableBuild {
         for (size_t k = 0; k < _rows; ++k) {
             auto emplace_result =
                     key_getter.emplace_key(hash_table_ctx.hash_table, k, _operation_node->_arena);
+
             if (k + 1 < _rows) {
                 key_getter.prefetch(hash_table_ctx.hash_table, k + 1, _operation_node->_arena);
             }
+
             if (emplace_result.is_inserted()) { //only inserted once as the same key, others skip
                 new (&emplace_result.get_mapped()) Mapped({&_acquired_block, k});
                 _operation_node->_valid_element_in_hash_tbl++;
@@ -67,7 +70,11 @@ private:
 
 VSetOperationNode::VSetOperationNode(ObjectPool* pool, const TPlanNode& tnode,
                                      const DescriptorTbl& descs)
-        : ExecNode(pool, tnode, descs), _valid_element_in_hash_tbl(0), _mem_used(0) {}
+        : ExecNode(pool, tnode, descs),
+          _valid_element_in_hash_tbl(0),
+          _mem_used(0),
+          _probe_index(-1),
+          _probe_rows(0) {}
 
 Status VSetOperationNode::close(RuntimeState* state) {
     if (is_closed()) {
@@ -79,6 +86,7 @@ Status VSetOperationNode::close(RuntimeState* state) {
     _mem_tracker->Release(_mem_used);
     return ExecNode::close(state);
 }
+
 Status VSetOperationNode::init(const TPlanNode& tnode, RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::init(tnode, state));
     DCHECK_EQ(_conjunct_ctxs.size(), 0);
@@ -112,16 +120,19 @@ Status VSetOperationNode::open(RuntimeState* state) {
     RETURN_IF_ERROR(hash_table_build(state));
     return Status::OK();
 }
+
 Status VSetOperationNode::prepare(RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::prepare(state));
     SCOPED_TIMER(_runtime_profile->total_time_counter());
     _build_timer = ADD_TIMER(runtime_profile(), "BuildTime");
+    _probe_timer = ADD_TIMER(runtime_profile(), "ProbeTime");
 
     // Prepare result expr lists.
     for (int i = 0; i < _child_expr_lists.size(); ++i) {
         RETURN_IF_ERROR(VExpr::prepare(_child_expr_lists[i], state, child(i)->row_desc(),
                                        expr_mem_tracker()));
     }
+
     for (auto ctx : _child_expr_lists[0]) {
         _build_not_ignore_null.push_back(ctx->root()->is_nullable());
         _left_table_data_types.push_back(ctx->root()->data_type());
@@ -219,8 +230,11 @@ Status VSetOperationNode::hash_table_build(RuntimeState* state) {
         SCOPED_TIMER(_build_timer);
         RETURN_IF_CANCELLED(state);
         RETURN_IF_ERROR(child(0)->get_next(state, &block, &eos));
-        _mem_tracker->Consume(block.allocated_bytes());
-        _mem_used += block.allocated_bytes();
+
+        size_t allocated_bytes = block.allocated_bytes();
+        _mem_tracker->Consume(allocated_bytes);
+        _mem_used += allocated_bytes;
+
         RETURN_IF_LIMIT_EXCEEDED(state, "Set Operation Node, while getting next from the child 0.");
         RETURN_IF_ERROR(process_build_block(block));
         RETURN_IF_LIMIT_EXCEEDED(state, "Set Operation Node, while constructing the hash table.");
@@ -233,10 +247,12 @@ Status VSetOperationNode::process_build_block(Block& block) {
     if (rows == 0) {
         return Status::OK();
     }
+
     auto& acquired_block = _acquire_list.acquire(std::move(block));
     vectorized::materialize_block_inplace(acquired_block);
     ColumnRawPtrs raw_ptrs(_child_expr_lists[0].size());
     RETURN_IF_ERROR(extract_build_column(acquired_block, raw_ptrs));
+
     std::visit(
             [&](auto&& arg) {
                 using HashTableCtxType = std::decay_t<decltype(arg)>;
@@ -253,17 +269,38 @@ Status VSetOperationNode::process_build_block(Block& block) {
     return Status::OK();
 }
 
+Status VSetOperationNode::process_probe_block(RuntimeState* state, int child_id, bool* eos) {
+    if (!_probe_column_inserted_id.empty()) {
+        for (int j = 0; j < _probe_column_inserted_id.size(); ++j) {
+            auto column_to_erase = _probe_column_inserted_id[j];
+            _probe_block.erase(column_to_erase - j);
+        }
+        _probe_column_inserted_id.clear();
+    }
+    _probe_block.clear_column_data();
+    _probe_index = 0;
+    _probe_rows = 0;
+
+    RETURN_IF_CANCELLED(state);
+    RETURN_IF_ERROR(child(child_id)->get_next(state, &_probe_block, eos));
+    _probe_rows = _probe_block.rows();
+    RETURN_IF_ERROR(extract_probe_column(_probe_block, _probe_columns, child_id));
+    return Status::OK();
+}
+
 Status VSetOperationNode::extract_build_column(Block& block, ColumnRawPtrs& raw_ptrs) {
     for (size_t i = 0; i < _child_expr_lists[0].size(); ++i) {
         int result_col_id = -1;
         RETURN_IF_ERROR(_child_expr_lists[0][i]->execute(&block, &result_col_id));
         auto column = block.get_by_position(result_col_id).column.get();
+
         if (auto* nullable = check_and_get_column<ColumnNullable>(*column)) {
             auto& col_nested = nullable->get_nested_column();
             if (_build_not_ignore_null[i])
                 raw_ptrs[i] = nullable;
             else
                 raw_ptrs[i] = &col_nested;
+
         } else {
             raw_ptrs[i] = column;
         }
@@ -275,10 +312,15 @@ Status VSetOperationNode::extract_build_column(Block& block, ColumnRawPtrs& raw_
 
 Status VSetOperationNode::extract_probe_column(Block& block, ColumnRawPtrs& raw_ptrs,
                                                int child_id) {
+    if (_probe_rows == 0) {
+        return Status::OK();
+    }
+
     for (size_t i = 0; i < _child_expr_lists[child_id].size(); ++i) {
         int result_col_id = -1;
         RETURN_IF_ERROR(_child_expr_lists[child_id][i]->execute(&block, &result_col_id));
         auto column = block.get_by_position(result_col_id).column.get();
+
         if (auto* nullable = check_and_get_column<ColumnNullable>(*column)) {
             auto& col_nested = nullable->get_nested_column();
             if (_build_not_ignore_null[i]) { //same as build column
@@ -286,17 +328,33 @@ Status VSetOperationNode::extract_probe_column(Block& block, ColumnRawPtrs& raw_
             } else {
                 raw_ptrs[i] = &col_nested;
             }
+
         } else {
             if (_build_not_ignore_null[i]) {
                 auto column_ptr = make_nullable(block.get_by_position(result_col_id).column, false);
+                _probe_column_inserted_id.emplace_back(block.columns());
                 block.insert(
                         {column_ptr, make_nullable(block.get_by_position(result_col_id).type), ""});
                 column = column_ptr.get();
             }
+
             raw_ptrs[i] = column;
         }
     }
     return Status::OK();
+}
+
+void VSetOperationNode::create_mutable_cols(Block* output_block) {
+    _mutable_cols.resize(_left_table_data_types.size());
+    bool mem_reuse = output_block->mem_reuse();
+
+    for (int i = 0; i < _left_table_data_types.size(); ++i) {
+        if (mem_reuse) {
+            _mutable_cols[i] = (std::move(*output_block->get_by_position(i).column).mutate());
+        } else {
+            _mutable_cols[i] = (_left_table_data_types[i]->create_column());
+        }
+    }
 }
 
 void VSetOperationNode::debug_string(int indentation_level, std::stringstream* out) const {
@@ -309,5 +367,6 @@ void VSetOperationNode::debug_string(int indentation_level, std::stringstream* o
     ExecNode::debug_string(indentation_level, out);
     *out << ")" << std::endl;
 }
+
 } // namespace vectorized
 } // namespace doris

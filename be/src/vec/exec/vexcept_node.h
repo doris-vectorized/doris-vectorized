@@ -32,13 +32,8 @@ public:
     virtual Status close(RuntimeState* state);
 
 private:
-    Block _probe_block;
-    ColumnRawPtrs _probe_columns;
-    int _probe_index = -1;
-    std::vector<MutableColumnPtr> mutable_cols;
-
-    template <class HashTableContext>
-    friend class HashTableProbeExcept;
+    template < class HashTableContext, bool is_intersected>
+    friend class HashTableProbe;
 };
 } // namespace vectorized
 } // namespace doris
