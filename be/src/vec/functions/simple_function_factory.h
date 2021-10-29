@@ -49,7 +49,7 @@ void register_function_date_time_string_to_string(SimpleFunctionFactory& factory
 void register_function_in(SimpleFunctionFactory& factory);
 void register_function_if(SimpleFunctionFactory& factory);
 void register_function_date_time_computation(SimpleFunctionFactory& factory);
-void register_function_str_to_date(SimpleFunctionFactory& factory);
+void register_function_timestamp(SimpleFunctionFactory& factory);
 void register_function_json(SimpleFunctionFactory& factory);
 void register_function_function_hash(SimpleFunctionFactory& factory);
 void register_function_function_ifnull(SimpleFunctionFactory& factory);
@@ -145,7 +145,7 @@ public:
             register_function_in(instance);
             register_function_if(instance);
             register_function_date_time_computation(instance);
-            register_function_str_to_date(instance);
+            register_function_timestamp(instance);
             register_function_date_time_to_string(instance);
             register_function_date_time_string_to_string(instance);
             register_function_json(instance);
