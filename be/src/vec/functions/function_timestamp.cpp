@@ -54,10 +54,59 @@ struct StrToDate {
     }
 };
 
-using FunctionStrToDate = FunctionBinaryStringOperateToNullType<StrToDate>;
+struct NameMakeDate {
+    static constexpr auto name = "makedate";
+};
 
-void register_function_str_to_date(SimpleFunctionFactory& factory) {
+template <typename LeftDataType, typename RightDataType>
+struct MakeDateImpl {
+    using ResultDataType = DataTypeDateTime;
+    using LeftDataColumnType = ColumnVector<typename LeftDataType::FieldType>;
+    using RightDataColumnType = ColumnVector<typename RightDataType::FieldType>;
+    using ColumnType = ColumnVector<Int128>;
+
+    static void vector_vector(const typename LeftDataColumnType::Container& ldata,
+                              const typename RightDataColumnType::Container& rdata,
+                              ColumnType::Container& res, NullMap& null_map) {
+        auto len = ldata.size();
+        res.resize(len);
+
+        for (size_t i = 0; i < len; ++i) {
+            const auto& l = ldata[i];
+            const auto& r = rdata[i];
+            if (r <= 0 || l < 0 || l > 9999) {
+                null_map[i] = 1;
+                continue;
+            }
+
+            auto& res_val = *reinterpret_cast<DateTimeValue*>(&res[i]);
+
+            DateTimeValue ts_value{l * 10000000000 + 101000000};
+            ts_value.set_type(TIME_DATE);
+            DateTimeVal ts_val;
+            ts_value.to_datetime_val(&ts_val);
+            if (ts_val.is_null) {
+                null_map[i] = 1;
+                continue;
+            }
+
+            TimeInterval interval(DAY, r - 1, false);
+            res_val = DateTimeValue::from_datetime_val(ts_val);
+            if (!res_val.date_add_interval(interval, DAY)) {
+                null_map[i] = 1;
+                continue;
+            }
+            res_val.cast_to_date();
+        }
+    }
+};
+
+using FunctionStrToDate = FunctionBinaryStringOperateToNullType<StrToDate>;
+using FunctionMakeDate = FunctionBinaryToNullType<DataTypeInt32, DataTypeInt32, MakeDateImpl, NameMakeDate>;
+
+void register_function_timestamp(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStrToDate>();
+    factory.register_function<FunctionMakeDate>();
 }
 
 } // namespace doris::vectorized
