@@ -183,7 +183,7 @@ struct HashTableProbe {
         return Status::OK();
     }
 
-    void add_result_columns(RowRefList& value, int block_size) {
+    void add_result_columns(RowRefList& value, int& block_size) {
         for (auto idx = _build_col_idx.begin(); idx != _build_col_idx.end(); ++idx) {
             auto& column = *value.begin()->block->get_by_position(idx->first).column;
             _mutable_cols[idx->second]->insert_from(column, value.begin()->row_num);
@@ -197,7 +197,7 @@ struct HashTableProbe {
         hash_table_ctx.init_once();
         int left_col_len = _left_table_data_types.size();
         auto& iter = hash_table_ctx.iter;
-        auto block_size = 0;
+        int block_size = 0;
 
         for (; iter != hash_table_ctx.hash_table.end() && block_size < _batch_size; ++iter) {
             auto& value = iter->get_second();
