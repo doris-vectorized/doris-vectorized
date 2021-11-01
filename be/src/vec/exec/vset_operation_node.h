@@ -46,6 +46,8 @@ public:
     virtual void debug_string(int indentation_level, std::stringstream* out) const;
 
 protected:
+    //Todo: In build process of hashtable, It's same as join node. 
+    //It's time to abstract out the same methods and provide them directly to others; 
     void hash_table_init();
     Status hash_table_build(RuntimeState* state);
     Status process_build_block(Block& block);

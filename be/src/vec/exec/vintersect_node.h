@@ -42,7 +42,7 @@ public:
     virtual Status close(RuntimeState* state);
 
 private:
-    template < class HashTableContext, bool is_intersected>
+    template <class HashTableContext, bool is_intersected>
     friend class HashTableProbe;
 };
 } // namespace vectorized
