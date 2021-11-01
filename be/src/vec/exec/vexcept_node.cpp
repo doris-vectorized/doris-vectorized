@@ -56,7 +56,6 @@ Status VExceptNode::open(RuntimeState* state) {
         _probe_columns.resize(probe_expr_ctxs_sz);
 
         while (!eos) {
-
             RETURN_IF_ERROR(process_probe_block(state, i, &eos));
             if (_probe_rows == 0) continue;
 
