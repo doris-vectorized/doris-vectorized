@@ -361,6 +361,10 @@ protected:
     Cell* buf;         /// A piece of memory for all elements except the element with zero key.
     Grower grower;
     int64_t _resize_timer_ns;
+
+    //factor that will trigger growing the hash table on insert.
+    static constexpr float MAX_BUCKET_OCCUPANCY_FRACTION = 0.5f;
+
 #ifdef DBMS_HASH_MAP_COUNT_COLLISIONS
     mutable size_t collisions = 0;
 #endif
@@ -417,7 +421,6 @@ protected:
           * The temporary variable `new_grower` is used to determine the new size.
           */
         Grower new_grower = grower;
-
         if (for_num_elems) {
             new_grower.set(for_num_elems);
             if (new_grower.buf_size() <= old_size) return;
@@ -851,6 +854,22 @@ public:
 
     bool empty() const { return 0 == m_size; }
 
+    float get_factor() const { return MAX_BUCKET_OCCUPANCY_FRACTION; }
+
+    bool should_be_shrink(int64_t valid_row) {
+        return valid_row < get_factor() * (size() / 2.0);
+    }
+
+    void init_buf_size(size_t reserve_for_num_elements) {
+        free();
+        grower.set(reserve_for_num_elements);
+        alloc(grower);
+    }
+
+    void delete_zero_key(Key key) {
+        if (Cell::is_zero(key, *this))
+             this->clear_get_has_zero();
+    }
     void clear() {
         destroy_elements();
         this->clear_get_has_zero();
