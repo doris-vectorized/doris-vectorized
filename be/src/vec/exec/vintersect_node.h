@@ -17,19 +17,33 @@
 
 #pragma once
 
+#include "exec/exec_node.h"
+#include "vec/common/columns_hashing.h"
+#include "vec/common/hash_table/hash_table.h"
+#include "vec/core/materialize_block.h"
+#include "vec/exec/join/join_op.h"
+#include "vec/exec/join/vacquire_list.hpp"
+#include "vec/exec/join/vhash_join_node.h"
 #include "vec/exec/vset_operation_node.h"
+#include "vec/functions/function.h"
+#include "vec/utils/util.hpp"
 
 namespace doris {
 namespace vectorized {
 
+class VExprContext;
 class VIntersectNode : public VSetOperationNode {
 public:
     VIntersectNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs);
     virtual Status init(const TPlanNode& tnode, RuntimeState* state = nullptr);
     virtual Status prepare(RuntimeState* state);
     virtual Status open(RuntimeState* state);
-    virtual Status get_next(RuntimeState* state, vectorized::Block* block, bool* eos);
+    virtual Status get_next(RuntimeState* state, vectorized::Block* output_block, bool* eos);
     virtual Status close(RuntimeState* state);
+
+private:
+    template <class HashTableContext, bool is_intersected>
+    friend class HashTableProbe;
 };
 } // namespace vectorized
 } // namespace doris
