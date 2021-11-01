@@ -23,43 +23,86 @@
 #include "vec/core/block.h"
 #include "vec/exprs/vexpr.h"
 #include "vec/exprs/vexpr_context.h"
-
+#include "vec/exec/vset_operation_node.h"
 namespace doris {
 namespace vectorized {
+
 VExceptNode::VExceptNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
         : VSetOperationNode(pool, tnode, descs) {}
 
 Status VExceptNode::init(const TPlanNode& tnode, RuntimeState* state) {
     RETURN_IF_ERROR(VSetOperationNode::init(tnode, state));
-    DCHECK(tnode.__isset.union_node);
+    DCHECK(tnode.__isset.except_node);
     return Status::OK();
 }
 
 Status VExceptNode::prepare(RuntimeState* state) {
-    return VSetOperationNode::prepare(state);
+    RETURN_IF_ERROR(VSetOperationNode::prepare(state));
+    return Status::OK();
 }
 
 Status VExceptNode::open(RuntimeState* state) {
-    return VSetOperationNode::open(state);
+    RETURN_IF_ERROR(VSetOperationNode::open(state));
+    bool eos = false;
+    Status st;
+    for (int i = 1; i < _children.size(); ++i) {
+        if (i > 1) {
+            refresh_hash_table<false>();
+        }
+
+        RETURN_IF_ERROR(child(i)->open(state));
+        eos = false;
+        int probe_expr_ctxs_sz = _child_expr_lists[i].size();
+        _probe_columns.resize(probe_expr_ctxs_sz);
+
+        while (!eos) {
+            RETURN_IF_ERROR(process_probe_block(state, i, &eos));
+            if (_probe_rows == 0) continue;
+
+            std::visit(
+                    [&](auto&& arg) {
+                        using HashTableCtxType = std::decay_t<decltype(arg)>;
+                        if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
+
+                            HashTableProbe<HashTableCtxType, false> process_hashtable_ctx(
+                                    this, state->batch_size(), _probe_rows);
+                            st = process_hashtable_ctx.mark_data_in_hashtable(arg);
+
+                        } else {
+                            LOG(FATAL) << "FATAL: uninited hash table";
+                        }
+                    },
+                    _hash_table_variants);
+        }
+    }
+    return st;
 }
 
-Status VExceptNode::get_next(RuntimeState* state, Block* block, bool* eos) {
-    return Status::NotSupported("Not Implemented.");
+Status VExceptNode::get_next(RuntimeState* state, Block* output_block, bool* eos) {
+    SCOPED_TIMER(_probe_timer);
+    Status st;
+    create_mutable_cols(output_block);
+
+    std::visit(
+            [&](auto&& arg) {
+                using HashTableCtxType = std::decay_t<decltype(arg)>;
+                if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
+                    
+                    HashTableProbe<HashTableCtxType, false> process_hashtable_ctx(
+                            this, state->batch_size(), _probe_rows);
+                    st = process_hashtable_ctx.get_data_in_hashtable(arg, _mutable_cols,
+                                                                     output_block, eos);
+                } else {
+                    LOG(FATAL) << "FATAL: uninited hash table";
+                }
+            },
+            _hash_table_variants);
+    return st;
 }
 
 Status VExceptNode::close(RuntimeState* state) {
     return VSetOperationNode::close(state);
 }
 
-void VExceptNode::debug_string(int indentation_level, std::stringstream* out) const {
-    *out << string(indentation_level * 2, ' ');
-    *out << " _child_expr_lists=[";
-    for (int i = 0; i < _child_expr_lists.size(); ++i) {
-        *out << VExpr::debug_string(_child_expr_lists[i]) << ", ";
-    }
-    *out << "] \n";
-    ExecNode::debug_string(indentation_level, out);
-    *out << ")" << std::endl;
-}
 } // namespace vectorized
 } // namespace doris
