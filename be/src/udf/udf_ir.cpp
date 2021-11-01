@@ -44,7 +44,6 @@ doris::ColumnPtrWrapper* FunctionContext::get_constant_col(int i) const {
         return nullptr;
     }
     return _impl->_constant_cols[i];
-    return nullptr;
 }
 
 int FunctionContext::get_num_args() const {

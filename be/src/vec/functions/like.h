@@ -38,6 +38,10 @@ namespace doris::vectorized {
 struct LikeSearchState {
     char escape_char;
 
+    /// Holds the string the StringValue points to and is set any time StringValue is
+    /// used.
+    std::string search_string;
+
     /// Used for LIKE predicates if the pattern is a constant argument, and is either a
     /// constant string or has a constant string at the beginning or end of the pattern.
     /// This will be set in order to check for that pattern in the corresponding part of
@@ -55,6 +59,7 @@ struct LikeSearchState {
     LikeSearchState() : escape_char('\\') {}
 
     void set_search_string(const std::string& search_string_arg) {
+        search_string = search_string_arg;
         search_string_sv = StringValue(search_string_arg);
         substring_pattern = StringSearch(&search_string_sv);
     }

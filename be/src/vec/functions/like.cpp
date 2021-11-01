@@ -216,7 +216,7 @@ Status FunctionLike::prepare(FunctionContext* context, FunctionContext::Function
     context->set_function_state(scope, state);
     state->function = like_fn;
     if (context->is_col_constant(1)) {
-        const auto pattern_col = context->get_constant_col(1)->_column_ptr;
+        const auto pattern_col = context->get_constant_col(1)->column_ptr;
         const auto& pattern = pattern_col->get_data_at(0);
 
         std::string pattern_str = pattern.to_string();
@@ -263,7 +263,7 @@ Status FunctionRegexp::prepare(FunctionContext* context,
     context->set_function_state(scope, state);
     state->function = regexp_fn;
     if (context->is_col_constant(1)) {
-        const auto pattern_col = context->get_constant_col(1)->_column_ptr;
+        const auto pattern_col = context->get_constant_col(1)->column_ptr;
         const auto& pattern = pattern_col->get_data_at(0);
 
         std::string pattern_str = pattern.to_string();
