@@ -39,7 +39,7 @@ public:
     virtual ~HybridSetBase() = default;
     virtual void insert(const void* data) = 0;
     // use in vectorize execute engine
-    virtual void insert(const StringRef& value) = 0;
+    virtual void insert(void* data, size_t) = 0;
 
     virtual void insert(HybridSetBase* set) = 0;
 
@@ -80,7 +80,7 @@ public:
             _set.insert(*reinterpret_cast<const T*>(data));
         }
     }
-    void insert(const StringRef& value) override { insert(value.data); }
+    void insert(void* data, size_t) override { insert(data); }
 
     void insert(HybridSetBase* set) override {
         HybridSet<T>* hybrid_set = reinterpret_cast<HybridSet<T>*>(set);
@@ -134,8 +134,8 @@ public:
         std::string str_value(value->ptr, value->len);
         _set.insert(str_value);
     }
-    void insert(const StringRef& value) override {
-        std::string str_value(value.data, value.size);
+    void insert(void* data, size_t size) override {
+        std::string str_value(reinterpret_cast<char*>(data), size);
         _set.insert(str_value);
     }
 

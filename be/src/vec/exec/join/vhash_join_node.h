@@ -209,7 +209,7 @@ private:
 
     void _hash_table_init();
 
-    template <class HashTableContext, bool ignore_null, bool build_unique, bool has_runtime_filter>
+    template <class HashTableContext, bool ignore_null, bool build_unique>
     friend class ProcessHashTableBuild;
 
     template <class HashTableContext, bool ignore_null>

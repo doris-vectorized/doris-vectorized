@@ -30,7 +30,7 @@
 namespace doris::vectorized {
 
 using ProfileCounter = RuntimeProfile::Counter;
-template <class HashTableContext, bool ignore_null, bool build_unique, bool has_runtime_filter>
+template <class HashTableContext, bool ignore_null, bool build_unique>
 struct ProcessHashTableBuild {
     ProcessHashTableBuild(int rows, Block& acquired_block, ColumnRawPtrs& build_raw_ptrs,
                           HashJoinNode* join_node, int batch_size)
@@ -41,7 +41,8 @@ struct ProcessHashTableBuild {
               _join_node(join_node),
               _batch_size(batch_size) {}
 
-    Status operator()(HashTableContext& hash_table_ctx, ConstNullMapPtr null_map) {
+    Status operator()(HashTableContext& hash_table_ctx, ConstNullMapPtr null_map,
+                      bool has_runtime_filter) {
         using KeyGetter = typename HashTableContext::State;
         using Mapped = typename HashTableContext::Mapped;
         int64_t old_bucket_bytes = hash_table_ctx.hash_table.get_buffer_size_in_bytes();
@@ -60,7 +61,7 @@ struct ProcessHashTableBuild {
         hash_table_ctx.hash_table.reset_resize_timer();
 
         vector<int>& inserted_rows = _join_node->_inserted_rows[&_acquired_block];
-        if constexpr (has_runtime_filter) {
+        if (has_runtime_filter) {
             inserted_rows.reserve(_batch_size);
         }
 
@@ -79,14 +80,14 @@ struct ProcessHashTableBuild {
 
             if (emplace_result.is_inserted()) {
                 new (&emplace_result.get_mapped()) Mapped({&_acquired_block, k});
-                if constexpr (has_runtime_filter) {
+                if (has_runtime_filter) {
                     inserted_rows.push_back(k);
                 }
             } else {
                 if constexpr (!build_unique) {
                     /// The first element of the list is stored in the value of the hash table, the rest in the pool.
                     emplace_result.get_mapped().insert({&_acquired_block, k}, _join_node->_arena);
-                    if constexpr (has_runtime_filter) {
+                    if (has_runtime_filter) {
                         inserted_rows.push_back(k);
                     }
                 } else {
@@ -889,42 +890,6 @@ Status HashJoinNode::extract_probe_join_column(Block& block, NullMap& null_map,
     return Status::OK();
 }
 
-template <int state = 7>
-void compile_time_call_build_process(bool has_null, bool build_unique, bool has_runtime_filter,
-                                     Status& st, NullMap& null_map_val, int rows,
-                                     Block& acquired_block, ColumnRawPtrs& build_raw_ptrs,
-                                     HashJoinNode* join_node, int batch_size) {
-    if constexpr (state >= 0) {
-        // cast 'bool' to 'constexpr bool'
-        // there use constexpr state to match has_null/build_unique/has_runtime_filter
-        if (state == has_null * 1 + build_unique * 2 + has_runtime_filter * 4) {
-            constexpr bool c_has_null = !!(1 & state);
-            constexpr bool c_build_unique = !!(2 & state);
-            constexpr bool c_has_runtime_filter = !!(4 & state);
-
-            std::visit(
-                    [&](auto&& arg) {
-                        using HashTableCtxType = std::decay_t<decltype(arg)>;
-                        if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
-                            ProcessHashTableBuild<HashTableCtxType, c_has_null, c_build_unique,
-                                                  c_has_runtime_filter>
-                                    hash_table_build_process(rows, acquired_block, build_raw_ptrs,
-                                                             join_node, batch_size);
-                            st = hash_table_build_process(arg, &null_map_val);
-
-                        } else {
-                            LOG(FATAL) << "FATAL: uninited hash table";
-                        }
-                    },
-                    join_node->get_hash_table_variants());
-        }
-
-        compile_time_call_build_process<state - 1>(has_null, build_unique, has_runtime_filter, st,
-                                                   null_map_val, rows, acquired_block,
-                                                   build_raw_ptrs, join_node, batch_size);
-    }
-}
-
 Status HashJoinNode::_process_build_block(RuntimeState* state, Block& block) {
     SCOPED_TIMER(_build_table_timer);
     size_t rows = block.rows();
@@ -958,8 +923,28 @@ Status HashJoinNode::_process_build_block(RuntimeState* state, Block& block) {
 
     bool has_runtime_filter = !_runtime_filter_descs.empty();
 
-    compile_time_call_build_process(has_null, _build_unique, has_runtime_filter, st, null_map_val,
-                                    rows, acquired_block, raw_ptrs, this, state->batch_size());
+    std::visit(
+            [&](auto&& arg) {
+                using HashTableCtxType = std::decay_t<decltype(arg)>;
+                if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
+#define CALL_BUILD_FUNCTION(HAS_NULL, BUILD_UNIQUE)                                           \
+    ProcessHashTableBuild<HashTableCtxType, HAS_NULL, BUILD_UNIQUE> hash_table_build_process( \
+            rows, acquired_block, raw_ptrs, this, state->batch_size());                       \
+    st = hash_table_build_process(arg, &null_map_val, has_runtime_filter);
+                    if (std::pair {has_null, _build_unique} == std::pair {true, true}) {
+                        CALL_BUILD_FUNCTION(true, true);
+                    } else if (std::pair {has_null, _build_unique} == std::pair {true, false}) {
+                        CALL_BUILD_FUNCTION(true, false);
+                    } else if (std::pair {has_null, _build_unique} == std::pair {false, true}) {
+                        CALL_BUILD_FUNCTION(false, true);
+                    } else {
+                        CALL_BUILD_FUNCTION(false, false);
+                    }
+                } else {
+                    LOG(FATAL) << "FATAL: uninited hash table";
+                }
+            },
+            _hash_table_variants);
 
     return st;
 }

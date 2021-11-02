@@ -80,7 +80,7 @@ doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* conte
             continue;
         }
         const auto& ref_data = column->get_data_at(0);
-        _hybrid_set->insert(ref_data);
+        _hybrid_set->insert((void*)(ref_data.data), ref_data.size);
     }
     _set_param = COWHelper<IColumn, ColumnSet>::create(1, _hybrid_set);
 

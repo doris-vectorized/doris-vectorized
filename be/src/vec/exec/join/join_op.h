@@ -68,7 +68,6 @@ struct RowRefList : RowRef {
     public:
         ForwardIterator(RowRefList* begin)
                 : root(begin), first(true), batch(root->next), position(0) {}
-        ForwardIterator() : root(nullptr), first(false), batch(nullptr), position(0) {}
 
         RowRef& operator*() {
             if (first) return *root;
@@ -104,18 +103,22 @@ struct RowRefList : RowRef {
 
         bool ok() const { return first || batch; }
 
+        static ForwardIterator end() { return ForwardIterator(); }
+
     private:
         RowRefList* root;
         bool first;
         Batch* batch;
         size_t position;
+
+        ForwardIterator() : root(nullptr), first(false), batch(nullptr), position(0) {}
     };
 
     RowRefList() {}
     RowRefList(const Block* block_, size_t row_num_) : RowRef(block_, row_num_) {}
 
     ForwardIterator begin() { return ForwardIterator(this); }
-    ForwardIterator end() { return ForwardIterator(); }
+    ForwardIterator end() { return ForwardIterator::end(); }
 
     /// insert element after current one
     void insert(RowRef&& row_ref, Arena& pool) {
