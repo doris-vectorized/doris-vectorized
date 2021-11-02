@@ -280,47 +280,6 @@ private:
     WrapperPtr _wrapper;
 };
 
-/// this class used in a hash join node
-/// Provide a unified interface for other classes
-class RuntimeFilterSlots {
-public:
-    RuntimeFilterSlots(const std::vector<ExprContext*>& prob_expr_ctxs,
-                       const std::vector<ExprContext*>& build_expr_ctxs,
-                       const std::vector<TRuntimeFilterDesc>& runtime_filter_descs)
-            : _probe_expr_context(prob_expr_ctxs),
-              _build_expr_context(build_expr_ctxs),
-              _runtime_filter_descs(runtime_filter_descs) {}
-
-    Status init(RuntimeState* state, ObjectPool* pool, MemTracker* tracker,
-                int64_t hash_table_size);
-
-    void insert(TupleRow* row) {
-        for (int i = 0; i < _build_expr_context.size(); ++i) {
-            auto iter = _runtime_filters.find(i);
-            if (iter != _runtime_filters.end()) {
-                void* val = _build_expr_context[i]->get_value(row);
-                if (val != nullptr) {
-                    for (auto filter : iter->second) {
-                        filter->insert(val);
-                    }
-                }
-            }
-        }
-    }
-
-    // should call this method after insert
-    void ready_for_publish();
-    // publish runtime filter
-    void publish();
-
-private:
-    const std::vector<ExprContext*>& _probe_expr_context;
-    const std::vector<ExprContext*>& _build_expr_context;
-    const std::vector<TRuntimeFilterDesc>& _runtime_filter_descs;
-    // prob_contition index -> [IRuntimeFilter]
-    std::map<int, std::list<IRuntimeFilter*>> _runtime_filters;
-};
-
 } // namespace doris
 
 #endif

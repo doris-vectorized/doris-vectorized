@@ -242,8 +242,7 @@ Status HashJoinNode::open(RuntimeState* state) {
                                                 _runtime_filter_descs);
 
         RETURN_IF_ERROR(thread_status.get_future().get());
-        RETURN_IF_ERROR(runtime_filter_slots.init(state, _pool, expr_mem_tracker().get(),
-                                                  _hash_tbl->size()));
+        RETURN_IF_ERROR(runtime_filter_slots.init(state, _hash_tbl->size()));
         {
             SCOPED_TIMER(_push_compute_timer);
             auto func = [&](TupleRow* row) { runtime_filter_slots.insert(row); };

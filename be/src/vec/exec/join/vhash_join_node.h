@@ -20,12 +20,12 @@
 
 #include "common/object_pool.h"
 #include "exec/exec_node.h"
+#include "exprs/runtime_filter_slots.h"
 #include "vec/common/columns_hashing.h"
 #include "vec/common/hash_table/hash_map.h"
 #include "vec/common/hash_table/hash_table.h"
 #include "vec/exec/join/join_op.h"
 #include "vec/exec/join/vacquire_list.hpp"
-#include "vec/exprs/vruntime_filter.h"
 #include "vec/functions/function.h"
 
 namespace doris {

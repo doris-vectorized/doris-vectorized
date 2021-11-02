@@ -83,7 +83,6 @@ set(VEC_FILES
   exprs/vin_predicate.cpp
   exprs/vslot_ref.cpp
   exprs/vcast_expr.cpp
-  exprs/vruntime_filter.cpp
   functions/math.cpp
   functions/function_bitmap.cpp
   functions/comparison.cpp
