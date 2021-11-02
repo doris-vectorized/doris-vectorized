@@ -328,6 +328,150 @@ struct TrimImpl {
     }
 };
 
+struct HexStringImpl {
+    static constexpr auto name = "hex";
+    using ReturnType = DataTypeString;
+    using ColumnType = ColumnString;
+
+    static int hex_encode(const char* src_str, size_t length,char* dst_str,
+                           const char* hexDigits = "0123456789ABCDEF") {
+        // hex(str) str length is n, result must be 2*n length
+        for (size_t i = 0; i < length; i++) {
+            char res[2];
+            // low 4 bits
+            *(res + 1) = hexDigits[src_str[i] & 0x0F];
+            // high 4 bits
+            *res = hexDigits[(src_str[i] >> 4) & 0x0F];
+            std::copy(res, res + 2, dst_str + 2 * i);
+        }
+        return 2 * length;
+    }
+
+    static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
+                         ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets, NullMap& null_map) {
+        auto rows_count = offsets.size();
+        dst_offsets.resize(rows_count);
+
+        for (int i = 0; i < rows_count; ++i) {
+            if (null_map[i]) {
+                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
+                continue;
+            }
+
+            auto source = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            size_t srclen = offsets[i] - offsets[i - 1] - 1;
+
+            if (*source == '\0' && srclen == 0) {
+                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
+                continue;
+            }
+
+            size_t cipher_len = 2 * srclen;
+            char dst[cipher_len];
+            int outlen = hex_encode(source, srclen, dst);
+
+            if (outlen < 0) {
+                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
+            } else {
+                StringOP::push_value_string(std::string_view(dst, outlen), i, dst_data, dst_offsets);
+            }
+        }
+
+        return Status::OK();
+    }
+};
+
+// support hex variadic
+struct HexStringDataTypes{
+    static DataTypes types;
+};
+DataTypes HexStringDataTypes::types = { make_nullable(std::make_shared<vectorized::DataTypeString>()) };
+
+struct UnHexImpl{
+    static constexpr auto name = "unhex";
+    using ReturnType = DataTypeString;
+    using ColumnType = ColumnString;
+    static bool check_and_decode_one(char& c, const char src_c, bool flag) {
+        int k = flag ? 16 : 1;
+        int value = src_c - '0';
+        // 9 = ('9'-'0')
+        if (value >= 0 && value <= 9) {
+            c += value * k;
+            return true;
+        }
+
+        value = src_c - 'A';
+        // 5 = ('F'-'A')
+        if (value >= 0 && value <= 5) {
+            c += (value + 10) * k;
+            return true;
+        }
+
+        value = src_c - 'a';
+        // 5 = ('f'-'a')
+        if (value >= 0 && value <= 5) {
+            c += (value + 10) * k;
+            return true;
+        }
+        // not in ( ['0','9'], ['a','f'], ['A','F'] )
+        return false;
+    }
+
+    static int hex_decode(const char* src_str, size_t src_len, char* dst_str) {
+
+        // if str length is odd or 0 ,return empty string like mysql dose.
+        if ((src_len & 1) != 0 or src_len == 0) {
+            return 0;
+        }
+        //check and decode one character at the same time
+        // character in ( ['0','9'], ['a','f'], ['A','F'] ), return 'NULL' like mysql dose.
+        for (auto i = 0, dst_index = 0; i < src_len; i += 2, dst_index++) {
+            char c = 0;
+            // combine two character into dst_str one character
+            bool left_4bits_flag = check_and_decode_one(c, *(src_str + i), true);
+            bool right_4bits_flag = check_and_decode_one(c, *(src_str + i + 1), false);
+
+            if (!left_4bits_flag || !right_4bits_flag) {
+                return 0;
+            }
+            *(dst_str + dst_index) = c;
+        }
+        return src_len / 2;
+    }
+
+    static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
+                         ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets, NullMap& null_map) {
+        auto rows_count = offsets.size();
+        dst_offsets.resize(rows_count);
+
+        for (int i = 0; i < rows_count; ++i) {
+            if (null_map[i]) {
+                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
+                continue;
+            }
+
+            auto source = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            size_t srclen = offsets[i] - offsets[i - 1] - 1;
+
+            if (*source == '\0' && srclen == 0) {
+                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
+                continue;
+            }
+
+            int cipher_len = srclen / 2;
+            char dst[cipher_len];
+            int outlen = hex_decode(source, srclen, dst);
+
+            if (outlen < 0) {
+                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
+            } else {
+                StringOP::push_value_string(std::string_view(dst, outlen), i, dst_data, dst_offsets);
+            }
+        }
+
+        return Status::OK();
+    }
+};
 struct NameStringSpace {
     static constexpr auto name = "space";
 };
@@ -599,6 +743,10 @@ using FunctionStringFindInSet =
 
 using FunctionReverse = FunctionStringToString<ReverseImpl, NameReverse>;
 
+using FunctionHexString = FunctionStringOperateToNullType<HexStringImpl, HexStringDataTypes>;
+
+using FunctionUnHex = FunctionStringOperateToNullType<UnHexImpl>;
+
 using FunctionToLower = FunctionStringToString<TransferImpl<::tolower>, NameToLower>;
 
 using FunctionToUpper = FunctionStringToString<TransferImpl<::toupper>, NameToUpper>;
@@ -635,6 +783,8 @@ void register_function_string(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStringFindInSet>();
     //    factory.register_function<FunctionStringLocate>();
     factory.register_function<FunctionReverse>();
+    factory.register_function<FunctionHexString>();
+    factory.register_function<FunctionUnHex>();
     factory.register_function<FunctionToLower>();
     factory.register_function<FunctionToUpper>();
     factory.register_function<FunctionLTrim>();

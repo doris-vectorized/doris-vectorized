@@ -162,6 +162,57 @@ struct CeilName {
 };
 using FunctionCeil = FunctionMathUnary<UnaryFunctionVectorized<CeilName, std::ceil, DataTypeInt64>>;
 
+struct HexIntName {
+    static constexpr auto name = "hex";
+};
+
+struct HexIntImpl {
+    using ReturnType = DataTypeString;
+    static constexpr auto TYPE_INDEX = TypeIndex::Int64;
+    using Type = Int64;
+    using ReturnColumnType = ColumnString;
+    
+    static std::string hex(uint64_t num){
+        char hexTable[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+        // uint64_t max value 0xFFFFFFFFFFFFFFFF , 16 'F'
+        if (num == 0) {
+            return std::string("0");
+        }
+        char ans[17];
+        int i = 0;
+        while (num) {
+            ans[i++] = hexTable[num & 15];
+            num = num >> 4;
+        }
+        ans[i] = '\0';
+        // reverse
+        for (int k = 0, j = i - 1; k <= j; k++, j--) {
+            char tmp = ans[j];
+            ans[j] = ans[k];
+            ans[k] = tmp;
+        }
+        
+        return ans;
+    }
+    
+    static Status vector(const ColumnInt64::Container& data, ColumnString::Chars& res_data,
+                         ColumnString::Offsets& res_offsets) {
+        
+        res_offsets.resize(data.size());
+        size_t input_size = res_offsets.size();
+        for (size_t i = 0; i < input_size; ++i) {
+            StringOP::push_value_string(hex(data[i]), i, res_data, res_offsets);
+        }
+        return Status::OK();
+    }
+};
+struct HexIntDataTypes{
+    static DataTypes types;
+};
+DataTypes HexIntDataTypes::types = { make_nullable(std::make_shared<vectorized::DataTypeInt64>()) };
+// support hex variadic
+using FunctionHexInt = FunctionUnaryToType<HexIntImpl, HexIntName, HexIntDataTypes>;
+
 template <typename A>
 struct SignImpl {
     using ResultType = Int8;
@@ -410,6 +461,7 @@ void register_function_math(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionCeil>();
     factory.register_alias("ceil", "dceil");
     factory.register_alias("ceil", "ceiling");
+    factory.register_function<FunctionHexInt>();
     factory.register_function<FunctionE>();
     factory.register_function<FunctionLn>();
     factory.register_alias("ln", "dlog1");
