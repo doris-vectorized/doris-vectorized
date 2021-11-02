@@ -674,6 +674,35 @@ TEST(function_string_test, function_parse_url_test) {
     }
 }
 
+TEST(function_string_test, function_hex_test) {
+    std::string func_name = "hex";
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
+    DataSet data_set = {{{Null()}, Null()},
+                        {{std::string("0")}, std::string("30")},
+                        {{std::string("1")}, std::string("31")},
+                        {{std::string("123")}, std::string("313233")},
+                        {{std::string("A")}, std::string("41")},
+                        {{std::string("a")}, std::string("61")},
+                        {{std::string("我")}, std::string("E68891")},
+                        {{std::string("?")}, std::string("3F")},
+                        {{std::string("？")}, std::string("EFBC9F")}};
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
+TEST(function_string_test, function_unhex_test) {
+    std::string func_name = "unhex";
+    std::vector<std::any> input_types = {vectorized::TypeIndex::String};
+    DataSet data_set = {{{Null()}, {Null()}},
+                        {{std::string("@!#")}, std::string("")},
+                        {{std::string("ò&ø")}, std::string("")},
+                        {{std::string("@@")}, std::string("")},
+                        {{std::string("61")}, std::string("a")},
+                        {{std::string("41")}, std::string("A")},
+                        {{std::string("313233")}, std::string("123")},
+                        {{std::string("EFBC9F")}, std::string("？")}};
+    vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+}
+
 } // namespace doris
 
 int main(int argc, char** argv) {
