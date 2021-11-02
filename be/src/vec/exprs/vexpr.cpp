@@ -272,10 +272,10 @@ ColumnPtrWrapper* VExpr::get_const_col(VExprContext* context) {
     }
 
     int result = -1;
-    _constant_block.reset(new Block);
-    execute(context, _constant_block.get(), &result);
+    Block block;
+    execute(context, &block, &result);
     DCHECK(result != -1);
-    const auto& column = _constant_block->get_by_position(result).column;
+    const auto& column = block.get_by_position(result).column;
     _constant_col = std::make_shared<ColumnPtrWrapper>(column);
     return _constant_col.get();
 }

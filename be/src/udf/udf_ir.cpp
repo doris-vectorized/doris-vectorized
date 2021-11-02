@@ -29,7 +29,7 @@ bool FunctionContext::is_col_constant(int i) const {
     if (i < 0 || i >= _impl->_constant_cols.size()) {
         return false;
     }
-    return _impl->_constant_cols[1] != nullptr;
+    return _impl->_constant_cols[i] != nullptr;
 }
 
 AnyVal* FunctionContext::get_constant_arg(int i) const {

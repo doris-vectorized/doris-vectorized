@@ -52,10 +52,8 @@ doris::Status VectorizedFnCall::prepare(doris::RuntimeState* state,
 
     FunctionContext::TypeDesc return_type = AnyValUtil::column_type_to_type_desc(_type);
     std::vector<FunctionContext::TypeDesc> arg_types;
-    bool char_arg = false;
     for (int i = 0; i < _children.size(); ++i) {
         arg_types.push_back(AnyValUtil::column_type_to_type_desc(_children[i]->type()));
-        char_arg = char_arg || (_children[i]->type().type == TYPE_CHAR);
     }
 
     _fn_context_index = context->register_func(state, return_type, arg_types, 0);

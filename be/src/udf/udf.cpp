@@ -191,6 +191,7 @@ FunctionContext* FunctionContextImpl::clone(MemPool* pool) {
             create_context(_state, pool, _intermediate_type, _return_type, _arg_types,
                            _varargs_buffer_size, _debug);
     new_context->_impl->_constant_args = _constant_args;
+    new_context->_impl->_constant_cols = _constant_cols;
     new_context->_impl->_fragment_local_fn_state = _fragment_local_fn_state;
     return new_context;
 }
