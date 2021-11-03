@@ -44,44 +44,6 @@ struct AggregateFunctionSumData {
     T get() const { return sum; }
 };
 
-template <typename T>
-struct AggregateFunctionSumKahanData {
-    static_assert(
-            std::is_floating_point_v<T>,
-            "It doesn't make sense to use Kahan Summation algorithm for non floating point types");
-
-    T sum{};
-    T compensation{};
-
-    void add(T value) {
-        auto compensated_value = value - compensation;
-        auto new_sum = sum + compensated_value;
-        compensation = (new_sum - sum) - compensated_value;
-        sum = new_sum;
-    }
-
-    void merge(const AggregateFunctionSumKahanData& rhs) {
-        auto raw_sum = sum + rhs.sum;
-        auto rhs_compensated = raw_sum - sum;
-        auto compensations = ((rhs.sum - rhs_compensated) + (sum - (raw_sum - rhs_compensated))) +
-                             compensation + rhs.compensation;
-        sum = raw_sum + compensations;
-        compensation = compensations - (sum - raw_sum);
-    }
-
-    void write(WriteBuffer& buf) const {
-        write_binary(sum, buf);
-        write_binary(compensation, buf);
-    }
-
-    void read(ReadBuffer& buf) {
-        read_binary(sum, buf);
-        read_binary(compensation, buf);
-    }
-
-    T get() const { return sum; }
-};
-
 /// Counts the sum of the numbers.
 template <typename T, typename TResult, typename Data>
 class AggregateFunctionSum final
