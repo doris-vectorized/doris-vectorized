@@ -37,27 +37,7 @@ struct SumSimple {
 };
 
 template <typename T>
-struct SumSameType {
-    using ResultType = T;
-    using AggregateDataType = AggregateFunctionSumData<ResultType>;
-    using Function = AggregateFunctionSum<T, ResultType, AggregateDataType>;
-};
-
-template <typename T>
-struct SumKahan {
-    using ResultType = Float64;
-    using AggregateDataType = AggregateFunctionSumKahanData<ResultType>;
-    using Function = AggregateFunctionSum<T, ResultType, AggregateDataType>;
-};
-
-template <typename T>
 using AggregateFunctionSumSimple = typename SumSimple<T>::Function;
-template <typename T>
-using AggregateFunctionSumWithOverflow = typename SumSameType<T>::Function;
-template <typename T>
-using AggregateFunctionSumKahan =
-        std::conditional_t<IsDecimalNumber<T>, typename SumSimple<T>::Function,
-                           typename SumKahan<T>::Function>;
 
 template <template <typename> class Function>
 AggregateFunctionPtr create_aggregate_function_sum(const std::string& name,
