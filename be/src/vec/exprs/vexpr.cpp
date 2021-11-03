@@ -35,7 +35,9 @@ using doris::RowDescriptor;
 using doris::TypeDescriptor;
 
 VExpr::VExpr(const doris::TExprNode& node)
-        : _node_type(node.node_type), _type(TypeDescriptor::from_thrift(node.type)) {
+        : _node_type(node.node_type),
+          _type(TypeDescriptor::from_thrift(node.type)),
+          _fn_context_index(-1) {
     if (node.__isset.fn) {
         _fn = node.fn;
     }
@@ -46,7 +48,8 @@ VExpr::VExpr(const doris::TExprNode& node)
     }
 }
 
-VExpr::VExpr(const TypeDescriptor& type, bool is_slotref, bool is_nullable) : _type(type) {
+VExpr::VExpr(const TypeDescriptor& type, bool is_slotref, bool is_nullable)
+        : _type(type), _fn_context_index(-1) {
     if (is_slotref) {
         _node_type = TExprNodeType::SLOT_REF;
     }
