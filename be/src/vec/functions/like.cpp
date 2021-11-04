@@ -18,6 +18,7 @@
 #include "vec/functions/like.h"
 
 #include "runtime/string_value.h"
+#include "runtime/string_value.hpp"
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_set.h"
 #include "vec/columns/columns_number.h"
