@@ -1562,18 +1562,10 @@ abstract public class Expr extends TreeNode<Expr> implements ParseNode, Cloneabl
     protected Function getBuiltinFunction(
             Analyzer analyzer, String name, Type[] argTypes, Function.CompareMode mode)
             throws AnalysisException {
-        return getBuiltinFunction(analyzer, name, argTypes, mode, Function.NullableMode.DEPEND_ON_ARGUMENT);
-    }
-
-    protected Function getBuiltinFunction(Analyzer analyzer, String name, Type[] argTypes,
-                                           Function.CompareMode compareMode, Function.NullableMode nullableMode)
-            throws AnalysisException {
         FunctionName fnName = new FunctionName(name);
-
-        Function searchDesc = new Function(0, fnName, Arrays.asList(argTypes), Type.INVALID, false,
-                VectorizedUtil.isVectorized(), nullableMode);
-
-        Function f = Catalog.getCurrentCatalog().getFunction(searchDesc, compareMode);
+        Function searchDesc = new Function(fnName, Arrays.asList(argTypes), Type.INVALID, false,
+                VectorizedUtil.isVectorized());
+        Function f = Catalog.getCurrentCatalog().getFunction(searchDesc, mode);
         if (f != null && fnName.getFunction().equalsIgnoreCase("rand")) {
             if (this.children.size() == 1
                     && !(this.children.get(0) instanceof LiteralExpr)) {

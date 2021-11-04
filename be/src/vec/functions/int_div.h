@@ -40,6 +40,7 @@ struct DivideIntegralImpl {
     static inline Result apply(A a, B b, NullMap& null_map, size_t index) {
         if (UNLIKELY(b == 0)) {
             null_map[index] = 1;
+            return 0;
         }
 
         /// Otherwise overflow may occur due to integer promotion. Example: int8_t(-1) / uint64_t(2).

@@ -124,12 +124,6 @@ struct DecimalBinaryOperation {
 
     using ResultType = ResultType_;
     using NativeResultType = typename NativeType<ResultType>::Type;
-//    using Op = std::conditional_t<
-//            is_float_division,
-//            DivideIntegralImpl<
-//                    NativeResultType,
-//                    NativeResultType>, /// substitute divide by intDiv (throw on division by zero)
-//            Operation<NativeResultType, NativeResultType>>;
     using Op = Operation<NativeResultType, NativeResultType>;
 
     using ColVecA = std::conditional_t<IsDecimalNumber<A>, ColumnDecimal<A>, ColumnVector<A>>;

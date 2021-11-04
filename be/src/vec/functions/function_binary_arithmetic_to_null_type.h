@@ -77,8 +77,7 @@ public:
                     if constexpr (!std::is_same_v<ResultDataType, InvalidType>) {
                         if constexpr (IsDataTypeDecimal<LeftDataType> &&
                                       IsDataTypeDecimal<RightDataType>) {
-                            constexpr bool is_multiply =
-                                    std::is_same_v<Op<UInt8, UInt8>, MultiplyImpl<UInt8, UInt8>>;
+                            constexpr bool is_multiply = false;
                             constexpr bool is_division =
                                     std::is_same_v<Op<UInt8, UInt8>,
                                             DivideFloatingImpl<UInt8, UInt8>> ||
@@ -114,7 +113,7 @@ public:
         return make_nullable(type_res);
     }
 
-    bool use_default_implementation_for_nulls() const override { return false; }
+    bool use_default_implementation_for_nulls() const override { return true; }
 
     Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
                         size_t input_rows_count) override {

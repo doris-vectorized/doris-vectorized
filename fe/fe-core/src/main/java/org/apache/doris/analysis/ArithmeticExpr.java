@@ -279,27 +279,22 @@ public class ArithmeticExpr extends Expr {
                 case MULTIPLY:
                 case ADD:
                 case SUBTRACT:
+                case MOD:
                     if (t1.isDecimalV2() || t2.isDecimalV2()) {
                         castBinaryOp(findCommonType(t1, t2));
                     }
                     fn = getBuiltinFunction(analyzer, op.name, collectChildReturnTypes(),
                             Function.CompareMode.IS_IDENTICAL);
                     break;
-                case MOD:
-                    if (t1.isDecimalV2() || t2.isDecimalV2()) {
-                        castBinaryOp(findCommonType(t1, t2));
-                    }
-                    fn = getBuiltinFunction(analyzer, op.name, collectChildReturnTypes(),
-                            Function.CompareMode.IS_IDENTICAL, Function.NullableMode.ALWAYS_NULLABLE);
-                    break;
                 case INT_DIVIDE:
                     if (t1.isDecimalV2() || t2.isDecimalV2()) {
                         castBinaryOp(findCommonType(t1, t2));
-                    } else if (t1.isDateType() || t2.isDateType()) {
+                    }
+                    else if (t1.isDateType() || t2.isDateType()) {
                         castBinaryOp(Type.BIGINT);
                     }
                     fn = getBuiltinFunction(analyzer, op.name, collectChildReturnTypes(),
-                            Function.CompareMode.IS_IDENTICAL, Function.NullableMode.ALWAYS_NULLABLE);
+                            Function.CompareMode.IS_IDENTICAL);
                     break;
                 case DIVIDE:
                     t1 = getChild(0).getType().getNumResultType();
@@ -311,7 +306,7 @@ public class ArithmeticExpr extends Expr {
                     }
                     castBinaryOp(commonType);
                     fn = getBuiltinFunction(analyzer, op.name, collectChildReturnTypes(),
-                            Function.CompareMode.IS_IDENTICAL, Function.NullableMode.ALWAYS_NULLABLE);
+                            Function.CompareMode.IS_IDENTICAL);
                     break;
             }
 
