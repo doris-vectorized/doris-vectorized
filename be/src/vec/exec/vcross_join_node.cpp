@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#include "vec/exec/vcross_join_node.h"
+
 #include <sstream>
 
 #include "exprs/expr.h"
@@ -23,13 +25,10 @@
 #include "runtime/runtime_state.h"
 #include "util/runtime_profile.h"
 
-#include "vec/exec/vcross_join_node.h"
-
 namespace doris::vectorized {
 
 VCrossJoinNode::VCrossJoinNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
-        : VBlockingJoinNode("VCrossJoinNode", TJoinOp::CROSS_JOIN, pool, tnode, descs) {
-}
+        : VBlockingJoinNode("VCrossJoinNode", TJoinOp::CROSS_JOIN, pool, tnode, descs) {}
 
 Status VCrossJoinNode::prepare(RuntimeState* state) {
     DCHECK(_join_op == TJoinOp::CROSS_JOIN);
@@ -127,19 +126,15 @@ Status VCrossJoinNode::get_next(RuntimeState* state, Block* block, bool* eos) {
 
         if (!_eos) {
             do {
-                const auto &now_process_build_block = _build_blocks[_current_build_pos++];
+                const auto& now_process_build_block = _build_blocks[_current_build_pos++];
                 process_left_child_block(dst_columns, now_process_build_block);
-            } while (block->rows() < state->batch_size() && _current_build_pos < _build_blocks.size());
+            } while (block->rows() < state->batch_size() &&
+                     _current_build_pos < _build_blocks.size());
         }
     }
     dst_columns.clear();
 
-    if (_vconjunct_ctx_ptr) {
-        int result_column_id = -1;
-        int orig_columns = block->columns();
-        (*_vconjunct_ctx_ptr)->execute(block, &result_column_id);
-        Block::filter_block(block, result_column_id, orig_columns);
-    }
+    RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, block, block->columns()));
 
     if (_limit != -1 && _limit - _num_rows_returned < block->rows()) {
         block->set_num_rows(_limit - _num_rows_returned);
@@ -182,7 +177,8 @@ MutableColumns VCrossJoinNode::get_mutable_columns(Block* block) {
     return block->mutate_columns();
 }
 
-void VCrossJoinNode::process_left_child_block(MutableColumns& dst_columns, const Block& now_process_build_block) {
+void VCrossJoinNode::process_left_child_block(MutableColumns& dst_columns,
+                                              const Block& now_process_build_block) {
     const int max_added_rows = now_process_build_block.rows();
     for (size_t i = 0; i < _num_existing_columns; ++i) {
         const ColumnWithTypeAndName& src_column = _left_block.get_by_position(i);
@@ -190,8 +186,9 @@ void VCrossJoinNode::process_left_child_block(MutableColumns& dst_columns, const
     }
     for (size_t i = 0; i < _num_columns_to_add; ++i) {
         const ColumnWithTypeAndName& src_column = now_process_build_block.get_by_position(i);
-        dst_columns[_num_existing_columns + i]->insert_range_from(*src_column.column.get(), 0, max_added_rows);
+        dst_columns[_num_existing_columns + i]->insert_range_from(*src_column.column.get(), 0,
+                                                                  max_added_rows);
     }
 }
 
-} // namespace doris
+} // namespace doris::vectorized

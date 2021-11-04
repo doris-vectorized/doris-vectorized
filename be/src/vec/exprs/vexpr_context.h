@@ -27,12 +27,12 @@ class VExpr;
 class VExprContext {
 public:
     VExprContext(VExpr* expr);
-    doris::Status prepare(doris::RuntimeState* state, const doris::RowDescriptor& row_desc,
-                          const std::shared_ptr<doris::MemTracker>& tracker);
-    doris::Status open(doris::RuntimeState* state);
-    void close(doris::RuntimeState* state);
-    doris::Status clone(doris::RuntimeState* state, VExprContext** new_ctx);
-    doris::Status execute(doris::vectorized::Block* block, int* result_column_id);
+    Status prepare(RuntimeState* state, const RowDescriptor& row_desc,
+                   const std::shared_ptr<MemTracker>& tracker);
+    Status open(RuntimeState* state);
+    void close(RuntimeState* state);
+    Status clone(RuntimeState* state, VExprContext** new_ctx);
+    Status execute(Block* block, int* result_column_id);
 
     VExpr* root() { return _root; }
     void set_root(VExpr* expr) { _root = expr; }
@@ -52,6 +52,10 @@ public:
         DCHECK_LT(i, _fn_contexts.size());
         return _fn_contexts[i];
     }
+    
+    static Status filter_block(VExprContext* vexpr_ctx, Block* block, int column_to_keep);
+    static Status filter_block(const std::unique_ptr<VExprContext*>& vexpr_ctx_ptr, Block* block,
+                               int column_to_keep);
 
 private:
     /// The expr tree this context is for.
