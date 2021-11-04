@@ -597,7 +597,7 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
             }
             _probe_block.clear_column_data();
         }
-        
+
         do {
             SCOPED_TIMER(_probe_next_timer);
             RETURN_IF_ERROR(child(0)->get_next(state, &_probe_block, &_probe_eos));
@@ -609,7 +609,9 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
 
             int probe_expr_ctxs_sz = _probe_expr_ctxs.size();
             _probe_columns.resize(probe_expr_ctxs_sz);
-            if (_null_map_column == nullptr) { _null_map_column = ColumnUInt8::create();}
+            if (_null_map_column == nullptr) {
+                _null_map_column = ColumnUInt8::create();
+            }
             _null_map_column->get_data().assign(probe_rows, (uint8_t)0);
 
             Status st = std::visit(
@@ -646,25 +648,25 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
                                     this, state->batch_size(), probe_rows);
 
                             st = _have_other_join_conjunct
-                                 ? process_hashtable_ctx
-                                         .do_process_with_other_join_conjunts(
-                                                 arg, &_null_map_column->get_data(),
-                                                 mutable_block, output_block)
-                                 : process_hashtable_ctx.do_process(
-                                            arg, &_null_map_column->get_data(),
-                                            mutable_block, output_block);
+                                         ? process_hashtable_ctx
+                                                   .do_process_with_other_join_conjunts(
+                                                           arg, &_null_map_column->get_data(),
+                                                           mutable_block, output_block)
+                                         : process_hashtable_ctx.do_process(
+                                                   arg, &_null_map_column->get_data(),
+                                                   mutable_block, output_block);
                         } else {
                             ProcessHashTableProbe<HashTableCtxType, false> process_hashtable_ctx(
                                     this, state->batch_size(), probe_rows);
 
                             st = _have_other_join_conjunct
-                                 ? process_hashtable_ctx
-                                         .do_process_with_other_join_conjunts(
-                                                 arg, &_null_map_column->get_data(),
-                                                 mutable_block, output_block)
-                                 : process_hashtable_ctx.do_process(
-                                            arg, &_null_map_column->get_data(),
-                                            mutable_block, output_block);
+                                         ? process_hashtable_ctx
+                                                   .do_process_with_other_join_conjunts(
+                                                           arg, &_null_map_column->get_data(),
+                                                           mutable_block, output_block)
+                                         : process_hashtable_ctx.do_process(
+                                                   arg, &_null_map_column->get_data(),
+                                                   mutable_block, output_block);
                         }
                     } else {
                         LOG(FATAL) << "FATAL: uninited hash table";
@@ -696,12 +698,8 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
         return Status::OK();
     }
 
-    if (_vconjunct_ctx_ptr && output_block->rows() > 0) {
-        int result_column_id = -1;
-        int orig_columns = output_block->columns();
-        (*_vconjunct_ctx_ptr)->execute(output_block, &result_column_id);
-        Block::filter_block(output_block, result_column_id, orig_columns);
-    }
+    RETURN_IF_ERROR(
+            VExprContext::filter_block(_vconjunct_ctx_ptr, output_block, output_block->columns()));
 
     int64_t m = output_block->rows();
     COUNTER_UPDATE(_rows_returned_counter, m);
