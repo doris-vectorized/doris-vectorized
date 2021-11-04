@@ -80,7 +80,7 @@ doris::Status VExprContext::clone(RuntimeState* state, VExprContext** new_ctx) {
     (*new_ctx)->_prepared = true;
     (*new_ctx)->_opened = true;
 
-    return _root->open(state, *new_ctx, FunctionContext::FRAGMENT_LOCAL);
+    return _root->open(state, *new_ctx, FunctionContext::THREAD_LOCAL);
 }
 
 int VExprContext::register_func(RuntimeState* state, const FunctionContext::TypeDesc& return_type,
