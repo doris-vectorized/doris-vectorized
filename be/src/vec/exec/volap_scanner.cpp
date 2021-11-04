@@ -107,11 +107,9 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
         }
         VLOG_ROW << "VOlapScanner output rows: " << block->rows();
 
-        if (_vconjunct_ctx != nullptr) {
-            int result_column_id = -1;
-            _vconjunct_ctx->execute(block, &result_column_id);
-            Block::filter_block(block, result_column_id, _tuple_desc->slots().size());
-        }
+        RETURN_IF_ERROR(
+                VExprContext::filter_block(_vconjunct_ctx, block, _tuple_desc->slots().size()));
+
     } while (block->rows() == 0 && !(*eof) && raw_rows_read() < raw_rows_threshold);
 
     return Status::OK();
@@ -171,15 +169,14 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
         }
         case TYPE_CHAR: {
             Slice* slice = reinterpret_cast<Slice*>(ptr);
-            assert_cast<ColumnString*>(column_ptr)->insert_data(
-                    slice->data, strnlen(slice->data, slice->size));
+            assert_cast<ColumnString*>(column_ptr)
+                    ->insert_data(slice->data, strnlen(slice->data, slice->size));
             break;
         }
         case TYPE_VARCHAR:
         case TYPE_STRING: {
             Slice* slice = reinterpret_cast<Slice*>(ptr);
-            assert_cast<ColumnString*>(column_ptr)->insert_data(
-                    slice->data, slice->size);
+            assert_cast<ColumnString*>(column_ptr)->insert_data(slice->data, slice->size);
             break;
         }
         case TYPE_OBJECT: {
@@ -204,8 +201,7 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
         case TYPE_HLL: {
             Slice* slice = reinterpret_cast<Slice*>(ptr);
             if (slice->size != 0) {
-                assert_cast<ColumnString*>(column_ptr)->insert_data(
-                    slice->data, slice->size);
+                assert_cast<ColumnString*>(column_ptr)->insert_data(slice->data, slice->size);
                 // TODO: in vector exec engine, it is diffcult to set hll size = 0
                 // so we have to serialize here. which will cause two problem
                 //      1. some unnecessary mem malloc and delay mem release
@@ -215,8 +211,7 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
                 std::string result(dst_hll->max_serialized_size(), '0');
                 int size = dst_hll->serialize((uint8_t*)result.c_str());
                 result.resize(size);
-                assert_cast<ColumnString*>(column_ptr)->insert_data(
-                        result.c_str(), size);
+                assert_cast<ColumnString*>(column_ptr)->insert_data(result.c_str(), size);
             }
             break;
         }
@@ -224,13 +219,15 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
             int64_t int_value = *(int64_t*)(ptr);
             int32_t frac_value = *(int32_t*)(ptr + sizeof(int64_t));
             DecimalV2Value data(int_value, frac_value);
-            assert_cast<ColumnDecimal<Decimal128>*>(column_ptr)->insert_data(reinterpret_cast<char*>(&data), 0);
+            assert_cast<ColumnDecimal<Decimal128>*>(column_ptr)
+                    ->insert_data(reinterpret_cast<char*>(&data), 0);
             break;
         }
         case TYPE_DATETIME: {
             uint64_t value = *reinterpret_cast<uint64_t*>(ptr);
             DateTimeValue data(value);
-            assert_cast<ColumnVector<Int128>*>(column_ptr)->insert_data(reinterpret_cast<char*>(&data), 0);
+            assert_cast<ColumnVector<Int128>*>(column_ptr)
+                    ->insert_data(reinterpret_cast<char*>(&data), 0);
             break;
         }
         case TYPE_DATE: {
@@ -242,7 +239,8 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
             value |= *(unsigned char*)(ptr);
             DateTimeValue date;
             date.from_olap_date(value);
-            assert_cast<ColumnVector<Int128>*>(column_ptr)->insert_data(reinterpret_cast<char*>(&date), 0);
+            assert_cast<ColumnVector<Int128>*>(column_ptr)
+                    ->insert_data(reinterpret_cast<char*>(&date), 0);
             break;
         }
         default: {
