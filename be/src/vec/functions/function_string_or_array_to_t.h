@@ -46,8 +46,8 @@ public:
 
     bool use_default_implementation_for_constants() const override { return true; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t /*input_rows_count*/) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t /*input_rows_count*/) override {
         const ColumnPtr column = block.get_by_position(arguments[0]).column;
         if (const ColumnString* col = check_and_get_column<ColumnString>(column.get())) {
             auto col_res = ColumnVector<ResultType>::create();

@@ -418,8 +418,8 @@ private:
         }
     }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         DCHECK_GE(arguments.size(), 1);
         int argument_size = arguments.size();
         ColumnPtr argument_column[argument_size];

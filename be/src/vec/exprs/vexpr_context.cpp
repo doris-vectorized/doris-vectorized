@@ -17,6 +17,7 @@
 
 #include "vec/exprs/vexpr_context.h"
 
+#include "udf/udf_internal.h"
 #include "vec/exprs/vexpr.h"
 
 namespace doris::vectorized {
@@ -24,39 +25,70 @@ VExprContext::VExprContext(VExpr* expr)
         : _root(expr), _prepared(false), _opened(false), _closed(false) {}
 
 doris::Status VExprContext::execute(doris::vectorized::Block* block, int* result_column_id) {
-    return _root->execute(block, result_column_id);
+    return _root->execute(this, block, result_column_id);
 }
 
 doris::Status VExprContext::prepare(doris::RuntimeState* state,
                                     const doris::RowDescriptor& row_desc,
                                     const std::shared_ptr<doris::MemTracker>& tracker) {
+    _prepared = true;
+    _pool.reset(new MemPool(state->instance_mem_tracker().get()));
     return _root->prepare(state, row_desc, this);
 }
+
 doris::Status VExprContext::open(doris::RuntimeState* state) {
-    return _root->open(state, this);
+    DCHECK(_prepared);
+    if (_opened) {
+        return Status::OK();
+    }
+    _opened = true;
+    // Fragment-local state is only initialized for original contexts. Clones inherit the
+    // original's fragment state and only need to have thread-local state initialized.
+    FunctionContext::FunctionStateScope scope =
+            _is_clone ? FunctionContext::THREAD_LOCAL : FunctionContext::FRAGMENT_LOCAL;
+    return _root->open(state, this, scope);
 }
 
 void VExprContext::close(doris::RuntimeState* state) {
-    return _root->close(state, this);
+    DCHECK(!_closed);
+    FunctionContext::FunctionStateScope scope =
+            _is_clone ? FunctionContext::THREAD_LOCAL : FunctionContext::FRAGMENT_LOCAL;
+    _root->close(state, this, scope);
+
+    for (int i = 0; i < _fn_contexts.size(); ++i) {
+        _fn_contexts[i]->impl()->close();
+    }
+    // _pool can be NULL if Prepare() was never called
+    if (_pool != NULL) {
+        _pool->free_all();
+    }
+    _closed = true;
 }
 
 doris::Status VExprContext::clone(RuntimeState* state, VExprContext** new_ctx) {
-//    DCHECK(_prepared);
-//    DCHECK(_opened);
-    DCHECK(*new_ctx == NULL);
+    DCHECK(_prepared);
+    DCHECK(_opened);
+    DCHECK(*new_ctx == nullptr);
 
     *new_ctx = state->obj_pool()->add(new VExprContext(_root));
-//    (*new_ctx)->_pool.reset(new MemPool(_pool->mem_tracker()));
-//    for (int i = 0; i < _fn_contexts.size(); ++i) {
-//        (*new_ctx)->_fn_contexts.push_back(_fn_contexts[i]->impl()->clone((*new_ctx)->_pool.get()));
-//    }
-//    (*new_ctx)->_fn_contexts_ptr = &((*new_ctx)->_fn_contexts[0]);
+    (*new_ctx)->_pool.reset(new MemPool(_pool->mem_tracker()));
+    for (auto & _fn_context : _fn_contexts) {
+        (*new_ctx)->_fn_contexts.push_back(_fn_context->impl()->clone((*new_ctx)->_pool.get()));
+    }
 
-//    (*new_ctx)->_is_clone = true;
-//    (*new_ctx)->_prepared = true;
-//    (*new_ctx)->_opened = true;
+    (*new_ctx)->_is_clone = true;
+    (*new_ctx)->_prepared = true;
+    (*new_ctx)->_opened = true;
 
-    return _root->open(state, *new_ctx);
+    return _root->open(state, *new_ctx, FunctionContext::THREAD_LOCAL);
+}
+
+int VExprContext::register_func(RuntimeState* state, const FunctionContext::TypeDesc& return_type,
+                                const std::vector<FunctionContext::TypeDesc>& arg_types,
+                                int varargs_buffer_size) {
+    _fn_contexts.push_back(FunctionContextImpl::create_context(
+            state, _pool.get(), return_type, arg_types, varargs_buffer_size, false));
+    return _fn_contexts.size() - 1;
 }
 
 } // namespace doris::vectorized

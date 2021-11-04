@@ -27,7 +27,8 @@ class VSlotRef final : public VExpr {
 public:
     VSlotRef(const doris::TExprNode& node);
     VSlotRef(const SlotDescriptor* desc);
-    virtual doris::Status execute(doris::vectorized::Block* block, int* result_column_id);
+    virtual doris::Status execute(VExprContext* context, doris::vectorized::Block* block,
+                                  int* result_column_id);
     virtual doris::Status prepare(doris::RuntimeState* state, const doris::RowDescriptor& desc,
                                   VExprContext* context);
     virtual VExpr* clone(doris::ObjectPool* pool) const override {
@@ -36,6 +37,7 @@ public:
 
     virtual const std::string& expr_name() const override;
     virtual std::string debug_string() const;
+    virtual bool is_constant() const { return false; }
 
 private:
     FunctionPtr _function;

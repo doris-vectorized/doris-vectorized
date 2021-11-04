@@ -70,7 +70,7 @@ doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* conte
         }
 
         int result = -1;
-        _children[i]->execute(&block, &result);
+        _children[i]->execute(context, &block, &result);
 
         DCHECK(result != -1);
         const auto& column = block.get_by_position(result).column;
@@ -110,11 +110,12 @@ void VInPredicate::close(doris::RuntimeState* state, VExprContext* context) {
     VExpr::close(state, context);
 }
 
-doris::Status VInPredicate::execute(doris::vectorized::Block* block, int* result_column_id) {
+doris::Status VInPredicate::execute(VExprContext* context, doris::vectorized::Block* block,
+                                    int* result_column_id) {
     // for each child call execute
     doris::vectorized::ColumnNumbers arguments(2);
     int column_id = -1;
-    _children[0]->execute(block, &column_id);
+    _children[0]->execute(context, block, &column_id);
     arguments[0] = column_id;
 
     size_t const_param_id = block->columns();
@@ -126,7 +127,8 @@ doris::Status VInPredicate::execute(doris::vectorized::Block* block, int* result
     size_t num_columns_without_result = block->columns();
     // prepare a column to save result
     block->insert({nullptr, _data_type, _expr_name});
-    _function->execute(*block, arguments, num_columns_without_result, block->rows(), false);
+    _function->execute(context->fn_context(_fn_context_index), *block, arguments,
+                       num_columns_without_result, block->rows(), false);
     *result_column_id = num_columns_without_result;
     return Status::OK();
 }

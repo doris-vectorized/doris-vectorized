@@ -105,8 +105,8 @@ public:
     bool use_default_implementation_for_nulls() const override { return false; }
     bool use_default_implementation_for_constants() const override { return true; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         substring_execute(block, arguments, result, input_rows_count);
         return Status::OK();
     }
@@ -210,8 +210,8 @@ public:
     String get_name() const override { return name; }
     size_t get_number_of_arguments() const override { return 2; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         auto int_type = std::make_shared<DataTypeInt32>();
         size_t num_columns_without_result = block.columns();
         block.insert({int_type->create_column_const(input_rows_count, to_field(1))
@@ -233,8 +233,8 @@ public:
     String get_name() const override { return name; }
     size_t get_number_of_arguments() const override { return 2; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         auto int_type = std::make_shared<DataTypeInt32>();
         auto params1 = ColumnInt32::create(input_rows_count);
         auto params2 = ColumnInt32::create(input_rows_count);
@@ -296,8 +296,8 @@ public:
     bool use_default_implementation_for_nulls() const override { return false; }
     bool use_default_implementation_for_constants() const override { return true; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         auto res_map = ColumnUInt8::create(input_rows_count, 0);
 
         auto column = block.get_by_position(arguments[0]).column;
@@ -333,8 +333,8 @@ public:
     bool use_default_implementation_for_nulls() const override { return false; }
     bool use_default_implementation_for_constants() const override { return true; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         DCHECK_GE(arguments.size(), 1);
 
         if (arguments.size() == 1) {
@@ -429,8 +429,8 @@ public:
     bool use_default_implementation_for_nulls() const override { return false; }
     bool use_default_implementation_for_constants() const override { return true; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         DCHECK_GE(arguments.size(), 2);
         auto null_map = ColumnUInt8::create(input_rows_count, 0);
         // we create a zero column to simply implement
@@ -518,8 +518,8 @@ public:
         return std::make_shared<DataTypeString>();
     }
     bool use_default_implementation_for_constants() const override { return true; }
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         DCHECK_EQ(arguments.size(), 2);
         auto res = ColumnString::create();
 
@@ -578,8 +578,8 @@ public:
     bool use_default_implementation_for_nulls() const override { return true; }
     bool use_default_implementation_for_constants() const override { return true; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         DCHECK_GE(arguments.size(), 3);
         auto null_map = ColumnUInt8::create(input_rows_count, 0);
         // we create a zero column to simply implement
@@ -719,8 +719,8 @@ public:
     bool use_default_implementation_for_nulls() const override { return false; }
     bool use_default_implementation_for_constants() const override { return true; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         DCHECK_EQ(arguments.size(), 3);
 
         auto null_map = ColumnUInt8::create(input_rows_count, 0);
@@ -838,8 +838,8 @@ public:
     }
     bool use_default_implementation_for_nulls() const override { return true; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         DCHECK_GE(arguments.size(), 1);
 
         int argument_size = arguments.size();
@@ -901,8 +901,8 @@ public:
     }
     bool use_default_implementation_for_nulls() const override { return false; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         auto null_map = ColumnUInt8::create(input_rows_count, 0);
         auto& null_map_data = null_map->get_data();
 

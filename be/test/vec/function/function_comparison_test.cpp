@@ -74,7 +74,7 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
 
     auto greater_function_ptr = doris::vectorized::SimpleFunctionFactory::instance().get_function("gt", ctn,
              std::make_shared<vectorized::DataTypeUInt8>());
-    greater_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
+    greater_function_ptr->execute(nullptr, block, arguments, num_columns_without_result, 1024, false);
     
 
     k1 = -100;
@@ -93,7 +93,8 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
 
     arguments[0] = 1;
     arguments[1] = 2;
-    less_or_equals_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
+    less_or_equals_function_ptr->execute(nullptr, block, arguments, num_columns_without_result,
+                                         1024, false);
 
     k2 = 100;
     k3 = 7.7;
@@ -111,7 +112,7 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
     doris::vectorized::ColumnsWithTypeAndName ctn2 = { block.get_by_position(arguments[0]), block.get_by_position(arguments[1]) };
     auto and_function_ptr = doris::vectorized::SimpleFunctionFactory::instance().get_function("and", ctn2,
             std::make_shared<vectorized::DataTypeUInt8>());
-    and_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
+    and_function_ptr->execute(nullptr, block, arguments, num_columns_without_result, 1024, false);
 
     k1 = -100;
     k2 = 100;
@@ -130,7 +131,7 @@ TEST(ComparisonTest, ComparisonFunctionTest) {
     // doris::vectorized::ColumnsWithTypeAndName ctn2 = { block.get_by_position(arguments[0]), block.get_by_position(arguments[1]) };
     auto or_function_ptr = doris::vectorized::SimpleFunctionFactory::instance().get_function("or", ctn2,
             std::make_shared<vectorized::DataTypeUInt8>());
-    or_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
+    or_function_ptr->execute(nullptr, block, arguments, num_columns_without_result, 1024, false);
 
     k1 = -100;
     k2 = 100;

@@ -40,8 +40,8 @@ public:
     bool use_default_implementation_for_constants() const override { return true; }
     ColumnNumbers get_arguments_that_are_always_constant() const override { return {1}; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         const ColumnPtr source_col = block.get_by_position(arguments[0]).column;
         const auto* sources = check_and_get_column<ColumnVector<Int128>>(source_col.get());
         auto col_res = ColumnString::create();

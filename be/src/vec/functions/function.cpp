@@ -122,8 +122,8 @@ bool allArgumentsAreConstants(const Block& block, const ColumnNumbers& args) {
 } // namespace
 
 Status PreparedFunctionImpl::default_implementation_for_constant_arguments(
-        Block& block, const ColumnNumbers& args, size_t result, size_t input_rows_count,
-        bool dry_run, bool* executed) {
+        FunctionContext* context, Block& block, const ColumnNumbers& args, size_t result,
+        size_t input_rows_count, bool dry_run, bool* executed) {
     *executed = false;
     ColumnNumbers arguments_to_remain_constants = get_arguments_that_are_always_constant();
 
@@ -174,8 +174,8 @@ Status PreparedFunctionImpl::default_implementation_for_constant_arguments(
     for (size_t i = 0; i < arguments_size; ++i) temporary_argument_numbers[i] = i;
 
     RETURN_IF_ERROR(execute_without_low_cardinality_columns(
-            temporary_block, temporary_argument_numbers, arguments_size, temporary_block.rows(),
-            dry_run));
+            context, temporary_block, temporary_argument_numbers, arguments_size,
+            temporary_block.rows(), dry_run));
 
     ColumnPtr result_column;
     /// extremely rare case, when we have function with completely const arguments
@@ -190,7 +190,8 @@ Status PreparedFunctionImpl::default_implementation_for_constant_arguments(
     return Status::OK();
 }
 
-Status PreparedFunctionImpl::default_implementation_for_nulls(Block& block,
+Status PreparedFunctionImpl::default_implementation_for_nulls(FunctionContext* context,
+                                                              Block& block,
                                                               const ColumnNumbers& args,
                                                               size_t result,
                                                               size_t input_rows_count, bool dry_run,
@@ -209,8 +210,8 @@ Status PreparedFunctionImpl::default_implementation_for_nulls(Block& block,
 
     if (null_presence.has_nullable) {
         Block temporary_block = create_block_with_nested_columns(block, args, result);
-        RETURN_IF_ERROR(execute_without_low_cardinality_columns(temporary_block, args, result,
-                                                                temporary_block.rows(), dry_run));
+        RETURN_IF_ERROR(execute_without_low_cardinality_columns(
+                context, temporary_block, args, result, temporary_block.rows(), dry_run));
         block.get_by_position(result).column =
                 wrap_in_nullable(temporary_block.get_by_position(result).column, block, args,
                                  result, input_rows_count);
@@ -221,30 +222,32 @@ Status PreparedFunctionImpl::default_implementation_for_nulls(Block& block,
     return Status::OK();
 }
 
-Status PreparedFunctionImpl::execute_without_low_cardinality_columns(Block& block,
+Status PreparedFunctionImpl::execute_without_low_cardinality_columns(FunctionContext* context,
+                                                                     Block& block,
                                                                      const ColumnNumbers& args,
                                                                      size_t result,
                                                                      size_t input_rows_count,
                                                                      bool dry_run) {
     bool executed = false;
     RETURN_IF_ERROR(default_implementation_for_constant_arguments(
-            block, args, result, input_rows_count, dry_run, &executed));
+            context, block, args, result, input_rows_count, dry_run, &executed));
     if (executed) {
         return Status::OK();
     }
-    RETURN_IF_ERROR(default_implementation_for_nulls(block, args, result, input_rows_count, dry_run,
-                                                     &executed));
+    RETURN_IF_ERROR(default_implementation_for_nulls(context, block, args, result, input_rows_count,
+                                                     dry_run, &executed));
     if (executed) {
         return Status::OK();
     }
 
     if (dry_run)
-        return execute_impl_dry_run(block, args, result, input_rows_count);
+        return execute_impl_dry_run(context, block, args, result, input_rows_count);
     else
-        return execute_impl(block, args, result, input_rows_count);
+        return execute_impl(context, block, args, result, input_rows_count);
 }
 
-Status PreparedFunctionImpl::execute(Block& block, const ColumnNumbers& args, size_t result,
+Status PreparedFunctionImpl::execute(FunctionContext* context, Block& block,
+                                     const ColumnNumbers& args, size_t result,
                                      size_t input_rows_count, bool dry_run) {
     if (use_default_implementation_for_low_cardinality_columns()) {
         auto& res = block.safe_get_by_position(result);
@@ -256,11 +259,13 @@ Status PreparedFunctionImpl::execute(Block& block, const ColumnNumbers& args, si
 
         {
             RETURN_IF_ERROR(execute_without_low_cardinality_columns(
-                    block_without_low_cardinality, args, result, input_rows_count, dry_run));
+                    context, block_without_low_cardinality, args, result, input_rows_count,
+                    dry_run));
             res.column = block_without_low_cardinality.safe_get_by_position(result).column;
         }
     } else
-        execute_without_low_cardinality_columns(block, args, result, input_rows_count, dry_run);
+        execute_without_low_cardinality_columns(context, block, args, result, input_rows_count,
+                                                dry_run);
     return Status::OK();
 }
 

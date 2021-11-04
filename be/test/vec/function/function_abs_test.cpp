@@ -75,7 +75,7 @@ TEST(ABSTest, ABSTest) {
     size_t num_columns_without_result = block.columns();
     block.insert({nullptr, block.get_by_position(0).type, "abs(k1)"});
 
-    abs_function_ptr->execute(block, arguments, num_columns_without_result, 1024, false);
+    abs_function_ptr->execute(nullptr, block, arguments, num_columns_without_result, 1024, false);
 
     k1 = -100;
     for (int i = 0; i < 1024; ++i) {

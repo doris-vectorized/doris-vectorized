@@ -441,7 +441,7 @@ DataTypePtr FunctionAnyArityLogical<Impl, Name>::get_return_type_impl(
 }
 
 template <typename Impl, typename Name>
-Status FunctionAnyArityLogical<Impl, Name>::execute_impl(Block& block,
+Status FunctionAnyArityLogical<Impl, Name>::execute_impl(FunctionContext* context, Block& block,
                                                          const ColumnNumbers& arguments,
                                                          size_t result_index,
                                                          size_t input_rows_count) {
@@ -497,8 +497,9 @@ bool functionUnaryExecuteType(Block& block, const ColumnNumbers& arguments, size
 }
 
 template <template <typename> class Impl, typename Name>
-Status FunctionUnaryLogical<Impl, Name>::execute_impl(Block& block, const ColumnNumbers& arguments,
-                                                      size_t result, size_t /*input_rows_count*/) {
+Status FunctionUnaryLogical<Impl, Name>::execute_impl(FunctionContext* context, Block& block,
+                                                      const ColumnNumbers& arguments, size_t result,
+                                                      size_t /*input_rows_count*/) {
     if (!(functionUnaryExecuteType<Impl, UInt8>(block, arguments, result) ||
           functionUnaryExecuteType<Impl, UInt16>(block, arguments, result) ||
           functionUnaryExecuteType<Impl, UInt32>(block, arguments, result) ||

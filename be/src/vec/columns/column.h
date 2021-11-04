@@ -437,3 +437,12 @@ bool is_column_const(const IColumn& column);
 bool is_column_nullable(const IColumn& column);
 
 } // namespace doris::vectorized
+
+// Wrap `ColumnPtr` because `ColumnPtr` can't be used in forward declaration.
+namespace doris {
+struct ColumnPtrWrapper {
+    vectorized::ColumnPtr column_ptr;
+
+    ColumnPtrWrapper(vectorized::ColumnPtr col) : column_ptr(col) {};
+};
+} // namespace doris
