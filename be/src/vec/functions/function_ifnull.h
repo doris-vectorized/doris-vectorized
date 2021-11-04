@@ -45,8 +45,8 @@ public:
     bool use_default_implementation_for_nulls() const override { return false; }
 
     // ifnull(col_left, col_right) == if(isnull(col_left), col_right, col_left)
-    Status execute_impl(Block &block, const ColumnNumbers &arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         const ColumnWithTypeAndName& col_left = block.get_by_position(arguments[0]);
         if (col_left.column->only_null()) {
             block.get_by_position(result).column = block.get_by_position(arguments[1]).column;
@@ -79,7 +79,7 @@ public:
                  new_result_column
                 });
         auto func_if = SimpleFunctionFactory::instance().get_function("if", if_columns, new_result_column.type);
-        func_if->execute(temporary_block, {0, 1, 2}, 3, input_rows_count);
+        func_if->execute(context, temporary_block, {0, 1, 2}, 3, input_rows_count);
         /// need to handle nullable type and not nullable type differently,
         /// because `IF` function always return nullable type, but result type is not always
         if (block.get_by_position(result).type->is_nullable()) {

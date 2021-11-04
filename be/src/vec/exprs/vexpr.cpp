@@ -17,6 +17,8 @@
 
 #include "vec/exprs/vexpr.h"
 
+#include <memory>
+
 #include <fmt/format.h>
 
 #include "gen_cpp/Exprs_types.h"
@@ -33,7 +35,9 @@ using doris::RowDescriptor;
 using doris::TypeDescriptor;
 
 VExpr::VExpr(const doris::TExprNode& node)
-        : _node_type(node.node_type), _type(TypeDescriptor::from_thrift(node.type)) {
+        : _node_type(node.node_type),
+          _type(TypeDescriptor::from_thrift(node.type)),
+          _fn_context_index(-1) {
     if (node.__isset.fn) {
         _fn = node.fn;
     }
@@ -44,7 +48,8 @@ VExpr::VExpr(const doris::TExprNode& node)
     }
 }
 
-VExpr::VExpr(const TypeDescriptor& type, bool is_slotref, bool is_nullable) : _type(type) {
+VExpr::VExpr(const TypeDescriptor& type, bool is_slotref, bool is_nullable)
+        : _type(type), _fn_context_index(-1) {
     if (is_slotref) {
         _node_type = TExprNodeType::SLOT_REF;
     }
@@ -58,16 +63,18 @@ Status VExpr::prepare(RuntimeState* state, const RowDescriptor& row_desc, VExprC
     return Status::OK();
 }
 
-Status VExpr::open(RuntimeState* state, VExprContext* context) {
+Status VExpr::open(RuntimeState* state, VExprContext* context,
+                   FunctionContext::FunctionStateScope scope) {
     for (int i = 0; i < _children.size(); ++i) {
-        RETURN_IF_ERROR(_children[i]->open(state, context));
+        RETURN_IF_ERROR(_children[i]->open(state, context, scope));
     }
     return Status::OK();
 }
 
-void VExpr::close(doris::RuntimeState* state, VExprContext* context) {
+void VExpr::close(doris::RuntimeState* state, VExprContext* context,
+                  FunctionContext::FunctionStateScope scope) {
     for (int i = 0; i < _children.size(); ++i) {
-        _children[i]->close(state, context);
+        _children[i]->close(state, context, scope);
     }
 }
 
@@ -246,6 +253,34 @@ std::string VExpr::debug_string(const std::vector<VExprContext*>& ctxs) {
         exprs.push_back(ctxs[i]->root());
     }
     return debug_string(exprs);
+}
+
+bool VExpr::is_constant() const {
+    for (int i = 0; i < _children.size(); ++i) {
+        if (!_children[i]->is_constant()) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+ColumnPtrWrapper* VExpr::get_const_col(VExprContext* context) {
+    if (!is_constant()) {
+        return nullptr;
+    }
+
+    if (_constant_col != nullptr) {
+        return _constant_col.get();
+    }
+
+    int result = -1;
+    Block block;
+    execute(context, &block, &result);
+    DCHECK(result != -1);
+    const auto& column = block.get_by_position(result).column;
+    _constant_col = std::make_shared<ColumnPtrWrapper>(column);
+    return _constant_col.get();
 }
 
 } // namespace doris::vectorized

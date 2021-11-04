@@ -24,7 +24,8 @@ class VCastExpr final: public VExpr {
 public:
     VCastExpr(const TExprNode& node) : VExpr(node) {}
     ~VCastExpr() = default;
-    virtual doris::Status execute(doris::vectorized::Block* block, int* result_column_id);
+    virtual doris::Status execute(VExprContext* context, doris::vectorized::Block* block,
+                                  int* result_column_id);
     virtual doris::Status prepare(doris::RuntimeState* state, const doris::RowDescriptor& desc,
                                   VExprContext* context);
     virtual doris::Status open(doris::RuntimeState* state, VExprContext* context);

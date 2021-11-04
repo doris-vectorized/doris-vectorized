@@ -177,8 +177,8 @@ private:
         return false;
     }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t /*input_rows_count*/) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t /*input_rows_count*/) override {
         const ColumnWithTypeAndName& col_left = block.get_by_position(arguments[0]);
         const ColumnWithTypeAndName& col_right = block.get_by_position(arguments[1]);
 

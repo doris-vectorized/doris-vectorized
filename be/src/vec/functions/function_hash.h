@@ -181,8 +181,8 @@ public:
         return std::make_shared<DataTypeNumber<ToType>>();
     }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         size_t rows = input_rows_count;
         auto col_to = ColumnVector<ToType>::create(rows);
 

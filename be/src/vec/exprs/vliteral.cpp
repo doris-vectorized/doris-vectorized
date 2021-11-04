@@ -125,7 +125,7 @@ VLiteral::VLiteral(const TExprNode& node) : VExpr(node) {
 
 VLiteral::~VLiteral() {}
 
-Status VLiteral::execute(vectorized::Block* block, int* result_column_id) {
+Status VLiteral::execute(VExprContext* context, vectorized::Block* block, int* result_column_id) {
     int rows = block->rows();
     if (rows < 1) {
         rows = 1;

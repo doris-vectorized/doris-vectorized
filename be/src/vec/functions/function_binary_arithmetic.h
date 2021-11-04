@@ -506,8 +506,8 @@ public:
         return type_res;
     }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         auto* left_generic = block.get_by_position(arguments[0]).type.get();
         auto* right_generic = block.get_by_position(arguments[1]).type.get();
         bool valid = cast_both_types(

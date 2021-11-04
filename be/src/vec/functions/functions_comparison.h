@@ -799,8 +799,8 @@ public:
         return std::make_shared<DataTypeUInt8>();
     }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         const auto& col_with_type_and_name_left = block.get_by_position(arguments[0]);
         const auto& col_with_type_and_name_right = block.get_by_position(arguments[1]);
         const IColumn* col_left_untyped = col_with_type_and_name_left.column.get();
