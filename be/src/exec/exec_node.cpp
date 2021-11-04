@@ -64,6 +64,7 @@
 #include "vec/core/block.h"
 #include "vec/exec/join/vhash_join_node.h"
 #include "vec/exec/vaggregation_node.h"
+#include "vec/exec/ves_http_scan_node.h"
 #include "vec/exec/vcross_join_node.h"
 #include "vec/exec/vexchange_node.h"
 #include "vec/exec/vmysql_scan_node.h"
@@ -377,6 +378,7 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         case TPlanNodeType::MYSQL_SCAN_NODE:
         case TPlanNodeType::INTERSECT_NODE:
         case TPlanNodeType::EXCEPT_NODE:
+        case TPlanNodeType::ES_HTTP_SCAN_NODE:
             break;
         default: {
             const auto& i = _TPlanNodeType_VALUES_TO_NAMES.find(tnode.node_type);
@@ -420,7 +422,11 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         return Status::OK();
 
     case TPlanNodeType::ES_HTTP_SCAN_NODE:
-        *node = pool->add(new EsHttpScanNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new vectorized::VEsHttpScanNode(pool, tnode, descs));
+        } else {
+            *node = pool->add(new EsHttpScanNode(pool, tnode, descs));
+        }
         return Status::OK();
 
     case TPlanNodeType::SCHEMA_SCAN_NODE:
