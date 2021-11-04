@@ -125,32 +125,50 @@ struct ProcessHashTableProbe {
     // TODO: opt the visited here to reduce the size of hash table
     Status do_process(HashTableContext& hash_table_ctx, ConstNullMapPtr null_map,
                       MutableBlock& mutable_block, Block* output_block) {
+        SCOPED_TIMER(_join_node->_probe_process1_timer);
+
         using KeyGetter = typename HashTableContext::State;
         using Mapped = typename HashTableContext::Mapped;
 
         KeyGetter key_getter(_probe_raw_ptrs, _join_node->_probe_key_sz, nullptr);
 
+#if 0
         IColumn::Offsets offset_data;
-        auto& mcol = mutable_block.mutable_columns();
         offset_data.assign(_probe_rows, (uint32_t)0);
+#else
+        assert(_probe_rows == _probe_block.rows());
+        unsigned int numbers[_probe_rows]; //alloc from stack
+        memset(numbers, 0, sizeof(*numbers) * _probe_index);
+#endif
 
         int right_col_idx = _join_node->_is_right_semi_anti ? 0 : _left_table_data_types.size();
         int right_col_len = _right_table_data_types.size();
-        int current_offset = 0;
+
+        auto& mcol = mutable_block.mutable_columns();
+        auto rcol = &mcol[right_col_idx];
+
+        int last_offset = 0, current_offset = 0;
+
+        auto& nullmap = *null_map;
+        auto& hash_table = hash_table_ctx.hash_table;
 
         for (; _probe_index < _probe_rows;) {
             // ignore null rows
             if constexpr (ignore_null) {
-                if ((*null_map)[_probe_index]) {
+                if (nullmap[_probe_index]) {
+#if 0
                     offset_data[_probe_index++] = current_offset;
+#else
+                    numbers[_probe_index++] = (current_offset - last_offset);
+                    last_offset = current_offset;
+#endif
                     continue;
                 }
             }
-            auto find_result =
-                    (*null_map)[_probe_index]
-                            ? decltype(key_getter.find_key(hash_table_ctx.hash_table, _probe_index,
+            auto find_result = nullmap[_probe_index]
+                            ? decltype(key_getter.find_key(hash_table, _probe_index,
                                                            _arena)) {nullptr, false}
-                            : key_getter.find_key(hash_table_ctx.hash_table, _probe_index, _arena);
+                            : key_getter.find_key(hash_table, _probe_index, _arena);
 
             if (find_result.is_found()) {
                 // left semi join only need one match, do not need insert the data of right table
@@ -160,18 +178,37 @@ struct ProcessHashTableProbe {
                     // do nothing
                 } else {
                     auto& mapped = find_result.get_mapped();
-
-                    for (auto it = mapped.begin(); it.ok(); ++it) {
-                        // right semi/anti join should dispose the data in hash table
-                        // after probe data eof
-                        if (!_join_node->_is_right_semi_anti) {
+                    if (!_join_node->_is_right_semi_anti) {
+#if 0
+                        for (auto it = mapped.begin(); it.ok(); ++it) {
+                            // right semi/anti join should dispose the data in hash table
+                            // after probe data eof
                             ++current_offset;
+                            auto& data = it->block->get_data();
+                            auto row_num = it->row_num;
+
                             for (size_t j = 0; j < right_col_len; ++j) {
-                                auto& column = *it->block->get_by_position(j).column;
-                                mcol[j + right_col_idx]->insert_from(column, it->row_num);
+                                rcol[j]->insert_from(*(data[j].column), row_num);
                             }
+                            it->visited = true;
                         }
-                        it->visited = true;
+#else
+                        current_offset += mapped.for_each([rcol, right_col_len](RowRef& rr) {
+                            auto& data = rr.block->get_data();
+                            auto row_num = rr.row_num;
+                            for (size_t j = 0; j < right_col_len; ++j) {
+                                rcol[j]->insert_from(*(data[j].column), row_num);
+                            }
+                        });
+#endif
+                    } else {
+#if 0
+                        for (auto it = mapped.begin(); it.ok(); ++it) {
+                            it->visited = true;
+                        }
+#else
+                        mapped.mark_all_visited();
+#endif
                     }
                 }
             } else if (_join_node->_match_all_probe ||
@@ -180,27 +217,45 @@ struct ProcessHashTableProbe {
                 // only full outer / left outer need insert the data of right table
                 if (_join_node->_match_all_probe) {
                     for (size_t j = 0; j < right_col_len; ++j) {
-                        DCHECK(mcol[j + right_col_idx]->is_nullable());
-                        mcol[j + right_col_idx]->insert_data(nullptr, 0);
+                        DCHECK(rcol[j]->is_nullable());
+                        rcol[j]->insert_data(nullptr, 0);
                     }
                 }
             }
 
+#if 0
             offset_data[_probe_index++] = current_offset;
+#else
+            numbers[_probe_index++] = (current_offset - last_offset);
+            last_offset = current_offset;
+#endif
 
             if (current_offset >= _batch_size) {
                 break;
             }
         }
 
+#if 0
         for (int i = _probe_index; i < _probe_rows; ++i) {
             offset_data[i] = current_offset;
         }
-        output_block->swap(mutable_block.to_block());
 
+#else
+        for (int i = _probe_index; i < _probe_rows; ++i) {
+            numbers[i] = 0;
+        }
+#endif
+
+        output_block->set_data(mutable_block.mutable_columns(), mutable_block.data_types());
+
+        auto& lhs = output_block->get_data();
+        auto& rhs = _probe_block.get_data();
         for (int i = 0; i < right_col_idx; ++i) {
-            auto& column = _probe_block.get_by_position(i).column;
-            output_block->get_by_position(i).column = column->replicate(offset_data);
+#if 0
+            lhs[i].column = rhs[i].column->replicate(offset_data);
+#else
+            lhs[i].column = rhs[i].column->replicate(current_offset, numbers, _probe_rows);
+#endif
         }
 
         return Status::OK();
@@ -213,6 +268,8 @@ struct ProcessHashTableProbe {
     Status do_process_with_other_join_conjunts(HashTableContext& hash_table_ctx,
                                                ConstNullMapPtr null_map,
                                                MutableBlock& mutable_block, Block* output_block) {
+        SCOPED_TIMER(_join_node->_probe_process2_timer);
+
         using KeyGetter = typename HashTableContext::State;
         using Mapped = typename HashTableContext::Mapped;
 
@@ -294,7 +351,7 @@ struct ProcessHashTableProbe {
         for (int i = _probe_index; i < _probe_rows; ++i) {
             offset_data[i] = current_offset;
         }
-        output_block->swap(mutable_block.to_block());
+        output_block->set_data(mutable_block.mutable_columns(), mutable_block.data_types());
         for (int i = 0; i < right_col_idx; ++i) {
             auto& column = _probe_block.get_by_position(i).column;
             output_block->get_by_position(i).column = column->replicate(offset_data);
@@ -399,6 +456,8 @@ struct ProcessHashTableProbe {
     // in hash table
     Status process_data_in_hashtable(HashTableContext& hash_table_ctx, MutableBlock& mutable_block,
                                      Block* output_block, bool* eos) {
+        SCOPED_TIMER(_join_node->_probe_process3_timer);
+
         hash_table_ctx.init_once();
         auto& mcol = mutable_block.mutable_columns();
         int right_col_idx = _join_node->_is_right_semi_anti ? 0 : _left_table_data_types.size();
@@ -536,6 +595,10 @@ Status HashJoinNode::prepare(RuntimeState* state) {
     auto probe_phase_profile = runtime_profile()->create_child("ProbePhase", true, true);
     _probe_timer = ADD_TIMER(probe_phase_profile, "ProbeTime");
     _probe_next_timer = ADD_TIMER(probe_phase_profile, "ProbeFindNextTime");
+    _probe_join_column_timer = ADD_TIMER(probe_phase_profile, "ProbeJoinColumnTime");
+    _probe_process1_timer = ADD_TIMER(probe_phase_profile, "ProbeProcess1Time");
+    _probe_process2_timer = ADD_TIMER(probe_phase_profile, "ProbeProcess2Time");
+    _probe_process3_timer = ADD_TIMER(probe_phase_profile, "ProbeProcess3Time");
     _probe_expr_call_timer = ADD_TIMER(probe_phase_profile, "ProbeExprCallTime");
     _probe_rows_counter = ADD_COUNTER(probe_phase_profile, "ProbeRows", TUnit::UNIT);
 
@@ -609,8 +672,9 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
 
             int probe_expr_ctxs_sz = _probe_expr_ctxs.size();
             _probe_columns.resize(probe_expr_ctxs_sz);
-            if (_null_map_column == nullptr) { _null_map_column = ColumnUInt8::create();}
             _null_map_column->get_data().assign(probe_rows, (uint8_t)0);
+
+            SCOPED_TIMER(_probe_join_column_timer);
 
             Status st = std::visit(
                     [&](auto&& arg) -> Status {
@@ -635,8 +699,8 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
     output_block->clear();
 
     if (_probe_index < _probe_block.rows()) {
-        MutableBlock mutable_block(VectorizedUtils::create_empty_columnswithtypename(
-                _have_other_join_conjunct ? _row_desc_for_other_join_conjunt : row_desc()));
+        std::unique_ptr<MutableBlock> mutable_block = VectorizedUtils::create_mutable_block(
+                _have_other_join_conjunct ? _row_desc_for_other_join_conjunt : row_desc());
         std::visit(
                 [&](auto&& arg) {
                     using HashTableCtxType = std::decay_t<decltype(arg)>;
@@ -649,10 +713,10 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
                                  ? process_hashtable_ctx
                                          .do_process_with_other_join_conjunts(
                                                  arg, &_null_map_column->get_data(),
-                                                 mutable_block, output_block)
+                                                 *mutable_block, output_block)
                                  : process_hashtable_ctx.do_process(
                                             arg, &_null_map_column->get_data(),
-                                            mutable_block, output_block);
+                                            *mutable_block, output_block);
                         } else {
                             ProcessHashTableProbe<HashTableCtxType, false> process_hashtable_ctx(
                                     this, state->batch_size(), probe_rows);
@@ -661,10 +725,10 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
                                  ? process_hashtable_ctx
                                          .do_process_with_other_join_conjunts(
                                                  arg, &_null_map_column->get_data(),
-                                                 mutable_block, output_block)
+                                                 *mutable_block, output_block)
                                  : process_hashtable_ctx.do_process(
                                             arg, &_null_map_column->get_data(),
-                                            mutable_block, output_block);
+                                            *mutable_block, output_block);
                         }
                     } else {
                         LOG(FATAL) << "FATAL: uninited hash table";
@@ -673,15 +737,14 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
                 _hash_table_variants);
     } else if (_probe_eos) {
         if (_is_right_semi_anti || (_is_outer_join && _join_op != TJoinOp::LEFT_OUTER_JOIN)) {
-            MutableBlock mutable_block(
-                    VectorizedUtils::create_empty_columnswithtypename(row_desc()));
+            std::unique_ptr<MutableBlock> mutable_block = VectorizedUtils::create_mutable_block(row_desc());
             std::visit(
                     [&](auto&& arg) {
                         using HashTableCtxType = std::decay_t<decltype(arg)>;
                         if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
                             ProcessHashTableProbe<HashTableCtxType, false> process_hashtable_ctx(
                                     this, state->batch_size(), probe_rows);
-                            st = process_hashtable_ctx.process_data_in_hashtable(arg, mutable_block,
+                            st = process_hashtable_ctx.process_data_in_hashtable(arg, *mutable_block,
                                                                                  output_block, eos);
                         } else {
                             LOG(FATAL) << "FATAL: uninited hash table";

@@ -370,6 +370,20 @@ public:
         }
     }
 
+    void replicate(uint32_t total, const T* from, const uint32_t* numbers, uint32_t numbers_len) {
+        this->reserve(this->size() + total);
+        T* t = t_end();
+        uint32_t n = 0;
+        for (uint32_t i = 0; i < numbers_len; ++i) {
+            if (LIKELY(n = numbers[i])) {
+                std::fill(t, t + n, from[i]);
+                t += n;
+            }
+        }
+        assert(total == t - t_end());
+        this->c_end = (char*)t;
+    }
+
     /** This method doesn't allow to pass parameters for Allocator,
       *  and it couldn't be used if Allocator requires custom parameters.
       */

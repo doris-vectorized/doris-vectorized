@@ -318,6 +318,22 @@ ColumnPtr ColumnVector<T>::replicate(const IColumn::Offsets& offsets) const {
 }
 
 template <typename T>
+ColumnPtr ColumnVector<T>::replicate(uint32_t total, const uint32_t* numbers, uint32_t numbers_len) const {
+    size_t size = data.size();
+    if (size != numbers_len) {
+        LOG(FATAL) << "numbers_len doesn't match size of column.";
+    }
+
+    if (0 == size) return this->create();
+
+    auto res = this->create();
+    typename Self::Container& res_data = res->get_data();
+    res_data.replicate(total, data.data(), numbers, numbers_len);
+
+    return res;
+}
+
+template <typename T>
 void ColumnVector<T>::get_extremes(Field& min, Field& max) const {
     size_t size = data.size();
 

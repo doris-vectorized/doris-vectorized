@@ -160,6 +160,10 @@ private:
     RuntimeProfile::Counter* _probe_timer;
     RuntimeProfile::Counter* _probe_expr_call_timer;
     RuntimeProfile::Counter* _probe_next_timer;
+    RuntimeProfile::Counter* _probe_join_column_timer;
+    RuntimeProfile::Counter* _probe_process1_timer;
+    RuntimeProfile::Counter* _probe_process2_timer;
+    RuntimeProfile::Counter* _probe_process3_timer;
     RuntimeProfile::Counter* _build_buckets_counter;
     RuntimeProfile::Counter* _push_down_timer;
     RuntimeProfile::Counter* _push_compute_timer;
@@ -175,7 +179,7 @@ private:
 
     Block _probe_block;
     ColumnRawPtrs _probe_columns;
-    ColumnUInt8::MutablePtr _null_map_column;
+    ColumnUInt8::MutablePtr _null_map_column = ColumnUInt8::create();
     bool _probe_ignore_null = false;
     int _probe_index = -1;
     bool _probe_eos = false;

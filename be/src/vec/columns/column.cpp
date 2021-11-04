@@ -43,6 +43,20 @@ void IColumn::insert_from(const IColumn& src, size_t n) {
     insert(src[n]);
 }
 
+IColumn::Ptr IColumn::replicate(uint32_t total, const uint32_t* numbers, uint32_t numbers_len) const {
+    Offsets offsets;
+    offsets.reserve(numbers_len);
+
+    uint32_t base = 0;
+    for (uint32_t i = 0; i < numbers_len; ++i) {
+        offsets.push_back((base += numbers[i]));
+    }
+    assert(base == total);
+
+    return replicate(offsets);
+}
+
+
 bool is_column_nullable(const IColumn& column) {
     return check_column<ColumnNullable>(column);
 }

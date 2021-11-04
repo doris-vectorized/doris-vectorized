@@ -112,6 +112,44 @@ struct RowRefList : RowRef {
         next = next->insert(std::move(row_ref), pool);
     }
 
+    void mark_all_visited() {
+        this->visited = true;
+
+        size_t index = 0;
+        Batch* batch = next;
+        while (batch) {
+            auto row_refs = batch->row_refs;
+            while (index < batch->size) {
+                row_refs[index++].visited = true;
+            }
+
+            index = 0;
+            batch = batch->next;
+        }
+    }
+
+    template <typename FUNCTION>
+    unsigned int for_each(FUNCTION f) {
+        unsigned int n = 1;
+        f(*this);
+        this->visited = true;
+
+        size_t index = 0;
+        Batch* batch = next;
+        while (batch) {
+            auto row_refs = batch->row_refs;
+            while (index < batch->size) {
+                f(row_refs[index]);
+                row_refs[index++].visited = true;
+                ++n;
+            }
+
+            index = 0;
+            batch = batch->next;
+        }
+        return n;
+    }
+
 private:
     Batch* next = nullptr;
 };

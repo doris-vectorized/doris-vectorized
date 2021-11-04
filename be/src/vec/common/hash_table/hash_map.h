@@ -78,6 +78,10 @@ struct HashMapCell {
     bool is_zero(const State& state) const { return is_zero(value.first, state); }
     static bool is_zero(const Key& key, const State& /*state*/) { return ZeroTraits::check(key); }
 
+    bool find(const Key& key_, size_t hash_, const State& state) const {
+        return (value.first == key_) || ZeroTraits::check(value.first);
+    }
+
     /// Set the key value to zero.
     void set_zero() { ZeroTraits::set(value.first); }
 
@@ -115,6 +119,10 @@ struct HashMapCellWithSavedHash : public HashMapCell<Key, TMapped, Hash, TState>
     }
     bool key_equals(const Key& key_, size_t hash_, const typename Base::State&) const {
         return key_equals(key_, hash_);
+    }
+
+    bool find(const Key& key_, size_t hash_, const typename Base::State& state) const {
+        return (saved_hash == hash_ && this->value.first == key_) || Base::is_zero(state);
     }
 
     void set_hash(size_t hash_value) { saved_hash = hash_value; }

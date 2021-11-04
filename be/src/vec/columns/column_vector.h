@@ -198,6 +198,8 @@ public:
 
     ColumnPtr replicate(const IColumn::Offsets& offsets) const override;
 
+    ColumnPtr replicate(uint32_t total, const uint32_t* numbers, uint32_t numbers_len) const override;
+
     void get_extremes(Field& min, Field& max) const override;
 
     MutableColumns scatter(IColumn::ColumnIndex num_columns,
