@@ -52,6 +52,7 @@ public:
         DCHECK_LT(i, _fn_contexts.size());
         return _fn_contexts[i];
     }
+    
     static Status filter_block(VExprContext* vexpr_ctx, Block* block, int column_to_keep);
     static Status filter_block(const std::unique_ptr<VExprContext*>& vexpr_ctx_ptr, Block* block,
                                int column_to_keep);

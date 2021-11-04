@@ -377,7 +377,7 @@ Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     } else {
         RETURN_IF_ERROR(_executor.get_result(state, block, eos));
         // dispose the having clause, should not be execute in prestreaming agg
-        VExprContext::filter_block(_vconjunct_ctx_ptr, block, block->columns());
+        RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, block, block->columns()));
     }
 
     _executor.update_memusage();

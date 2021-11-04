@@ -698,10 +698,8 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
         return Status::OK();
     }
 
-    if (_vconjunct_ctx_ptr != nullptr) {
-        RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, output_block,
-                                                   output_block->columns()));
-    }
+    RETURN_IF_ERROR(
+            VExprContext::filter_block(_vconjunct_ctx_ptr, output_block, output_block->columns()));
 
     int64_t m = output_block->rows();
     COUNTER_UPDATE(_rows_returned_counter, m);
