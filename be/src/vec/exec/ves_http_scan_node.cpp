@@ -8,9 +8,11 @@
 #include "util/runtime_profile.h"
 #include "util/types.h"
 #include "vec/exprs/vexpr_context.h"
+
 namespace doris::vectorized {
 
-VEsHttpScanNode::VEsHttpScanNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
+VEsHttpScanNode::VEsHttpScanNode(ObjectPool* pool, const TPlanNode& tnode,
+                                 const DescriptorTbl& descs)
         : EsHttpScanNode(pool, tnode, descs) {
     _vectorized = true;
 }
@@ -99,7 +101,7 @@ Status VEsHttpScanNode::scanner_scan(std::unique_ptr<VEsHttpScanner> scanner) {
     while (!scanner_eof) {
         std::shared_ptr<vectorized::Block> block(new vectorized::Block());
         std::vector<vectorized::MutableColumnPtr> columns(slot_num);
-        for (int i = 0; i < slot_num; i ++) {
+        for (int i = 0; i < slot_num; i++) {
             columns[i] = _tuple_desc->slots()[i]->get_empty_mutable_column();
         }
         while (columns[0]->size() < batch_size && !scanner_eof) {
@@ -111,7 +113,8 @@ Status VEsHttpScanNode::scanner_scan(std::unique_ptr<VEsHttpScanner> scanner) {
             }
 
             // Get from scanner
-            RETURN_IF_ERROR(scanner->get_next(columns, tuple_pool.get(), &scanner_eof, _docvalue_context));
+            RETURN_IF_ERROR(
+                    scanner->get_next(columns, tuple_pool.get(), &scanner_eof, _docvalue_context));
         }
 
         if (columns[0]->size() > 0) {
@@ -121,11 +124,9 @@ Status VEsHttpScanNode::scanner_scan(std::unique_ptr<VEsHttpScanner> scanner) {
                                                     slot_desc->get_data_type_ptr(),
                                                     slot_desc->col_name()));
             }
-            if (_vconjunct_ctx_ptr != nullptr) {
-                int result_column_id = -1;
-                (*_vconjunct_ctx_ptr)->execute(block.get(), &result_column_id);
-                Block::filter_block(block.get(), result_column_id, _tuple_desc->slots().size());
-            }
+
+            RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, block.get(),
+                                                       _tuple_desc->slots().size()));
 
             std::unique_lock<std::mutex> l(_block_queue_lock);
             while (_process_status.ok() && !_scan_finished.load() &&
