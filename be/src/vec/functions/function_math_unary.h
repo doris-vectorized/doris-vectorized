@@ -116,8 +116,8 @@ private:
 
     bool use_default_implementation_for_constants() const override { return true; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t /*input_rows_count*/) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         const ColumnWithTypeAndName& col = block.get_by_position(arguments[0]);
 
         auto call = [&](const auto& types) -> bool {

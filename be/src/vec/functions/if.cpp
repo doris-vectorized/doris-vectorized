@@ -241,7 +241,8 @@ public:
                                                       else_col.type->get_type_id(), call);
     }
 
-    bool execute_for_null_then_else(Block& block, const ColumnWithTypeAndName& arg_cond,
+    bool execute_for_null_then_else(FunctionContext* context, Block& block,
+                                    const ColumnWithTypeAndName& arg_cond,
                                     const ColumnWithTypeAndName& arg_then,
                                     const ColumnWithTypeAndName& arg_else, size_t result,
                                     size_t input_rows_count, Status& status) {
@@ -340,7 +341,8 @@ public:
         return false;
     }
 
-    bool execute_for_nullable_then_else(Block& block, const ColumnWithTypeAndName& arg_cond,
+    bool execute_for_nullable_then_else(FunctionContext* context, Block& block,
+                                        const ColumnWithTypeAndName& arg_cond,
                                         const ColumnWithTypeAndName& arg_then,
                                         const ColumnWithTypeAndName& arg_else, size_t result,
                                         size_t input_rows_count) {
@@ -365,7 +367,7 @@ public:
                       std::make_shared<DataTypeUInt8>(), ""},
                      {nullptr, std::make_shared<DataTypeUInt8>(), ""}});
 
-            execute_impl(temporary_block, {0, 1, 2}, 3, temporary_block.rows());
+            execute_impl(context, temporary_block, {0, 1, 2}, 3, temporary_block.rows());
 
             result_null_mask = temporary_block.get_by_position(3).column;
         }
@@ -379,7 +381,7 @@ public:
                      {get_nested_column(arg_else.column), remove_nullable(arg_else.type), ""},
                      {nullptr, remove_nullable(block.get_by_position(result).type), ""}});
 
-            execute_impl(temporary_block, {0, 1, 2}, 3, temporary_block.rows());
+            execute_impl(context, temporary_block, {0, 1, 2}, 3, temporary_block.rows());
 
             result_nested_column = temporary_block.get_by_position(3).column;
         }
@@ -390,7 +392,8 @@ public:
         return true;
     }
 
-    bool execute_for_null_condition(Block& block, const ColumnWithTypeAndName& arg_cond,
+    bool execute_for_null_condition(FunctionContext* context, Block& block,
+                                    const ColumnWithTypeAndName& arg_cond,
                                     const ColumnWithTypeAndName& arg_then,
                                     const ColumnWithTypeAndName& arg_else, size_t result) {
         bool cond_is_null = arg_cond.column->only_null();
@@ -410,7 +413,7 @@ public:
                 block.get_by_position(result)
             };
 
-            execute_impl(temporary_block, {0, 1, 2}, 3, temporary_block.rows());
+            execute_impl(context, temporary_block, {0, 1, 2}, 3, temporary_block.rows());
 
             block.get_by_position(result).column = std::move(temporary_block.get_by_position(3).column);
             return true;
@@ -418,8 +421,8 @@ public:
         return false;
     }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         const ColumnWithTypeAndName& arg_cond = block.get_by_position(arguments[0]);
         const ColumnWithTypeAndName& arg_then = block.get_by_position(arguments[1]);
         const ColumnWithTypeAndName& arg_else = block.get_by_position(arguments[2]);
@@ -432,10 +435,10 @@ public:
         }
 
         Status ret = Status::OK();
-        if (execute_for_null_condition(block, arg_cond, arg_then, arg_else, result) ||
-            execute_for_null_then_else(block, arg_cond, arg_then, arg_else, result,
+        if (execute_for_null_condition(context, block, arg_cond, arg_then, arg_else, result) ||
+            execute_for_null_then_else(context, block, arg_cond, arg_then, arg_else, result,
                                        input_rows_count, ret) ||
-            execute_for_nullable_then_else(block, arg_cond, arg_then, arg_else, result,
+            execute_for_nullable_then_else(context, block, arg_cond, arg_then, arg_else, result,
                                            input_rows_count)) {
             return ret;
         }

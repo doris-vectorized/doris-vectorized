@@ -102,8 +102,8 @@ public:
         return result;
     }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t /*input_rows_count*/) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         bool valid =
                 cast_type(block.get_by_position(arguments[0]).type.get(), [&](const auto& type) {
                     using DataType = std::decay_t<decltype(type)>;

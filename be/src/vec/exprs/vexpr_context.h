@@ -37,10 +37,39 @@ public:
     VExpr* root() { return _root; }
     void set_root(VExpr* expr) { _root = expr; }
 
+    /// Creates a FunctionContext, and returns the index that's passed to fn_context() to
+    /// retrieve the created context. Exprs that need a FunctionContext should call this in
+    /// Prepare() and save the returned index. 'varargs_buffer_size', if specified, is the
+    /// size of the varargs buffer in the created FunctionContext (see udf-internal.h).
+    int register_func(RuntimeState* state, const FunctionContext::TypeDesc& return_type,
+                      const std::vector<FunctionContext::TypeDesc>& arg_types,
+                      int varargs_buffer_size);
+
+    /// Retrieves a registered FunctionContext. 'i' is the index returned by the call to
+    /// register_func(). This should only be called by VExprs.
+    FunctionContext* fn_context(int i) {
+        DCHECK_GE(i, 0);
+        DCHECK_LT(i, _fn_contexts.size());
+        return _fn_contexts[i];
+    }
+
 private:
+    /// The expr tree this context is for.
     VExpr* _root;
+
+    /// True if this context came from a Clone() call. Used to manage FunctionStateScope.
+    bool _is_clone;
+
+    /// Variables keeping track of current state.
     bool _prepared;
     bool _opened;
     bool _closed;
+
+    /// FunctionContexts for each registered expression. The FunctionContexts are created
+    /// and owned by this VExprContext.
+    std::vector<FunctionContext*> _fn_contexts;
+
+    /// Pool backing fn_contexts_. Counts against the runtime state's UDF mem tracker.
+    std::unique_ptr<MemPool> _pool;
 };
 } // namespace doris::vectorized

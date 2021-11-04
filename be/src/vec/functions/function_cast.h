@@ -500,8 +500,8 @@ public:
     ColumnNumbers get_arguments_that_are_always_constant() const override { return {1}; }
     bool can_be_executed_on_default_arguments() const override { return false; }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         return executeInternal(block, arguments, result, input_rows_count);
     }
 
@@ -658,7 +658,8 @@ struct FunctionTo<DataTypeDateTime> {
 
 class PreparedFunctionCast : public PreparedFunctionImpl {
 public:
-    using WrapperType = std::function<Status(Block&, const ColumnNumbers&, size_t, size_t)>;
+    using WrapperType = std::function<Status(FunctionContext* context, Block&, const ColumnNumbers&,
+                                             size_t, size_t)>;
 
     explicit PreparedFunctionCast(WrapperType&& wrapper_function_, const char* name_)
             : wrapper_function(std::move(wrapper_function_)), name(name_) {}
@@ -666,15 +667,15 @@ public:
     String get_name() const override { return name; }
 
 protected:
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         /// drop second argument, pass others
         ColumnNumbers new_arguments{arguments.front()};
         if (arguments.size() > 2)
             new_arguments.insert(std::end(new_arguments), std::next(std::begin(arguments), 2),
                                  std::end(arguments));
 
-        return wrapper_function(block, new_arguments, result, input_rows_count);
+        return wrapper_function(context, block, new_arguments, result, input_rows_count);
     }
 
     bool use_default_implementation_for_nulls() const override { return false; }
@@ -812,8 +813,8 @@ public:
         return res;
     }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         const IDataType* from_type = block.get_by_position(arguments[0]).type.get();
 
         bool ok = true;
@@ -861,8 +862,8 @@ public:
         return res;
     }
 
-    Status execute_impl(Block& block, const ColumnNumbers& arguments, size_t result,
-                        size_t input_rows_count) override {
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
         Status ret_status = Status::OK();
         const IDataType* from_type = block.get_by_position(arguments[0]).type.get();
         auto call = [&](const auto& types) -> bool {
@@ -888,7 +889,8 @@ public:
 
 class FunctionCast final : public IFunctionBase {
 public:
-    using WrapperType = std::function<Status(Block&, const ColumnNumbers&, size_t, size_t)>;
+    using WrapperType =
+            std::function<Status(FunctionContext*, Block&, const ColumnNumbers&, size_t, size_t)>;
     using MonotonicityForRange =
             std::function<Monotonicity(const IDataType&, const Field&, const Field&)>;
 
@@ -902,7 +904,8 @@ public:
     const DataTypes& get_argument_types() const override { return argument_types; }
     const DataTypePtr& get_return_type() const override { return return_type; }
 
-    PreparedFunctionPtr prepare(const Block& /*sample_block*/, const ColumnNumbers& /*arguments*/,
+    PreparedFunctionPtr prepare(FunctionContext* context, const Block& /*sample_block*/,
+                                const ColumnNumbers& /*arguments*/,
                                 size_t /*result*/) const override {
         return std::make_shared<PreparedFunctionCast>(
                 prepare_unpack_dictionaries(get_argument_types()[0], get_return_type()), name);
@@ -949,9 +952,9 @@ private:
         /// Check conversion using underlying function
         { function->get_return_type(ColumnsWithTypeAndName(1, {nullptr, from_type, ""})); }
 
-        return [function](Block& block, const ColumnNumbers& arguments, const size_t result,
-                          size_t input_rows_count) {
-            return function->execute(block, arguments, result, input_rows_count);
+        return [function](FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                          const size_t result, size_t input_rows_count) {
+            return function->execute(context, block, arguments, result, input_rows_count);
         };
     }
 
@@ -961,9 +964,9 @@ private:
         /// Check conversion using underlying function
         { function->get_return_type(ColumnsWithTypeAndName(1, {nullptr, from_type, ""})); }
 
-        return [function](Block& block, const ColumnNumbers& arguments, const size_t result,
-                          size_t input_rows_count) {
-            return function->execute(block, arguments, result, input_rows_count);
+        return [function](FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                          const size_t result, size_t input_rows_count) {
+            return function->execute(context, block, arguments, result, input_rows_count);
         };
     }
 
@@ -993,14 +996,16 @@ private:
             /// Check conversion using underlying function
             { function->get_return_type(ColumnsWithTypeAndName(1, {nullptr, from_type, ""})); }
 
-            return [function](Block& block, const ColumnNumbers& arguments, const size_t result,
+            return [function](FunctionContext* context, Block& block,
+                              const ColumnNumbers& arguments, const size_t result,
                               size_t input_rows_count) {
-                return function->execute(block, arguments, result, input_rows_count);
+                return function->execute(context, block, arguments, result, input_rows_count);
             };
         }
 
-        return [type_index, precision, scale](Block& block, const ColumnNumbers& arguments,
-                                              const size_t result, size_t input_rows_count) {
+        return [type_index, precision, scale](FunctionContext* context, Block& block,
+                                              const ColumnNumbers& arguments, const size_t result,
+                                              size_t input_rows_count) {
             auto res = call_on_index_and_data_type<ToDataType>(
                     type_index, [&](const auto& types) -> bool {
                         using Types = std::decay_t<decltype(types)>;
@@ -1023,8 +1028,8 @@ private:
     }
 
     WrapperType create_identity_wrapper(const DataTypePtr&) const {
-        return [](Block& block, const ColumnNumbers& arguments, const size_t result,
-                  size_t /*input_rows_count*/) {
+        return [](FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                  const size_t result, size_t /*input_rows_count*/) {
             block.get_by_position(result).column = block.get_by_position(arguments.front()).column;
             return Status::OK();
         };
@@ -1032,8 +1037,8 @@ private:
 
     WrapperType create_nothing_wrapper(const IDataType* to_type) const {
         ColumnPtr res = to_type->create_column_const_with_default_value(1);
-        return [res](Block& block, const ColumnNumbers&, const size_t result,
-                     size_t input_rows_count) {
+        return [res](FunctionContext* context, Block& block, const ColumnNumbers&,
+                     const size_t result, size_t input_rows_count) {
             /// Column of Nothing type is trivially convertible to any other column
             block.get_by_position(result).column =
                     res->clone_resized(input_rows_count)->convert_to_full_column_if_const();
@@ -1051,8 +1056,8 @@ private:
                 LOG(FATAL) << "Cannot convert NULL to a non-nullable type";
             }
 
-            return [](Block& block, const ColumnNumbers&, const size_t result,
-                      size_t input_rows_count) {
+            return [](FunctionContext* context, Block& block, const ColumnNumbers&,
+                      const size_t result, size_t input_rows_count) {
                 auto& res = block.get_by_position(result);
                 res.column = res.type->create_column_const_with_default_value(input_rows_count)
                                      ->convert_to_full_column_if_const();
@@ -1078,7 +1083,8 @@ private:
                                     result_is_nullable);
 
         if (result_is_nullable) {
-            return [wrapper, source_is_nullable](Block& block, const ColumnNumbers& arguments,
+            return [wrapper, source_is_nullable](FunctionContext* context, Block& block,
+                                                 const ColumnNumbers& arguments,
                                                  const size_t result, size_t input_rows_count) {
                 /// Create a temporary block on which to perform the operation.
                 auto& res = block.get_by_position(result);
@@ -1096,7 +1102,7 @@ private:
                 tmp_block.insert({nullptr, nested_type, ""});
 
                 /// Perform the requested conversion.
-                wrapper(tmp_block, arguments, tmp_res_index, input_rows_count);
+                wrapper(context, tmp_block, arguments, tmp_res_index, input_rows_count);
 
                 const auto& tmp_res = tmp_block.get_by_position(tmp_res_index);
 
@@ -1116,7 +1122,8 @@ private:
         } else if (source_is_nullable) {
             /// Conversion from Nullable to non-Nullable.
 
-            return [wrapper, skip_not_null_check](Block& block, const ColumnNumbers& arguments,
+            return [wrapper, skip_not_null_check](FunctionContext* context, Block& block,
+                                                  const ColumnNumbers& arguments,
                                                   const size_t result, size_t input_rows_count) {
                 Block tmp_block = create_block_with_nested_columns(block, arguments, result);
 
@@ -1134,7 +1141,7 @@ private:
                     }
                 }
 
-                wrapper(tmp_block, arguments, result, input_rows_count);
+                wrapper(context, tmp_block, arguments, result, input_rows_count);
                 block.get_by_position(result).column = tmp_block.get_by_position(result).column;
                 return Status::OK();
             };

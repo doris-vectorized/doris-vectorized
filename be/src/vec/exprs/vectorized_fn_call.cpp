@@ -19,8 +19,10 @@
 
 #include <string_view>
 
+#include "exprs/anyval_util.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
+#include "udf/udf_internal.h"
 #include "vec/data_types/data_type_nullable.h"
 #include "vec/data_types/data_type_number.h"
 #include "vec/functions/simple_function_factory.h"
@@ -47,30 +49,64 @@ doris::Status VectorizedFnCall::prepare(doris::RuntimeState* state,
                 fmt::format("Function {} is not implemented", _fn.name.function_name));
     }
     _expr_name = fmt::format("{}({})", _fn.name.function_name, child_expr_name);
+
+    FunctionContext::TypeDesc return_type = AnyValUtil::column_type_to_type_desc(_type);
+    std::vector<FunctionContext::TypeDesc> arg_types;
+    for (int i = 0; i < _children.size(); ++i) {
+        arg_types.push_back(AnyValUtil::column_type_to_type_desc(_children[i]->type()));
+    }
+
+    _fn_context_index = context->register_func(state, return_type, arg_types, 0);
     return Status::OK();
-}
-doris::Status VectorizedFnCall::open(doris::RuntimeState* state, VExprContext* context) {
-    RETURN_IF_ERROR(VExpr::open(state, context));
-    return Status::OK();
-}
-void VectorizedFnCall::close(doris::RuntimeState* state, VExprContext* context) {
-    VExpr::close(state, context);
 }
 
-doris::Status VectorizedFnCall::execute(doris::vectorized::Block* block, int* result_column_id) {
+doris::Status VectorizedFnCall::open(doris::RuntimeState* state, VExprContext* context,
+                                     FunctionContext::FunctionStateScope scope) {
+    RETURN_IF_ERROR(VExpr::open(state, context, scope));
+
+    FunctionContext* fn_ctx = context->fn_context(_fn_context_index);
+    if (scope == FunctionContext::FRAGMENT_LOCAL) {
+        std::vector<ColumnPtrWrapper*> constant_cols;
+        for (int i = 0; i < _children.size(); ++i) {
+            constant_cols.push_back(_children[i]->get_const_col(context));
+        }
+        fn_ctx->impl()->set_constant_cols(constant_cols);
+    }
+
+    if (scope == FunctionContext::FRAGMENT_LOCAL) {
+        RETURN_IF_ERROR(_function->prepare(fn_ctx, FunctionContext::FRAGMENT_LOCAL));
+    }
+    RETURN_IF_ERROR(_function->prepare(fn_ctx, FunctionContext::THREAD_LOCAL));
+    return Status::OK();
+}
+
+void VectorizedFnCall::close(doris::RuntimeState* state, VExprContext* context,
+                             FunctionContext::FunctionStateScope scope) {
+    if (_fn_context_index != -1) {
+        FunctionContext* fn_ctx = context->fn_context(_fn_context_index);
+        _function->close(fn_ctx, FunctionContext::THREAD_LOCAL);
+        if (scope == FunctionContext::FRAGMENT_LOCAL) {
+            _function->close(fn_ctx, FunctionContext::FRAGMENT_LOCAL);
+        }
+    }
+    VExpr::close(state, context, scope);
+}
+
+doris::Status VectorizedFnCall::execute(VExprContext* context, doris::vectorized::Block* block,
+                                        int* result_column_id) {
     // for each child call execute
     doris::vectorized::ColumnNumbers arguments(_children.size());
     for (int i = 0; i < _children.size(); ++i) {
         int column_id = -1;
-        _children[i]->execute(block, &column_id);
+        _children[i]->execute(context, block, &column_id);
         arguments[i] = column_id;
     }
     // call function
     size_t num_columns_without_result = block->columns();
     // prepare a column to save result
     block->insert({nullptr, _data_type, _expr_name});
-    RETURN_IF_ERROR(_function->execute(*block, arguments, num_columns_without_result, block->rows(),
-                                       false));
+    RETURN_IF_ERROR(_function->execute(context->fn_context(_fn_context_index), *block, arguments,
+                                       num_columns_without_result, block->rows(), false));
     *result_column_id = num_columns_without_result;
     return Status::OK();
 }

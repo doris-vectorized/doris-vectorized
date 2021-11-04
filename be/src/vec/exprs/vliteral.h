@@ -29,7 +29,8 @@ class VLiteral : public VExpr {
 public:
     virtual ~VLiteral();
     VLiteral(const TExprNode& node);
-    virtual Status execute(vectorized::Block* block, int* result_column_id) override;
+    virtual Status execute(VExprContext* context, vectorized::Block* block,
+                           int* result_column_id) override;
     virtual const std::string& expr_name() const override { return _expr_name; }
     virtual VExpr* clone(doris::ObjectPool* pool) const override {
         return pool->add(new VLiteral(*this));

@@ -113,6 +113,7 @@ set(VEC_FILES
   functions/is_null.cpp
   functions/is_not_null.cpp
   functions/in.cpp
+  functions/like.cpp
   functions/to_time_function.cpp
   functions/time_of_function.cpp
   functions/if.cpp

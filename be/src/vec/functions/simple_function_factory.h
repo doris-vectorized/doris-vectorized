@@ -53,6 +53,8 @@ void register_function_timestamp(SimpleFunctionFactory& factory);
 void register_function_json(SimpleFunctionFactory& factory);
 void register_function_function_hash(SimpleFunctionFactory& factory);
 void register_function_function_ifnull(SimpleFunctionFactory& factory);
+void register_function_like(SimpleFunctionFactory& factory);
+void register_function_regexp(SimpleFunctionFactory& factory);
 
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
@@ -151,6 +153,8 @@ public:
             register_function_json(instance);
             register_function_function_hash(instance);
             register_function_function_ifnull(instance);
+            register_function_like(instance);
+            register_function_regexp(instance);
         });
         return instance;
     }
