@@ -34,21 +34,14 @@ struct ModuloImpl {
 
     template <typename Result = ResultType>
     static inline Result apply(A a, B b, NullMap& null_map, size_t index) {
-        if (UNLIKELY(b == 0)) {
-            null_map[index] = 1;
-            return 0;
-        }
-
+        null_map[index] = b == 0;
         return typename NumberTraits::ToInteger<A>::Type(a) %
-               typename NumberTraits::ToInteger<B>::Type(b);
+               (typename NumberTraits::ToInteger<B>::Type(b) + (b == 0));
     }
 
     static inline DecimalV2Value apply(DecimalV2Value a, DecimalV2Value b, NullMap& null_map, size_t index) {
-        if (UNLIKELY(b.value() == 0)) {
-            null_map[index] = 1;
-            return DecimalV2Value(int128_t(0));
-        }
-        return a % b;
+        null_map[index] = b == DecimalV2Value(0);
+        return a % (b + DecimalV2Value(b == DecimalV2Value(0)));
     }
 
 #if USE_EMBEDDED_COMPILER

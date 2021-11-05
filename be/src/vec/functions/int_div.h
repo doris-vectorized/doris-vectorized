@@ -38,10 +38,7 @@ struct DivideIntegralImpl {
 
     template <typename Result = ResultType>
     static inline Result apply(A a, B b, NullMap& null_map, size_t index) {
-        if (UNLIKELY(b == 0)) {
-            null_map[index] = 1;
-            return 0;
-        }
+        null_map[index] = b == 0;
 
         /// Otherwise overflow may occur due to integer promotion. Example: int8_t(-1) / uint64_t(2).
         /// NOTE: overflow is still possible when dividing large signed number to large unsigned number or vice-versa. But it's less harmful.
@@ -49,7 +46,7 @@ struct DivideIntegralImpl {
                       (std::is_signed_v<A> || std::is_signed_v<B>))
             return std::make_signed_t<A>(a) / std::make_signed_t<B>(b);
         else
-            return a / b;
+            return a / (b + (b == 0));
     }
 };
 

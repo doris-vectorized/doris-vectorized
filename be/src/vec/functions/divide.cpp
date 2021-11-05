@@ -28,11 +28,8 @@ struct DivideFloatingImpl {
 
     template <typename Result = ResultType>
     static inline Result apply(A a, B b, NullMap& null_map, size_t index) {
-        if (UNLIKELY(b == 0)) {
-            null_map[index] = 1;
-            return 0;
-        }
-        return static_cast<Result>(a) / b;
+        null_map[index] = b == 0;
+        return static_cast<Result>(a) / (b + (b == 0));
     }
 };
 
