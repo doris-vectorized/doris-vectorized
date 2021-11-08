@@ -48,15 +48,9 @@ doris::Status VectorizedFnCall::prepare(doris::RuntimeState* state,
         return Status::InternalError(
                 fmt::format("Function {} is not implemented", _fn.name.function_name));
     }
+    VExpr::_register_function_context(state, context);
     _expr_name = fmt::format("{}({})", _fn.name.function_name, child_expr_name);
 
-    FunctionContext::TypeDesc return_type = AnyValUtil::column_type_to_type_desc(_type);
-    std::vector<FunctionContext::TypeDesc> arg_types;
-    for (int i = 0; i < _children.size(); ++i) {
-        arg_types.push_back(AnyValUtil::column_type_to_type_desc(_children[i]->type()));
-    }
-
-    _fn_context_index = context->register_func(state, return_type, arg_types, 0);
     return Status::OK();
 }
 
