@@ -22,7 +22,7 @@
 
 namespace doris::vectorized {
 VExprContext::VExprContext(VExpr* expr)
-        : _root(expr), _prepared(false), _opened(false), _closed(false) {}
+        : _root(expr), _is_clone(false), _prepared(false), _opened(false), _closed(false) {}
 
 doris::Status VExprContext::execute(doris::vectorized::Block* block, int* result_column_id) {
     return _root->execute(this, block, result_column_id);
