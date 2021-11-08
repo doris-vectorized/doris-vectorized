@@ -18,9 +18,9 @@
 #include "vec/exprs/vexpr.h"
 
 #include <memory>
-
 #include <fmt/format.h>
 
+#include "exprs/anyval_util.h"
 #include "gen_cpp/Exprs_types.h"
 #include "vec/exprs/vcast_expr.h"
 #include "vec/exprs/vectorized_fn_call.h"
@@ -69,6 +69,16 @@ Status VExpr::open(RuntimeState* state, VExprContext* context,
         RETURN_IF_ERROR(_children[i]->open(state, context, scope));
     }
     return Status::OK();
+}
+
+void VExpr::_register_function_context(doris::RuntimeState* state, VExprContext* context) {
+    FunctionContext::TypeDesc return_type = AnyValUtil::column_type_to_type_desc(_type);
+    std::vector<FunctionContext::TypeDesc> arg_types;
+    for (int i = 0; i < _children.size(); ++i) {
+        arg_types.push_back(AnyValUtil::column_type_to_type_desc(_children[i]->type()));
+    }
+
+    _fn_context_index = context->register_func(state, return_type, arg_types, 0);
 }
 
 void VExpr::close(doris::RuntimeState* state, VExprContext* context,

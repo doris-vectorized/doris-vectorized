@@ -102,6 +102,7 @@ doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* conte
         return Status::NotSupported(
                 fmt::format("Function {} is not implemented", _fn.name.function_name));
     }
+    VExpr::_register_function_context(state, context);
 
     return Status::OK();
 }

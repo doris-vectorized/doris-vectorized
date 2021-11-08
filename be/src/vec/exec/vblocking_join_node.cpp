@@ -47,7 +47,6 @@ Status VBlockingJoinNode::prepare(RuntimeState* state) {
     _left_child_row_counter = ADD_COUNTER(runtime_profile(), "LeftChildRows", TUnit::UNIT);
 
     // pre-compute the tuple index of build tuples in the output row
-    int num_left_tuples = child(0)->row_desc().tuple_descriptors().size();
     int num_build_tuples = child(1)->row_desc().tuple_descriptors().size();
 
     _build_tuple_size = num_build_tuples;
