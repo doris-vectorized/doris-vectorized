@@ -122,6 +122,8 @@ protected:
         return out.str();
     }
 
+    void _register_function_context(doris::RuntimeState* state, VExprContext* context);
+
     TExprNodeType::type _node_type;
     TypeDescriptor _type;
     DataTypePtr _data_type;
