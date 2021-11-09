@@ -51,18 +51,22 @@ doris::Status VCastExpr::prepare(doris::RuntimeState* state, const doris::RowDes
         return Status::NotSupported(
                 fmt::format("Function {} is not implemented", _fn.name.function_name));
     }
-    VExpr::_register_function_context(state, context);
+    VExpr::register_function_context(state, context);
     _expr_name = fmt::format("(CAST {}, TO {})", child_name, _target_data_type_name);
     return Status::OK();
 }
 
-doris::Status VCastExpr::open(doris::RuntimeState* state, VExprContext* context) {
-    RETURN_IF_ERROR(VExpr::open(state, context));
+doris::Status VCastExpr::open(doris::RuntimeState* state, VExprContext* context,
+                              FunctionContext::FunctionStateScope scope) {
+    RETURN_IF_ERROR(VExpr::open(state, context, scope));
+    RETURN_IF_ERROR(VExpr::init_function_context(context, scope, _function));
     return Status::OK();
 }
 
-void VCastExpr::close(doris::RuntimeState* state, VExprContext* context) {
-    VExpr::close(state, context);
+void VCastExpr::close(doris::RuntimeState* state, VExprContext* context,
+                      FunctionContext::FunctionStateScope scope) {
+    VExpr::close_function_context(context, scope, _function);
+    VExpr::close(state, context, scope);
 }
 
 doris::Status VCastExpr::execute(VExprContext* context, doris::vectorized::Block* block,

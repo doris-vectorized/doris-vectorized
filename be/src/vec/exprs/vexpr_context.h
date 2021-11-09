@@ -58,6 +58,8 @@ public:
                                int column_to_keep);
 
 private:
+    friend class VExpr;
+
     /// The expr tree this context is for.
     VExpr* _root;
 
