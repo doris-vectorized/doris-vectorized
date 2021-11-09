@@ -32,7 +32,6 @@ using vectorized::Null;
 using vectorized::DataSet;
 using vectorized::TypeIndex;
 
-
 TEST(function_arithmetic_test, function_arithmetic_mod_test) {
     std::string func_name = "mod";
 
@@ -40,26 +39,11 @@ TEST(function_arithmetic_test, function_arithmetic_mod_test) {
         std::vector<std::any> input_types = {vectorized::TypeIndex::Int32,
                                              vectorized::TypeIndex::Int32};
 
-        DataSet data_set = {{{10,   1},  0},
-                            {{10,   -2}, 0},
-                            {{1234, 33}, 13},
-                            {{1234, 0},  Null()}};
+        DataSet data_set = {{{10, 1}, 0}, {{10, -2}, 0}, {{1234, 33}, 13}, {{1234, 0}, Null()}};
 
-        vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
+        vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types,
+                                                                    data_set);
     }
-//
-//    {
-//        std::vector<std::any> input_types = {vectorized::TypeIndex::Float64,
-//                                             vectorized::TypeIndex::Float64};
-//
-//        DataSet data_set = {{{10.0,      1.0},  0},
-//                            {{10.3,      -2.0}, 0.2},
-//                            {{1234.0,    33.0}, 13},
-//                            {{1234.0,    33.1}, 9.3},
-//                            {{1234.1223, 0.0},  Null()}};
-//
-//        vectorized::check_function<vectorized::DataTypeFloat64 , true>(func_name, input_types, data_set);
-//    }
 }
 
 TEST(function_arithmetic_test, function_arithmetic_divide_test) {
@@ -68,35 +52,17 @@ TEST(function_arithmetic_test, function_arithmetic_divide_test) {
     {
         std::vector<std::any> input_types = {vectorized::TypeIndex::Int32,
                                              vectorized::TypeIndex::Int32};
-        DataSet data_set = {{{1234, 34}, 36.294117647058826},
-                            {{1234, 0}, Null()}};
-        vectorized::check_function<vectorized::DataTypeFloat64, true>(func_name, input_types, data_set);
+        DataSet data_set = {{{1234, 34}, 36.294117647058826}, {{1234, 0}, Null()}};
+        vectorized::check_function<vectorized::DataTypeFloat64, true>(func_name, input_types,
+                                                                      data_set);
     }
-
-//    {
-//        std::vector<std::any> input_types = {vectorized::TypeIndex::Int32,
-//                                             vectorized::TypeIndex::Int32};
-//        DataSet data_set = {{{10, 1}, 10},
-//                            {{10, -2}, -5},
-//                            {{1234, 0}, Null()}};
-//        vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
-//    }
-
-//    {
-//        std::vector<std::any> input_types = {vectorized::TypeIndex::Float64,
-//                                             vectorized::TypeIndex::Float64};
-//        DataSet data_set = {{{10.0, 1.0}, 10},
-//                            {{10.0, -2.0}, -5},
-//                            {{1234.34, 0.0}, Null()}};
-//        vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types, data_set);
-//    }
 
     {
         std::vector<std::any> input_types = {vectorized::TypeIndex::Float64,
                                              vectorized::TypeIndex::Float64};
-        DataSet data_set = {{{1234.1, 34.6}, 35.667630057803464},
-                            {{1234.34, 0.0}, Null()}};
-        vectorized::check_function<vectorized::DataTypeFloat64, true>(func_name, input_types, data_set);
+        DataSet data_set = {{{1234.1, 34.6}, 35.667630057803464}, {{1234.34, 0.0}, Null()}};
+        vectorized::check_function<vectorized::DataTypeFloat64, true>(func_name, input_types,
+                                                                      data_set);
     }
 }
 

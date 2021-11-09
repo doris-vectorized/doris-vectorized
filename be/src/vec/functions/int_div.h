@@ -44,7 +44,7 @@ struct DivideIntegralImpl {
         /// NOTE: overflow is still possible when dividing large signed number to large unsigned number or vice-versa. But it's less harmful.
         if constexpr (std::is_integral_v<A> && std::is_integral_v<B> &&
                       (std::is_signed_v<A> || std::is_signed_v<B>))
-            return std::make_signed_t<A>(a) / std::make_signed_t<B>(b);
+            return std::make_signed_t<A>(a) / (std::make_signed_t<B>(b) + (b == 0));
         else
             return a / (b + (b == 0));
     }
