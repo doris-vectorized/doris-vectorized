@@ -36,6 +36,10 @@ void register_function_minus(SimpleFunctionFactory& factory);
 void register_function_multiply(SimpleFunctionFactory& factory);
 void register_function_divide(SimpleFunctionFactory& factory);
 void register_function_int_div(SimpleFunctionFactory& factory);
+void register_function_bitand(SimpleFunctionFactory& factory);
+void register_function_bitor(SimpleFunctionFactory& factory);
+void register_function_bitxor(SimpleFunctionFactory& factory);
+void register_function_bitnot(SimpleFunctionFactory& factory);
 void register_function_math(SimpleFunctionFactory& factory);
 void register_function_modulo(SimpleFunctionFactory& factory);
 void register_function_bitmap(SimpleFunctionFactory& factory);
@@ -106,7 +110,7 @@ public:
         if (iter != function_creators.end()) {
             return iter->second()->build(arguments, return_type);
         }
-        
+
         return nullptr;
     }
 
@@ -138,6 +142,10 @@ public:
             register_function_divide(instance);
             register_function_int_div(instance);
             register_function_modulo(instance);
+            register_function_bitand(instance);
+            register_function_bitor(instance);
+            register_function_bitxor(instance);
+            register_function_bitnot(instance);
             register_function_is_null(instance);
             register_function_is_not_null(instance);
             register_function_to_time_fuction(instance);

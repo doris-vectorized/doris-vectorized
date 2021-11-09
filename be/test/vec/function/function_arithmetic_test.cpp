@@ -66,6 +66,74 @@ TEST(function_arithmetic_test, function_arithmetic_divide_test) {
     }
 }
 
+TEST(function_arithmetic_test, bitnot_test) {
+    std::string func_name = "bitnot";
+
+    {
+        std::vector<std::any> input_types = {vectorized::TypeIndex::Int32};
+
+        DataSet data_set = {{{(int32_t)30}, ~(int32_t)30},
+                            {{(int32_t)0}, ~(int32_t)0},
+                            {{(int32_t)-10}, ~(int32_t)-10},
+                            {{(int32_t)-10.44}, ~(int32_t)-10},
+                            {{(int32_t)-999.888}, ~(int32_t)-999}};
+
+        vectorized::check_function<vectorized::DataTypeInt32, false>(func_name, input_types,
+                                                                     data_set);
+    }
+}
+
+TEST(function_arithmetic_test, bitand_test) {
+    std::string func_name = "bitand";
+
+    {
+        std::vector<std::any> input_types = {vectorized::TypeIndex::Int32,
+                                             vectorized::TypeIndex::Int32};
+
+        DataSet data_set = {{{(int32_t)30, (int32_t)12}, 30 & 12},
+                            {{(int32_t)0, (int32_t)12}, 0 & 12},
+                            {{(int32_t)-10, (int32_t)111}, -10 & 111},
+                            {{(int32_t)-999, (int32_t)888}, -999 & 888}};
+
+        vectorized::check_function<vectorized::DataTypeInt32, false>(func_name, input_types,
+                                                                     data_set);
+    }
+}
+
+TEST(function_arithmetic_test, bitor_test) {
+    std::string func_name = "bitor";
+
+    {
+        std::vector<std::any> input_types = {vectorized::TypeIndex::Int32,
+                                             vectorized::TypeIndex::Int32};
+
+        DataSet data_set = {{{(int32_t)30, (int32_t)12}, 30 | 12},
+                            {{(int32_t)0, (int32_t)12}, 0 | 12},
+                            {{(int32_t)-10, (int32_t)111}, -10 | 111},
+                            {{(int32_t)-999, (int32_t)888}, -999 | 888}};
+
+        vectorized::check_function<vectorized::DataTypeInt32, false>(func_name, input_types,
+                                                                     data_set);
+    }
+}
+
+TEST(function_arithmetic_test, bitxor_test) {
+    std::string func_name = "bitxor";
+
+    {
+        std::vector<std::any> input_types = {vectorized::TypeIndex::Int32,
+                                             vectorized::TypeIndex::Int32};
+
+        DataSet data_set = {{{(int32_t)30, (int32_t)12}, 30 ^ 12},
+                            {{(int32_t)0, (int32_t)12}, 0 ^ 12},
+                            {{(int32_t)-10, (int32_t)111}, -10 ^ 111},
+                            {{(int32_t)-999, (int32_t)888}, -999 ^ 888}};
+
+        vectorized::check_function<vectorized::DataTypeInt32, false>(func_name, input_types,
+                                                                     data_set);
+    }
+}
+
 } // namespace doris
 
 int main(int argc, char** argv) {

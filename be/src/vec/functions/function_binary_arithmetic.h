@@ -18,7 +18,6 @@
 #pragma once
 
 #include "common/logging.h"
-
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_decimal.h"
 #include "vec/columns/column_vector.h"
@@ -200,8 +199,8 @@ struct DecimalBinaryOperation {
 
     /// null_map for divide and mod
     static void NO_INLINE vector_vector(const ArrayA& a, const ArrayB& b, ArrayC& c,
-                                        ResultType scale_a [[maybe_unused]], ResultType scale_b [[maybe_unused]],
-                                        NullMap& null_map) {
+                                        ResultType scale_a [[maybe_unused]],
+                                        ResultType scale_b [[maybe_unused]], NullMap& null_map) {
         size_t size = a.size();
         if constexpr (is_division && IsDecimalNumber<B>) {
             for (size_t i = 0; i < size; ++i) {
@@ -284,7 +283,8 @@ private:
     }
 
     /// null_map for divide and mod
-    static NativeResultType apply(NativeResultType a, NativeResultType b, NullMap& null_map, size_t index) {
+    static NativeResultType apply(NativeResultType a, NativeResultType b, NullMap& null_map,
+                                  size_t index) {
         DecimalV2Value l(a);
         DecimalV2Value r(b);
         auto ans = Op::template apply(l, r, null_map, index);
@@ -327,7 +327,8 @@ private:
     }
 
     static NativeResultType apply_scaled_div(NativeResultType a, NativeResultType b,
-                                             NativeResultType scale, NullMap& null_map, size_t index) {
+                                             NativeResultType scale, NullMap& null_map,
+                                             size_t index) {
         if constexpr (is_division) {
             if constexpr (_check_overflow) {
                 bool overflow = false;
@@ -461,8 +462,8 @@ class FunctionBinaryArithmetic : public IFunction {
     template <typename F>
     static bool cast_type(const IDataType* type, F&& f) {
         return cast_type_to_either<DataTypeUInt8, DataTypeUInt16, DataTypeUInt32, DataTypeUInt64,
-                                   DataTypeInt8, DataTypeInt16, DataTypeInt32, DataTypeInt64, DataTypeInt128,
-                                   DataTypeFloat32, DataTypeFloat64,
+                                   DataTypeInt8, DataTypeInt16, DataTypeInt32, DataTypeInt64,
+                                   DataTypeInt128, DataTypeFloat32, DataTypeFloat64,
                                    //            DataTypeDate,
                                    //            DataTypeDateTime,
                                    DataTypeDecimal<Decimal32>, DataTypeDecimal<Decimal64>,
@@ -556,8 +557,8 @@ public:
                     using LeftDataType = std::decay_t<decltype(left)>;
                     using RightDataType = std::decay_t<decltype(right)>;
                     using ResultDataType =
-                    typename BinaryOperationTraits<Op, LeftDataType,
-                            RightDataType>::ResultDataType;
+                            typename BinaryOperationTraits<Op, LeftDataType,
+                                                           RightDataType>::ResultDataType;
                     if constexpr (!std::is_same_v<ResultDataType, InvalidType>) {
                         constexpr bool result_is_decimal =
                                 IsDataTypeDecimal<LeftDataType> || IsDataTypeDecimal<RightDataType>;
@@ -569,12 +570,12 @@ public:
                         using T1 = typename RightDataType::FieldType;
                         using ResultType = typename ResultDataType::FieldType;
                         using ColVecT0 = std::conditional_t<IsDecimalNumber<T0>, ColumnDecimal<T0>,
-                                ColumnVector<T0>>;
+                                                            ColumnVector<T0>>;
                         using ColVecT1 = std::conditional_t<IsDecimalNumber<T1>, ColumnDecimal<T1>,
-                                ColumnVector<T1>>;
+                                                            ColumnVector<T1>>;
                         using ColVecResult = std::conditional_t<IsDecimalNumber<ResultType>,
-                                ColumnDecimal<ResultType>,
-                                ColumnVector<ResultType>>;
+                                                                ColumnDecimal<ResultType>,
+                                                                ColumnVector<ResultType>>;
 
                         /// Decimal operations need scale. Operations are on result type.
                         using OpImpl = std::conditional_t<
@@ -586,7 +587,7 @@ public:
                         auto col_right_raw = block.get_by_position(arguments[1]).column.get();
                         if (auto col_left = check_and_get_column_const<ColVecT0>(col_left_raw)) {
                             if (auto col_right =
-                                    check_and_get_column_const<ColVecT1>(col_right_raw)) {
+                                        check_and_get_column_const<ColVecT1>(col_right_raw)) {
                                 /// the only case with a non-vector result
                                 if constexpr (result_is_decimal) {
                                     ResultDataType type = decimal_result_type(
@@ -631,7 +632,7 @@ public:
                         vec_res.resize(block.rows());
 
                         if (auto col_left_const =
-                                check_and_get_column_const<ColVecT0>(col_left_raw)) {
+                                    check_and_get_column_const<ColVecT0>(col_left_raw)) {
                             if (auto col_right = check_and_get_column<ColVecT1>(col_right_raw)) {
                                 if constexpr (result_is_decimal) {
                                     ResultDataType type = decimal_result_type(
@@ -665,13 +666,13 @@ public:
                                 typename ResultDataType::FieldType scale_b =
                                         type.scale_factor_for(right, is_multiply || is_division);
                                 if (auto col_right =
-                                        check_and_get_column<ColVecT1>(col_right_raw)) {
+                                            check_and_get_column<ColVecT1>(col_right_raw)) {
                                     OpImpl::vector_vector(col_left->get_data(),
                                                           col_right->get_data(), vec_res, scale_a,
                                                           scale_b, check_decimal_overflow);
                                 } else if (auto col_right_const =
-                                        check_and_get_column_const<ColVecT1>(
-                                                col_right_raw)) {
+                                                   check_and_get_column_const<ColVecT1>(
+                                                           col_right_raw)) {
                                     OpImpl::vector_constant(
                                             col_left->get_data(),
                                             col_right_const->template get_value<T1>(), vec_res,
@@ -683,8 +684,8 @@ public:
                                     OpImpl::vector_vector(col_left->get_data(),
                                                           col_right->get_data(), vec_res);
                                 else if (auto col_right_const =
-                                        check_and_get_column_const<ColVecT1>(
-                                                col_right_raw))
+                                                 check_and_get_column_const<ColVecT1>(
+                                                         col_right_raw))
                                     OpImpl::vector_constant(
                                             col_left->get_data(),
                                             col_right_const->template get_value<T1>(), vec_res);
