@@ -26,6 +26,7 @@
 #include "udf/udf_internal.h"
 #include "vec/data_types/data_type.h"
 #include "vec/exprs/vexpr_context.h"
+#include "vec/functions/function.h"
 
 namespace doris {
 namespace vectorized {
@@ -39,24 +40,33 @@ public:
     virtual VExpr* clone(ObjectPool* pool) const = 0;
 
     virtual const std::string& expr_name() const = 0;
-    // VExpr(const VExpr& expr);
+
+    /// Initializes this expr instance for execution. This does not include initializing
+    /// state in the VExprContext; 'context' should only be used to register a
+    /// FunctionContext via RegisterFunctionContext().
+    ///
+    /// Subclasses overriding this function should call VExpr::Prepare() to recursively call
+    /// Prepare() on the expr tree
     virtual Status prepare(RuntimeState* state, const RowDescriptor& row_desc,
                            VExprContext* context);
 
-    Status open(RuntimeState* state, VExprContext* context) {
-        return open(state, context, FunctionContext::FRAGMENT_LOCAL);
-    }
-
+    /// Initializes 'context' for execution. If scope if FRAGMENT_LOCAL, both fragment- and
+    /// thread-local state should be initialized. Otherwise, if scope is THREAD_LOCAL, only
+    /// thread-local state should be initialized.
+    //
+    /// Subclasses overriding this function should call Expr::Open() to recursively call
+    /// Open() on the expr tree
     virtual Status open(RuntimeState* state, VExprContext* context,
                         FunctionContext::FunctionStateScope scope);
 
     virtual Status execute(VExprContext* context, vectorized::Block* block,
                            int* result_column_id) = 0;
 
-    void close(RuntimeState* state, VExprContext* context) {
-        close(state, context, FunctionContext::FRAGMENT_LOCAL);
-    }
-
+    /// Subclasses overriding this function should call VExpr::Close().
+    //
+    /// If scope if FRAGMENT_LOCAL, both fragment- and thread-local state should be torn
+    /// down. Otherwise, if scope is THREAD_LOCAL, only thread-local state should be torn
+    /// down.
     virtual void close(RuntimeState* state, VExprContext* context,
                        FunctionContext::FunctionStateScope scope);
 
@@ -122,7 +132,21 @@ protected:
         return out.str();
     }
 
-    void _register_function_context(doris::RuntimeState* state, VExprContext* context);
+    /// Helper function that calls ctx->register(), sets fn_context_index_, and returns the
+    /// registered FunctionContext
+    void register_function_context(doris::RuntimeState* state, VExprContext* context);
+
+    /// Helper function to initialize function context, called in `open` phase of VExpr:
+    /// 1. Set constant columns result of function arguments.
+    /// 2. Call function's prepare() to initialize function state, fragment-local or
+    /// thread-local according the input `FunctionStateScope` argument.
+    Status init_function_context(VExprContext* context, FunctionContext::FunctionStateScope scope,
+                                 const FunctionBasePtr& function);
+
+    /// Helper function to close function context, fragment-local or thread-local according
+    /// the input `FunctionStateScope` argument. Called in `close` phase of VExpr.
+    void close_function_context(VExprContext* context, FunctionContext::FunctionStateScope scope,
+                                const FunctionBasePtr& function);
 
     TExprNodeType::type _node_type;
     TypeDescriptor _type;

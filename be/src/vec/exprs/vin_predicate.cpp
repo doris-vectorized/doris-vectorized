@@ -25,6 +25,7 @@
 #include "vec/data_types/data_type_factory.hpp"
 #include "vec/functions/simple_function_factory.h"
 
+// TODO: Refactor `in` implementation via FunctionContext.
 namespace doris::vectorized {
 
 VInPredicate::VInPredicate(const TExprNode& node)
@@ -51,11 +52,6 @@ doris::Status VInPredicate::prepare(doris::RuntimeState* state, const doris::Row
 
     _expr_name = fmt::format("({} {} set)", _children[0]->expr_name(), _is_not_in ? "not_in" : "in");
     _is_prepare = true;
-    return Status::OK();
-}
-
-doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* context) {
-    RETURN_IF_ERROR(VExpr::open(state, context));
 
     Block block;
     for (int i = 1; i < _children.size(); ++i) {
@@ -102,13 +98,23 @@ doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* conte
         return Status::NotSupported(
                 fmt::format("Function {} is not implemented", _fn.name.function_name));
     }
-    VExpr::_register_function_context(state, context);
 
+    // TODO: revisit this, `register_function_context` would create a constant column for every
+    // constant child (each single element in hybrid set) for `in` expression.
+    VExpr::register_function_context(state, context);
     return Status::OK();
 }
 
-void VInPredicate::close(doris::RuntimeState* state, VExprContext* context) {
-    VExpr::close(state, context);
+doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* context,
+                                 FunctionContext::FunctionStateScope scope) {
+    RETURN_IF_ERROR(VExpr::open(state, context, scope));
+    RETURN_IF_ERROR(VExpr::init_function_context(context, scope, _function));
+    return Status::OK();
+}
+
+void VInPredicate::close(doris::RuntimeState* state, VExprContext* context, FunctionContext::FunctionStateScope scope) {
+    VExpr::close_function_context(context, scope, _function);
+    VExpr::close(state, context, scope);
 }
 
 doris::Status VInPredicate::execute(VExprContext* context, doris::vectorized::Block* block,
