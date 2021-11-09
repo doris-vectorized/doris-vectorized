@@ -27,8 +27,9 @@
 
 namespace doris {
 namespace vectorized {
-ResultSink::ResultSink(const RowDescriptor& row_desc, const std::vector<TExpr>& t_output_expr,
-                       const TResultSink& sink, int buffer_size)
+
+VResultSink::VResultSink(const RowDescriptor& row_desc, const std::vector<TExpr>& t_output_expr,
+                         const TResultSink& sink, int buffer_size)
         : _row_desc(row_desc), _t_output_expr(t_output_expr), _buf_size(buffer_size) {
     if (!sink.__isset.type || sink.type == TResultSinkType::MYSQL_PROTOCAL) {
         _sink_type = TResultSinkType::MYSQL_PROTOCAL;
@@ -44,9 +45,9 @@ ResultSink::ResultSink(const RowDescriptor& row_desc, const std::vector<TExpr>& 
     _name = "ResultSink";
 }
 
-ResultSink::~ResultSink() = default;
+VResultSink::~VResultSink() = default;
 
-Status ResultSink::prepare_exprs(RuntimeState* state) {
+Status VResultSink::prepare_exprs(RuntimeState* state) {
     // From the thrift expressions create the real exprs.
     RETURN_IF_ERROR(
             VExpr::create_expr_trees(state->obj_pool(), _t_output_expr, &_output_vexpr_ctxs));
@@ -54,7 +55,7 @@ Status ResultSink::prepare_exprs(RuntimeState* state) {
     RETURN_IF_ERROR(VExpr::prepare(_output_vexpr_ctxs, state, _row_desc, _expr_mem_tracker));
     return Status::OK();
 }
-Status ResultSink::prepare(RuntimeState* state) {
+Status VResultSink::prepare(RuntimeState* state) {
     RETURN_IF_ERROR(DataSink::prepare(state));
     auto fragment_instance_id = state->fragment_instance_id();
     auto title = fmt::format("VDataBufferSender (dst_fragment_instance_id={:x}-{:x})",
@@ -72,7 +73,7 @@ Status ResultSink::prepare(RuntimeState* state) {
     switch (_sink_type) {
     case TResultSinkType::MYSQL_PROTOCAL:
         _writer.reset(new (std::nothrow)
-                              MysqlResultWriter(_sender.get(), _output_vexpr_ctxs, _profile));
+                              VMysqlResultWriter(_sender.get(), _output_vexpr_ctxs, _profile));
         break;
     case TResultSinkType::FILE:
         CHECK(_file_opts.get() != nullptr);
@@ -89,19 +90,19 @@ Status ResultSink::prepare(RuntimeState* state) {
     return Status::OK();
 }
 
-Status ResultSink::open(RuntimeState* state) {
+Status VResultSink::open(RuntimeState* state) {
     return VExpr::open(_output_vexpr_ctxs, state);
 }
 
-Status ResultSink::send(RuntimeState* state, RowBatch* batch) {
+Status VResultSink::send(RuntimeState* state, RowBatch* batch) {
     return Status::NotSupported("Not Implemented Result Sink::send scalar");
 }
 
-Status ResultSink::send(RuntimeState* state, Block* block) {
+Status VResultSink::send(RuntimeState* state, Block* block) {
     return _writer->append_block(*block);
 }
 
-Status ResultSink::close(RuntimeState* state, Status exec_status) {
+Status VResultSink::close(RuntimeState* state, Status exec_status) {
     if (_closed || _writer == nullptr|| _sender == nullptr) {
         return Status::OK();
     }
@@ -128,7 +129,7 @@ Status ResultSink::close(RuntimeState* state, Status exec_status) {
     return Status::OK();
 }
 
-void ResultSink::set_query_statistics(std::shared_ptr<QueryStatistics> statistics) {
+void VResultSink::set_query_statistics(std::shared_ptr<QueryStatistics> statistics) {
     _sender->set_query_statistics(statistics);
 }
 

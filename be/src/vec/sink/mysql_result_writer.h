@@ -29,13 +29,13 @@ class MysqlRowBuffer;
 namespace vectorized {
 class VExprContext;
 
-class MysqlResultWriter final : public VResultWriter {
+class VMysqlResultWriter final : public VResultWriter {
 public:
-    MysqlResultWriter(BufferControlBlock* sinker,
-                      const std::vector<vectorized::VExprContext*>& output_vexpr_ctxs,
-                      RuntimeProfile* parent_profile);
+    VMysqlResultWriter(BufferControlBlock* sinker,
+                       const std::vector<vectorized::VExprContext*>& output_vexpr_ctxs,
+                       RuntimeProfile* parent_profile);
 
-    virtual ~MysqlResultWriter();
+    virtual ~VMysqlResultWriter();
 
     virtual Status init(RuntimeState* state) override;
 
@@ -55,7 +55,6 @@ private:
     BufferControlBlock* _sinker;
 
     const std::vector<vectorized::VExprContext*>& _output_vexpr_ctxs;
-    // std::vector<int> _result_column_ids;
 
     std::vector<MysqlRowBuffer*> _vec_buffers;
 

@@ -16,7 +16,7 @@
 // under the License.
 
 #pragma once
-#include "vec/sink/data_sink.h"
+#include "exec/data_sink.h"
 #include "vec/sink/result_writer.h"
 
 namespace doris {
@@ -31,15 +31,16 @@ class MemTracker;
 class ResultFileOptions;
 namespace vectorized {
 class VExprContext;
-class ResultSink : public VDataSink {
+
+class VResultSink : public DataSink {
 public:
     // construct a buffer for the result need send to coordinator.
     // row_desc used for convert RowBatch to TRowBatch
     // buffer_size is the buffer size allocated to each query
-    ResultSink(const RowDescriptor& row_desc, const std::vector<TExpr>& select_exprs,
-               const TResultSink& sink, int buffer_size);
+    VResultSink(const RowDescriptor& row_desc, const std::vector<TExpr>& select_exprs,
+                const TResultSink& sink, int buffer_size);
 
-    virtual ~ResultSink();
+    virtual ~VResultSink();
 
     virtual Status prepare(RuntimeState* state) override;
     virtual Status open(RuntimeState* state) override;
