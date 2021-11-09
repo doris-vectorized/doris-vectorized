@@ -76,7 +76,6 @@ public:
             for (auto type : types) {
                 key_str.append(type->get_name());
             }
-            LOG(INFO) << "register_function() key_str: " << key_str;
         }
         function_creators[key_str] = ptr;
     }
