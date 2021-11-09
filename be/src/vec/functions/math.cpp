@@ -395,62 +395,49 @@ struct BinImpl {
 
 using FunctionBin = FunctionUnaryToType<BinImpl, NameBin>;
 
-class FunctionRound : public IFunction {
-public:
+struct RoundName {
     static constexpr auto name = "round";
-    static FunctionPtr create() { return std::make_shared<FunctionRound>(); }
+};
 
-private:
-    String get_name() const override { return name; }
-    size_t get_number_of_arguments() const override { return 2; }
-    bool is_variadic() const override { return true; }
-    bool use_default_implementation_for_constants() const override { return true; }
-
-    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
-        if (arguments.size() == 1) {
-            return std::make_shared<DataTypeInt64>();
-        } else if (arguments.size() == 2) {
-            return std::make_shared<DataTypeFloat64>();
-        } else {
-            DCHECK(false) << "error about round function arguments size, it should be 1 or 2";
-            return nullptr;
-        }
+/// round(double)-->int64
+/// key_str:roundFloat64
+template <typename Name>
+struct RoundOneImpl {
+    using Type = DataTypeInt64;
+    static constexpr auto name = RoundName::name;
+    static constexpr auto rows_per_iteration = 1;
+    static constexpr bool always_returns_float64 = false;
+    
+    static DataTypes get_variadic_argument_types() {
+        return {std::make_shared<vectorized::DataTypeFloat64>()};
     }
-
-    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
-                        size_t result, size_t input_rows_count) override {
-        DCHECK_GE(arguments.size(), 1);
-        int argument_size = arguments.size();
-        ColumnPtr argument_column[argument_size];
-        for (int i = 0; i < argument_size; ++i) {
-            argument_column[i] =
-                    block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
-        }
-        auto data_column = assert_cast<const ColumnVector<Float64>*>(argument_column[0].get());
-        if (arguments.size() == 1) { //round(double)-->int64
-            auto res_column = ColumnInt64::create(input_rows_count);
-            auto& res_data = assert_cast<ColumnInt64&>(*res_column).get_data();
-
-            for (int i = 0; i < input_rows_count; ++i) {
-                res_data[i] = std::round(data_column->get_data()[i]);
-            }
-            block.replace_by_position(result, std::move(res_column));
-        } else {                     //round(double,int)-->double
-            auto specific_data_column =
-                    assert_cast<const ColumnVector<Int32>*>(argument_column[1].get());
-            auto res_column = ColumnFloat64::create(input_rows_count);
-            auto& res_data = assert_cast<ColumnFloat64&>(*res_column).get_data();
-
-            for (int i = 0; i < input_rows_count; ++i) {
-                res_data[i] = my_double_round(data_column->get_data()[i],
-                                              specific_data_column->get_data()[i], false, false);
-            }
-            block.replace_by_position(result, std::move(res_column));
-        }
-
-        return Status::OK();
+    
+    template <typename T, typename U>
+    static void execute(const T* src, U* dst) {
+        dst[0] = static_cast<Int64>(std::round(static_cast<Float64>(src[0])));
     }
 };
+using FunctionRoundOne = FunctionMathUnary<RoundOneImpl<RoundName>>;
+
+/// round(double,int32)-->double
+/// key_str:roundFloat64Int32
+template <typename Name>
+struct RoundTwoImpl {
+    static constexpr auto name = RoundName::name;
+    static constexpr auto rows_per_iteration = 1;
+    
+    static DataTypes get_variadic_argument_types() {
+        return {std::make_shared<vectorized::DataTypeFloat64>(),
+                std::make_shared<vectorized::DataTypeInt32>()};
+    }
+
+    template <typename T1, typename T2>
+    static void execute(const T1* src_left, const T2* src_right, Float64* dst) {
+        dst[0] = my_double_round(static_cast<Float64>(src_left[0]),
+                                 static_cast<Int32>(src_right[0]), false, false);
+    }
+};
+using FunctionRoundTwo = FunctionMathBinaryFloat64<RoundTwoImpl<RoundName>>;
 
 void register_function_math(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionAcos>();
@@ -478,7 +465,8 @@ void register_function_math(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionTan>();
     factory.register_function<FunctionFloor>();
     factory.register_alias("floor", "dfloor");
-    factory.register_function<FunctionRound>();
+    factory.register_function<FunctionRoundOne>();
+    factory.register_function<FunctionRoundTwo>();
     factory.register_function<FunctionPow>();
     factory.register_alias("pow", "power");
     factory.register_alias("pow", "dpow");

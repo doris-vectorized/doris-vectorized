@@ -346,6 +346,7 @@ TEST(MathFunctionTest, round_test) {
 
         DataSet data_set = {{{30.1}, (int64_t)30},
                             {{90.6}, (int64_t)91},
+                            {{Null()}, Null()},
                             {{0.0}, (int64_t)0},
                             {{-1.1}, (int64_t)-1},
                             {{-60.7}, (int64_t)-61}};

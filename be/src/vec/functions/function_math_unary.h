@@ -30,6 +30,8 @@ template <typename Impl>
 class FunctionMathUnary : public IFunction {
 public:
     static constexpr auto name = Impl::name;
+    static constexpr bool has_variadic_argument =
+            !std::is_void_v<decltype(has_variadic_argument_types(std::declval<Impl>()))>;
     static FunctionPtr create() { return std::make_shared<FunctionMathUnary>(); }
 
 private:
@@ -43,7 +45,11 @@ private:
         }
         return std::make_shared<typename Impl::Type>();
     }
-
+    DataTypes get_variadic_argument_types_impl() const override {
+        if constexpr (has_variadic_argument) return Impl::get_variadic_argument_types();
+        return {};
+    }
+    
     template <typename T, typename ReturnType>
     static void execute_in_iterations(const T* src_data, ReturnType* dst_data, size_t size) {
         if constexpr (Impl::rows_per_iteration == 0) {
