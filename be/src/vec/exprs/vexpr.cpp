@@ -71,16 +71,6 @@ Status VExpr::open(RuntimeState* state, VExprContext* context,
     return Status::OK();
 }
 
-void VExpr::_register_function_context(doris::RuntimeState* state, VExprContext* context) {
-    FunctionContext::TypeDesc return_type = AnyValUtil::column_type_to_type_desc(_type);
-    std::vector<FunctionContext::TypeDesc> arg_types;
-    for (int i = 0; i < _children.size(); ++i) {
-        arg_types.push_back(AnyValUtil::column_type_to_type_desc(_children[i]->type()));
-    }
-
-    _fn_context_index = context->register_func(state, return_type, arg_types, 0);
-}
-
 void VExpr::close(doris::RuntimeState* state, VExprContext* context,
                   FunctionContext::FunctionStateScope scope) {
     for (int i = 0; i < _children.size(); ++i) {
@@ -220,9 +210,9 @@ Status VExpr::clone_if_not_exists(const std::vector<VExprContext*>& ctxs, Runtim
     if (!new_ctxs->empty()) {
         // 'ctxs' was already cloned into '*new_ctxs', nothing to do.
         DCHECK_EQ(new_ctxs->size(), ctxs.size());
-        //        for (int i = 0; i < new_ctxs->size(); ++i) {
-        //            DCHECK((*new_ctxs)[i]->_is_clone);
-        //        }
+        for (int i = 0; i < new_ctxs->size(); ++i) {
+            DCHECK((*new_ctxs)[i]->_is_clone);
+        }
         return Status::OK();
     }
     new_ctxs->resize(ctxs.size());
@@ -291,6 +281,46 @@ ColumnPtrWrapper* VExpr::get_const_col(VExprContext* context) {
     const auto& column = block.get_by_position(result).column;
     _constant_col = std::make_shared<ColumnPtrWrapper>(column);
     return _constant_col.get();
+}
+
+void VExpr::register_function_context(doris::RuntimeState* state, VExprContext* context) {
+    FunctionContext::TypeDesc return_type = AnyValUtil::column_type_to_type_desc(_type);
+    std::vector<FunctionContext::TypeDesc> arg_types;
+    for (int i = 0; i < _children.size(); ++i) {
+        arg_types.push_back(AnyValUtil::column_type_to_type_desc(_children[i]->type()));
+    }
+
+    _fn_context_index = context->register_func(state, return_type, arg_types, 0);
+}
+
+Status VExpr::init_function_context(VExprContext* context,
+                                    FunctionContext::FunctionStateScope scope,
+                                    const FunctionBasePtr& function) {
+    FunctionContext* fn_ctx = context->fn_context(_fn_context_index);
+    if (scope == FunctionContext::FRAGMENT_LOCAL) {
+        std::vector<ColumnPtrWrapper*> constant_cols;
+        for (auto c : _children) {
+            constant_cols.push_back(c->get_const_col(context));
+        }
+        fn_ctx->impl()->set_constant_cols(constant_cols);
+    }
+
+    if (scope == FunctionContext::FRAGMENT_LOCAL) {
+        RETURN_IF_ERROR(function->prepare(fn_ctx, FunctionContext::FRAGMENT_LOCAL));
+    }
+    RETURN_IF_ERROR(function->prepare(fn_ctx, FunctionContext::THREAD_LOCAL));
+    return Status::OK();
+}
+
+void VExpr::close_function_context(VExprContext* context, FunctionContext::FunctionStateScope scope,
+                                   const FunctionBasePtr& function) {
+    if (_fn_context_index != -1) {
+        FunctionContext* fn_ctx = context->fn_context(_fn_context_index);
+        function->close(fn_ctx, FunctionContext::THREAD_LOCAL);
+        if (scope == FunctionContext::FRAGMENT_LOCAL) {
+            function->close(fn_ctx, FunctionContext::FRAGMENT_LOCAL);
+        }
+    }
 }
 
 } // namespace doris::vectorized

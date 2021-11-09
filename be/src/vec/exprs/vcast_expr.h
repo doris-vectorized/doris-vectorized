@@ -28,8 +28,10 @@ public:
                                   int* result_column_id);
     virtual doris::Status prepare(doris::RuntimeState* state, const doris::RowDescriptor& desc,
                                   VExprContext* context);
-    virtual doris::Status open(doris::RuntimeState* state, VExprContext* context);
-    virtual void close(doris::RuntimeState* state, VExprContext* context);
+    virtual doris::Status open(doris::RuntimeState* state, VExprContext* context,
+                               FunctionContext::FunctionStateScope scope);
+    virtual void close(doris::RuntimeState* state, VExprContext* context,
+                       FunctionContext::FunctionStateScope scope);
     virtual VExpr* clone(doris::ObjectPool* pool) const override {
         return pool->add(new VCastExpr(*this));
     }

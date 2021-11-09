@@ -48,7 +48,7 @@ doris::Status VectorizedFnCall::prepare(doris::RuntimeState* state,
         return Status::InternalError(
                 fmt::format("Function {} is not implemented", _fn.name.function_name));
     }
-    VExpr::_register_function_context(state, context);
+    VExpr::register_function_context(state, context);
     _expr_name = fmt::format("{}({})", _fn.name.function_name, child_expr_name);
 
     return Status::OK();
@@ -57,32 +57,13 @@ doris::Status VectorizedFnCall::prepare(doris::RuntimeState* state,
 doris::Status VectorizedFnCall::open(doris::RuntimeState* state, VExprContext* context,
                                      FunctionContext::FunctionStateScope scope) {
     RETURN_IF_ERROR(VExpr::open(state, context, scope));
-
-    FunctionContext* fn_ctx = context->fn_context(_fn_context_index);
-    if (scope == FunctionContext::FRAGMENT_LOCAL) {
-        std::vector<ColumnPtrWrapper*> constant_cols;
-        for (int i = 0; i < _children.size(); ++i) {
-            constant_cols.push_back(_children[i]->get_const_col(context));
-        }
-        fn_ctx->impl()->set_constant_cols(constant_cols);
-    }
-
-    if (scope == FunctionContext::FRAGMENT_LOCAL) {
-        RETURN_IF_ERROR(_function->prepare(fn_ctx, FunctionContext::FRAGMENT_LOCAL));
-    }
-    RETURN_IF_ERROR(_function->prepare(fn_ctx, FunctionContext::THREAD_LOCAL));
+    RETURN_IF_ERROR(VExpr::init_function_context(context, scope, _function));
     return Status::OK();
 }
 
 void VectorizedFnCall::close(doris::RuntimeState* state, VExprContext* context,
                              FunctionContext::FunctionStateScope scope) {
-    if (_fn_context_index != -1) {
-        FunctionContext* fn_ctx = context->fn_context(_fn_context_index);
-        _function->close(fn_ctx, FunctionContext::THREAD_LOCAL);
-        if (scope == FunctionContext::FRAGMENT_LOCAL) {
-            _function->close(fn_ctx, FunctionContext::FRAGMENT_LOCAL);
-        }
-    }
+    VExpr::close_function_context(context, scope, _function);
     VExpr::close(state, context, scope);
 }
 
