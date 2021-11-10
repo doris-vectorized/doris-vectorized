@@ -23,6 +23,7 @@
 
 #include "common/status.h"
 #include "vec/functions/function_binary_arithmetic.h"
+#include "vec/functions/function_binary_arithmetic_to_null_type.h"
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
@@ -32,22 +33,15 @@ struct ModuloImpl {
     using ResultType = typename NumberTraits::ResultOfModulo<A, B>::Type;
 
     template <typename Result = ResultType>
-    static inline Result apply(A a, B b) {
-        throw_if_division_leads_to_fpe(typename NumberTraits::ToInteger<A>::Type(a),
-                                       typename NumberTraits::ToInteger<B>::Type(b));
-
-        if (UNLIKELY(b == 0)) {
-            return 0;
-        }
+    static inline Result apply(A a, B b, NullMap& null_map, size_t index) {
+        null_map[index] = b == 0;
         return typename NumberTraits::ToInteger<A>::Type(a) %
-               typename NumberTraits::ToInteger<B>::Type(b);
+               (typename NumberTraits::ToInteger<B>::Type(b) + (b == 0));
     }
 
-    static inline DecimalV2Value apply(DecimalV2Value a, DecimalV2Value b) {
-        if (UNLIKELY(b.value() == 0)) {
-            return DecimalV2Value(int128_t(0));
-        }
-        return a % b;
+    static inline DecimalV2Value apply(DecimalV2Value a, DecimalV2Value b, NullMap& null_map, size_t index) {
+        null_map[index] = b == DecimalV2Value(0);
+        return a % (b + DecimalV2Value(b == DecimalV2Value(0)));
     }
 
 #if USE_EMBEDDED_COMPILER
@@ -148,7 +142,7 @@ struct BinaryOperationImpl<Int32, Int64, ModuloImpl<Int32, Int64>>
 struct NameModulo {
     static constexpr auto name = "mod";
 };
-using FunctionModulo = FunctionBinaryArithmetic<ModuloImpl, NameModulo, false>;
+using FunctionModulo = FunctionBinaryArithmeticToNullType<ModuloImpl, NameModulo, false>;
 
 void register_function_modulo(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionModulo>();

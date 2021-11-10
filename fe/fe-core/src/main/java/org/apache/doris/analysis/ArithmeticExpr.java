@@ -141,20 +141,20 @@ public class ArithmeticExpr extends Expr {
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DOUBLE, Type.DOUBLE),
-                Type.DOUBLE, Function.NullableMode.DEPEND_ON_ARGUMENT));
+                Type.DOUBLE, Function.NullableMode.ALWAYS_NULLABLE));
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                 Operator.DIVIDE.getName(),
                 Lists.<Type>newArrayList(Type.DECIMALV2, Type.DECIMALV2),
-                Type.DECIMALV2, Function.NullableMode.DEPEND_ON_ARGUMENT));
+                Type.DECIMALV2, Function.NullableMode.ALWAYS_NULLABLE));
 
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                 Operator.MOD.getName(),
                 Lists.<Type>newArrayList(Type.DOUBLE, Type.DOUBLE),
-                Type.DOUBLE, Function.NullableMode.DEPEND_ON_ARGUMENT));
+                Type.DOUBLE, Function.NullableMode.ALWAYS_NULLABLE));
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                 Operator.MOD.getName(),
                 Lists.<Type>newArrayList(Type.DECIMALV2, Type.DECIMALV2),
-                Type.DECIMALV2, Function.NullableMode.DEPEND_ON_ARGUMENT));
+                Type.DECIMALV2, Function.NullableMode.ALWAYS_NULLABLE));
 
         for (int i = 0; i < Type.getIntegerTypes().size(); i++) {
             Type t1 = Type.getIntegerTypes().get(i);
@@ -164,11 +164,11 @@ public class ArithmeticExpr extends Expr {
                 functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                         Operator.INT_DIVIDE.getName(), Lists.newArrayList(t1, t2),
                         Type.getAssignmentCompatibleType(t1, t2, false),
-                        Function.NullableMode.DEPEND_ON_ARGUMENT));
+                        Function.NullableMode.ALWAYS_NULLABLE));
                 functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                         Operator.MOD.getName(), Lists.newArrayList(t1, t2),
                         Type.getAssignmentCompatibleType(t1, t2, false),
-                        Function.NullableMode.DEPEND_ON_ARGUMENT));
+                        Function.NullableMode.ALWAYS_NULLABLE));
             }
         }
     }
