@@ -298,6 +298,7 @@ Status AggregationNode::prepare(RuntimeState* state) {
         }
 
         if (_is_streaming_preagg) {
+            runtime_profile()->append_exec_option("Streaming Preaggregation");
             _executor.pre_agg =
                     std::bind<Status>(&AggregationNode::_pre_agg_with_serialized_key, this,
                                       std::placeholders::_1, std::placeholders::_2);
@@ -637,6 +638,7 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
                 if (auto& hash_tbl = agg_method.data; hash_tbl.add_elem_size_overflow(rows)) {
                     // do not try to do agg, just init and serialize directly return the out_block
                     if (!_should_expand_preagg_hash_tables()) {
+                        ret_flag = true;
                         if (_streaming_pre_agg_buffer == nullptr) {
                             _streaming_pre_agg_buffer = _agg_arena_pool.aligned_alloc(
                                     _total_size_of_aggregate_states *
@@ -704,45 +706,46 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
                                         ->insert_range_from(*key_columns[i], 0, rows);
                             }
                         }
-                        ret_flag = true;
                     }
                 }
             },
             _agg_data._aggregated_method_variant);
 
-    std::visit(
-            [&](auto&& agg_method) -> void {
-                using HashMethodType = std::decay_t<decltype(agg_method)>;
-                using AggState = typename HashMethodType::State;
-                AggState state(key_columns, _probe_key_sz, nullptr);
-                /// For all rows.
-                for (size_t i = 0; i < rows; ++i) {
-                    AggregateDataPtr aggregate_data = nullptr;
+    if (!ret_flag) {
+        std::visit(
+                [&](auto &&agg_method) -> void {
+                    using HashMethodType = std::decay_t<decltype(agg_method)>;
+                    using AggState = typename HashMethodType::State;
+                    AggState state(key_columns, _probe_key_sz, nullptr);
+                    /// For all rows.
+                    for (size_t i = 0; i < rows; ++i) {
+                        AggregateDataPtr aggregate_data = nullptr;
 
-                    auto emplace_result = state.emplace_key(agg_method.data, i, _agg_arena_pool);
+                        auto emplace_result = state.emplace_key(agg_method.data, i, _agg_arena_pool);
 
-                    /// If a new key is inserted, initialize the states of the aggregate functions, and possibly something related to the key.
-                    if (emplace_result.is_inserted()) {
-                        /// exception-safety - if you can not allocate memory or create states, then destructors will not be called.
-                        emplace_result.set_mapped(nullptr);
+                        /// If a new key is inserted, initialize the states of the aggregate functions, and possibly something related to the key.
+                        if (emplace_result.is_inserted()) {
+                            /// exception-safety - if you can not allocate memory or create states, then destructors will not be called.
+                            emplace_result.set_mapped(nullptr);
 
-                        aggregate_data = _agg_arena_pool.aligned_alloc(
-                                _total_size_of_aggregate_states, _align_aggregate_states);
-                        _create_agg_status(aggregate_data);
+                            aggregate_data = _agg_arena_pool.aligned_alloc(
+                                    _total_size_of_aggregate_states, _align_aggregate_states);
+                            _create_agg_status(aggregate_data);
 
-                        emplace_result.set_mapped(aggregate_data);
-                    } else
-                        aggregate_data = emplace_result.get_mapped();
+                            emplace_result.set_mapped(aggregate_data);
+                        } else
+                            aggregate_data = emplace_result.get_mapped();
 
-                    places[i] = aggregate_data;
-                    assert(places[i] != nullptr);
-                }
-            },
-            _agg_data._aggregated_method_variant);
+                        places[i] = aggregate_data;
+                        assert(places[i] != nullptr);
+                    }
+                },
+                _agg_data._aggregated_method_variant);
 
-    for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
-        _aggregate_evaluators[i]->execute_batch_add(in_block, _offsets_of_aggregate_states[i],
-                                                    places.data(), &_agg_arena_pool);
+        for (int i = 0; i < _aggregate_evaluators.size(); ++i) {
+            _aggregate_evaluators[i]->execute_batch_add(in_block, _offsets_of_aggregate_states[i],
+                                                        places.data(), &_agg_arena_pool);
+        }
     }
 
     return Status::OK();
