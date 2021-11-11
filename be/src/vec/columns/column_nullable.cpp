@@ -149,6 +149,16 @@ void ColumnNullable::insert_from_not_nullable(const IColumn& src, size_t n) {
     get_null_map_data().push_back(0);
 }
 
+void ColumnNullable::insert_from_adapted(COW<IColumn>::immutable_ptr<IColumn> src, size_t n) {
+    if (src == nullptr) {
+        insert_default();
+    } else if (src->is_nullable()) {
+        insert_from(*src, n);
+    } else {
+        insert_from_not_nullable(*src, n);
+    }
+}
+
 void ColumnNullable::insert_range_from_not_nullable(const IColumn& src, size_t start,
                                                     size_t length) {
     get_nested_column().insert_range_from(src, start, length);
@@ -199,6 +209,15 @@ int ColumnNullable::compare_at(size_t n, size_t m, const IColumn& rhs_,
 
     const IColumn& nested_rhs = nullable_rhs.get_nested_column();
     return get_nested_column().compare_at(n, m, nested_rhs, null_direction_hint);
+}
+
+int ColumnNullable::compare_at_adapted(size_t n, size_t m, const IColumn& rhs,
+                                       int nan_direction_hint) const {
+    if (rhs.is_nullable()) {
+        return compare_at(n, m, rhs, nan_direction_hint);
+    } else {
+        return -rhs.compare_at_adapted(m, n, *this, nan_direction_hint);
+    }
 }
 
 void ColumnNullable::get_permutation(bool reverse, size_t limit, int null_direction_hint,

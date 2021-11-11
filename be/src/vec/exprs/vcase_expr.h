@@ -16,36 +16,34 @@
 // under the License.
 
 #pragma once
-#include "vec/exprs/vexpr.h"
-namespace doris::vectorized {
- 
-class VCaseExpr : public VExpr {
 
+#include "vec/exprs/vexpr.h"
+#include "vec/functions/function_case.h"
+
+namespace doris::vectorized {
+
+class VCaseExpr final : public VExpr {
 public:
     VCaseExpr(const TExprNode& node);
     ~VCaseExpr() = default;
-    virtual doris::Status execute(doris::vectorized::Block* block, int* result_column_id);
-    virtual doris::Status prepare(doris::RuntimeState* state, const doris::RowDescriptor& desc,
-                                  VExprContext* context);
-    virtual doris::Status open(doris::RuntimeState* state, VExprContext* context);
-    virtual void close(doris::RuntimeState* state, VExprContext* context);
-
-    virtual VCaseExpr* clone(doris::ObjectPool* pool) const override {
+    virtual Status execute(VExprContext* context, vectorized::Block* block, int* result_column_id);
+    virtual Status prepare(RuntimeState* state, const RowDescriptor& desc, VExprContext* context);
+    virtual Status open(RuntimeState* state, VExprContext* context,
+                        FunctionContext::FunctionStateScope scope);
+    virtual void close(RuntimeState* state, VExprContext* context,
+                       FunctionContext::FunctionStateScope scope);
+    virtual VExpr* clone(ObjectPool* pool) const override {
         return pool->add(new VCaseExpr(*this));
     }
-
     virtual const std::string& expr_name() const override;
 
- private:
-    doris::Status _execute_generic(doris::vectorized::Block* block, int* result_column_id);
-
 private:
+    bool _is_prepare;
     bool _has_case_expr;
     bool _has_else_expr;
-    // result data type
-    DataTypePtr _data_type;
-    const std::string _expr_name = "vcase expr";
- 
-};
 
-} // namespace
+    FunctionBasePtr _function;
+    std::string _function_name = "case";
+    const std::string _expr_name = "vcase expr";
+};
+} // namespace doris::vectorized

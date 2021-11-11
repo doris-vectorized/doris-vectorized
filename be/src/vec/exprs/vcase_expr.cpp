@@ -16,177 +16,99 @@
 // under the License.
 
 #include "vec/exprs/vcase_expr.h"
-#include "vec/columns/columns_number.h"
+
 #include "vec/columns/column_nullable.h"
-#include "vec/data_types/data_type_nullable.h"
 
 namespace doris::vectorized {
- 
+
 VCaseExpr::VCaseExpr(const TExprNode& node)
-    : VExpr(node),
-        _has_case_expr(node.case_expr.has_case_expr),
-        _has_else_expr(node.case_expr.has_else_expr) {}
- 
-doris::Status VCaseExpr::prepare(doris::RuntimeState* state, const doris::RowDescriptor& desc,
-                                  VExprContext* context) {
+        : VExpr(node),
+          _is_prepare(false),
+          _has_case_expr(node.case_expr.has_case_expr),
+          _has_else_expr(node.case_expr.has_else_expr) {
+    if (_has_case_expr) {
+        _function_name += "_has_case";
+    }
+    if (_has_else_expr) {
+        _function_name += "_has_else";
+    }
+}
+
+Status VCaseExpr::prepare(doris::RuntimeState* state, const doris::RowDescriptor& desc,
+                          VExprContext* context) {
     RETURN_IF_ERROR(VExpr::prepare(state, desc, context));
+
+    if (_is_prepare) {
+        return Status::OK();
+    }
+    _is_prepare = true;
+
+    ColumnsWithTypeAndName argument_template;
+    DataTypes arguments;
+    for (int i = 0; i < _children.size(); i++) {
+        auto child = _children[i];
+        const auto& child_name = child->expr_name();
+        auto child_column = child->data_type()->create_column();
+        argument_template.emplace_back(std::move(child_column), child->data_type(), child_name);
+        arguments.emplace_back(child->data_type());
+    }
+
+    _function = SimpleFunctionFactory::instance().get_function(_function_name, argument_template,
+                                                               _data_type);
+    if (_function == nullptr) {
+        return Status::NotSupported(fmt::format("vcase_expr Function {} is not implemented",
+                                                _fn.name.function_name));
+    }
+
+    VExpr::register_function_context(state, context);
     return Status::OK();
 }
- 
-doris::Status VCaseExpr::open(doris::RuntimeState* state, VExprContext* context) {
-    RETURN_IF_ERROR(VExpr::open(state, context));
-    // data type follows then column's type
-    _data_type = _has_case_expr ? _children[2]->data_type() : _children[1]->data_type();
+
+Status VCaseExpr::open(RuntimeState* state, VExprContext* context,
+                       FunctionContext::FunctionStateScope scope) {
+    RETURN_IF_ERROR(VExpr::open(state, context, scope));
+    RETURN_IF_ERROR(VExpr::init_function_context(context, scope, _function));
+    CaseState* case_state = new CaseState {_data_type};
+    context->fn_context(_fn_context_index)
+            ->set_function_state(FunctionContext::FRAGMENT_LOCAL, case_state);
     return Status::OK();
 }
- 
-void VCaseExpr::close(doris::RuntimeState* state, VExprContext* context) {
-    VExpr::close(state, context);
+
+void VCaseExpr::close(RuntimeState* state, VExprContext* context,
+                      FunctionContext::FunctionStateScope scope) {
+    CaseState* case_state = reinterpret_cast<CaseState*>(
+            context->fn_context(_fn_context_index)
+                    ->get_function_state(FunctionContext::FRAGMENT_LOCAL));
+    delete case_state;
+
+    VExpr::close_function_context(context, scope, _function);
+    VExpr::close(state, context, scope);
 }
 
-doris::Status VCaseExpr::_execute_generic(doris::vectorized::Block* block, int* result_column_id) {
-    std::vector<size_t> arguments(_children.size());
-    int input_row_count = 0;
+Status VCaseExpr::execute(VExprContext* context, Block* block, int* result_column_id) {
+    ColumnNumbers arguments(_children.size());
 
-    // convert all column to nullable for later compare and insert, exclude `case when expr`
     for (int i = 0; i < _children.size(); i++) {
         int column_id = -1;
-        _children[i]->execute(block, &column_id);
+        _children[i]->execute(context, block, &column_id);
         arguments[i] = column_id;
-        
-        // if column is column const, need to convert full column for later compare and insert
+
         block->replace_by_position_if_const(column_id);
         auto child_column = block->get_by_position(column_id).column;
-        input_row_count = child_column->size();
-
-        if (!child_column->is_nullable()) {
-            auto bool_column = ColumnUInt8::create();
-            bool_column->insert_many_defaults(input_row_count);
-
-            arguments[i] = block->columns();
-            block->insert({doris::vectorized::ColumnNullable::create(child_column, bool_column->get_ptr()),
-                std::make_shared<DataTypeNullable>(block->get_by_position(column_id).type),
-                "case when nullable"
-            });
-        }
-    }
-    
-    auto else_column_ptr = _has_else_expr ? block->get_by_position(arguments[arguments.size() - 1]).column : nullptr;
-    // make return column
-    MutableColumnPtr ret_column_ptr = _data_type->create_column();
-    if (!_data_type->is_nullable()) {
-        ret_column_ptr = doris::vectorized::ColumnNullable::create(std::move(ret_column_ptr), doris::vectorized::ColumnUInt8::create());
-    }
-    auto* tmp_ret_column_ptr = reinterpret_cast<ColumnNullable*>(ret_column_ptr.get());
-
-    // stands for the pos of the last then column
-    int end_pos = arguments.size() - 1;
-    if (_has_else_expr) {
-        end_pos--; // exclude else column
     }
 
-    if (_has_case_expr) {
-        auto case_column_ptr = block->get_by_position(arguments[0]).column;
- 
-        for (int row_idx = 0; row_idx < input_row_count; row_idx++) {
-            for (int arg_idx = 1; arg_idx < end_pos; arg_idx = arg_idx + 2) {
-                auto when_column_ptr = block->get_by_position(arguments[arg_idx]).column;
-                
-                if (case_column_ptr->is_null_at(row_idx)) {
-                    if (else_column_ptr == nullptr) {
-                        tmp_ret_column_ptr->insert_default();
-                    } else {
-                        tmp_ret_column_ptr->insert_from(*else_column_ptr, row_idx);
-                    }
-                    break;
-                }
+    size_t num_columns_without_result = block->columns();
+    block->insert({nullptr, _data_type, _expr_name});
 
-                if (when_column_ptr->is_null_at(row_idx)) {
-                    if (arg_idx == end_pos - 1) {
-                        if (else_column_ptr == nullptr) {
-                            tmp_ret_column_ptr->insert_default();
-                        } else {
-                            tmp_ret_column_ptr->insert_from(*else_column_ptr, row_idx);
-                        }
-                        break;
-                    }
-                    continue;
-                }
-
-                if (case_column_ptr->compare_at(row_idx, row_idx, *when_column_ptr, -1) == 0) {
-                    auto then_column_ptr = block->get_by_position(arguments[arg_idx + 1]).column;
-                    tmp_ret_column_ptr->insert_from(*then_column_ptr, row_idx);
-                    break;
-                }
-
-                if (arg_idx == end_pos - 1) {
-                    if (else_column_ptr == nullptr) {
-                        tmp_ret_column_ptr->insert_default();
-                    } else {
-                        tmp_ret_column_ptr->insert_from(*else_column_ptr, row_idx);
-                    }
-                    break;
-                }
-            }
-        }
-    } else {
-        for (int row_idx = 0; row_idx < input_row_count; row_idx++) {
-            for (int arg_idx = 0; arg_idx < end_pos; arg_idx = arg_idx + 2) {
-                auto column_ptr = block->get_by_position(arguments[arg_idx]).column;
-                if (column_ptr->is_null_at(row_idx)) {
-                    if (arg_idx == end_pos - 1) {
-                        if (else_column_ptr == nullptr) {
-                            tmp_ret_column_ptr->insert_default();
-                        } else {
-                            tmp_ret_column_ptr->insert_from(*else_column_ptr, row_idx);
-                        }
-                        break;
-                    }
-                    continue;
-                }
-                
-                auto* case_when_null_column_ptr =  reinterpret_cast<const doris::vectorized::ColumnNullable*>(column_ptr.get());
-                auto* case_when_column_ptr = check_and_get_column<doris::vectorized::ColumnVector<UInt8>>(case_when_null_column_ptr->get_nested_column());
-                if (!case_when_column_ptr) {
-                    return Status::InvalidArgument("case when expr required type columnVector<Uint8>");
-                }
-                if ((*case_when_column_ptr)[row_idx] == 1u) {
-                    auto then_column_ptr = block->get_by_position(arguments[arg_idx + 1]).column;
-                    tmp_ret_column_ptr->insert_from(*then_column_ptr, row_idx);
-                    break;
-                }
-
-                if (arg_idx == end_pos - 1) {
-                    if (else_column_ptr == nullptr) {
-                        tmp_ret_column_ptr->insert_default();
-                    } else {
-                        tmp_ret_column_ptr->insert_from(*else_column_ptr, row_idx);
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
-    *result_column_id = block->columns();
-    if (!_data_type->is_nullable()) {
-        block->insert({ret_column_ptr->get_ptr(), std::make_shared<DataTypeNullable>(_data_type), "vcase expr result colummn"});
-    } else {
-        block->insert({ret_column_ptr->get_ptr(), _data_type, "vcase expr result colummn"});   
-    }
+    _function->execute(context->fn_context(_fn_context_index), *block, arguments,
+                       num_columns_without_result, block->rows(), false);
+    *result_column_id = num_columns_without_result;
 
     return Status::OK();
-}
- 
- doris::Status VCaseExpr::execute(doris::vectorized::Block* block, int* result_column_id) {
-    // todo(wb) add type check here
-    return _execute_generic(block, result_column_id);
-
-    // todo(wb) using code-gen to eliminate branch and make tight loop for SIMD 
 }
 
 const std::string& VCaseExpr::expr_name() const {
     return _expr_name;
 }
- 
-} // namespace
+
+} // namespace doris::vectorized

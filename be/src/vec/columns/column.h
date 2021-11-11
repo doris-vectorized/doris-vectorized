@@ -149,6 +149,11 @@ public:
     /// Is used in merge-sort and merges. It could be implemented in inherited classes more optimally than default implementation.
     virtual void insert_from(const IColumn& src, size_t n);
 
+    /// Appends like `insert_from`.
+    /// But support unnullable column insert from nullable column, vice versa.
+    /// And iff src is nullptr, it will insert default element.
+    virtual void insert_from_adapted(COW<IColumn>::immutable_ptr<IColumn> src, size_t n);
+
     /// Appends range of elements from other column with the same type.
     /// Could be used to concatenate columns.
     virtual void insert_range_from(const IColumn& src, size_t start, size_t length) = 0;
@@ -230,6 +235,11 @@ public:
       */
     virtual int compare_at(size_t n, size_t m, const IColumn& rhs,
                            int nan_direction_hint) const = 0;
+
+    /// get compare result like `compare_at`.
+    /// But support unnullable column compare with nullable column, vice versa.
+    virtual int compare_at_adapted(size_t n, size_t m, const IColumn& rhs,
+                                   int nan_direction_hint) const;
 
     /** Returns a permutation that sorts elements of this column,
       *  i.e. perm[i]-th element of source column should be i-th element of sorted column.
@@ -351,7 +361,7 @@ public:
     /// If is_fixed_and_contiguous, returns the underlying data array, otherwise throws an exception.
     virtual StringRef get_raw_data() const {
         LOG(FATAL) << fmt::format("Column {} is not a contiguous block of memory", get_name());
-        return StringRef{};
+        return StringRef {};
     }
 
     /// If values_have_fixed_size, returns size of value, otherwise throw an exception.

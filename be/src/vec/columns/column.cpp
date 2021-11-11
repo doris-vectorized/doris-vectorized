@@ -39,8 +39,32 @@ std::string IColumn::dump_structure() const {
     return res.str();
 }
 
+int IColumn::compare_at_adapted(size_t n, size_t m, const IColumn& rhs,
+                                int nan_direction_hint) const {
+    if (rhs.is_nullable()) {
+        if (rhs.is_null_at(m)) {
+            return -nan_direction_hint;
+        } else {
+            return compare_at(n, m, assert_cast<const ColumnNullable&>(rhs).get_nested_column(),
+                              nan_direction_hint);
+        }
+    } else {
+        return compare_at(n, m, rhs, nan_direction_hint);
+    }
+}
+
 void IColumn::insert_from(const IColumn& src, size_t n) {
     insert(src[n]);
+}
+
+void IColumn::insert_from_adapted(COW<IColumn>::immutable_ptr<IColumn> src, size_t n) {
+    if (src == nullptr) {
+        insert_default();
+    } else if (src->is_nullable()) {
+        insert_from(assert_cast<const ColumnNullable&>(*src).get_nested_column(), n);
+    } else {
+        insert_from(*src, n);
+    }
 }
 
 bool is_column_nullable(const IColumn& column) {

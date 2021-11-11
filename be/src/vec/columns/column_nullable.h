@@ -50,7 +50,8 @@ public:
       */
     using Base = COWHelper<IColumn, ColumnNullable>;
     static Ptr create(const ColumnPtr& nested_column_, const ColumnPtr& null_map_) {
-        return ColumnNullable::create(nested_column_->assume_mutable(), null_map_->assume_mutable());
+        return ColumnNullable::create(nested_column_->assume_mutable(),
+                                      null_map_->assume_mutable());
     }
 
     template <typename... Args,
@@ -68,7 +69,9 @@ public:
     }
     Field operator[](size_t n) const override;
     void get(size_t n, Field& res) const override;
-    bool get_bool(size_t n) const override { return is_null_at(n) ? 0 : nested_column->get_bool(n); }
+    bool get_bool(size_t n) const override {
+        return is_null_at(n) ? 0 : nested_column->get_bool(n);
+    }
     UInt64 get64(size_t n) const override { return nested_column->get64(n); }
     StringRef get_data_at(size_t n) const override;
 
@@ -79,6 +82,7 @@ public:
     void insert_range_from(const IColumn& src, size_t start, size_t length) override;
     void insert(const Field& x) override;
     void insert_from(const IColumn& src, size_t n) override;
+    void insert_from_adapted(COW<IColumn>::immutable_ptr<IColumn> src, size_t n) override;
 
     void insert_from_not_nullable(const IColumn& src, size_t n);
     void insert_range_from_not_nullable(const IColumn& src, size_t start, size_t length);
@@ -94,8 +98,10 @@ public:
     ColumnPtr permute(const Permutation& perm, size_t limit) const override;
     //    ColumnPtr index(const IColumn & indexes, size_t limit) const override;
     int compare_at(size_t n, size_t m, const IColumn& rhs_, int null_direction_hint) const override;
+    int compare_at_adapted(size_t n, size_t m, const IColumn& rhs,
+                           int nan_direction_hint) const override;
     void get_permutation(bool reverse, size_t limit, int null_direction_hint,
-                        Permutation& res) const override;
+                         Permutation& res) const override;
     void reserve(size_t n) override;
     size_t byte_size() const override;
     size_t allocated_bytes() const override;
