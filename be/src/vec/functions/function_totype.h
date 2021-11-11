@@ -35,10 +35,13 @@ namespace doris::vectorized {
 // support string->complex/primary
 // support primary/complex->primary/complex
 // support primary -> string
-template <typename Impl, typename Name, typename argument_types = DefaultDataTypes>
+template <typename Impl, typename Name>
 class FunctionUnaryToType : public IFunction {
 public:
     static constexpr auto name = Name::name;
+    static constexpr bool has_variadic_argument = !std::is_void_v<decltype
+            (has_variadic_argument_types(std::declval<Impl>()))>;
+
     static FunctionPtr create() { return std::make_shared<FunctionUnaryToType>(); }
     String get_name() const override { return name; }
     size_t get_number_of_arguments() const override { return 1; }
@@ -54,8 +57,10 @@ public:
                                                        input_rows_count);
     }
     
-    DataTypes get_variadic_argument_types_impl() const override{
-        return argument_types::types;
+    DataTypes get_variadic_argument_types_impl() const override {
+        if constexpr (has_variadic_argument)
+            return Impl::get_variadic_argument_types();
+        return {};
     }
 
 private:
@@ -381,7 +386,7 @@ public:
 };
 
 // func(string) -> nullable(type)
-template<typename Impl, typename argument_types = DefaultDataTypes>
+template<typename Impl>
 class FunctionStringOperateToNullType : public IFunction {
 public:
     static constexpr auto name = Impl::name;
@@ -396,10 +401,6 @@ public:
 
     DataTypePtr get_return_type_impl(const DataTypes &arguments) const override {
         return make_nullable(std::make_shared<typename Impl::ReturnType>());
-    }
-    
-    DataTypes get_variadic_argument_types_impl() const override{
-        return argument_types::types;
     }
 
     bool use_default_implementation_for_constants() const override { return true; }

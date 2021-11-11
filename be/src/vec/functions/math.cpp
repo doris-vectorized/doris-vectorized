@@ -171,47 +171,46 @@ struct HexIntImpl {
     static constexpr auto TYPE_INDEX = TypeIndex::Int64;
     using Type = Int64;
     using ReturnColumnType = ColumnString;
+
+    static DataTypes get_variadic_argument_types() {
+        return {std::make_shared<vectorized::DataTypeInt64>()};
+    }
     
-    static std::string hex(uint64_t num){
-        char hexTable[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+    static std::string_view hex(uint64_t num, char* ans){
+        static constexpr auto hex_table = "0123456789ABCDEF";
         // uint64_t max value 0xFFFFFFFFFFFFFFFF , 16 'F'
-        if (num == 0) {
-            return std::string("0");
-        }
-        char ans[17];
-        int i = 0;
+        if (num == 0) { return {hex_table, 1};}
+
+        size_t i = 0;
         while (num) {
-            ans[i++] = hexTable[num & 15];
+            ans[i++] = hex_table[num & 15];
             num = num >> 4;
         }
         ans[i] = '\0';
+
         // reverse
         for (int k = 0, j = i - 1; k <= j; k++, j--) {
             char tmp = ans[j];
             ans[j] = ans[k];
             ans[k] = tmp;
         }
-        
-        return ans;
+
+        return {ans, i};
     }
     
     static Status vector(const ColumnInt64::Container& data, ColumnString::Chars& res_data,
                          ColumnString::Offsets& res_offsets) {
-        
         res_offsets.resize(data.size());
         size_t input_size = res_offsets.size();
+        char ans[17];
         for (size_t i = 0; i < input_size; ++i) {
-            StringOP::push_value_string(hex(data[i]), i, res_data, res_offsets);
+            StringOP::push_value_string(hex(data[i], ans), i, res_data, res_offsets);
         }
         return Status::OK();
     }
 };
-struct HexIntDataTypes{
-    static DataTypes types;
-};
-DataTypes HexIntDataTypes::types = { make_nullable(std::make_shared<vectorized::DataTypeInt64>()) };
-// support hex variadic
-using FunctionHexInt = FunctionUnaryToType<HexIntImpl, HexIntName, HexIntDataTypes>;
+
+using FunctionHexInt = FunctionUnaryToType<HexIntImpl, HexIntName>;
 
 template <typename A>
 struct SignImpl {
