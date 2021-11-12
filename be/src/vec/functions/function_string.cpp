@@ -266,6 +266,53 @@ struct ReverseImpl {
     }
 };
 
+struct HexStringName {
+    static constexpr auto name = "hex";
+};
+
+struct HexStringImpl {
+    static DataTypes get_variadic_argument_types() {
+        return {std::make_shared<vectorized::DataTypeString>()};
+    }
+
+    static size_t hex_encode(const char* src_str, size_t length, char* dst_str) {
+        static constexpr auto hex_table = "0123456789ABCDEF";
+        char res[2];
+        // hex(str) str length is n, result must be 2 * n length
+        for (size_t i = 0; i < length; i++) {
+            // low 4 bits
+            *(res + 1) = hex_table[src_str[i] & 0x0F];
+            // high 4 bits
+            *res = hex_table[(src_str[i] >> 4) & 0x0F];
+            std::copy(res, res + 2, dst_str + 2 * i);
+        }
+        return 2 * length;
+    }
+
+    static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
+                         ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets) {
+        auto rows_count = offsets.size();
+        dst_offsets.resize(rows_count);
+
+        for (int i = 0; i < rows_count; ++i) {
+            auto source = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            size_t srclen = offsets[i] - offsets[i - 1] - 1;
+
+            if (*source == '\0' && srclen == 0) {
+                StringOP::push_empty_string(i, dst_data, dst_offsets);
+                continue;
+            }
+
+            size_t cipher_len = 2 * srclen;
+            char dst[cipher_len];
+            int outlen = hex_encode(source, srclen, dst);
+
+            StringOP::push_value_string(std::string_view(dst, outlen), i, dst_data, dst_offsets);
+        }
+        return Status::OK();
+    }
+};
+
 struct NameToLower {
     static constexpr auto name = "lower";
 };
@@ -328,65 +375,6 @@ struct TrimImpl {
     }
 };
 
-struct HexStringImpl {
-    static constexpr auto name = "hex";
-    using ReturnType = DataTypeString;
-    using ColumnType = ColumnString;
-
-    static int hex_encode(const char* src_str, size_t length,char* dst_str,
-                           const char* hexDigits = "0123456789ABCDEF") {
-        // hex(str) str length is n, result must be 2*n length
-        for (size_t i = 0; i < length; i++) {
-            char res[2];
-            // low 4 bits
-            *(res + 1) = hexDigits[src_str[i] & 0x0F];
-            // high 4 bits
-            *res = hexDigits[(src_str[i] >> 4) & 0x0F];
-            std::copy(res, res + 2, dst_str + 2 * i);
-        }
-        return 2 * length;
-    }
-
-    static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
-                         ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets, NullMap& null_map) {
-        auto rows_count = offsets.size();
-        dst_offsets.resize(rows_count);
-
-        for (int i = 0; i < rows_count; ++i) {
-            if (null_map[i]) {
-                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
-                continue;
-            }
-
-            auto source = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
-            size_t srclen = offsets[i] - offsets[i - 1] - 1;
-
-            if (*source == '\0' && srclen == 0) {
-                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
-                continue;
-            }
-
-            size_t cipher_len = 2 * srclen;
-            char dst[cipher_len];
-            int outlen = hex_encode(source, srclen, dst);
-
-            if (outlen < 0) {
-                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
-            } else {
-                StringOP::push_value_string(std::string_view(dst, outlen), i, dst_data, dst_offsets);
-            }
-        }
-
-        return Status::OK();
-    }
-};
-
-// support hex variadic
-struct HexStringDataTypes{
-    static DataTypes types;
-};
-DataTypes HexStringDataTypes::types = { make_nullable(std::make_shared<vectorized::DataTypeString>()) };
-
 struct UnHexImpl{
     static constexpr auto name = "unhex";
     using ReturnType = DataTypeString;
@@ -418,7 +406,6 @@ struct UnHexImpl{
     }
 
     static int hex_decode(const char* src_str, size_t src_len, char* dst_str) {
-
         // if str length is odd or 0 ,return empty string like mysql dose.
         if ((src_len & 1) != 0 or src_len == 0) {
             return 0;
@@ -454,7 +441,7 @@ struct UnHexImpl{
             size_t srclen = offsets[i] - offsets[i - 1] - 1;
 
             if (*source == '\0' && srclen == 0) {
-                StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
+                StringOP::push_empty_string(i, dst_data, dst_offsets);
                 continue;
             }
 
@@ -743,7 +730,7 @@ using FunctionStringFindInSet =
 
 using FunctionReverse = FunctionStringToString<ReverseImpl, NameReverse>;
 
-using FunctionHexString = FunctionStringOperateToNullType<HexStringImpl, HexStringDataTypes>;
+using FunctionHexString = FunctionStringToString<HexStringImpl, HexStringName>;
 
 using FunctionUnHex = FunctionStringOperateToNullType<UnHexImpl>;
 

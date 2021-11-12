@@ -28,7 +28,9 @@ template <typename Impl, typename Name, bool is_injective = false>
 class FunctionStringToString : public IFunction {
 public:
     static constexpr auto name = Name::name;
-    //    static FunctionPtr create(const Context &)
+    static constexpr bool has_variadic_argument = !std::is_void_v<decltype
+            (has_variadic_argument_types(std::declval<Impl>()))>;
+
     static FunctionPtr create() { return std::make_shared<FunctionStringToString>(); }
 
     String get_name() const override { return name; }
@@ -47,6 +49,12 @@ public:
     }
 
     bool use_default_implementation_for_constants() const override { return true; }
+
+    DataTypes get_variadic_argument_types_impl() const override{
+        if constexpr (has_variadic_argument)
+            return Impl::get_variadic_argument_types();
+        return {};
+    }
 
     Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
                         size_t result, size_t input_rows_count) override {
