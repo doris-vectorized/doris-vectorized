@@ -34,17 +34,6 @@ struct BitAndImpl {
     static inline Result apply(A a, B b) {
         return static_cast<Result>(a) & static_cast<Result>(b);
     }
-
-#if USE_EMBEDDED_COMPILER
-    static constexpr bool compilable = true;
-
-    static inline llvm::Value* compile(llvm::IRBuilder<>& b, llvm::Value* left, llvm::Value* right,
-                                       bool) {
-        if (!left->getType()->isIntegerTy())
-            throw Exception("BitAndImpl expected an integral type", ErrorCodes::LOGICAL_ERROR);
-        return b.CreateAnd(left, right);
-    }
-#endif
 };
 
 struct NameBitNot {
@@ -56,16 +45,6 @@ struct BitNotImpl {
     using ResultType = typename NumberTraits::ResultOfBitNot<A>::Type;
 
     static inline ResultType apply(A a) { return ~static_cast<ResultType>(a); }
-
-#if USE_EMBEDDED_COMPILER
-    static constexpr bool compilable = true;
-
-    static inline llvm::Value* compile(llvm::IRBuilder<>& b, llvm::Value* arg, bool) {
-        if (!arg->getType()->isIntegerTy())
-            throw Exception("BitNotImpl expected an integral type", ErrorCodes::LOGICAL_ERROR);
-        return b.CreateNot(arg);
-    }
-#endif
 };
 
 struct NameBitOr {
@@ -80,17 +59,6 @@ struct BitOrImpl {
     static inline Result apply(A a, B b) {
         return static_cast<Result>(a) | static_cast<Result>(b);
     }
-
-#if USE_EMBEDDED_COMPILER
-    static constexpr bool compilable = true;
-
-    static inline llvm::Value* compile(llvm::IRBuilder<>& b, llvm::Value* left, llvm::Value* right,
-                                       bool) {
-        if (!left->getType()->isIntegerTy())
-            throw Exception("BitOrImpl expected an integral type", ErrorCodes::LOGICAL_ERROR);
-        return b.CreateOr(left, right);
-    }
-#endif
 };
 
 struct NameBitXor {
@@ -105,17 +73,6 @@ struct BitXorImpl {
     static inline Result apply(A a, B b) {
         return static_cast<Result>(a) ^ static_cast<Result>(b);
     }
-
-#if USE_EMBEDDED_COMPILER
-    static constexpr bool compilable = true;
-
-    static inline llvm::Value* compile(llvm::IRBuilder<>& b, llvm::Value* left, llvm::Value* right,
-                                       bool) {
-        if (!left->getType()->isIntegerTy())
-            throw Exception("BitXorImpl expected an integral type", ErrorCodes::LOGICAL_ERROR);
-        return b.CreateXor(left, right);
-    }
-#endif
 };
 
 using FunctionBitAnd = FunctionBinaryArithmetic<BitAndImpl, NameBitAnd>;
