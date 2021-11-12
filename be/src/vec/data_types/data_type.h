@@ -41,10 +41,6 @@ class Field;
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
 
-struct DefaultDataTypes{
-    static DataTypes types;
-};
-
 /** Properties of data type.
   * Contains methods for serialization/deserialization.
   * Implementations of this interface represent a data type (example: UInt8)

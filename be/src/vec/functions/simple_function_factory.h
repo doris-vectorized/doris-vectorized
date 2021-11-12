@@ -97,8 +97,9 @@ public:
         std::string key_str = name;
         // if function is variadic, added types_str as key
         if (function_variadic_map.count(name) && function_variadic_map[name]) {
-            for (auto arg : arguments) {
-                key_str.append(make_nullable(arg.type)->get_name());
+            for (auto& arg : arguments) {
+                key_str.append(arg.type->is_nullable() ?
+                reinterpret_cast<const DataTypeNullable*>(arg.type.get())->get_nested_type()->get_name() : arg.type->get_name());
             }
         }
 
