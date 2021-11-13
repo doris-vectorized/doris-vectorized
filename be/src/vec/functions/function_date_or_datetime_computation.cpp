@@ -49,6 +49,55 @@ using FunctionHoursDiff = FunctionDateOrDateTimeComputation<HoursDiffImpl>;
 using FunctionMinutesDiff = FunctionDateOrDateTimeComputation<MintueSDiffImpl>;
 using FunctionSecondsDiff = FunctionDateOrDateTimeComputation<SecondsDiffImpl>;
 
+struct NowFunctionName {
+    static constexpr auto name = "now";
+};
+
+struct CurrentTimestampFunctionName {
+    static constexpr auto name = "current_timestamp";
+};
+
+struct LocalTimeFunctionName {
+    static constexpr auto name = "localtime";
+};
+
+struct LocalTimestampFunctionName {
+    static constexpr auto name = "localtimestamp";
+};
+
+using FunctionNow = FunctionCurrentDateOrDateTime<CurrentDateTimeImpl<NowFunctionName>>;
+using FunctionCurrentTimestamp =
+        FunctionCurrentDateOrDateTime<CurrentDateTimeImpl<CurrentTimestampFunctionName>>;
+using FunctionLocalTime = FunctionCurrentDateOrDateTime<CurrentDateTimeImpl<LocalTimeFunctionName>>;
+using FunctionLocalTimestamp =
+        FunctionCurrentDateOrDateTime<CurrentDateTimeImpl<LocalTimestampFunctionName>>;
+
+struct CurDateFunctionName {
+    static constexpr auto name = "curdate";
+};
+
+struct CurrentDateFunctionName {
+    static constexpr auto name = "current_date";
+};
+
+using FunctionCurDate =
+        FunctionCurrentDateOrDateTime<CurrentDateImpl<CurDateFunctionName>>;
+using FunctionCurrentDate =
+        FunctionCurrentDateOrDateTime<CurrentDateImpl<CurrentDateFunctionName>>;
+
+struct CurTimeFunctionName {
+    static constexpr auto name = "curtime";
+};
+struct CurrentTimeFunctionName {
+    static constexpr auto name = "current_time";
+};
+
+using FunctionCurTime =
+        FunctionCurrentDateOrDateTime<CurrentTimeImpl<CurTimeFunctionName>>;
+using FunctionCurrentTime =
+        FunctionCurrentDateOrDateTime<CurrentTimeImpl<CurrentTimeFunctionName>>;
+using FunctionUtcTimeStamp = FunctionCurrentDateOrDateTime<UtcTimestampImpl>;
+
 void register_function_date_time_computation(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionAddSeconds>();
     factory.register_function<FunctionAddMinutes>();
@@ -77,6 +126,15 @@ void register_function_date_time_computation(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionHoursDiff>();
     factory.register_function<FunctionMinutesDiff>();
     factory.register_function<FunctionSecondsDiff>();
+    factory.register_function<FunctionNow>();
+    factory.register_function<FunctionCurrentTimestamp>();
+    factory.register_function<FunctionLocalTime>();
+    factory.register_function<FunctionLocalTimestamp>();
+    factory.register_function<FunctionCurDate>();
+    factory.register_function<FunctionCurrentDate>();
+    factory.register_function<FunctionCurTime>();
+    factory.register_function<FunctionCurrentTime>();
+    factory.register_function<FunctionUtcTimeStamp>();
 }
 
 } // namespace doris::vectorized
