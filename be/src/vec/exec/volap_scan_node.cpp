@@ -367,10 +367,10 @@ Status VOlapScanNode::start_scan_thread(RuntimeState* state) {
             }
             VOlapScanner* scanner =
                     new VOlapScanner(state, this, _olap_scan_node.is_preaggregation,
-                                     _need_agg_finalize, *scan_range, scanner_ranges);
+                                     _need_agg_finalize, *scan_range);
             // add scanner to pool before doing prepare.
             // so that scanner can be automatically deconstructed if prepare failed.
-            _scanner_pool->add(scanner);
+            _scanner_pool.add(scanner);
             RETURN_IF_ERROR(scanner->prepare(*scan_range, scanner_ranges, _olap_filter, _bloom_filters_push_down));
 
             _volap_scanners.push_back(scanner);
@@ -385,7 +385,7 @@ Status VOlapScanNode::start_scan_thread(RuntimeState* state) {
     ss << "ScanThread complete (node=" << id() << "):";
     _progress = ProgressUpdater(ss.str(), _volap_scanners.size(), 1);
 
-    _transfer_thread.add_thread(new boost::thread(&VOlapScanNode::transfer_thread, this, state));
+    _transfer_thread.reset(new std::thread(&VOlapScanNode::transfer_thread, this, state));
 
     return Status::OK();
 }
@@ -407,7 +407,7 @@ Status VOlapScanNode::close(RuntimeState* state) {
     _scan_block_added_cv.notify_all();
 
     // join transfer thread
-    _transfer_thread.join_all();
+    _transfer_thread->join();
 
     size_t mem_usege_in_block = 0;
     // clear some block in queue

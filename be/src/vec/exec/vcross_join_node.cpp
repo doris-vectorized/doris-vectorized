@@ -166,12 +166,12 @@ MutableColumns VCrossJoinNode::get_mutable_columns(Block* block) {
     if (!mem_reuse) {
         for (size_t i = 0; i < _num_existing_columns; ++i) {
             const ColumnWithTypeAndName& src_column = _left_block.get_by_position(i);
-            block->insert({nullptr, src_column.type, src_column.name});
+            block->insert({src_column.type->create_column(), src_column.type, src_column.name});
         }
 
         for (size_t i = 0; i < _num_columns_to_add; ++i) {
             const ColumnWithTypeAndName& src_column = _build_blocks[0].get_by_position(i);
-            block->insert({nullptr, src_column.type, src_column.name});
+            block->insert({src_column.type->create_column(), src_column.type, src_column.name});
         }
     }
     return block->mutate_columns();

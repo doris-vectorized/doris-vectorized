@@ -73,11 +73,11 @@ public:
         _stub.reset(new PBackendService_Stub(channel));
     }
     virtual ~MockBrpcStubCache() = default;
-    virtual PBackendService_Stub* get_stub(const TNetworkAddress&) { return _stub.get(); }
+    virtual std::shared_ptr<PBackendService_Stub> get_stub(const TNetworkAddress&) { return _stub; }
 
 private:
     std::unique_ptr<google::protobuf::RpcChannel> _channel;
-    std::unique_ptr<PBackendService_Stub> _stub;
+    std::shared_ptr<PBackendService_Stub> _stub;
 };
 
 class VDataStreamTest : public testing::Test {

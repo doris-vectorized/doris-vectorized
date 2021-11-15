@@ -251,7 +251,7 @@ private:
     PUniqueId _finst_id;
     PBlock _pb_block;
     PTransmitDataParams _brpc_request;
-    PBackendService_Stub* _brpc_stub = nullptr;
+    std::shared_ptr<PBackendService_Stub> _brpc_stub = nullptr;
     RefCountClosure<PTransmitDataResult>* _closure = nullptr;
     int32_t _brpc_timeout_ms = 500;
     // whether the dest can be treated as query statistics transfer chain.
