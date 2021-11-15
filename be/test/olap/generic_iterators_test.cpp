@@ -122,7 +122,7 @@ TEST(GenericIteratorsTest, Merge) {
     inputs.push_back(new_auto_increment_iterator(schema, 200));
     inputs.push_back(new_auto_increment_iterator(schema, 300));
 
-    auto iter = new_merge_iterator(inputs, MemTracker::CreateTracker(-1, "MergeIterator", nullptr, false));
+    auto iter = new_merge_iterator(inputs, MemTracker::CreateTracker(-1, "MergeIterator", nullptr, false), -1);
     StorageReadOptions opts;
     auto st = iter->init(opts);
     ASSERT_TRUE(st.ok());

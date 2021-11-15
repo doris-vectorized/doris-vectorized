@@ -69,7 +69,7 @@ ThriftStruct from_json_string(const std::string& json_val) {
     ThriftStruct ts;
     TMemoryBuffer* buffer =
             new TMemoryBuffer((uint8_t*)json_val.c_str(), (uint32_t)json_val.size());
-    boost::shared_ptr<TTransport> trans(buffer);
+    std::shared_ptr<TTransport> trans(buffer);
     TJSONProtocol protocol(trans);
     ts.read(&protocol);
     return ts;

@@ -207,8 +207,8 @@ Status MergeIteratorContext::_load_next_block() {
 class MergeIterator : public RowwiseIterator {
 public:
     // MergeIterator takes the ownership of input iterators
-    MergeIterator(std::list<RowwiseIterator*> iters, std::shared_ptr<MemTracker> parent, int sequence_id_idx)
-        : _origin_iters(std::move(iters)), _sequence_id_idx(sequence_id_idx) {
+    MergeIterator(std::vector<RowwiseIterator*> iters, std::shared_ptr<MemTracker> parent, int sequence_id_idx)
+        : _origin_iters(std::move(iters)), _sequence_id_idx(sequence_id_idx), _merge_heap(MergeContextComparator(_sequence_id_idx)) {
         // use for count the mem use of Block use in Merge
         _mem_tracker = MemTracker::CreateTracker(-1, "MergeIterator", parent, false);
     }
@@ -277,7 +277,6 @@ Status MergeIterator::init(const StorageReadOptions& opts) {
     }
     _schema.reset(new Schema((*(_origin_iters.begin()))->schema()));
 
-    _merge_heap = std::make_unique<MergeHeap>(MergeContextComparator(_sequence_id_idx));
     for (auto iter : _origin_iters) {
         std::unique_ptr<MergeIteratorContext> ctx(new MergeIteratorContext(iter, _mem_tracker));
         RETURN_IF_ERROR(ctx->init(opts));
@@ -375,7 +374,7 @@ Status UnionIterator::next_batch(RowBlockV2* block) {
     return Status::EndOfFile("End of UnionIterator");
 }
 
-RowwiseIterator* new_merge_iterator(std::list<RowwiseIterator*> inputs, std::shared_ptr<MemTracker> parent, int sequence_id_idx) {
+RowwiseIterator* new_merge_iterator(std::vector<RowwiseIterator*> inputs, std::shared_ptr<MemTracker> parent, int sequence_id_idx) {
     if (inputs.size() == 1) {
         return *(inputs.begin());
     }

@@ -54,9 +54,6 @@ public:
     int64_t filtered_rows() override {
         return _stats->rows_del_filtered + _stats->rows_conditions_filtered;
     }
-    RowsetReaderType type() const override {
-        return RowsetReaderType::BETA;
-    }
 
     RowsetReaderType type() const override { return RowsetReaderType::BETA; }
 

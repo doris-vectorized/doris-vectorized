@@ -34,7 +34,7 @@ VDataStreamRecvr::SenderQueue::SenderQueue(VDataStreamRecvr* parent_recvr, int n
           _num_remaining_senders(num_senders),
           _received_first_batch(false) {}
 
-VDataStreamRecvr::SenderQueue::~SenderQueue() {}
+VDataStreamRecvr::SenderQueue::~SenderQueue() = default;
 
 Status VDataStreamRecvr::SenderQueue::get_batch(Block** next_block) {
     std::unique_lock<std::mutex> l(_lock);
@@ -104,7 +104,7 @@ void VDataStreamRecvr::SenderQueue::add_block(const PBlock& pblock, int be_numbe
     } else {
         _packet_seq_map.emplace(be_number, packet_seq);
     }
-    int block_byte_size = pblock.ByteSize();
+    auto block_byte_size = pblock.ByteSizeLong();
     COUNTER_UPDATE(_recvr->_bytes_received_counter, block_byte_size);
 
     if (_num_remaining_senders <= 0) {
