@@ -309,6 +309,9 @@ private:
 
     // keep dict page decoder
     std::unique_ptr<PageDecoder> _dict_decoder;
+    // todo(wb) add dict info to mem tracker
+    uint32_t* _dict_start_offset_array = nullptr;
+    uint32_t* _dict_len_array = nullptr;
 
     // keep dict page handle to avoid released
     PageHandle _dict_page_handle;

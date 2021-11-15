@@ -191,6 +191,10 @@ public:
 
     ColumnPtr filter(const IColumn::Filter& filt, ssize_t result_size_hint) const override;
 
+    ColumnPtr filter_by_selector(const uint16_t* sel, size_t sel_size, ColumnPtr* ptr = nullptr) override;
+ 
+    ColumnPtr filter_date_by_selector(const uint16_t* sel, size_t sel_size, ColumnPtr* ptr = nullptr) override;
+
     ColumnPtr permute(const IColumn::Permutation& perm, size_t limit) const override;
 
     //    ColumnPtr index(const IColumn & indexes, size_t limit) const override;

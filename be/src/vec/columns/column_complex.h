@@ -23,7 +23,230 @@
 #include "vec/columns/column.h"
 #include "vec/columns/column_impl.h"
 
+#include "runtime/string_value.h"
+#include "olap/decimal12.h"
+#include "vec/columns/column_string.h"
+#include "vec/columns/column_decimal.h"
+
 namespace doris::vectorized {
+
+/**
+ * used to keep predicate column in storage layer
+ * 
+ * @tparam T StringValue,decimal_12
+ */
+template <typename T>
+class PredicateColumnType final : public COWHelper<IColumn, PredicateColumnType<T>> {
+private:
+    PredicateColumnType() {}
+    PredicateColumnType(const size_t n) : data(n) {}
+    friend class COWHelper<IColumn, PredicateColumnType<T>>;
+ 
+    PredicateColumnType(const PredicateColumnType& src) : data(src.data.begin(), src.data.end()) {}
+ 
+public:
+    using Self = PredicateColumnType;
+    using value_type = T;
+    using Container = PaddedPODArray<value_type>;
+ 
+    bool is_numeric() const override { return false; }
+ 
+    bool is_complex_column() const override { return true; }
+ 
+    size_t size() const override { return data.size(); }
+ 
+   [[noreturn]]  StringRef get_data_at(size_t n) const override {
+         LOG(FATAL) << "get_data_at not supported in PredicateColumnType";
+    }
+ 
+    void insert_from(const IColumn& src, size_t n) override {
+         LOG(FATAL) << "insert_from not supported in PredicateColumnType";
+    }
+ 
+    void insert_range_from(const IColumn& src, size_t start, size_t length) override {
+         LOG(FATAL) << "insert_range_from not supported in PredicateColumnType";
+    }
+ 
+    void pop_back(size_t n) {
+        LOG(FATAL) << "pop_back not supported in PredicateColumnType";
+    }
+ 
+    void update_hash_with_value(size_t n, SipHash& hash) const {
+         LOG(FATAL) << "update_hash_with_value not supported in PredicateColumnType";
+    }
+ 
+    void insert_data(const char* pos, size_t /*length*/) override {
+        data.push_back(*reinterpret_cast<const T*>(pos));
+    }
+ 
+    void insert_default() override { 
+        data.push_back(T()); 
+    }
+ 
+    void clear() override { data.clear(); }
+ 
+    size_t byte_size() const override { 
+         return data.size() * sizeof(T);
+    }
+ 
+    size_t allocated_bytes() const override { return byte_size(); }
+ 
+    void protect() override {}
+ 
+    void get_permutation(bool reverse, size_t limit, int nan_direction_hint,
+                                      IColumn::Permutation& res) const override {
+        LOG(FATAL) << "get_permutation not supported in PredicateColumnType";
+    }
+ 
+    void reserve(size_t n) override { 
+        data.reserve(n); 
+    }
+ 
+    [[noreturn]] const char* get_family_name() const override { 
+        LOG(FATAL) << "get_family_name not supported in PredicateColumnType";
+    }
+ 
+   [[noreturn]] MutableColumnPtr clone_resized(size_t size) const override {
+        LOG(FATAL) << "clone_resized not supported in PredicateColumnType";
+    }
+ 
+    void insert(const Field& x) override {
+        LOG(FATAL) << "insert not supported in PredicateColumnType";
+    }
+ 
+    [[noreturn]] Field operator[](size_t n) const override {
+        LOG(FATAL) << "operator[] not supported in PredicateColumnType";
+    }
+ 
+    void get(size_t n, Field& res) const override {
+        LOG(FATAL) << "get field not supported in PredicateColumnType";
+    }
+ 
+    [[noreturn]] UInt64 get64(size_t n) const override {
+        LOG(FATAL) << "get field not supported in PredicateColumnTyped";
+    }
+ 
+    [[noreturn]] Float64 get_float64(size_t n) const override {
+        LOG(FATAL) << "get field not supported in PredicateColumnType";
+    }
+ 
+    [[noreturn]] UInt64 get_uint(size_t n) const override {
+        LOG(FATAL) << "get field not supported in PredicateColumnType";
+    }
+ 
+    [[noreturn]] bool get_bool(size_t n) const override {
+        LOG(FATAL) << "get field not supported in PredicateColumnType";
+    }
+ 
+    [[noreturn]] Int64 get_int(size_t n) const override {
+        LOG(FATAL) << "get field not supported in PredicateColumnType";
+    }
+ 
+    // it's impossable to use ComplexType as key , so we don't have to implemnt them
+    [[noreturn]] StringRef serialize_value_into_arena(size_t n, Arena& arena,
+                                                      char const*& begin) const {
+        LOG(FATAL) << "serialize_value_into_arena not supported in PredicateColumnType";
+    }
+ 
+    [[noreturn]] const char* deserialize_and_insert_from_arena(const char* pos) {
+        LOG(FATAL) << "deserialize_and_insert_from_arena not supported in PredicateColumnType";
+    }
+ 
+    [[noreturn]] int compare_at(size_t n, size_t m, const IColumn& rhs,
+                                int nan_direction_hint) const {
+        LOG(FATAL) << "compare_at not supported in PredicateColumnType";
+    }
+ 
+    void get_extremes(Field& min, Field& max) const {
+        LOG(FATAL) << "get_extremes not supported in PredicateColumnType";
+    }
+ 
+    bool can_be_inside_nullable() const override { return true; }
+ 
+    bool is_fixed_and_contiguous() const override { return true; }
+    size_t size_of_value_if_fixed() const override { return sizeof(T); }
+ 
+    [[noreturn]] StringRef get_raw_data() const override {
+        LOG(FATAL) << "get_raw_data not supported in PredicateColumnType";
+    }
+ 
+    [[noreturn]] bool structure_equals(const IColumn& rhs) const override {
+         LOG(FATAL) << "structure_equals not supported in PredicateColumnType";
+    }
+ 
+    [[noreturn]] ColumnPtr filter(const IColumn::Filter& filt, ssize_t result_size_hint) const override {
+         LOG(FATAL) << "filter not supported in PredicateColumnType";
+    };
+ 
+    [[noreturn]] ColumnPtr permute(const IColumn::Permutation& perm, size_t limit) const override { 
+         LOG(FATAL) << "permute not supported in PredicateColumnType";
+    };
+ 
+    Container& get_data() { return data; }
+ 
+    const Container& get_data() const { return data; }
+ 
+    [[noreturn]] ColumnPtr replicate(const IColumn::Offsets& replicate_offsets) const override {
+        LOG(FATAL) << "replicate not supported in PredicateColumnType";
+    };
+ 
+    [[noreturn]] MutableColumns scatter(IColumn::ColumnIndex num_columns,
+                                        const IColumn::Selector& selector) const override {
+        LOG(FATAL) << "scatter not supported in PredicateColumnType";
+    }
+ 
+    // used in lazy materialization, using selected rowids to filter current column(StringValue, Decimal)
+    ColumnPtr filter_by_selector(const uint16_t* sel, size_t sel_size, ColumnPtr* ptr = nullptr) override {
+        if (std::is_same<value_type, StringValue>::value) {
+            if (ptr == nullptr) {
+                auto res = vectorized::ColumnString::create();
+                if (sel_size == 0) {
+                    return res;
+                }
+                res->reserve(sel_size);
+                for (size_t i = 0; i < sel_size; i++) {
+                    uint16_t n = sel[i];
+                    auto& sv = reinterpret_cast<StringValue&>(data[n]);
+                    res->insert_data(sv.ptr, sv.len);
+                }
+                return res;
+            } else {
+                if (sel_size != 0) {
+                    MutableColumnPtr ptr_res = (*std::move(*ptr)).assume_mutable();
+ 
+                    for (size_t i = 0; i < sel_size; i++) {
+                        uint16_t n = sel[i];
+                        auto& sv = reinterpret_cast<StringValue&>(data[n]);
+                        ptr_res->insert_data(sv.ptr, sv.len);
+                     }
+                }
+                return nullptr;
+            }
+        } else if (std::is_same<value_type, decimal12_t>::value) {
+            // todo(wb) support decimal mem reuse
+            auto res = vectorized::ColumnDecimal<Decimal128>::create(0, 9); // todo(wb) need a global variable to stand for scale
+            if (sel_size == 0) {
+                return res;
+            }
+            for (size_t i = 0; i < sel_size; i++) {
+                uint16_t n = sel[i];
+                auto& dv = reinterpret_cast<const decimal12_t&>(data[n]);
+                DecimalV2Value dv_data(dv.integer, dv.fraction);
+                res->insert_data(reinterpret_cast<char*>(&dv_data), 0);
+            }
+            return res;
+        }
+        // unreachable here
+        return nullptr;
+    }
+ 
+private:
+    Container data;
+};
+using ColumnStringValue = PredicateColumnType<StringValue>;
+using ColumnDecimal12 = PredicateColumnType<decimal12_t>;
+
+
 template <typename T>
 class ColumnComplexType final : public COWHelper<IColumn, ColumnComplexType<T>> {
 private:

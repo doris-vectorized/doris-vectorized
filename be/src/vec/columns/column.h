@@ -208,6 +208,17 @@ public:
     using Filter = PaddedPODArray<UInt8>;
     virtual Ptr filter(const Filter& filt, ssize_t result_size_hint) const = 0;
 
+    /**
+     *  used by lazy materialization to filter column by selected rowids
+     */
+    virtual Ptr filter_by_selector(const uint16_t* sel, size_t sel_size, Ptr* ptr = nullptr) {
+        return nullptr;
+    };
+ 
+    virtual Ptr filter_date_by_selector(const uint16_t* sel, size_t sel_size, Ptr* ptr = nullptr) {
+        return nullptr;
+    };
+
     /// Permutes elements using specified permutation. Is used in sortings.
     /// limit - if it isn't 0, puts only first limit elements in the result.
     using Permutation = PaddedPODArray<size_t>;
@@ -368,6 +379,11 @@ public:
     /// Implies is_fixed_and_contiguous.
     virtual bool is_numeric() const { return false; }
 
+    virtual bool is_column_decimal() const { return false; }
+ 
+    // bitmap/decimal/stringvalue
+    virtual bool is_complex_column() const { return false; }
+
     /// If the only value column can contain is NULL.
     /// Does not imply type of object, because it can be ColumnNullable(ColumnNothing) or ColumnConst(ColumnNullable(ColumnNothing))
     virtual bool only_null() const { return false; }
@@ -387,6 +403,14 @@ public:
 
     // Only use in column have only one row, use in unique key replace only
     virtual void replace_column_data(const IColumn&, size_t row) = 0;
+    
+    bool is_date_type() {
+        return is_date;
+    }
+
+// todo(wb): a temporary implemention, need refactor here
+public:
+  bool is_date = false;
 
 protected:
     /// Template is to devirtualize calls to insert_from method.
