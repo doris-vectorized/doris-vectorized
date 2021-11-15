@@ -339,7 +339,7 @@ private:
     // only focus on pending batches and channel status, the internal errors of NodeChannels will be handled by the producer
     void _send_batch_process();
 
-private:
+protected:
     friend class NodeChannel;
     friend class IndexChannel;
 

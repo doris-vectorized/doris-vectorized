@@ -29,21 +29,21 @@
 
 namespace doris {
 namespace vectorized {
-MysqlResultWriter::MysqlResultWriter(BufferControlBlock* sinker,
-                                     const std::vector<VExprContext*>& output_vexpr_ctxs,
-                                     RuntimeProfile* parent_profile)
+VMysqlResultWriter::VMysqlResultWriter(BufferControlBlock* sinker,
+                                       const std::vector<VExprContext*>& output_vexpr_ctxs,
+                                       RuntimeProfile* parent_profile)
         : VResultWriter(),
           _sinker(sinker),
           _output_vexpr_ctxs(output_vexpr_ctxs),
           _parent_profile(parent_profile) {}
 
-MysqlResultWriter::~MysqlResultWriter() {
+VMysqlResultWriter::~VMysqlResultWriter() {
     for (auto buffer : _vec_buffers) {
         delete buffer;
     }
 }
 
-Status MysqlResultWriter::init(RuntimeState* state) {
+Status VMysqlResultWriter::init(RuntimeState* state) {
     _init_profile();
     if (nullptr == _sinker) {
         return Status::InternalError("sinker is NULL pointer.");
@@ -57,7 +57,7 @@ Status MysqlResultWriter::init(RuntimeState* state) {
     return Status::OK();
 }
 
-void MysqlResultWriter::_init_profile() {
+void VMysqlResultWriter::_init_profile() {
     _append_row_batch_timer = ADD_TIMER(_parent_profile, "AppendBatchTime");
     _convert_tuple_timer = ADD_CHILD_TIMER(_parent_profile, "TupleConvertTime", "AppendBatchTime");
     _result_send_timer = ADD_CHILD_TIMER(_parent_profile, "ResultRendTime", "AppendBatchTime");
@@ -65,7 +65,7 @@ void MysqlResultWriter::_init_profile() {
 }
 
 template <PrimitiveType type, bool is_nullable>
-Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
+Status VMysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
     SCOPED_TIMER(_convert_tuple_timer);
     DCHECK(column_ptr->size() <= _vec_buffers.size());
 
@@ -159,14 +159,7 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
         if constexpr (type == TYPE_DECIMALV2) {
             DecimalV2Value decimal_val(
                     assert_cast<const ColumnDecimal<Decimal128>&>(*column).get_data()[i]);
-            std::string decimal_str;
-            //            int output_scale = _output_expr_ctxs[i]->root()->output_scale();
-            //
-            //            if (output_scale > 0 && output_scale <= 30) {
-            //                decimal_str = decimal_val.to_string(output_scale);
-            //            } else {
-            decimal_str = decimal_val.to_string();
-            //            }
+            auto decimal_str = decimal_val.to_string();
             buf_ret = _vec_buffers[i]->push_string(decimal_str.c_str(), decimal_str.length());
         }
 
@@ -178,45 +171,38 @@ Status MysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr) {
     return Status::OK();
 }
 
-Status MysqlResultWriter::append_row_batch(const RowBatch* batch) {
+Status VMysqlResultWriter::append_row_batch(const RowBatch* batch) {
     return Status::RuntimeError("Not Implemented MysqlResultWriter::append_row_batch scalar");
 }
 
-Status MysqlResultWriter::append_block(Block& block) {
-    int result_column_ids[_output_vexpr_ctxs.size()];
-    // TODO: add dirty execute
-    for (int i = 0; i < _output_vexpr_ctxs.size(); i++) {
-        const auto& vexpr_ctx = _output_vexpr_ctxs[i];
-        int result_column_id = -1;
-        RETURN_IF_ERROR(vexpr_ctx->execute(&block, &result_column_id));
-        DCHECK(result_column_id != -1);
-        result_column_ids[i] = result_column_id;
-    }
-
+Status VMysqlResultWriter::append_block(Block& input_block) {
     SCOPED_TIMER(_append_row_batch_timer);
-    if (block.rows() == 0) {
-        return Status::OK();
-    }
+    Status status = Status::OK();
+    if (UNLIKELY(input_block.rows() == 0)) { return status; }
+
+    // Exec vectorized expr here to speed up, block.rows() == 0 means expr exec
+    // failed, just return the error status
+    auto block = VExprContext::get_output_block_after_execute_exprs(_output_vexpr_ctxs,
+            input_block, status);
+    auto num_rows = block.rows();
+    if (UNLIKELY(num_rows == 0)) { return status; }
 
     // TODO: Recheck the vec buffer size of block buffer size
-    if (UNLIKELY(block.rows() > _vec_buffers.size())) {
-        auto gap_size = block.rows() - _vec_buffers.size();
-        _vec_buffers.reserve(block.rows());
+    if (UNLIKELY(num_rows > _vec_buffers.size())) {
+        auto gap_size = num_rows - _vec_buffers.size();
+        _vec_buffers.reserve(num_rows);
         for (int i = 0; i < gap_size; ++i) {
             _vec_buffers.emplace_back(new MysqlRowBuffer);
         }
     }
 
-    Status status;
     // convert one batch
     auto result = std::make_unique<TFetchDataResult>();
-    int num_rows = block.rows();
     result->result_batch.rows.resize(num_rows);
-
     for (int i = 0; status.ok() && i < _output_vexpr_ctxs.size(); ++i) {
         auto column_ptr =
-                block.get_by_position(result_column_ids[i]).column->convert_to_full_column_if_const();
-        auto type_ptr = block.get_by_position(result_column_ids[i]).type;
+                block.get_by_position(i).column->convert_to_full_column_if_const();
+        auto type_ptr = block.get_by_position(i).type;
 
         switch (_output_vexpr_ctxs[i]->root()->result_type()) {
         case TYPE_BOOLEAN:
@@ -358,7 +344,7 @@ Status MysqlResultWriter::append_block(Block& block) {
     return status;
 }
 
-Status MysqlResultWriter::close() {
+Status VMysqlResultWriter::close() {
     COUNTER_SET(_sent_rows_counter, _written_rows);
     return Status::OK();
 }

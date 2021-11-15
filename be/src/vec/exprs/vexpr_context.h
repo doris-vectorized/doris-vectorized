@@ -57,6 +57,8 @@ public:
     static Status filter_block(const std::unique_ptr<VExprContext*>& vexpr_ctx_ptr, Block* block,
                                int column_to_keep);
 
+    static Block get_output_block_after_execute_exprs(const std::vector<vectorized::VExprContext*>&,
+            const Block&, Status&);
 private:
     friend class VExpr;
 

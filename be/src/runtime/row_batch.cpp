@@ -689,6 +689,7 @@ void RowBatch::deep_copy_to(RowBatch* dst) {
     }
     dst->commit_rows(_num_rows);
 }
+
 // TODO: consider computing size of batches as they are built up
 size_t RowBatch::total_byte_size() {
     size_t result = 0;

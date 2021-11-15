@@ -18,13 +18,18 @@
 #include "vec/core/block.h"
 
 #include <fmt/format.h>
-
 #include <iomanip>
 #include <iterator>
 #include <memory>
+#include <snappy.h>
 
 #include "common/status.h"
 #include "gen_cpp/data.pb.h"
+#include "runtime/descriptors.h"
+#include "runtime/tuple.h"
+#include "runtime/tuple_row.h"
+#include "runtime/row_batch.h"
+
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_nullable.h"
 #include "vec/columns/column_vector.h"
@@ -717,6 +722,52 @@ size_t Block::serialize(PBlock* pblock) const {
     }
 
     return block_size_before_compress;
+}
+
+void Block::serialize(RowBatch* output_batch, const RowDescriptor& row_desc) {
+    auto num_rows = rows();
+    auto mem_pool = output_batch->tuple_data_pool();
+
+    for (int i = 0; i < num_rows; ++i) {
+        auto tuple_row = output_batch->get_row(i);
+        const auto& tuple_descs = row_desc.tuple_descriptors();
+        auto column_offset = 0;
+
+        for (int j = 0; j < tuple_descs.size(); ++j) {
+            auto tuple_desc = tuple_descs[j];
+            tuple_row->set_tuple(j, deep_copy_tuple(*tuple_desc, mem_pool, i, column_offset));
+            column_offset += tuple_desc->slots().size();
+        }
+        output_batch->commit_last_row();
+    }
+}
+
+doris::Tuple* Block::deep_copy_tuple(const doris::TupleDescriptor& desc, MemPool* pool, int row, int column_offset) {
+    auto dst = reinterpret_cast<doris::Tuple*>(pool->allocate(desc.byte_size()));
+
+    for (int i = 0; i < desc.slots().size(); ++i) {
+        auto slot_desc = desc.slots()[i];
+        auto column_ptr = get_by_position(column_offset + i).column;
+        auto data_ref = column_ptr->get_data_at(row);
+
+        if (data_ref.size == 0) {
+            dst->set_null(slot_desc->null_indicator_offset());
+            continue;
+        } else {
+            dst->set_not_null(slot_desc->null_indicator_offset());
+        }
+
+        if (!slot_desc->type().is_string_type()) {
+            memcpy((void*)dst->get_slot(slot_desc->tuple_offset()), data_ref.data, data_ref.size);
+        } else {
+            memcpy((void*)dst->get_slot(slot_desc->tuple_offset()), (const void*)(&data_ref), sizeof(data_ref));
+            // Copy the content of string
+            auto str_ptr = pool->allocate(data_ref.size);
+            memcpy(str_ptr, data_ref.data, data_ref.size);
+            dst->get_string_slot(slot_desc->tuple_offset())->ptr = reinterpret_cast<char *>(str_ptr);
+        }
+    }
+    return dst;
 }
 
 size_t MutableBlock::rows() const {
