@@ -44,67 +44,67 @@ visible_functions = [
     # For functions corresponding to builtin operators, we can reuse the implementations
     [['bitand'], 'TINYINT', ['TINYINT', 'TINYINT'],
         '_ZN5doris9Operators32bitand_tiny_int_val_tiny_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_10TinyIntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_10TinyIntValES6_', '', '', 'vec', ''],
     [['bitand'], 'SMALLINT', ['SMALLINT', 'SMALLINT'],
         '_ZN5doris9Operators34bitand_small_int_val_small_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_11SmallIntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_11SmallIntValES6_', '', '', 'vec', ''],
     [['bitand'], 'INT', ['INT', 'INT'],
         '_ZN5doris9Operators22bitand_int_val_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_6IntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_6IntValES6_', '', '', 'vec', ''],
     [['bitand'], 'BIGINT', ['BIGINT', 'BIGINT'],
         '_ZN5doris9Operators30bitand_big_int_val_big_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_9BigIntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_9BigIntValES6_', '', '', 'vec', ''],
     [['bitand'], 'LARGEINT', ['LARGEINT', 'LARGEINT'],
         '_ZN5doris9Operators34bitand_large_int_val_large_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_11LargeIntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_11LargeIntValES6_', '', '', 'vec', ''],
 
     [['bitor'], 'TINYINT', ['TINYINT', 'TINYINT'],
         '_ZN5doris9Operators31bitor_tiny_int_val_tiny_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_10TinyIntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_10TinyIntValES6_', '', '', 'vec', ''],
     [['bitor'], 'SMALLINT', ['SMALLINT', 'SMALLINT'],
         '_ZN5doris9Operators33bitor_small_int_val_small_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_11SmallIntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_11SmallIntValES6_', '', '', 'vec', ''],
     [['bitor'], 'INT', ['INT', 'INT'],
         '_ZN5doris9Operators21bitor_int_val_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_6IntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_6IntValES6_', '', '', 'vec', ''],
     [['bitor'], 'BIGINT', ['BIGINT', 'BIGINT'],
         '_ZN5doris9Operators29bitor_big_int_val_big_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_9BigIntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_9BigIntValES6_', '', '', 'vec', ''],
     [['bitor'], 'LARGEINT', ['LARGEINT', 'LARGEINT'],
         '_ZN5doris9Operators33bitor_large_int_val_large_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_11LargeIntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_11LargeIntValES6_', '', '', 'vec', ''],
 
     [['bitxor'], 'TINYINT', ['TINYINT', 'TINYINT'],
         '_ZN5doris9Operators32bitxor_tiny_int_val_tiny_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_10TinyIntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_10TinyIntValES6_', '', '', 'vec', ''],
     [['bitxor'], 'SMALLINT', ['SMALLINT', 'SMALLINT'],
         '_ZN5doris9Operators34bitxor_small_int_val_small_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_11SmallIntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_11SmallIntValES6_', '', '', 'vec', ''],
     [['bitxor'], 'INT', ['INT', 'INT'],
         '_ZN5doris9Operators22bitxor_int_val_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_6IntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_6IntValES6_', '', '', 'vec', ''],
     [['bitxor'], 'BIGINT', ['BIGINT', 'BIGINT'],
         '_ZN5doris9Operators30bitxor_big_int_val_big_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_9BigIntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_9BigIntValES6_', '', '', 'vec', ''],
     [['bitxor'], 'LARGEINT', ['LARGEINT', 'LARGEINT'],
         '_ZN5doris9Operators34bitxor_large_int_val_large_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_11LargeIntValES6_', '', '', '', ''],
+        '15FunctionContextERKNS1_11LargeIntValES6_', '', '', 'vec', ''],
 
     [['bitnot'], 'TINYINT', ['TINYINT'],
         '_ZN5doris9Operators19bitnot_tiny_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_10TinyIntValE', '', '', '', ''],
+        '15FunctionContextERKNS1_10TinyIntValE', '', '', 'vec', ''],
     [['bitnot'], 'SMALLINT', ['SMALLINT'],
         '_ZN5doris9Operators20bitnot_small_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_11SmallIntValE', '', '', '', ''],
+        '15FunctionContextERKNS1_11SmallIntValE', '', '', 'vec', ''],
     [['bitnot'], 'INT', ['INT'],
         '_ZN5doris9Operators14bitnot_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_6IntValE', '', '', '', ''],
+        '15FunctionContextERKNS1_6IntValE', '', '', 'vec', ''],
     [['bitnot'], 'BIGINT', ['BIGINT'],
         '_ZN5doris9Operators18bitnot_big_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_9BigIntValE', '', '', '', ''],
+        '15FunctionContextERKNS1_9BigIntValE', '', '', 'vec', ''],
     [['bitnot'], 'LARGEINT', ['LARGEINT'],
         '_ZN5doris9Operators20bitnot_large_int_valEPN9doris_udf'
-        '15FunctionContextERKNS1_11LargeIntValE', '', '', '', ''],
+        '15FunctionContextERKNS1_11LargeIntValE', '', '', 'vec', ''],
 
     # array functions
     [['array'], 'ARRAY', ['INT', '...'],

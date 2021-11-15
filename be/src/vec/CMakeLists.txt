@@ -110,6 +110,7 @@ set(VEC_FILES
   functions/minus.cpp
   functions/int_div.cpp
   functions/divide.cpp
+  functions/function_bit.cpp
   functions/is_null.cpp
   functions/is_not_null.cpp
   functions/in.cpp
