@@ -32,6 +32,8 @@ template <typename Impl>
 class FunctionMathBinaryFloat64 : public IFunction {
 public:
     static constexpr auto name = Impl::name;
+    static constexpr bool has_variadic_argument =
+            !std::is_void_v<decltype(has_variadic_argument_types(std::declval<Impl>()))>;
     static FunctionPtr create() { return std::make_shared<FunctionMathBinaryFloat64>(); }
     static_assert(Impl::rows_per_iteration > 0, "Impl must process at least one row per iteration");
 
@@ -58,6 +60,11 @@ private:
         } else {
             return nullptr;
         }
+    }
+
+    DataTypes get_variadic_argument_types_impl() const override {
+        if constexpr (has_variadic_argument) return Impl::get_variadic_argument_types();
+        return {};
     }
 
     template <typename LeftType, typename RightType>
