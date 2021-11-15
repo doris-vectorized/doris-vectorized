@@ -268,9 +268,12 @@ public class ArithmeticExpr extends Expr {
         if (VectorizedUtil.isVectorized()) {
             // bitnot is the only unary op, deal with it here
             if (op == Operator.BITNOT) {
-                type = Type.BIGINT;
-                if (getChild(0).getType().getPrimitiveType() != PrimitiveType.BIGINT) {
+                Type t = getChild(0).getType();
+                if (t.getPrimitiveType().ordinal() > PrimitiveType.LARGEINT.ordinal()) {
+                    type = Type.BIGINT;
                     castChild(type, 0);
+                } else {
+                    type = t;
                 }
                 fn = getBuiltinFunction(
                         analyzer, op.getName(), collectChildReturnTypes(), Function.CompareMode.IS_SUPERTYPE_OF);
@@ -319,8 +322,10 @@ public class ArithmeticExpr extends Expr {
                 case BITAND:
                 case BITOR:
                 case BITXOR:
-                    // Must be bigint
-                    commonType = Type.BIGINT;
+                    commonType = Type.getAssignmentCompatibleType(t1, t2, false);
+                    if (commonType.getPrimitiveType().ordinal() > PrimitiveType.LARGEINT.ordinal()) {
+                        commonType = Type.BIGINT;
+                    }
                     type = castBinaryOp(commonType);
                     break;
                 default:
