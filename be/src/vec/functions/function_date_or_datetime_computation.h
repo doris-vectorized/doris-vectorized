@@ -18,6 +18,8 @@
 #include "common/logging.h"
 #include "fmt/format.h"
 #include "runtime/datetime_value.h"
+#include "runtime/runtime_state.h"
+#include "udf/udf_internal.h"
 #include "util/binary_cast.hpp"
 #include "vec/columns/column_vector.h"
 #include "vec/data_types/data_type_date.h"
@@ -349,6 +351,138 @@ public:
                     fmt::format("Illegal type {} of argument of function {}",
                                 block.get_by_position(arguments[0]).type->get_name(), get_name()));
         }
+    }
+};
+
+template <typename FunctionImpl>
+class FunctionCurrentDateOrDateTime : public IFunction {
+public:
+    static constexpr auto name = FunctionImpl::name;
+    static FunctionPtr create() { return std::make_shared<FunctionCurrentDateOrDateTime>(); }
+
+    String get_name() const override { return name; }
+
+    size_t get_number_of_arguments() const override { return 0; }
+
+    DataTypePtr get_return_type_impl(const ColumnsWithTypeAndName& arguments) const override {
+        return std::make_shared<typename FunctionImpl::ReturnType>();
+    }
+
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
+        DCHECK(arguments.empty());
+        return FunctionImpl::execute(context, block, result, input_rows_count);
+    }
+};
+
+template<typename FunctionName>
+struct CurrentDateTimeImpl {
+    using ReturnType = DataTypeDateTime;
+    static constexpr auto name = FunctionName::name;
+    static Status execute(FunctionContext* context, Block& block, size_t result,
+                          size_t input_rows_count) {
+        auto col_to = ColumnVector<Int128>::create();
+        DateTimeValue dtv;
+        if (dtv.from_unixtime(context->impl()->state()->timestamp_ms() / 1000,
+                              context->impl()->state()->timezone_obj())) {
+            reinterpret_cast<DateTimeValue*>(&dtv)->set_type(TIME_DATETIME);
+            auto date_packed_int = binary_cast<doris::DateTimeValue, int128_t>(
+                    *reinterpret_cast<DateTimeValue*>(&dtv));
+            for (int i = 0; i < input_rows_count; i ++) {
+                col_to->insert_data(
+                        const_cast<const char*>(reinterpret_cast<char*>(&date_packed_int)), 0);
+            }
+        } else {
+            auto invalid_val = 0;
+            for (int i = 0; i < input_rows_count; i ++) {
+                col_to->insert_data(const_cast<const char*>(reinterpret_cast<char*>(&invalid_val)),
+                                    0);
+            }
+        }
+        block.get_by_position(result).column = std::move(col_to);
+        return Status::OK();
+    }
+};
+
+template<typename FunctionName>
+struct CurrentDateImpl {
+    using ReturnType = DataTypeDate;
+    static constexpr auto name = FunctionName::name;
+    static Status execute(FunctionContext* context, Block& block, size_t result,
+                          size_t input_rows_count) {
+        auto col_to = ColumnVector<Int128>::create();
+        DateTimeValue dtv;
+        if (dtv.from_unixtime(context->impl()->state()->timestamp_ms() / 1000,
+                              context->impl()->state()->timezone_obj())) {
+            reinterpret_cast<DateTimeValue*>(&dtv)->set_type(TIME_DATE);
+            auto date_packed_int = binary_cast<doris::DateTimeValue, int128_t>(
+                    *reinterpret_cast<DateTimeValue*>(&dtv));
+            for (int i = 0; i < input_rows_count; i ++) {
+                col_to->insert_data(
+                        const_cast<const char*>(reinterpret_cast<char*>(&date_packed_int)), 0);
+            }
+        } else {
+            auto invalid_val = 0;
+            for (int i = 0; i < input_rows_count; i ++) {
+                col_to->insert_data(const_cast<const char*>(reinterpret_cast<char*>(&invalid_val)),
+                                    0);
+            }
+        }
+        block.get_by_position(result).column = std::move(col_to);
+        return Status::OK();
+    }
+};
+
+template<typename FunctionName>
+struct CurrentTimeImpl {
+    using ReturnType = DataTypeInt64;
+    static constexpr auto name = FunctionName::name;
+    static Status execute(FunctionContext* context, Block& block, size_t result,
+                          size_t input_rows_count) {
+        auto col_to = ColumnVector<Int128>::create();
+        DateTimeValue dtv;
+        if (dtv.from_unixtime(context->impl()->state()->timestamp_ms() / 1000,
+                              context->impl()->state()->timezone_obj())) {
+            double time = dtv.hour() * 3600 + dtv.minute() * 60 + dtv.second();
+            for (int i = 0; i < input_rows_count; i ++) {
+                col_to->insert_data(const_cast<const char*>(reinterpret_cast<char*>(&time)), 0);
+            }
+        } else {
+            auto invalid_val = 0;
+            for (int i = 0; i < input_rows_count; i ++) {
+                col_to->insert_data(const_cast<const char*>(reinterpret_cast<char*>(&invalid_val)),
+                                    0);
+            }
+        }
+        block.get_by_position(result).column = std::move(col_to);
+        return Status::OK();
+    }
+};
+
+struct UtcTimestampImpl {
+    using ReturnType = DataTypeDateTime;
+    static constexpr auto name = "utc_timestamp";
+    static Status execute(FunctionContext* context, Block& block, size_t result,
+                          size_t input_rows_count) {
+        auto col_to = ColumnVector<Int128>::create();
+        DateTimeValue dtv;
+        if (dtv.from_unixtime(context->impl()->state()->timestamp_ms() / 1000, "+00:00")) {
+            reinterpret_cast<DateTimeValue*>(&dtv)->set_type(TIME_DATETIME);
+            auto date_packed_int = binary_cast<doris::DateTimeValue, int128_t>(
+                    *reinterpret_cast<DateTimeValue*>(&dtv));
+            for (int i = 0; i < input_rows_count; i ++) {
+                col_to->insert_data(
+                        const_cast<const char*>(reinterpret_cast<char*>(&date_packed_int)), 0);
+            }
+        } else {
+            auto invalid_val = 0;
+            for (int i = 0; i < input_rows_count; i ++) {
+                col_to->insert_data(const_cast<const char*>(reinterpret_cast<char*>(&invalid_val)),
+                                    0);
+            }
+        }
+        block.get_by_position(result).column = std::move(col_to);
+        return Status::OK();
     }
 };
 
