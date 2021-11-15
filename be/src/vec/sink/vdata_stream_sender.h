@@ -1,5 +1,24 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #pragma once
+
 #include "common/global_types.h"
+#include "exec/data_sink.h"
 #include "gen_cpp/PaloInternalService_types.h"
 #include "gen_cpp/data.pb.h"
 #include "gen_cpp/internal_service.pb.h"
@@ -11,7 +30,6 @@
 #include "util/ref_count_closure.h"
 #include "util/uid_util.h"
 #include "vec/exprs/vexpr.h"
-#include "vec/sink/data_sink.h"
 
 namespace doris {
 class ObjectPool;
@@ -27,8 +45,7 @@ namespace vectorized {
 class VExprContext;
 class VPartitionInfo;
 
-// TODO: support Partition Range
-class VDataStreamSender final : public VDataSink {
+class VDataStreamSender final : public DataSink {
 public:
     VDataStreamSender(ObjectPool* pool, int sender_id, const RowDescriptor& row_desc,
                       const TDataStreamSink& sink,

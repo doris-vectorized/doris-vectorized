@@ -111,4 +111,19 @@ Status VExprContext::filter_block(const std::unique_ptr<VExprContext*>& vexpr_ct
     return Block::filter_block(block, result_column_id, column_to_keep);
 }
 
+Block VExprContext::get_output_block_after_execute_exprs(const std::vector<vectorized::VExprContext*>&
+        output_vexpr_ctxs, const Block& input_block, Status& status) {
+    vectorized::Block tmp_block(input_block.get_columns_with_type_and_name());
+    vectorized::ColumnsWithTypeAndName result_columns;
+    for (auto vexpr_ctx : output_vexpr_ctxs) {
+        int result_column_id = -1;
+        status= vexpr_ctx->execute(&tmp_block, &result_column_id);
+        if (UNLIKELY(!status.ok())) return {};
+        DCHECK(result_column_id != -1);
+        result_columns.emplace_back(tmp_block.get_by_position(result_column_id));
+    }
+
+    return {result_columns};
+}
+
 } // namespace doris::vectorized

@@ -409,7 +409,7 @@ public:
 
     // Populate row_tuple_ids with our ids.
     void to_thrift(std::vector<TTupleId>* row_tuple_ids);
-    void to_protobuf(google::protobuf::RepeatedField<google::protobuf::int32>* row_tuple_ids);
+    void to_protobuf(google::protobuf::RepeatedField<google::protobuf::int32>* row_tuple_ids) const;
 
     // Return true if the tuple ids of this descriptor are a prefix
     // of the tuple ids of other_desc.

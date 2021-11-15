@@ -312,7 +312,7 @@ public:
 
     vectorized::Block convert_to_vec_block() const;
 
-    void copy_row(const TupleRow* src, TupleRow* dest) const {
+    void copy_row(TupleRow* src, TupleRow* dest) {
         memcpy(dest, src, _num_tuples_per_row * sizeof(Tuple*));
     }
 

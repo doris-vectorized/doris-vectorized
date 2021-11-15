@@ -45,7 +45,6 @@
 #include "vec/core/block.h"
 #include "vec/exec/vexchange_node.h"
 #include "vec/runtime/vdata_stream_mgr.h"
-#include "vec/sink/data_sink.h"
 
 namespace doris {
 
@@ -297,8 +296,7 @@ Status PlanFragmentExecutor::open_vectorized_internal() {
         if (_collect_query_statistics_with_every_batch) {
             _collect_query_statistics();
         }
-        auto vsink = static_cast<doris::vectorized::VDataSink*>(_sink.get());
-        RETURN_IF_ERROR(vsink->send(runtime_state(), block));
+        RETURN_IF_ERROR(_sink->send(runtime_state(), block));
     }
     {
         SCOPED_TIMER(profile()->total_time_counter());

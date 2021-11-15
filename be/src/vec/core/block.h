@@ -32,6 +32,12 @@
 
 namespace doris {
 class Status;
+class RowBatch;
+class RowDescriptor;
+class Tuple;
+class TupleDescriptor;
+class MemPool;
+
 namespace vectorized {
 
 /** Container for set of columns for bunch of rows in memory.
@@ -118,6 +124,7 @@ public:
     size_t get_position_by_name(const std::string& name) const;
 
     const ColumnsWithTypeAndName& get_columns_with_type_and_name() const;
+
     Names get_names() const;
     DataTypes get_data_types() const;
 
@@ -198,6 +205,10 @@ public:
 
     // serialize block to PBlock
     size_t serialize(PBlock* pblock) const;
+
+    // serialize block to PRowbatch
+    void serialize(RowBatch*, const RowDescriptor&);
+
     /** Compares (*this) n-th row and rhs m-th row. 
       * Returns negative number, 0, or positive number  (*this) n-th row is less, equal, greater than rhs m-th row respectively.
       * Is used in sortings.
@@ -214,6 +225,7 @@ public:
 
 
 private:
+    doris::Tuple* deep_copy_tuple(const TupleDescriptor&, MemPool*, int, int);
     void erase_impl(size_t position);
     void initialize_index_by_name();
 };
