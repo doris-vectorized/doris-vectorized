@@ -215,10 +215,12 @@ Status PlanFragmentExecutor::prepare(const TExecPlanFragmentParams& request,
     _rows_produced_counter = ADD_COUNTER(profile(), "RowsProduced", TUnit::UNIT);
     _fragment_cpu_timer = ADD_TIMER(profile(), "FragmentCpuTime");
 
-    _row_batch.reset(new RowBatch(_plan->row_desc(), _runtime_state->batch_size(),
-                                  _runtime_state->instance_mem_tracker().get()));
-    _block.reset(new doris::vectorized::Block());
-    // _row_batch->tuple_data_pool()->set_limits(*_runtime_state->mem_trackers());
+    if (_runtime_state->enable_vectorized_exec()) {
+        _block.reset(new doris::vectorized::Block());
+    } else {
+        _row_batch.reset(new RowBatch(_plan->row_desc(), _runtime_state->batch_size(),
+                                     _runtime_state->instance_mem_tracker().get()));
+    }
     VLOG_NOTICE << "plan_root=\n" << _plan->debug_string();
     _prepared = true;
 
@@ -317,6 +319,7 @@ Status PlanFragmentExecutor::open_vectorized_internal() {
 
     return Status::OK();
 }
+
 Status PlanFragmentExecutor::get_vectorized_internal(::doris::vectorized::Block** block) {
     if (_done) {
         *block = nullptr;

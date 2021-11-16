@@ -18,7 +18,6 @@
 #ifndef DORIS_BE_RUNTIME_PLAN_FRAGMENT_EXECUTOR_H
 #define DORIS_BE_RUNTIME_PLAN_FRAGMENT_EXECUTOR_H
 
-#include <boost/scoped_ptr.hpp>
 #include <condition_variable>
 #include <functional>
 #include <vector>
@@ -191,12 +190,12 @@ private:
 
     // note that RuntimeState should be constructed before and destructed after `_sink' and `_row_batch',
     // therefore we declare it before `_sink' and `_row_batch'
-    boost::scoped_ptr<RuntimeState> _runtime_state;
+    std::unique_ptr<RuntimeState> _runtime_state;
     // Output sink for rows sent to this fragment. May not be set, in which case rows are
     // returned via get_next's row batch
     // Created in prepare (if required), owned by this object.
-    boost::scoped_ptr<DataSink> _sink;
-    boost::scoped_ptr<RowBatch> _row_batch;
+    std::unique_ptr<DataSink> _sink;
+    std::unique_ptr<RowBatch> _row_batch;
     std::unique_ptr<doris::vectorized::Block> _block;
 
     // Number of rows returned by this fragment
@@ -209,8 +208,6 @@ private:
     // multithreaded access.
     std::shared_ptr<QueryStatistics> _query_statistics;
     bool _collect_query_statistics_with_every_batch;
-
-    bool _enable_vectorized_engine;
 
     ObjectPool* obj_pool() { return _runtime_state->obj_pool(); }
 

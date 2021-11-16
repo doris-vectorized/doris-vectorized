@@ -19,7 +19,6 @@
 #define DORIS_BE_SRC_QUERY_RUNTIME_RUNTIME_STATE_H
 
 #include <atomic>
-#include <boost/scoped_ptr.hpp>
 #include <fstream>
 #include <memory>
 #include <mutex>
@@ -383,7 +382,7 @@ public:
 
 private:
     // Use a custom block manager for the query for testing purposes.
-    void set_block_mgr2(const boost::shared_ptr<BufferedBlockMgr2>& block_mgr) {
+    void set_block_mgr2(const std::shared_ptr<BufferedBlockMgr2>& block_mgr) {
         _block_mgr2 = block_mgr;
     }
 
@@ -422,7 +421,7 @@ private:
     // Receivers depend on the descriptor table and we need to guarantee that their control
     // blocks are removed from the data stream manager before the objects in the
     // descriptor table are destroyed.
-    boost::scoped_ptr<ObjectPool> _data_stream_recvrs_pool;
+    std::unique_ptr<ObjectPool> _data_stream_recvrs_pool;
 
     // Lock protecting _error_log and _unreported_error_idx
     std::mutex _error_log_lock;
@@ -464,12 +463,11 @@ private:
     // will not necessarily be set in all error cases.
     std::mutex _process_status_lock;
     Status _process_status;
-    //boost::scoped_ptr<MemPool> _udf_pool;
 
     // BufferedBlockMgr object used to allocate and manage blocks of input data in memory
     // with a fixed memory budget.
     // The block mgr is shared by all fragments for this query.
-    boost::shared_ptr<BufferedBlockMgr2> _block_mgr2;
+    std::shared_ptr<BufferedBlockMgr2> _block_mgr2;
 
     // This is the node id of the root node for this plan fragment. This is used as the
     // hash seed and has two useful properties:
@@ -513,7 +511,7 @@ private:
 
     /// Buffer reservation for this fragment instance - a child of the query buffer
     /// reservation. Non-NULL if 'query_state_' is not NULL.
-    boost::scoped_ptr<ReservationTracker> _instance_buffer_reservation;
+    std::unique_ptr<ReservationTracker> _instance_buffer_reservation;
 
     /// Pool of buffer reservations used to distribute initial reservations to operators
     /// in the query. Contains a ReservationTracker that is a child of

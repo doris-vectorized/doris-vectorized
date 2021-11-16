@@ -288,7 +288,7 @@ public:
     // - buffer_size: maximum size of each buffer.
     static Status create(RuntimeState* state, const std::shared_ptr<MemTracker>& parent,
                          RuntimeProfile* profile, TmpFileMgr* tmp_file_mgr, int64_t mem_limit,
-                         int64_t buffer_size, boost::shared_ptr<BufferedBlockMgr2>* block_mgr);
+                         int64_t buffer_size, std::shared_ptr<BufferedBlockMgr2>* block_mgr);
 
     ~BufferedBlockMgr2();
 
@@ -579,7 +579,7 @@ private:
     bool _is_cancelled;
 
     // Counters and timers to track behavior.
-    boost::scoped_ptr<RuntimeProfile> _profile;
+    std::unique_ptr<RuntimeProfile> _profile;
 
     // These have a fixed value for the lifetime of the manager and show memory usage.
     RuntimeProfile::Counter* _mem_tracker_counter;
@@ -622,7 +622,7 @@ private:
     // map contains only weak ptrs. BufferedBlockMgr2s that are handed out are shared ptrs.
     // When all the shared ptrs are no longer referenced, the BufferedBlockMgr2
     // d'tor will be called at which point the weak ptr will be removed from the map.
-    typedef std::unordered_map<TUniqueId, boost::weak_ptr<BufferedBlockMgr2>> BlockMgrsMap;
+    typedef std::unordered_map<TUniqueId, std::weak_ptr<BufferedBlockMgr2>> BlockMgrsMap;
     static BlockMgrsMap _s_query_to_block_mgrs;
 
     // Unowned.

@@ -47,7 +47,7 @@ Status DataSink::create_data_sink(ObjectPool* pool, const TDataSink& thrift_sink
                                   const TPlanFragmentExecParams& params,
                                   const RowDescriptor& row_desc,
                                   bool is_vec,
-                                  boost::scoped_ptr<DataSink>* sink,
+                                  std::unique_ptr<DataSink>* sink,
                                   DescriptorTbl& desc_tbl) {
     DataSink* tmp_sink = NULL;
 

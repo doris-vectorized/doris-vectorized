@@ -44,7 +44,6 @@ using std::mem_fn;
 using std::lock_guard;
 using std::mutex;
 using boost::scoped_array;
-using boost::shared_ptr;
 using std::unique_lock;
 
 namespace doris {
@@ -225,7 +224,7 @@ BufferedBlockMgr2::BufferedBlockMgr2(RuntimeState* state, TmpFileMgr* tmp_file_m
 Status BufferedBlockMgr2::create(RuntimeState* state, const std::shared_ptr<MemTracker>& parent,
                                  RuntimeProfile* profile, TmpFileMgr* tmp_file_mgr,
                                  int64_t mem_limit, int64_t block_size,
-                                 boost::shared_ptr<BufferedBlockMgr2>* block_mgr) {
+                                 std::shared_ptr<BufferedBlockMgr2>* block_mgr) {
     DCHECK(parent != nullptr);
     block_mgr->reset();
     {
@@ -567,7 +566,7 @@ BufferedBlockMgr2::~BufferedBlockMgr2() {
         // distinguish between the two expired pointers), and when the other
         // ~BufferedBlockMgr2() call occurs, it won't find an entry for this _query_id.
         if (it != _s_query_to_block_mgrs.end()) {
-            shared_ptr<BufferedBlockMgr2> mgr = it->second.lock();
+            std::shared_ptr<BufferedBlockMgr2> mgr = it->second.lock();
             if (mgr.get() == NULL) {
                 // The BufferBlockMgr object referenced by this entry is being deconstructed.
                 _s_query_to_block_mgrs.erase(it);

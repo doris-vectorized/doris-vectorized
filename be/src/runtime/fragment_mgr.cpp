@@ -82,8 +82,6 @@ public:
     FragmentExecState(const TUniqueId& query_id, const TUniqueId& instance_id, int backend_num,
                       ExecEnv* exec_env, const TNetworkAddress& coord_addr);
 
-    ~FragmentExecState();
-
     Status prepare(const TExecPlanFragmentParams& params);
 
     // just no use now
@@ -166,8 +164,6 @@ private:
 
     int _timeout_second;
 
-    std::unique_ptr<std::thread> _exec_thread;
-
     // This context is shared by all fragments of this host in a query
     std::shared_ptr<QueryFragmentsCtx> _fragments_ctx;
 
@@ -208,8 +204,6 @@ FragmentExecState::FragmentExecState(const TUniqueId& query_id,
           _timeout_second(-1) {
     _start_time = DateTimeValue::local_time();
 }
-
-FragmentExecState::~FragmentExecState() {}
 
 Status FragmentExecState::prepare(const TExecPlanFragmentParams& params) {
     if (params.__isset.query_options) {
