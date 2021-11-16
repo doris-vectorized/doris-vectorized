@@ -182,6 +182,32 @@ public:
         }
         return char_size;
     }
+
+    static void hex_encode(const char* src_str, size_t length, char* dst_str) {
+        static const char *hex_table = "0123456789ABCDEF";
+        auto src_str_end = src_str + length;
+
+#if defined(__SSE2__)
+        constexpr auto step = sizeof(uint64);
+        const auto hex_map = _mm_loadu_si128(reinterpret_cast<const __m128i *>(hex_table));
+        const auto mask_map = _mm_set1_epi8(0x0F);
+
+        for (; src_str + step < src_str_end; src_str += step, dst_str += step * 2) {
+            auto data = _mm_loadu_si64(src_str);
+            auto hex_loc = _mm_and_si128(_mm_unpacklo_epi8(_mm_srli_epi64(data, 4), data), mask_map);
+            _mm_storeu_si128(reinterpret_cast<__m128i *>(dst_str), _mm_shuffle_epi8(hex_map, hex_loc));
+        }
+#endif
+        char res[2];
+        // hex(str) str length is n, result must be 2 * n length
+        for (; src_str < src_str_end; src_str += 1, dst_str += 2) {
+            // low 4 bits
+            *(res + 1) = hex_table[src_str[0] & 0x0F];
+            // high 4 bits
+            *res = hex_table[(src_str[0] >> 4)];
+            std::copy(res, res + 2, dst_str);
+        }
+    }
 };
 }
 

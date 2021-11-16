@@ -275,20 +275,6 @@ struct HexStringImpl {
         return {std::make_shared<vectorized::DataTypeString>()};
     }
 
-    static size_t hex_encode(const char* src_str, size_t length, char* dst_str) {
-        static constexpr auto hex_table = "0123456789ABCDEF";
-        char res[2];
-        // hex(str) str length is n, result must be 2 * n length
-        for (size_t i = 0; i < length; i++) {
-            // low 4 bits
-            *(res + 1) = hex_table[src_str[i] & 0x0F];
-            // high 4 bits
-            *res = hex_table[(src_str[i] >> 4) & 0x0F];
-            std::copy(res, res + 2, dst_str + 2 * i);
-        }
-        return 2 * length;
-    }
-
     static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
                          ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets) {
         auto rows_count = offsets.size();
@@ -305,9 +291,9 @@ struct HexStringImpl {
 
             size_t cipher_len = 2 * srclen;
             char dst[cipher_len];
-            int outlen = hex_encode(source, srclen, dst);
+            VStringFunctions::hex_encode(source, srclen, dst);
 
-            StringOP::push_value_string(std::string_view(dst, outlen), i, dst_data, dst_offsets);
+            StringOP::push_value_string(std::string_view(dst, srclen * 2), i, dst_data, dst_offsets);
         }
         return Status::OK();
     }
@@ -379,6 +365,7 @@ struct UnHexImpl{
     static constexpr auto name = "unhex";
     using ReturnType = DataTypeString;
     using ColumnType = ColumnString;
+
     static bool check_and_decode_one(char& c, const char src_c, bool flag) {
         int k = flag ? 16 : 1;
         int value = src_c - '0';
@@ -406,7 +393,7 @@ struct UnHexImpl{
     }
 
     static int hex_decode(const char* src_str, size_t src_len, char* dst_str) {
-        // if str length is odd or 0 ,return empty string like mysql dose.
+        // if str length is odd or 0, return empty string like mysql dose.
         if ((src_len & 1) != 0 or src_len == 0) {
             return 0;
         }
