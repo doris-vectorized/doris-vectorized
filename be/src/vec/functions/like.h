@@ -77,7 +77,7 @@ class FunctionLikeBase : public IFunction {
 public:
     size_t get_number_of_arguments() const override { return 2; }
 
-    DataTypePtr get_return_type_impl(const DataTypes& /*arguments*/) const override {
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         return std::make_shared<DataTypeUInt8>();
     }
 
