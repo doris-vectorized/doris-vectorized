@@ -25,7 +25,6 @@
 #include <algorithm>
 
 #include "exprs/anyval_util.h"
-#include "exprs/expr.h"
 #include "fmt/format.h"
 #include "math_functions.h"
 #include "runtime/string_value.hpp"
