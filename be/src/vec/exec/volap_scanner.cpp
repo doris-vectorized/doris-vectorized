@@ -35,8 +35,6 @@ VOlapScanner::VOlapScanner(RuntimeState* runtime_state, VOlapScanNode* parent, b
           _parent(parent),
           _profile(parent->runtime_profile()) {}
 
-VOlapScanner::~VOlapScanner() = default;
-
 Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bool* eof) {
     auto tracker = MemTracker::CreateTracker(state->fragment_mem_tracker()->limit(),
                                              "VOlapScanner:" + print_id(state->query_id()),

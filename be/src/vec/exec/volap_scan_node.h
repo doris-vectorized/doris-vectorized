@@ -23,43 +23,45 @@ namespace doris {
 class ObjectPool;
 class TPlanNode;
 class DescriptorTbl;
-class RowBatch;
+
 namespace vectorized {
 
-class VOlapScanner;
-
 class VOlapScanNode : public OlapScanNode {
+    friend class VOlapScanner;
 public:
     VOlapScanNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs);
-    ~VOlapScanNode();
-    virtual void transfer_thread(RuntimeState* state);
-    virtual void scanner_thread(VOlapScanner* scanner);
-    virtual Status get_next(RuntimeState* state, RowBatch* row_batch, bool* eos) {
-        return Status::NotSupported("Not Implemented VOlapScanNode Node::get_next scalar");
-    }
-    virtual Status get_next(RuntimeState* state, Block* block, bool* eos);
-    virtual Status add_one_block(Block* block);
-    virtual Status start_scan_thread(RuntimeState* state);
-    virtual Status close(RuntimeState* state);
-
-    friend class VOlapScanner;
 
 private:
+    void scanner_thread(VOlapScanner* scanner);
+    void transfer_thread(RuntimeState* state);
+    Status start_scan_thread(RuntimeState* state) override;
+
+    Status get_next(RuntimeState* state, Block* block, bool* eos) override;
+    Status close(RuntimeState* state) override;
+
+    Status add_one_block(Block* block);
+    bool memory_consume_too_large(RuntimeState* state);
+    int start_scanner_thread_task(RuntimeState* state);
+    Block* get_scan_block(int assigned_thread_num);
+    Block* alloc_block();
+
     std::list<Block*> _scan_blocks;
+    std::mutex _scan_blocks_lock;
+    std::condition_variable _scan_block_added_cv;
+
     std::vector<Block*> _materialized_blocks;
     std::mutex _blocks_lock;
     std::condition_variable _block_added_cv;
     std::condition_variable _block_consumed_cv;
 
-    std::mutex _scan_blocks_lock;
-    std::condition_variable _scan_block_added_cv;
-
     std::vector<Block*> _free_blocks;
     std::mutex _free_blocks_lock;
 
     std::list<VOlapScanner*> _volap_scanners;
+    std::mutex _volap_scanners_lock;
 
     int _max_materialized_blocks;
+    int _max_thread = 0;
 };
 } // namespace vectorized
 } // namespace doris
