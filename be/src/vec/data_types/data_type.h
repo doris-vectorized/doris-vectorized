@@ -323,6 +323,10 @@ inline bool is_array(const DataTypePtr& data_type) {
     return WhichDataType(data_type).is_array();
 }
 
+inline bool is_nothing(const DataTypePtr& data_type) {
+    return WhichDataType(data_type).is_nothing();
+}
+
 template <typename T>
 inline bool is_uint8(const T& data_type) {
     return WhichDataType(data_type).is_uint8();
