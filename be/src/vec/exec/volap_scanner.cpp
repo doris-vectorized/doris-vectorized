@@ -25,6 +25,7 @@
 #include "vec/core/block.h"
 #include "vec/exec/volap_scan_node.h"
 #include "vec/exprs/vexpr_context.h"
+#include "vec/olap/block_reader.h"
 
 namespace doris::vectorized {
 
@@ -33,77 +34,45 @@ VOlapScanner::VOlapScanner(RuntimeState* runtime_state, VOlapScanNode* parent, b
         : OlapScanner(runtime_state, parent, aggregation, need_agg_finalize, scan_range),
           _runtime_state(runtime_state),
           _parent(parent),
-          _profile(parent->runtime_profile()) {}
+          _profile(parent->runtime_profile()) {
+    _reader.reset(new BlockReader);
+}
 
 VOlapScanner::~VOlapScanner() = default;
 
 Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bool* eof) {
-    auto tracker = MemTracker::CreateTracker(state->fragment_mem_tracker()->limit(),
-                                             "VOlapScanner:" + print_id(state->query_id()),
-                                             state->fragment_mem_tracker());
-    std::unique_ptr<MemPool> mem_pool(new MemPool(tracker.get()));
-    int64_t raw_rows_threshold = raw_rows_read() + config::doris_scanner_row_num;
-    auto agg_object_pool = std::make_unique<ObjectPool>();
-
-    auto column_size = get_query_slots().size();
-    std::vector<vectorized::MutableColumnPtr> columns(column_size);
     // only empty block should be here
     DCHECK(block->rows() == 0);
 
-    do {
-        bool mem_reuse = block->mem_reuse();
-        for (auto i = 0; i < column_size; i++) {
-            if (mem_reuse) {
-                columns[i] = std::move(*block->get_by_position(i).column).mutate();
-            } else {
-                columns[i] = get_query_slots()[i]->get_empty_mutable_column();
-            }
-        }
-
-        while (true) {
-            // block is full, break
-            if (state->batch_size() <= columns[0]->size()) {
-                _update_realtime_counter();
-                break;
-            }
-            // Read one row from reader
-            auto res = _reader->next_row_with_aggregation(&_read_row_cursor, mem_pool.get(),
-                                                          agg_object_pool.get(), eof);
-            if (res != OLAP_SUCCESS) {
-                std::stringstream ss;
-                ss << "Internal Error: read storage fail. res=" << res
-                   << ", tablet=" << _tablet->full_name()
-                   << ", backend=" << BackendOptions::get_localhost();
-                return Status::InternalError(ss.str());
-            }
-            // If we reach end of this scanner, break
-            if (UNLIKELY(*eof)) {
-                break;
-            }
-
-            _num_rows_read++;
-
-            _convert_row_to_block(&columns);
-            VLOG_ROW << "VOlapScanner input row: " << _read_row_cursor.to_string();
-
-            if (raw_rows_read() >= raw_rows_threshold) {
-                break;
-            }
-        }
-        auto n_columns = 0;
-
-        // Before really use the Block, muse clear other ptr of column in block
-        // So here need do std::move and clear in `columns`
-        if (!mem_reuse) {
-            for (const auto slot_desc : _tuple_desc->slots()) {
-                block->insert(ColumnWithTypeAndName(std::move(columns[n_columns++]),
+    int64_t raw_rows_threshold = raw_rows_read() + config::doris_scanner_row_num;
+    if (!block->mem_reuse()) {
+        for (const auto slot_desc : _tuple_desc->slots()) {
+            block->insert(ColumnWithTypeAndName(slot_desc->get_empty_mutable_column(),
                                                     slot_desc->get_data_type_ptr(),
                                                     slot_desc->col_name()));
-            }
-        } else {
-            columns.clear();
         }
-        VLOG_ROW << "VOlapScanner output rows: " << block->rows();
+    }
+
+    do {
+        // Read one block from block reader
+        auto res = _reader->next_block_with_aggregation(block, nullptr, nullptr, eof);
+        if (res != OLAP_SUCCESS) {
+            std::stringstream ss;
+            ss << "Internal Error: read storage fail. res=" << res
+               << ", tablet=" << _tablet->full_name()
+               << ", backend=" << BackendOptions::get_localhost();
+            return Status::InternalError(ss.str());
+        }
+        _num_rows_read += block->rows();
+        _update_realtime_counter();
+
+        // If we reach end of this scanner, break
+        if (UNLIKELY(*eof)) {
+            DCHECK(block->rows() == 0);
+            break;
+        }
+
+        VLOG_ROW << "VOlapScanner input row: " << _read_row_cursor.to_string();
 
         RETURN_IF_ERROR(
                 VExprContext::filter_block(_vconjunct_ctx, block, _tuple_desc->slots().size()));
@@ -247,5 +216,4 @@ void VOlapScanner::_convert_row_to_block(std::vector<vectorized::MutableColumnPt
         }
     }
 }
-
 } // namespace doris::vectorized

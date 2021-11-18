@@ -43,8 +43,8 @@ public:
     VExprContext** vconjunct_ctx_ptr() { return &_vconjunct_ctx; }
 
 private:
+    // TODO: Remove this function after we finish reader vec
     void _convert_row_to_block(std::vector<vectorized::MutableColumnPtr>* columns);
-
     VExprContext* _vconjunct_ctx = nullptr;
 
     RuntimeState* _runtime_state;

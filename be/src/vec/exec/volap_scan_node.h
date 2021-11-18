@@ -38,14 +38,14 @@ public:
         return Status::NotSupported("Not Implemented VOlapScanNode Node::get_next scalar");
     }
     virtual Status get_next(RuntimeState* state, Block* block, bool* eos);
-    virtual Status add_one_block(Block* block);
+    virtual Status add_blocks(std::vector<Block*>& block);
     virtual Status start_scan_thread(RuntimeState* state);
     virtual Status close(RuntimeState* state);
 
     friend class VOlapScanner;
 
 private:
-    std::list<Block*> _scan_blocks;
+    std::vector<Block*> _scan_blocks;
     std::vector<Block*> _materialized_blocks;
     std::mutex _blocks_lock;
     std::condition_variable _block_added_cv;

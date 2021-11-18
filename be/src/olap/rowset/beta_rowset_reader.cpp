@@ -188,7 +188,6 @@ OLAPStatus BetaRowsetReader::next_block(vectorized::Block* block) {
                 if (!s.ok()) {
                     if (s.is_end_of_file()) {
                         if (is_first) {
-                            block->clear();
                             return OLAP_ERR_DATA_EOF;
                         } else {
                             break;
@@ -205,10 +204,10 @@ OLAPStatus BetaRowsetReader::next_block(vectorized::Block* block) {
 
         {
             SCOPED_RAW_TIMER(&_stats->block_convert_ns);
-            _input_block->convert_to_vec_block(block, is_first);
+            _input_block->convert_to_vec_block(block);
         }
         is_first = false;
-    } while (block->rows() <= _input_block->capacity() / 2); // here we should keep block.rows() < batch_size
+    } while (block->rows() < _input_block->capacity()); // here we should keep block.rows() < batch_size
 
     return OLAP_SUCCESS;
 }

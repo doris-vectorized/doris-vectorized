@@ -23,7 +23,7 @@
 namespace doris {
 namespace vectorized {
 
-VCollectIterator::~VCollectIterator() {}
+VCollectIterator::~VCollectIterator() = default;
 
 void VCollectIterator::init(Reader* reader) {
     _reader = reader;
@@ -37,9 +37,6 @@ void VCollectIterator::init(Reader* reader) {
 
 OLAPStatus VCollectIterator::add_child(RowsetReaderSharedPtr rs_reader) {
     std::unique_ptr<LevelIterator> child(new Level0Iterator(rs_reader, _reader));
-    RETURN_NOT_OK(child->init());
-    //RETURN_NOT_OK(child->_refresh_current_row());
-
     _children.push_back(child.release());
     return OLAP_SUCCESS;
 }
@@ -55,6 +52,7 @@ void VCollectIterator::build_heap(const std::vector<RowsetReaderSharedPtr>& rs_r
         return;
     } else if (_merge) {
         DCHECK(!rs_readers.empty());
+        for (auto& child : _children) { child->init(); }
         // build merge heap with two children, a base rowset as level0iterator and
         // other cumulative rowsets as a level1iterator
         if (_children.size() > 1) {
@@ -160,7 +158,7 @@ VCollectIterator::Level0Iterator::Level0Iterator(RowsetReaderSharedPtr rs_reader
     DCHECK_EQ(RowsetReader::BETA, rs_reader->type());
 }
 
-VCollectIterator::Level0Iterator::~Level0Iterator() {}
+VCollectIterator::Level0Iterator::~Level0Iterator() = default;
 
 OLAPStatus VCollectIterator::Level0Iterator::init() {
     return _refresh_current_row();
@@ -201,10 +199,7 @@ OLAPStatus VCollectIterator::Level0Iterator::next(const Block** block, uint32_t*
 }
 
 OLAPStatus VCollectIterator::Level0Iterator::next(Block* block) {
-    RETURN_NOT_OK(_refresh_current_row());
-    block = &_block;
-    _current_row = _block.rows();
-    return OLAP_SUCCESS;
+    return _rs_reader->next_block(block);
 }
 
 const TabletSchema& VCollectIterator::Level0Iterator::tablet_schema() const {
@@ -242,6 +237,18 @@ OLAPStatus VCollectIterator::Level1Iterator::next(const Block** block, uint32_t*
         DCHECK(false) << "should not use this method.";
         return _normal_next(block, row);
     }
+}
+
+// Read next block
+// Returns
+//      OLAP_SUCCESS when read successfully.
+//      OLAP_ERR_DATA_EOF and set *row to nullptr when EOF is reached.
+//      Others when error happens
+OLAPStatus VCollectIterator::Level1Iterator::next(Block* block) {
+    if (UNLIKELY(_cur_child == nullptr)) {
+        return OLAP_ERR_DATA_EOF;
+    }
+    return _normal_next(block);
 }
 
 // Get top row of the heap, nullptr if reach end.
