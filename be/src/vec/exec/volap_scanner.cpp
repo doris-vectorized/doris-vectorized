@@ -38,8 +38,6 @@ VOlapScanner::VOlapScanner(RuntimeState* runtime_state, VOlapScanNode* parent, b
     _reader.reset(new BlockReader);
 }
 
-VOlapScanner::~VOlapScanner() = default;
-
 Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bool* eof) {
     // only empty block should be here
     DCHECK(block->rows() == 0);

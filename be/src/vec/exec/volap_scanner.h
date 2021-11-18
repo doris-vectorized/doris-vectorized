@@ -34,7 +34,6 @@ public:
     VOlapScanner(RuntimeState* runtime_state, VOlapScanNode* parent, bool aggregation,
                  bool need_agg_finalize, const TPaloScanRange& scan_range);
 
-    ~VOlapScanner();
     Status get_block(RuntimeState* state, vectorized::Block* block, bool* eof);
     Status get_batch(RuntimeState* state, RowBatch* row_batch, bool* eos) {
         return Status::NotSupported("Not Implemented VOlapScanNode Node::get_next scalar");
