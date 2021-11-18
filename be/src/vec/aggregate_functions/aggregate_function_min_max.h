@@ -47,6 +47,12 @@ public:
             assert_cast<ColumnVector<T>&>(to).insert_default();
     }
 
+    void reset() {
+        if (has()) {
+            has_value = false;    
+        }
+    }
+
     void write(BufferWritable& buf) const {
         write_binary(has(), buf);
         if (has()) write_binary(value, buf);
@@ -157,6 +163,12 @@ public:
             assert_cast<ColumnDecimal<Decimal128>&>(to).insert_default();
     }
 
+    void reset() {
+        if (has()) {
+            has_value = false;    
+        }
+    }
+    
     void write(BufferWritable& buf) const {
         write_binary(has(), buf);
         if (has()) write_binary(value, buf);
@@ -281,6 +293,14 @@ public:
             assert_cast<ColumnString &>(to).insert_default();
     }
 
+    void reset() {
+        if (size != -1) {
+            size = -1;    
+            capacity = 0; 
+            large_data = nullptr;
+        }
+    }
+    
     void write(BufferWritable& buf) const {
         write_binary(size, buf);
         if (has()) buf.write(get_data(), size);
@@ -455,6 +475,32 @@ struct AggregateFunctionMinData : Data {
     static const char* name() { return "min"; }
 };
 
+template <typename Data>
+struct AggregateFunctionAnyData : Data {
+    using Self = AggregateFunctionAnyData;
+
+    bool change_if_better(const IColumn& column, size_t row_num, Arena* arena) {
+        return this->change_first_time(column, row_num, arena);
+    }
+    bool change_if_better(const Self& to, Arena* arena) { return this->change_first_time(to, arena); }
+
+    static const char* name() { return "first_value"; }
+};
+
+template <typename Data>
+struct AggregateFunctionAnyLastData : Data {
+    using Self = AggregateFunctionAnyLastData;
+
+    bool change_if_better(const IColumn& column, size_t row_num, Arena* arena) {
+        return this->change_every_time(column, row_num, arena);
+    }
+    bool change_if_better(const Self& to, Arena* arena) {
+        return this->change_every_time(to, arena);
+    }
+
+    static const char* name() { return "last_value"; }
+};
+
 template <typename Data, bool AllocatesMemoryInArena>
 class AggregateFunctionsSingleValue final
         : public IAggregateFunctionDataHelper<
@@ -486,6 +532,10 @@ public:
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena* arena) const override {
         this->data(place).change_if_better(*columns[0], row_num, arena);
+    }
+
+    void reset(AggregateDataPtr place) const override {
+        this->data(place).reset();
     }
 
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena* arena) const override {

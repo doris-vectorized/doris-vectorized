@@ -73,12 +73,32 @@ AggregateFunctionPtr create_aggregate_function_min(const std::string& name,
                                                    AggregateFunctionMinData>(name, argument_types,
                                                                              parameters));
 }
+AggregateFunctionPtr create_aggregate_function_first(const std::string& name,
+                                                   const DataTypes& argument_types,
+                                                   const Array& parameters,
+                                                   const bool result_is_nullable) {
+    return AggregateFunctionPtr(
+            create_aggregate_function_single_value<AggregateFunctionsSingleValue,
+                                                   AggregateFunctionAnyData>(name, argument_types,
+                                                                             parameters));
+}
 
+AggregateFunctionPtr create_aggregate_function_last(const std::string& name,
+                                                       const DataTypes& argument_types,
+                                                       const Array& parameters,
+                                                       const bool result_is_nullable) {
+    return AggregateFunctionPtr(
+            create_aggregate_function_single_value<AggregateFunctionsSingleValue,
+                                                   AggregateFunctionAnyLastData>(
+                    name, argument_types, parameters));
+}
 } // namespace
 
 void register_aggregate_function_minmax(AggregateFunctionSimpleFactory& factory) {
     factory.register_function("max", create_aggregate_function_max);
     factory.register_function("min", create_aggregate_function_min);
+    factory.register_function("first_value", create_aggregate_function_first);
+    factory.register_function("last_value", create_aggregate_function_last);
 }
 
 } // namespace doris::vectorized

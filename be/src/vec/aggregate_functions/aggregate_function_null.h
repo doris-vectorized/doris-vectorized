@@ -74,7 +74,7 @@ public:
     AggregateFunctionNullBase(AggregateFunctionPtr nested_function_, const DataTypes& arguments,
                               const Array& params)
             : IAggregateFunctionHelper<Derived>(arguments, params),
-              nested_function{nested_function_} {
+              nested_function {nested_function_} {
         if (result_is_nullable)
             prefix_size = nested_function->align_of_data();
         else
@@ -98,6 +98,10 @@ public:
 
     void destroy(AggregateDataPtr place) const noexcept override {
         nested_function->destroy(nested_place(place));
+    }
+    void reset(AggregateDataPtr place) const override {
+        init_flag(place);
+        nested_function->reset(nested_place(place));
     }
 
     bool has_trivial_destructor() const override {

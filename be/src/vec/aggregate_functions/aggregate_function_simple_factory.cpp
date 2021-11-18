@@ -28,7 +28,7 @@ void register_aggregate_function_HLL_union_agg(AggregateFunctionSimpleFactory& f
 void register_aggregate_function_uniq(AggregateFunctionSimpleFactory& factory);
 void register_aggregate_function_combinator_distinct(AggregateFunctionSimpleFactory& factory);
 void register_aggregate_function_bitmap(AggregateFunctionSimpleFactory& factory);
-
+void register_aggregate_function_window(AggregateFunctionSimpleFactory& factory);
 AggregateFunctionSimpleFactory& AggregateFunctionSimpleFactory::instance() {
     static std::once_flag oc;
     static AggregateFunctionSimpleFactory instance;
@@ -42,6 +42,7 @@ AggregateFunctionSimpleFactory& AggregateFunctionSimpleFactory::instance() {
         register_aggregate_function_combinator_distinct(instance);
         register_aggregate_function_HLL_union_agg(instance);
         register_aggregate_function_combinator_null(instance);
+        register_aggregate_function_window(instance);
     });
     return instance;
 }

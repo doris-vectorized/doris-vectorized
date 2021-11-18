@@ -79,6 +79,10 @@ public:
         const auto& column = static_cast<const ColVecType&>(*columns[0]);
         this->data(place).add(column.get_data()[row_num]);
     }
+    
+    void reset(AggregateDataPtr place) const override {
+        this->data(place).sum = {};
+    }
 
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {
         this->data(place).merge(this->data(rhs));
