@@ -1217,10 +1217,10 @@ visible_functions = [
     # hash functions
     [['murmur_hash3_32'], 'INT', ['VARCHAR', '...'],
         '_ZN5doris13HashFunctions15murmur_hash3_32EPN9doris_udf15FunctionContextEiPKNS1_9StringValE',
-        '', '', '', ''],
+        '', '', 'vec', ''],
     [['murmur_hash3_32'], 'INT', ['STRING', '...'],
         '_ZN5doris13HashFunctions15murmur_hash3_32EPN9doris_udf15FunctionContextEiPKNS1_9StringValE',
-        '', '', '', ''],
+        '', '', 'vec', ''],
 
     # aes and base64 function
     [['aes_encrypt'], 'VARCHAR', ['VARCHAR', 'VARCHAR'],
