@@ -16,22 +16,21 @@
 // under the License.
 
 #include "vec/functions/function_string.h"
-#include "exprs/v_string_functions.h"
+
 #include <re2/re2.h>
 
 #include <cstddef>
 #include <cstdlib>
 #include <string_view>
 
-#include "runtime/string_search.hpp"
 #include "exprs/v_string_functions.h"
+#include "runtime/string_search.hpp"
+#include "util/aes_util.h"
+#include "util/url_coding.h"
 #include "vec/common/pod_array_fwd.h"
 #include "vec/functions/function_string_to_string.h"
 #include "vec/functions/function_totype.h"
 #include "vec/functions/simple_function_factory.h"
-
-#include "util/aes_util.h"
-#include "util/url_coding.h"
 
 namespace doris::vectorized {
 struct NameStringASCII {
@@ -259,7 +258,8 @@ struct ReverseImpl {
             auto src_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
             int64_t src_len = offsets[i] - offsets[i - 1] - 1;
             char dst[src_len];
-            VStringFunctions::reverse(StringVal((uint8_t*)src_str, src_len), StringVal((uint8_t*)dst, src_len));
+            VStringFunctions::reverse(StringVal((uint8_t*)src_str, src_len),
+                                      StringVal((uint8_t*)dst, src_len));
             StringOP::push_value_string(std::string_view(dst, src_len), i, res_data, res_offsets);
         }
         return Status::OK();
@@ -293,7 +293,8 @@ struct HexStringImpl {
             char dst[cipher_len];
             VStringFunctions::hex_encode(source, srclen, dst);
 
-            StringOP::push_value_string(std::string_view(dst, srclen * 2), i, dst_data, dst_offsets);
+            StringOP::push_value_string(std::string_view(dst, srclen * 2), i, dst_data,
+                                        dst_offsets);
         }
         return Status::OK();
     }
@@ -355,13 +356,14 @@ struct TrimImpl {
             if constexpr (is_rtrim) {
                 str = VStringFunctions::rtrim(str);
             }
-            StringOP::push_value_string(std::string_view((char*)str.ptr, str.len), i, res_data, res_offsets);
+            StringOP::push_value_string(std::string_view((char*)str.ptr, str.len), i, res_data,
+                                        res_offsets);
         }
         return Status::OK();
     }
 };
 
-struct UnHexImpl{
+struct UnHexImpl {
     static constexpr auto name = "unhex";
     using ReturnType = DataTypeString;
     using ColumnType = ColumnString;
@@ -414,7 +416,8 @@ struct UnHexImpl{
     }
 
     static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
-                         ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets, NullMap& null_map) {
+                         ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets,
+                         NullMap& null_map) {
         auto rows_count = offsets.size();
         dst_offsets.resize(rows_count);
 
@@ -439,7 +442,8 @@ struct UnHexImpl{
             if (outlen < 0) {
                 StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
             } else {
-                StringOP::push_value_string(std::string_view(dst, outlen), i, dst_data, dst_offsets);
+                StringOP::push_value_string(std::string_view(dst, outlen), i, dst_data,
+                                            dst_offsets);
             }
         }
 
@@ -477,7 +481,6 @@ struct StringSpace {
     }
 };
 
-
 struct AesEncryptImpl {
     static constexpr auto name = "aes_encrypt";
     using Chars = ColumnString::Chars;
@@ -507,8 +510,8 @@ struct AesEncryptImpl {
             char p[cipher_len];
 
             int outlen =
-                    AesUtil::encrypt(AES_128_ECB, (unsigned char*)l_raw, l_size, (unsigned char*)r_raw,
-                                     r_size, NULL, true, (unsigned char*)p);
+                    AesUtil::encrypt(AES_128_ECB, (unsigned char*)l_raw, l_size,
+                                     (unsigned char*)r_raw, r_size, NULL, true, (unsigned char*)p);
             if (outlen < 0) {
                 StringOP::push_null_string(i, res_data, res_offsets, null_map_data);
             } else {
@@ -547,8 +550,8 @@ struct AesDecryptImpl {
             char p[cipher_len];
 
             int outlen =
-                    AesUtil::decrypt(AES_128_ECB, (unsigned char*)l_raw, l_size, (unsigned char*)r_raw,
-                                     r_size, NULL, true, (unsigned char*)p);
+                    AesUtil::decrypt(AES_128_ECB, (unsigned char*)l_raw, l_size,
+                                     (unsigned char*)r_raw, r_size, NULL, true, (unsigned char*)p);
             if (outlen < 0) {
                 StringOP::push_null_string(i, res_data, res_offsets, null_map_data);
             } else {
@@ -558,14 +561,14 @@ struct AesDecryptImpl {
     }
 };
 
-
 struct ToBase64Impl {
     static constexpr auto name = "to_base64";
     using ReturnType = DataTypeString;
     using ColumnType = ColumnString;
 
     static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
-                         ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets, NullMap& null_map) {
+                         ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets,
+                         NullMap& null_map) {
         auto rows_count = offsets.size();
         dst_offsets.resize(rows_count);
 
@@ -578,7 +581,7 @@ struct ToBase64Impl {
             auto source = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
             size_t srclen = offsets[i] - offsets[i - 1] - 1;
 
-            if (*source == '\0' && srclen == 0) {
+            if (*source == '\0' || srclen == 0) {
                 StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
                 continue;
             }
@@ -590,7 +593,8 @@ struct ToBase64Impl {
             if (outlen < 0) {
                 StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
             } else {
-                StringOP::push_value_string(std::string_view(dst, outlen), i, dst_data, dst_offsets);
+                StringOP::push_value_string(std::string_view(dst, outlen), i, dst_data,
+                                            dst_offsets);
             }
         }
         return Status::OK();
@@ -603,7 +607,8 @@ struct FromBase64Impl {
     using ColumnType = ColumnString;
 
     static Status vector(const ColumnString::Chars& data, const ColumnString::Offsets& offsets,
-                         ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets, NullMap& null_map) {
+                         ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets,
+                         NullMap& null_map) {
         auto rows_count = offsets.size();
         dst_offsets.resize(rows_count);
 
@@ -616,7 +621,7 @@ struct FromBase64Impl {
             auto source = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
             size_t srclen = offsets[i] - offsets[i - 1] - 1;
 
-            if (*source == '\0' && srclen == 0) {
+            if (*source == '\0' || srclen == 0) {
                 StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
                 continue;
             }
@@ -628,7 +633,8 @@ struct FromBase64Impl {
             if (outlen < 0) {
                 StringOP::push_null_string(i, dst_data, dst_offsets, null_map);
             } else {
-                StringOP::push_value_string(std::string_view(dst, outlen), i, dst_data, dst_offsets);
+                StringOP::push_value_string(std::string_view(dst, outlen), i, dst_data,
+                                            dst_offsets);
             }
         }
 

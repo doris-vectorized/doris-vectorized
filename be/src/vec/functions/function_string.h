@@ -17,19 +17,16 @@
 
 #pragma once
 
-#include "exprs/anyval_util.h"
-
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
-#include "runtime/string_value.hpp"
-
 #include <string_view>
 
+#include "exprs/anyval_util.h"
+#include "runtime/string_value.hpp"
 #include "util/md5.h"
 #include "util/url_parser.h"
-
 #include "vec/columns/column_nullable.h"
 #include "vec/columns/column_string.h"
 #include "vec/columns/columns_number.h"
@@ -194,8 +191,9 @@ private:
             if (byte_pos <= str_size && fixed_len > 0) {
                 // return StringVal(str.ptr + byte_pos, fixed_len);
                 StringOP::push_value_string(
-                        std::string_view {reinterpret_cast<const char*>(raw_str + byte_pos), (size_t)fixed_len}, i, res_chars,
-                        res_offsets);
+                        std::string_view {reinterpret_cast<const char*>(raw_str + byte_pos),
+                                          (size_t)fixed_len},
+                        i, res_chars, res_offsets);
             } else {
                 StringOP::push_empty_string(i, res_chars, res_offsets);
             }
@@ -772,7 +770,8 @@ public:
                 while (num < part_number) {
                     pre_offset = offset;
                     size_t n = str.size - offset - 1;
-                    const char* pos = reinterpret_cast<const char*>(memchr(str.data + offset + 1, delimiter_str[0], n));
+                    const char* pos = reinterpret_cast<const char*>(
+                            memchr(str.data + offset + 1, delimiter_str[0], n));
                     if (pos != nullptr) {
                         offset = pos - str.data;
                         num++;
@@ -785,8 +784,10 @@ public:
 
                 if (num == part_number) {
                     StringOP::push_value_string(
-                            std::string_view {reinterpret_cast<const char*>(str.data + pre_offset + 1), (size_t)offset - pre_offset - 1}, i, res_chars,
-                            res_offsets);
+                            std::string_view {
+                                    reinterpret_cast<const char*>(str.data + pre_offset + 1),
+                                    (size_t)offset - pre_offset - 1},
+                            i, res_chars, res_offsets);
                 } else {
                     StringOP::push_null_string(i, res_chars, res_offsets, null_map_data);
                 }
@@ -798,8 +799,8 @@ public:
                 while (num < part_number) {
                     pre_offset = offset;
                     size_t n = str.size - offset - delimiter.size;
-                    char* pos = reinterpret_cast<char*>(
-                            memmem(str.data + offset + delimiter.size, n, delimiter.data, delimiter.size));
+                    char* pos = reinterpret_cast<char*>(memmem(str.data + offset + delimiter.size,
+                                                               n, delimiter.data, delimiter.size));
                     if (pos != nullptr) {
                         offset = pos - str.data;
                         num++;
@@ -812,8 +813,10 @@ public:
 
                 if (num == part_number) {
                     StringOP::push_value_string(
-                            std::string_view {reinterpret_cast<const char*>(str.data + pre_offset + delimiter.size), (size_t)offset - pre_offset - delimiter.size}, i, res_chars,
-                            res_offsets);
+                            std::string_view {reinterpret_cast<const char*>(str.data + pre_offset +
+                                                                            delimiter.size),
+                                              (size_t)offset - pre_offset - delimiter.size},
+                            i, res_chars, res_offsets);
                 } else {
                     StringOP::push_null_string(i, res_chars, res_offsets, null_map_data);
                 }
@@ -849,7 +852,8 @@ public:
         std::vector<const ColumnString::Chars*> chars_list(argument_size);
 
         for (int i = 0; i < argument_size; ++i) {
-            argument_columns[i] = block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
+            argument_columns[i] =
+                    block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
             if (auto col_str = assert_cast<const ColumnString*>(argument_columns[i].get())) {
                 offsets_list[i] = &col_str->get_offsets();
                 chars_list[i] = &col_str->get_chars();
@@ -938,16 +942,16 @@ public:
             }
 
             auto part = part_col->get_data_at(i);
-            StringValue p(const_cast<char *>(part.data), part.size);
+            StringValue p(const_cast<char*>(part.data), part.size);
             UrlParser::UrlPart url_part = UrlParser::get_url_part(p);
             StringValue url_key;
             if (has_key) {
                 auto key = key_col->get_data_at(i);
-                url_key = StringValue(const_cast<char *>(key.data), key.size);
+                url_key = StringValue(const_cast<char*>(key.data), key.size);
             }
 
             auto source = url_col->get_data_at(i);
-            StringValue url_val(const_cast<char *>(source.data), source.size);
+            StringValue url_val(const_cast<char*>(source.data), source.size);
 
             StringValue parse_res;
             bool success = false;
@@ -970,8 +974,8 @@ public:
                 }
             }
 
-            StringOP::push_value_string(std::string_view(parse_res.ptr, parse_res.len),
-                                        i, res_chars, res_offsets);
+            StringOP::push_value_string(std::string_view(parse_res.ptr, parse_res.len), i,
+                                        res_chars, res_offsets);
         }
         block.get_by_position(result).column =
                 ColumnNullable::create(std::move(res), std::move(null_map));
