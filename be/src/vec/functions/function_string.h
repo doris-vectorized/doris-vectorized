@@ -903,7 +903,7 @@ public:
     DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
         return make_nullable(std::make_shared<DataTypeString>());
     }
-    bool use_default_implementation_for_nulls() const override { return false; }
+    bool use_default_implementation_for_nulls() const override { return true; }
 
     Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
                         size_t result, size_t input_rows_count) override {
@@ -922,17 +922,17 @@ public:
         for (size_t i = 0; i < argument_size; ++i) {
             argument_columns[i] =
                     block.get_by_position(arguments[i]).column->convert_to_full_column_if_const();
-            if (auto* nullable = check_and_get_column<const ColumnNullable>(*argument_columns[i])) {
-                argument_columns[i] = nullable->get_nested_column_ptr();
-                VectorizedUtils::update_null_map(null_map_data, nullable->get_null_map_data());
-            }
         }
 
-        auto url_col = assert_cast<const ColumnString*>(argument_columns[0].get());
-        auto part_col = assert_cast<const ColumnString*>(argument_columns[1].get());
+        const auto* url_col = check_and_get_column<ColumnString>(argument_columns[0].get());
+        const auto* part_col = check_and_get_column<ColumnString>(argument_columns[1].get());
         const ColumnString* key_col;
         if (has_key) {
-            key_col = assert_cast<const ColumnString*>(argument_columns[2].get());
+            key_col = check_and_get_column<ColumnString>(argument_columns[2].get());
+        }
+
+        if (!url_col || !part_col || (has_key && !key_col)) {
+            return Status::InternalError("Not supported input arguments types");
         }
 
         for (size_t i = 0; i < input_rows_count; ++i) {
