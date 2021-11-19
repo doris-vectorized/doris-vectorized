@@ -20,6 +20,7 @@
 
 #include "common/object_pool.h"
 #include "exec/exec_node.h"
+#include "exprs/runtime_filter_slots.h"
 #include "vec/common/columns_hashing.h"
 #include "vec/common/hash_table/hash_map.h"
 #include "vec/common/hash_table/hash_table.h"
@@ -127,6 +128,7 @@ public:
     virtual Status get_next(RuntimeState* state, RowBatch* row_batch, bool* eos);
     virtual Status get_next(RuntimeState* state, Block* block, bool* eos);
     virtual Status close(RuntimeState* state);
+    HashTableVariants& get_hash_table_variants() { return _hash_table_variants; }
 
 private:
     using VExprContexts = std::vector<VExprContext*>;
@@ -197,7 +199,7 @@ private:
 
 private:
     Status _hash_table_build(RuntimeState* state);
-    Status _process_build_block(Block& block);
+    Status _process_build_block(RuntimeState* state, Block& block);
 
     Status extract_build_join_column(Block& block, NullMap& null_map, ColumnRawPtrs& raw_ptrs,
                                      bool& ignore_null, RuntimeProfile::Counter& expr_call_timer);
@@ -212,6 +214,12 @@ private:
 
     template <class HashTableContext, bool ignore_null>
     friend class ProcessHashTableProbe;
+
+    template <class HashTableContext>
+    friend class ProcessRuntimeFilterBuild;
+
+    std::vector<TRuntimeFilterDesc> _runtime_filter_descs;
+    std::unordered_map<const Block*, std::vector<int>> _inserted_rows;
 };
 } // namespace vectorized
 } // namespace doris

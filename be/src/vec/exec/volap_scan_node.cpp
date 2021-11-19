@@ -20,6 +20,7 @@
 #include "gen_cpp/PlanNodes_types.h"
 #include "runtime/descriptors.h"
 #include "runtime/exec_env.h"
+#include "runtime/runtime_filter_mgr.h"
 #include "util/priority_thread_pool.hpp"
 #include "vec/core/block.h"
 #include "vec/exec/volap_scanner.h"
@@ -197,6 +198,32 @@ void VOlapScanNode::scanner_thread(VOlapScanner* scanner) {
         scanner->set_opened();
     }
 
+    std::vector<ExprContext*> contexts;
+    auto& scanner_filter_apply_marks = *scanner->mutable_runtime_filter_marks();
+    DCHECK(scanner_filter_apply_marks.size() == _runtime_filter_descs.size());
+    for (size_t i = 0; i < scanner_filter_apply_marks.size(); i++) {
+        if (!scanner_filter_apply_marks[i] && !_runtime_filter_ctxs[i].apply_mark) {
+            IRuntimeFilter* runtime_filter = nullptr;
+            state->runtime_filter_mgr()->get_consume_filter(_runtime_filter_descs[i].filter_id,
+                                                            &runtime_filter);
+            DCHECK(runtime_filter != nullptr);
+            bool ready = runtime_filter->is_ready();
+            if (ready) {
+                runtime_filter->get_prepared_context(&contexts, row_desc(), _expr_mem_tracker);
+                _runtime_filter_ctxs[i].apply_mark = true;
+            }
+        }
+    }
+
+    if (!contexts.empty()) {
+        std::vector<ExprContext*> new_contexts;
+        auto& scanner_conjunct_ctxs = *scanner->conjunct_ctxs();
+        Expr::clone_if_not_exists(contexts, state, &new_contexts);
+        scanner_conjunct_ctxs.insert(scanner_conjunct_ctxs.end(), new_contexts.begin(),
+                                     new_contexts.end());
+        scanner->set_use_pushdown_conjuncts(true);
+    }
+
     std::vector<Block*> blocks;
 
     // Because we use thread pool to scan data from storage. One scanner can't
@@ -371,7 +398,8 @@ Status VOlapScanNode::start_scan_thread(RuntimeState* state) {
             // add scanner to pool before doing prepare.
             // so that scanner can be automatically deconstructed if prepare failed.
             _scanner_pool.add(scanner);
-            RETURN_IF_ERROR(scanner->prepare(*scan_range, scanner_ranges, _olap_filter, _bloom_filters_push_down));
+            RETURN_IF_ERROR(scanner->prepare(*scan_range, scanner_ranges, _olap_filter,
+                                             _bloom_filters_push_down));
 
             _volap_scanners.push_back(scanner);
             disk_set.insert(scanner->scan_disk());
@@ -431,6 +459,13 @@ Status VOlapScanNode::close(RuntimeState* state) {
     // so that initiative close the Scanner
     for (auto scanner : _volap_scanners) {
         scanner->close(state);
+    }
+
+    for (auto& filter_desc : _runtime_filter_descs) {
+        IRuntimeFilter* runtime_filter = nullptr;
+        state->runtime_filter_mgr()->get_consume_filter(filter_desc.filter_id, &runtime_filter);
+        DCHECK(runtime_filter != nullptr);
+        runtime_filter->consumer_close();
     }
 
     VLOG_CRITICAL << "VOlapScanNode::close()";
