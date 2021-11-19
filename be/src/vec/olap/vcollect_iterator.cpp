@@ -23,8 +23,6 @@
 namespace doris {
 namespace vectorized {
 
-VCollectIterator::~VCollectIterator() = default;
-
 void VCollectIterator::init(Reader* reader) {
     _reader = reader;
     // when aggregate is enabled or key_type is DUP_KEYS, we don't merge
@@ -157,8 +155,6 @@ VCollectIterator::Level0Iterator::Level0Iterator(RowsetReaderSharedPtr rs_reader
         : _rs_reader(rs_reader), _reader(reader), _current_row(0) {
     DCHECK_EQ(RowsetReader::BETA, rs_reader->type());
 }
-
-VCollectIterator::Level0Iterator::~Level0Iterator() = default;
 
 OLAPStatus VCollectIterator::Level0Iterator::init() {
     return _refresh_current_row();

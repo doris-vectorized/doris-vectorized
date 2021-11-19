@@ -30,8 +30,6 @@ namespace vectorized {
 
 class VCollectIterator {
 public:
-    ~VCollectIterator();
-
     // Hold reader point to get reader params
     void init(Reader* reader);
 
@@ -105,8 +103,6 @@ private:
         OLAPStatus next(Block* block) override;
 
         const TabletSchema& tablet_schema() const override;
-
-        ~Level0Iterator();
 
     private:
         OLAPStatus _refresh_current_row();

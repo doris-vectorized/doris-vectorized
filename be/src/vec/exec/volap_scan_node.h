@@ -45,7 +45,7 @@ private:
 
     Status _add_blocks(std::vector<Block*>& block);
     int _start_scanner_thread_task(RuntimeState* state, int block_per_scanner);
-    Block* _alloc_block(bool& not_miss_block);
+    Block* _alloc_block(bool& get_free_block);
 
     std::vector<Block*> _scan_blocks;
     std::vector<Block*> _materialized_blocks;

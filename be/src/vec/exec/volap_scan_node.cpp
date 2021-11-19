@@ -61,11 +61,11 @@ void VOlapScanNode::transfer_thread(RuntimeState* state) {
     _total_assign_num = 0;
     _nice = 18 + std::max(0, 2 - (int)_volap_scanners.size() / 5);
 
-    auto block_per_scanner = config::doris_scanner_row_num / state->batch_size() +
-            static_cast<int>(config::doris_scanner_row_num % state->batch_size() != 0);
-
+    auto block_per_scanner = (config::doris_scanner_row_num + (state->batch_size() - 1)) / state->batch_size();
+    auto blocks = new Block[_volap_scanners.size() * block_per_scanner];
+    
     for (int i = 0; i < _volap_scanners.size() * block_per_scanner; ++i) {
-        auto block = new Block;
+        auto block = blocks + i;
         for (const auto slot_desc : _tuple_desc->slots()) {
             auto column_ptr = slot_desc->get_empty_mutable_column();
             column_ptr->reserve(state->batch_size());
@@ -162,9 +162,9 @@ void VOlapScanNode::scanner_thread(VOlapScanner* scanner) {
     // scan, if this exceed threshold, we yield this thread.
     int64_t raw_rows_read = scanner->raw_rows_read();
     int64_t raw_rows_threshold = raw_rows_read + config::doris_scanner_row_num;
-    bool not_miss_block = true;
+    bool get_free_block = true;
 
-    while (!eos && raw_rows_read < raw_rows_threshold && not_miss_block) {
+    while (!eos && raw_rows_read < raw_rows_threshold && get_free_block) {
         if (UNLIKELY(_transfer_done)) {
             eos = true;
             status = Status::Cancelled("Cancelled");
@@ -172,7 +172,7 @@ void VOlapScanNode::scanner_thread(VOlapScanner* scanner) {
             break;
         }
 
-        auto block = _alloc_block(not_miss_block);
+        auto block = _alloc_block(get_free_block);
         status = scanner->get_block(_runtime_state, block, &eos);
         VLOG_ROW << "VOlapScanNode input rows: " << block->rows();
         if (!status.ok()) {
@@ -468,7 +468,7 @@ Status VOlapScanNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     return _status;
 }
 
-Block* VOlapScanNode::_alloc_block(bool& not_miss_block) {
+Block* VOlapScanNode::_alloc_block(bool& get_free_block) {
     {
         std::lock_guard<std::mutex> l(_free_blocks_lock);
         if (!_free_blocks.empty()) {
@@ -477,7 +477,7 @@ Block* VOlapScanNode::_alloc_block(bool& not_miss_block) {
             return block;
         }
     }
-    not_miss_block = false;
+    get_free_block = false;
     return new Block();
 }
 

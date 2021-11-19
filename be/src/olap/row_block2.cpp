@@ -200,8 +200,8 @@ void RowBlockV2::_copy_data_to_column(int cid, doris::vectorized::MutableColumnP
                     uint16_t row_idx = _selection_vector[j];
                     auto ptr = reinterpret_cast<const char *>(column_block(cid).cell_ptr(row_idx));
 
-                    int64_t int_value = *(int64_t * )(ptr);
-                    int32_t frac_value = *(int32_t * )(ptr + sizeof(int64_t));
+                    int64_t int_value = *(int64_t*)(ptr);
+                    int32_t frac_value = *(int32_t*)(ptr + sizeof(int64_t));
                     DecimalV2Value data(int_value, frac_value);
                     column_decimal->insert_data(reinterpret_cast<char *>(&data), 0);
                 } else {
