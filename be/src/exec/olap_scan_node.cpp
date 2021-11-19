@@ -515,6 +515,7 @@ void OlapScanNode::remove_pushed_conjuncts(RuntimeState* state) {
     _conjunct_ctxs = std::move(new_conjunct_ctxs);
     _direct_conjunct_size = new_direct_conjunct_size;
 
+    // TODO: support vbloom_filter_predicate/vbinary_predicate and merge unpushed predicate to _vconjunct_ctx
     for (auto push_down_ctx : _pushed_conjuncts_index) {
         auto iter = _conjunctid_to_runtime_filter_ctxs.find(push_down_ctx);
         if (iter != _conjunctid_to_runtime_filter_ctxs.end()) {

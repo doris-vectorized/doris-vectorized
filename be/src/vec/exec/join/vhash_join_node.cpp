@@ -19,6 +19,7 @@
 
 #include "gen_cpp/PlanNodes_types.h"
 #include "runtime/mem_tracker.h"
+#include "runtime/runtime_filter_mgr.h"
 #include "util/defer_op.h"
 #include "vec/core/materialize_block.h"
 #include "vec/exprs/vexpr.h"
@@ -32,14 +33,16 @@ using ProfileCounter = RuntimeProfile::Counter;
 template <class HashTableContext, bool ignore_null, bool build_unique>
 struct ProcessHashTableBuild {
     ProcessHashTableBuild(int rows, Block& acquired_block, ColumnRawPtrs& build_raw_ptrs,
-                          HashJoinNode* join_node)
+                          HashJoinNode* join_node, int batch_size)
             : _rows(rows),
               _skip_rows(0),
               _acquired_block(acquired_block),
               _build_raw_ptrs(build_raw_ptrs),
-              _join_node(join_node) {}
+              _join_node(join_node),
+              _batch_size(batch_size) {}
 
-    Status operator()(HashTableContext& hash_table_ctx, ConstNullMapPtr null_map) {
+    Status operator()(HashTableContext& hash_table_ctx, ConstNullMapPtr null_map,
+                      bool has_runtime_filter) {
         using KeyGetter = typename HashTableContext::State;
         using Mapped = typename HashTableContext::Mapped;
         int64_t old_bucket_bytes = hash_table_ctx.hash_table.get_buffer_size_in_bytes();
@@ -57,6 +60,11 @@ struct ProcessHashTableBuild {
         SCOPED_TIMER(_join_node->_build_table_insert_timer);
         hash_table_ctx.hash_table.reset_resize_timer();
 
+        vector<int>& inserted_rows = _join_node->_inserted_rows[&_acquired_block];
+        if (has_runtime_filter) {
+            inserted_rows.reserve(_batch_size);
+        }
+
         for (size_t k = 0; k < _rows; ++k) {
             if constexpr (ignore_null) {
                 if ((*null_map)[k]) {
@@ -72,10 +80,16 @@ struct ProcessHashTableBuild {
 
             if (emplace_result.is_inserted()) {
                 new (&emplace_result.get_mapped()) Mapped({&_acquired_block, k});
+                if (has_runtime_filter) {
+                    inserted_rows.push_back(k);
+                }
             } else {
                 if constexpr (!build_unique) {
                     /// The first element of the list is stored in the value of the hash table, the rest in the pool.
                     emplace_result.get_mapped().insert({&_acquired_block, k}, _join_node->_arena);
+                    if (has_runtime_filter) {
+                        inserted_rows.push_back(k);
+                    }
                 } else {
                     _skip_rows++;
                 }
@@ -101,6 +115,39 @@ private:
     int _skip_rows;
     Block& _acquired_block;
     ColumnRawPtrs& _build_raw_ptrs;
+    HashJoinNode* _join_node;
+    int _batch_size;
+};
+
+template <class HashTableContext>
+struct ProcessRuntimeFilterBuild {
+    ProcessRuntimeFilterBuild(HashJoinNode* join_node) : _join_node(join_node) {}
+
+    Status operator()(RuntimeState* state, HashTableContext& hash_table_ctx) {
+        if (_join_node->_runtime_filter_descs.empty()) {
+            return Status::OK();
+        }
+        VRuntimeFilterSlots* runtime_filter_slots =
+                new VRuntimeFilterSlots(_join_node->_probe_expr_ctxs, _join_node->_build_expr_ctxs,
+                                        _join_node->_runtime_filter_descs);
+
+        RETURN_IF_ERROR(runtime_filter_slots->init(state, hash_table_ctx.hash_table.get_size()));
+
+        if (!runtime_filter_slots->empty()) {
+            {
+                SCOPED_TIMER(_join_node->_push_compute_timer);
+                runtime_filter_slots->insert(_join_node->_inserted_rows);
+            }
+        }
+        {
+            SCOPED_TIMER(_join_node->_push_down_timer);
+            runtime_filter_slots->publish();
+        }
+
+        return Status::OK();
+    }
+
+private:
     HashJoinNode* _join_node;
 };
 
@@ -465,7 +512,9 @@ HashJoinNode::HashJoinNode(ObjectPool* pool, const TPlanNode& tnode, const Descr
                              _join_op == TJoinOp::LEFT_SEMI_JOIN),
           _is_right_semi_anti(_join_op == TJoinOp::RIGHT_ANTI_JOIN ||
                               _join_op == TJoinOp::RIGHT_SEMI_JOIN),
-          _is_outer_join(_match_all_build || _match_all_probe) {}
+          _is_outer_join(_match_all_build || _match_all_probe) {
+    _runtime_filter_descs = tnode.runtime_filters;
+}
 
 HashJoinNode::~HashJoinNode() = default;
 
@@ -516,6 +565,11 @@ Status HashJoinNode::init(const TPlanNode& tnode, RuntimeState* state) {
         _have_other_join_conjunct = true;
     }
 
+    for (const auto& filter_desc : _runtime_filter_descs) {
+        RETURN_IF_ERROR(state->runtime_filter_mgr()->regist_filter(RuntimeFilterRole::PRODUCER,
+                                                                   filter_desc));
+    }
+
     return Status::OK();
 }
 
@@ -539,8 +593,8 @@ Status HashJoinNode::prepare(RuntimeState* state) {
     _probe_expr_call_timer = ADD_TIMER(probe_phase_profile, "ProbeExprCallTime");
     _probe_rows_counter = ADD_COUNTER(probe_phase_profile, "ProbeRows", TUnit::UNIT);
 
-    _push_down_timer = ADD_TIMER(runtime_profile(), "PushDownTime");           // Unrealized
-    _push_compute_timer = ADD_TIMER(runtime_profile(), "PushDownComputeTime"); // Unrealized
+    _push_down_timer = ADD_TIMER(runtime_profile(), "PushDownTime");
+    _push_compute_timer = ADD_TIMER(runtime_profile(), "PushDownComputeTime");
     _build_buckets_counter = ADD_COUNTER(runtime_profile(), "BuildBuckets", TUnit::UNIT);
 
     RETURN_IF_ERROR(
@@ -741,10 +795,21 @@ Status HashJoinNode::_hash_table_build(RuntimeState* state) {
         _mem_used += block.allocated_bytes();
         RETURN_IF_LIMIT_EXCEEDED(state, "Hash join, while getting next from the child 1.");
 
-        RETURN_IF_ERROR(_process_build_block(block));
+        RETURN_IF_ERROR(_process_build_block(state, block));
         RETURN_IF_LIMIT_EXCEEDED(state, "Hash join, while constructing the hash table.");
     }
-    return Status::OK();
+
+    return std::visit(
+            [&](auto&& arg) -> Status {
+                using HashTableCtxType = std::decay_t<decltype(arg)>;
+                if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
+                    ProcessRuntimeFilterBuild<HashTableCtxType> runtime_filter_build_process(this);
+                    return runtime_filter_build_process(state, arg);
+                } else {
+                    LOG(FATAL) << "FATAL: uninited hash table";
+                }
+            },
+            _hash_table_variants);
 }
 
 Status HashJoinNode::extract_build_join_column(Block& block, NullMap& null_map,
@@ -821,7 +886,7 @@ Status HashJoinNode::extract_probe_join_column(Block& block, NullMap& null_map,
     return Status::OK();
 }
 
-Status HashJoinNode::_process_build_block(Block& block) {
+Status HashJoinNode::_process_build_block(RuntimeState* state, Block& block) {
     SCOPED_TIMER(_build_table_timer);
     size_t rows = block.rows();
     if (rows == 0) {
@@ -830,7 +895,6 @@ Status HashJoinNode::_process_build_block(Block& block) {
     COUNTER_UPDATE(_build_rows_counter, rows);
 
     auto& acquired_block = _acquire_list.acquire(std::move(block));
-
     materialize_block_inplace(acquired_block);
 
     ColumnRawPtrs raw_ptrs(_build_expr_ctxs.size());
@@ -853,14 +917,16 @@ Status HashJoinNode::_process_build_block(Block& block) {
             },
             _hash_table_variants);
 
+    bool has_runtime_filter = !_runtime_filter_descs.empty();
+
     std::visit(
             [&](auto&& arg) {
                 using HashTableCtxType = std::decay_t<decltype(arg)>;
                 if constexpr (!std::is_same_v<HashTableCtxType, std::monostate>) {
 #define CALL_BUILD_FUNCTION(HAS_NULL, BUILD_UNIQUE)                                           \
     ProcessHashTableBuild<HashTableCtxType, HAS_NULL, BUILD_UNIQUE> hash_table_build_process( \
-            rows, acquired_block, raw_ptrs, this);                                            \
-    st = hash_table_build_process(arg, &null_map_val);
+            rows, acquired_block, raw_ptrs, this, state->batch_size());                       \
+    st = hash_table_build_process(arg, &null_map_val, has_runtime_filter);
                     if (std::pair {has_null, _build_unique} == std::pair {true, true}) {
                         CALL_BUILD_FUNCTION(true, true);
                     } else if (std::pair {has_null, _build_unique} == std::pair {true, false}) {

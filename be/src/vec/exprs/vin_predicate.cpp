@@ -19,24 +19,24 @@
 
 #include <string_view>
 
-#include "vec/core/field.h"
 #include "vec/columns/column_set.h"
-#include "vec/data_types/data_type_nullable.h"
+#include "vec/core/field.h"
 #include "vec/data_types/data_type_factory.hpp"
+#include "vec/data_types/data_type_nullable.h"
 #include "vec/functions/simple_function_factory.h"
 
 // TODO: Refactor `in` implementation via FunctionContext.
 namespace doris::vectorized {
 
 VInPredicate::VInPredicate(const TExprNode& node)
-     : VExpr(node),
-       _is_not_in(node.in_predicate.is_not_in),
-       _is_prepare(false),
-       _null_in_set(false),
-       _hybrid_set() {}
+        : VExpr(node),
+          _is_not_in(node.in_predicate.is_not_in),
+          _is_prepare(false),
+          _null_in_set(false),
+          _hybrid_set() {}
 
-doris::Status VInPredicate::prepare(doris::RuntimeState* state, const doris::RowDescriptor& desc,
-                                 VExprContext* context) {
+Status VInPredicate::prepare(RuntimeState* state, const RowDescriptor& desc,
+                             VExprContext* context) {
     RETURN_IF_ERROR(VExpr::prepare(state, desc, context));
 
     if (_is_prepare) {
@@ -50,7 +50,8 @@ doris::Status VInPredicate::prepare(doris::RuntimeState* state, const doris::Row
         return Status::InternalError("Unknown column type.");
     }
 
-    _expr_name = fmt::format("({} {} set)", _children[0]->expr_name(), _is_not_in ? "not_in" : "in");
+    _expr_name =
+            fmt::format("({} {} set)", _children[0]->expr_name(), _is_not_in ? "not_in" : "in");
     _is_prepare = true;
 
     Block block;
@@ -93,7 +94,8 @@ doris::Status VInPredicate::prepare(doris::RuntimeState* state, const doris::Row
     std::string head(_is_not_in ? "not_" : "");
     std::string tail(_null_in_set ? "_null_in_set" : "");
     std::string real_function_name = head + std::string(function_name) + tail;
-    _function = SimpleFunctionFactory::instance().get_function(real_function_name, argument_template, _data_type);
+    _function = SimpleFunctionFactory::instance().get_function(real_function_name,
+                                                               argument_template, _data_type);
     if (_function == nullptr) {
         return Status::NotSupported(
                 fmt::format("Function {} is not implemented", _fn.name.function_name));
@@ -105,22 +107,22 @@ doris::Status VInPredicate::prepare(doris::RuntimeState* state, const doris::Row
     return Status::OK();
 }
 
-doris::Status VInPredicate::open(doris::RuntimeState* state, VExprContext* context,
-                                 FunctionContext::FunctionStateScope scope) {
+Status VInPredicate::open(RuntimeState* state, VExprContext* context,
+                          FunctionContext::FunctionStateScope scope) {
     RETURN_IF_ERROR(VExpr::open(state, context, scope));
     RETURN_IF_ERROR(VExpr::init_function_context(context, scope, _function));
     return Status::OK();
 }
 
-void VInPredicate::close(doris::RuntimeState* state, VExprContext* context, FunctionContext::FunctionStateScope scope) {
+void VInPredicate::close(RuntimeState* state, VExprContext* context,
+                         FunctionContext::FunctionStateScope scope) {
     VExpr::close_function_context(context, scope, _function);
     VExpr::close(state, context, scope);
 }
 
-doris::Status VInPredicate::execute(VExprContext* context, doris::vectorized::Block* block,
-                                    int* result_column_id) {
+Status VInPredicate::execute(VExprContext* context, Block* block, int* result_column_id) {
     // for each child call execute
-    doris::vectorized::ColumnNumbers arguments(2);
+    ColumnNumbers arguments(2);
     int column_id = -1;
     _children[0]->execute(context, block, &column_id);
     arguments[0] = column_id;
