@@ -225,6 +225,8 @@ public:
 
     void reserve(size_t n) override;
 
+    void resize(size_t n) override;
+
     void get_extremes(Field& min, Field& max) const override;
 
     bool can_be_inside_nullable() const override { return true; }
