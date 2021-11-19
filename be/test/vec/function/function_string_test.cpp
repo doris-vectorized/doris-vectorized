@@ -34,9 +34,7 @@ using vectorized::TypeIndex;
 
 TEST(function_string_test, function_string_substr_test) {
     std::string func_name = "substr";
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::Int32,
-                                         TypeIndex::Int32};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::Int32, TypeIndex::Int32};
 
     DataSet data_set = {
             {{std::string("asd你好"), 4, 10}, std::string("\xE4\xBD\xA0\xE5\xA5\xBD")}, //你好
@@ -51,8 +49,7 @@ TEST(function_string_test, function_string_substr_test) {
 
 TEST(function_string_test, function_string_strright_test) {
     std::string func_name = "strright";
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::Int32};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::Int32};
 
     DataSet data_set = {{{std::string("asd"), 1}, std::string("d")},
                         {{std::string("hello word"), -2}, std::string("ello word")},
@@ -66,8 +63,7 @@ TEST(function_string_test, function_string_strright_test) {
 
 TEST(function_string_test, function_string_strleft_test) {
     std::string func_name = "strleft";
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::Int32};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::Int32};
 
     DataSet data_set = {{{std::string("asd"), 1}, std::string("a")},
                         {{std::string("hel  lo  "), 5}, std::string("hel  ")},
@@ -119,11 +115,12 @@ TEST(function_string_test, function_string_trim_test) {
 TEST(function_string_test, function_string_ltrim_test) {
     std::string func_name = "ltrim";
     std::vector<std::any> input_types = {TypeIndex::String};
-    DataSet data_set = {{{std::string("a sd")}, std::string("a sd")},
-                        {{std::string("  hello 123  ")}, std::string("hello 123  ")},
-                        {{std::string("  HELLO,!^%")}, std::string("HELLO,!^%")},
-                        {{std::string("  你好MY test Str你好  ")}, std::string("你好MY test Str你好  ")},
-                        {{std::string("")}, std::string("")}};
+    DataSet data_set = {
+            {{std::string("a sd")}, std::string("a sd")},
+            {{std::string("  hello 123  ")}, std::string("hello 123  ")},
+            {{std::string("  HELLO,!^%")}, std::string("HELLO,!^%")},
+            {{std::string("  你好MY test Str你好  ")}, std::string("你好MY test Str你好  ")},
+            {{std::string("")}, std::string("")}};
     vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
@@ -140,8 +137,7 @@ TEST(function_string_test, function_string_rtrim_test) {
 }
 TEST(function_string_test, function_string_repeat_test) {
     std::string func_name = "repeat";
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::Int32};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::Int32};
 
     DataSet data_set = {{{std::string("a"), 3}, std::string("aaa")},
                         {{std::string("hel lo"), 2}, std::string("hel lohel lo")},
@@ -179,8 +175,7 @@ TEST(function_string_test, function_string_length_test) {
 TEST(function_string_test, function_append_trailing_char_if_absent_test) {
     std::string func_name = "append_trailing_char_if_absent";
 
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::String};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String};
 
     DataSet data_set = {{{std::string("ASD"), std::string("D")}, std::string("ASD")},
                         {{std::string("AS"), std::string("D")}, std::string("ASD")},
@@ -193,8 +188,7 @@ TEST(function_string_test, function_append_trailing_char_if_absent_test) {
 TEST(function_string_test, function_starts_with_test) {
     std::string func_name = "starts_with";
 
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::String};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String};
 
     DataSet data_set = {{{std::string("hello world"), std::string("hello")}, uint8_t(1)},
                         {{std::string("hello world"), std::string("world")}, uint8_t(0)},
@@ -209,8 +203,7 @@ TEST(function_string_test, function_starts_with_test) {
 TEST(function_string_test, function_ends_with_test) {
     std::string func_name = "ends_with";
 
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::String};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String};
 
     DataSet data_set = {{{std::string("hello world"), std::string("hello")}, uint8_t(0)},
                         {{std::string("hello world"), std::string("world")}, uint8_t(1)},
@@ -225,9 +218,7 @@ TEST(function_string_test, function_ends_with_test) {
 TEST(function_string_test, function_lpad_test) {
     std::string func_name = "lpad";
 
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::Int32,
-                                         TypeIndex::String};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::Int32, TypeIndex::String};
 
     DataSet data_set = {{{std::string("hi"), 5, std::string("?")}, std::string("???hi")},
                         {{std::string("g8%7IgY%AHx7luNtf8Kh"), 20, std::string("")},
@@ -248,9 +239,7 @@ TEST(function_string_test, function_lpad_test) {
 TEST(function_string_test, function_rpad_test) {
     std::string func_name = "rpad";
 
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::Int32,
-                                         TypeIndex::String};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::Int32, TypeIndex::String};
 
     DataSet data_set = {{{std::string("hi"), 5, std::string("?")}, std::string("hi???")},
                         {{std::string("g8%7IgY%AHx7luNtf8Kh"), 20, std::string("")},
@@ -308,8 +297,7 @@ TEST(function_string_test, function_concat_test) {
     };
 
     {
-        std::vector<std::any> input_types = {TypeIndex::String,
-                                             TypeIndex::String};
+        std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String};
 
         DataSet data_set = {{{std::string(""), std::string("")}, std::string("")},
                             {{std::string("123"), std::string("45")}, std::string("12345")},
@@ -320,8 +308,7 @@ TEST(function_string_test, function_concat_test) {
     };
 
     {
-        std::vector<std::any> input_types = {TypeIndex::String,
-                                             TypeIndex::String,
+        std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String,
                                              TypeIndex::String};
 
         DataSet data_set = {
@@ -338,8 +325,7 @@ TEST(function_string_test, function_concat_test) {
 TEST(function_string_test, function_concat_ws_test) {
     std::string func_name = "concat_ws";
     {
-        std::vector<std::any> input_types = {TypeIndex::String,
-                                             TypeIndex::String};
+        std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String};
 
         DataSet data_set = {{{std::string("-"), std::string("")}, std::string("")},
                             {{std::string(""), std::string("123")}, std::string("123")},
@@ -352,8 +338,7 @@ TEST(function_string_test, function_concat_ws_test) {
     };
 
     {
-        std::vector<std::any> input_types = {TypeIndex::String,
-                                             TypeIndex::String,
+        std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String,
                                              TypeIndex::String};
 
         DataSet data_set = {
@@ -368,9 +353,8 @@ TEST(function_string_test, function_concat_ws_test) {
     };
 
     {
-        std::vector<std::any> input_types = {
-                TypeIndex::String, TypeIndex::String,
-                TypeIndex::String, TypeIndex::String};
+        std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String,
+                                             TypeIndex::String, TypeIndex::String};
 
         DataSet data_set = {
                 {{std::string("-"), std::string(""), std::string(""), std::string("")},
@@ -449,8 +433,7 @@ TEST(function_string_test, function_reverse_test) {
 TEST(function_string_test, function_instr_test) {
     std::string func_name = "instr";
 
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::String};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String};
 
     DataSet data_set = {{{std::string("abcdefg"), std::string("efg")}, 5},
                         {{std::string("aa"), std::string("a")}, 1},
@@ -466,8 +449,7 @@ TEST(function_string_test, function_instr_test) {
 TEST(function_string_test, function_find_in_set_test) {
     std::string func_name = "find_in_set";
 
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::String};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String};
 
     DataSet data_set = {{{std::string("abcdefg"), std::string("a,b,c")}, 0},
                         {{std::string("aa"), std::string("a,aa,aaa")}, 2},
@@ -482,18 +464,17 @@ TEST(function_string_test, function_find_in_set_test) {
 
 TEST(function_string_test, function_string_splitpart_test) {
     std::string func_name = "split_part";
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::String,
-                                         TypeIndex::Int32};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String, TypeIndex::Int32};
 
-    DataSet data_set = {{{std::string("prefix_string1"), std::string("_"), 2}, std::string("string1")},
-                        {{std::string("prefix__string2"), std::string("__"), 2}, std::string("string2")},
-                        {{std::string("prefix__string2"), std::string("_"), 2}, std::string("")},
-                        {{std::string("prefix_string2"), std::string("__"), 1}, Null()},
-                        {{Null(), std::string("__"), 1}, Null()},
-                        {{std::string("prefix_string"), Null(), 1}, Null()},
-                        {{std::string("prefix_string"), std::string("__"), Null()}, Null()},
-                        {{std::string("prefix_string"), std::string("__"), -1}, Null()}};
+    DataSet data_set = {
+            {{std::string("prefix_string1"), std::string("_"), 2}, std::string("string1")},
+            {{std::string("prefix__string2"), std::string("__"), 2}, std::string("string2")},
+            {{std::string("prefix__string2"), std::string("_"), 2}, std::string("")},
+            {{std::string("prefix_string2"), std::string("__"), 1}, Null()},
+            {{Null(), std::string("__"), 1}, Null()},
+            {{std::string("prefix_string"), Null(), 1}, Null()},
+            {{std::string("prefix_string"), std::string("__"), Null()}, Null()},
+            {{std::string("prefix_string"), std::string("__"), -1}, Null()}};
 
     vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
@@ -504,68 +485,66 @@ TEST(function_string_test, function_md5sum_test) {
     {
         std::vector<std::any> input_types = {TypeIndex::String};
         DataSet data_set = {
-            {{std::string("asd你好")}, {std::string("a38c15675555017e6b8ea042f2eb24f5")}},
-            {{std::string("hello world")}, {std::string("5eb63bbbe01eeed093cb22bb8f5acdc3")}},
-            {{std::string("HELLO,!^%")}, {std::string("b8e6e34d1cc3dc76b784ddfdfb7df800")}},
-            {{std::string("")}, {std::string("d41d8cd98f00b204e9800998ecf8427e")}},
-            {{std::string(" ")}, {std::string("7215ee9c7d9dc229d2921a40e899ec5f")}},
-            {{Null()}, {Null()}},
-            {{std::string("MYtestSTR")}, {std::string("cd24c90b3fc1192eb1879093029e87d4")}},
-            {{std::string("ò&ø")}, {std::string("fd157b4cb921fa91acc667380184d59c")}}};
+                {{std::string("asd你好")}, {std::string("a38c15675555017e6b8ea042f2eb24f5")}},
+                {{std::string("hello world")}, {std::string("5eb63bbbe01eeed093cb22bb8f5acdc3")}},
+                {{std::string("HELLO,!^%")}, {std::string("b8e6e34d1cc3dc76b784ddfdfb7df800")}},
+                {{std::string("")}, {std::string("d41d8cd98f00b204e9800998ecf8427e")}},
+                {{std::string(" ")}, {std::string("7215ee9c7d9dc229d2921a40e899ec5f")}},
+                {{Null()}, {Null()}},
+                {{std::string("MYtestSTR")}, {std::string("cd24c90b3fc1192eb1879093029e87d4")}},
+                {{std::string("ò&ø")}, {std::string("fd157b4cb921fa91acc667380184d59c")}}};
 
-        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
+                                                                     data_set);
     }
 
     {
         std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String};
-        DataSet data_set = {
-            {{std::string("asd"), std::string("你好")},
-             {std::string("a38c15675555017e6b8ea042f2eb24f5")}},
-            {{std::string("hello "), std::string("world")},
-             {std::string("5eb63bbbe01eeed093cb22bb8f5acdc3")}},
-            {{std::string("HELLO"), std::string(",!^%")},
-             {std::string("b8e6e34d1cc3dc76b784ddfdfb7df800")}},
-            {{Null(), std::string("HELLO")}, {Null()}}
-        };
+        DataSet data_set = {{{std::string("asd"), std::string("你好")},
+                             {std::string("a38c15675555017e6b8ea042f2eb24f5")}},
+                            {{std::string("hello "), std::string("world")},
+                             {std::string("5eb63bbbe01eeed093cb22bb8f5acdc3")}},
+                            {{std::string("HELLO"), std::string(",!^%")},
+                             {std::string("b8e6e34d1cc3dc76b784ddfdfb7df800")}},
+                            {{Null(), std::string("HELLO")}, {Null()}}};
 
-        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
+                                                                     data_set);
     }
 
     {
-        std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String, TypeIndex::String};
-        DataSet data_set = {
-            {{std::string("a"), std::string("sd"), std::string("你好")},
-             {std::string("a38c15675555017e6b8ea042f2eb24f5")}},
-            {{std::string(""), std::string(""), std::string("")},
-             {std::string("d41d8cd98f00b204e9800998ecf8427e")}},
-            {{std::string("HEL"), std::string("LO,!"), std::string("^%")},
-             {std::string("b8e6e34d1cc3dc76b784ddfdfb7df800")}},
-            {{Null(), std::string("HELLO"), Null()}, {Null()}}
-        };
+        std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String,
+                                             TypeIndex::String};
+        DataSet data_set = {{{std::string("a"), std::string("sd"), std::string("你好")},
+                             {std::string("a38c15675555017e6b8ea042f2eb24f5")}},
+                            {{std::string(""), std::string(""), std::string("")},
+                             {std::string("d41d8cd98f00b204e9800998ecf8427e")}},
+                            {{std::string("HEL"), std::string("LO,!"), std::string("^%")},
+                             {std::string("b8e6e34d1cc3dc76b784ddfdfb7df800")}},
+                            {{Null(), std::string("HELLO"), Null()}, {Null()}}};
 
-        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
+                                                                     data_set);
     }
 }
 
 TEST(function_string_test, function_aes_encrypt_test) {
     std::string func_name = "aes_encrypt";
 
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::String};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String};
 
     const char* key = "doris";
     const char* src[6] = {"aaaaaa", "bbbbbb", "cccccc", "dddddd", "eeeeee", ""};
     std::string r[5];
 
     for (int i = 0; i < 5; i++) {
-
         int cipher_len = strlen(src[i]) + 16;
         char p[cipher_len];
 
-        int outlen = AesUtil::encrypt(AES_128_ECB, (unsigned char*)src[i], strlen(src[i]),
-                                      (unsigned char*)key, strlen(key), NULL, true, (unsigned char*)p);
+        int outlen =
+                AesUtil::encrypt(AES_128_ECB, (unsigned char*)src[i], strlen(src[i]),
+                                 (unsigned char*)key, strlen(key), NULL, true, (unsigned char*)p);
         r[i] = std::string(p, outlen);
-
     }
 
     DataSet data_set = {{{std::string(src[0]), std::string(key)}, r[0]},
@@ -582,22 +561,20 @@ TEST(function_string_test, function_aes_encrypt_test) {
 TEST(function_string_test, function_aes_decrypt_test) {
     std::string func_name = "aes_decrypt";
 
-    std::vector<std::any> input_types = {TypeIndex::String,
-                                         TypeIndex::String};
+    std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String};
 
     const char* key = "doris";
     const char* src[5] = {"aaaaaa", "bbbbbb", "cccccc", "dddddd", "eeeeee"};
     std::string r[5];
 
     for (int i = 0; i < 5; i++) {
-
         int cipher_len = strlen(src[i]) + 16;
         char p[cipher_len];
 
-        int outlen = AesUtil::encrypt(AES_128_ECB, (unsigned char*)src[i], strlen(src[i]),
-                                      (unsigned char*)key, strlen(key), NULL, true, (unsigned char*)p);
+        int outlen =
+                AesUtil::encrypt(AES_128_ECB, (unsigned char*)src[i], strlen(src[i]),
+                                 (unsigned char*)key, strlen(key), NULL, true, (unsigned char*)p);
         r[i] = std::string(p, outlen);
-
     }
 
     DataSet data_set = {{{r[0], std::string(key)}, std::string(src[0])},
@@ -611,66 +588,65 @@ TEST(function_string_test, function_aes_decrypt_test) {
 }
 
 TEST(function_string_test, function_parse_url_test) {
-        std::string func_name = "parse_url";
+    std::string func_name = "parse_url";
 
     {
         std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String};
         DataSet data_set = {
-                {{std::string("zhangsan"),                                std::string("HOST")},
-                        {Null()}},
-                {{std::string("facebook.com/path/p1"),                    std::string("HOST")},
-                        {Null()}},
-                {{std::string("http://fb.com/path/p1.p?q=1#f"),           std::string("HOST")},
-                        {std::string("fb.com")}},
+                {{std::string("zhangsan"), std::string("HOST")}, {Null()}},
+                {{std::string("facebook.com/path/p1"), std::string("HOST")}, {Null()}},
+                {{std::string("http://fb.com/path/p1.p?q=1#f"), std::string("HOST")},
+                 {std::string("fb.com")}},
                 {{std::string("http://facebook.com/path/p1.php?query=1"), std::string("AUTHORITY")},
-                        {std::string("facebook.com")}},
+                 {std::string("facebook.com")}},
                 {{std::string("http://facebook.com/path/p1.php?query=1"), std::string("authority")},
-                        {std::string("facebook.com")}},
-                {{std::string("http://www.baidu.com:9090/a/b/c.php"),     std::string("FILE")},
-                        {std::string("/a/b/c.php")}},
-                {{std::string("http://www.baidu.com:9090/a/b/c.php"),     std::string("file")},
-                        {std::string("/a/b/c.php")}},
-                {{std::string("http://www.baidu.com:9090/a/b/c.php"),     std::string("PATH")},
-                        {std::string("/a/b/c.php")}},
-                {{std::string("http://www.baidu.com:9090/a/b/c.php"),     std::string("path")},
-                        {std::string("/a/b/c.php")}},
+                 {std::string("facebook.com")}},
+                {{std::string("http://www.baidu.com:9090/a/b/c.php"), std::string("FILE")},
+                 {std::string("/a/b/c.php")}},
+                {{std::string("http://www.baidu.com:9090/a/b/c.php"), std::string("file")},
+                 {std::string("/a/b/c.php")}},
+                {{std::string("http://www.baidu.com:9090/a/b/c.php"), std::string("PATH")},
+                 {std::string("/a/b/c.php")}},
+                {{std::string("http://www.baidu.com:9090/a/b/c.php"), std::string("path")},
+                 {std::string("/a/b/c.php")}},
                 {{std::string("http://facebook.com/path/p1.php?query=1"), std::string("PROTOCOL")},
-                        {std::string("http")}},
+                 {std::string("http")}},
                 {{std::string("http://facebook.com/path/p1.php?query=1"), std::string("protocol")},
-                        {std::string("http")}},
-                {{std::string("http://www.baidu.com:9090?a=b"),           std::string("QUERY")},
-                        {std::string("a=b")}},
-                {{std::string("http://www.baidu.com:9090?a=b"),           std::string("query")},
-                        {std::string("a=b")}},
-                {{std::string("http://www.baidu.com:9090?a=b"),           std::string("REF")},
-                        {Null()}},
-                {{std::string("http://www.baidu.com:9090?a=b"),           std::string("ref")},
-                        {Null()}},
-                {{std::string("http://www.baidu.com:9090/a/b/c?a=b"),     std::string("PORT")},
-                        {std::string("9090")}},
-                {{std::string("http://www.baidu.com/a/b/c?a=b"),          std::string("PORT")},
-                        {Null()}},
-                {{std::string("http://fb.com/path/p1.p?q=1#f"),           std::string("QUERY")},
-                        {std::string("q=1")}}
-        };
+                 {std::string("http")}},
+                {{std::string("http://www.baidu.com:9090?a=b"), std::string("QUERY")},
+                 {std::string("a=b")}},
+                {{std::string("http://www.baidu.com:9090?a=b"), std::string("query")},
+                 {std::string("a=b")}},
+                {{std::string("http://www.baidu.com:9090?a=b"), std::string("REF")}, {Null()}},
+                {{std::string("http://www.baidu.com:9090?a=b"), std::string("ref")}, {Null()}},
+                {{std::string("http://www.baidu.com:9090/a/b/c?a=b"), std::string("PORT")},
+                 {std::string("9090")}},
+                {{std::string("http://www.baidu.com/a/b/c?a=b"), std::string("PORT")}, {Null()}},
+                {{std::string("http://fb.com/path/p1.p?q=1#f"), std::string("QUERY")},
+                 {std::string("q=1")}}};
 
-        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
+                                                                     data_set);
     }
 
     {
-        std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String, TypeIndex::String};
+        std::vector<std::any> input_types = {TypeIndex::String, TypeIndex::String,
+                                             TypeIndex::String};
         DataSet data_set = {
-                {{std::string("http://fb.com/path/p1.p?q=1#f"), std::string("QUERY"), std::string("q")},
-                        {std::string("1")}},
-                {{std::string("fb.com/path/p1.p?q=1#f"),        std::string("QUERY"), std::string("q")},
-                        {std::string("1")}},
-                {{std::string("http://facebook.com/path/p1"),   std::string("QUERY"), std::string("q")},
-                        {Null()}},
-                {{std::string("http://fb.com/path/p1.p?q=1#f"), std::string("HOST"),  std::string("q")},
-                        {Null()}}
-        };
+                {{std::string("http://fb.com/path/p1.p?q=1#f"), std::string("QUERY"),
+                  std::string("q")},
+                 {std::string("1")}},
+                {{std::string("fb.com/path/p1.p?q=1#f"), std::string("QUERY"), std::string("q")},
+                 {std::string("1")}},
+                {{std::string("http://facebook.com/path/p1"), std::string("QUERY"),
+                  std::string("q")},
+                 {Null()}},
+                {{std::string("http://fb.com/path/p1.p?q=1#f"), std::string("HOST"),
+                  std::string("q")},
+                 {Null()}}};
 
-        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
+        vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types,
+                                                                     data_set);
     }
 }
 
