@@ -279,22 +279,26 @@ struct HexStringImpl {
                          ColumnString::Chars& dst_data, ColumnString::Offsets& dst_offsets) {
         auto rows_count = offsets.size();
         dst_offsets.resize(rows_count);
+        dst_data.resize(data.size() * 2);
 
+        size_t offset = 0;
+        auto dst_data_ptr = dst_data.data();
         for (int i = 0; i < rows_count; ++i) {
-            auto source = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
+            auto source = reinterpret_cast<const unsigned char*>(&data[offsets[i - 1]]);
             size_t srclen = offsets[i] - offsets[i - 1] - 1;
 
-            if (*source == '\0' && srclen == 0) {
-                StringOP::push_empty_string(i, dst_data, dst_offsets);
-                continue;
+            if (srclen == 0) {
+                DCHECK(*source == '\0');
+                *dst_data_ptr = '\0';
+                dst_data_ptr++;
+                offset++;
+            } else {
+                VStringFunctions::hex_encode(source, srclen, reinterpret_cast<char *>(dst_data_ptr));
+                dst_data_ptr[srclen * 2] = '\0';
+                dst_data_ptr += (srclen * 2 + 1);
+                offset += (srclen * 2 + 1);
             }
-
-            size_t cipher_len = 2 * srclen;
-            char dst[cipher_len];
-            VStringFunctions::hex_encode(source, srclen, dst);
-
-            StringOP::push_value_string(std::string_view(dst, srclen * 2), i, dst_data,
-                                        dst_offsets);
+            dst_offsets[i] = offset;
         }
         return Status::OK();
     }

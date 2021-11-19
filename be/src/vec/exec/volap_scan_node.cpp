@@ -435,7 +435,7 @@ Status VOlapScanNode::close(RuntimeState* state) {
     _scan_block_added_cv.notify_all();
 
     // join transfer thread
-    _transfer_thread->join();
+    if (_transfer_thread) _transfer_thread->join();
 
     size_t mem_usege_in_block = 0;
     // clear some block in queue
