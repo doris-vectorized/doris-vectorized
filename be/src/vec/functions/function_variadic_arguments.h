@@ -52,25 +52,27 @@ public:
 
     Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
                         size_t result, size_t input_rows_count) override {
-        auto col_to = Impl::CreateResultColumn(input_rows_count);
+        ToDataType to_type;
+        auto column = to_type.create_column();
+        column->reserve(input_rows_count);
+
         if (arguments.empty()) {
-            /// Constant random number from /dev/urandom is used as a hash value of empty list of arguments.
-            RETURN_IF_ERROR(Impl::empty_apply(col_to->get_data(), input_rows_count));
+            RETURN_IF_ERROR(Impl::empty_apply(column->assume_mutable_ref(), input_rows_count));
         } else {
             const ColumnWithTypeAndName& first_col = block.get_by_position(arguments[0]);
             RETURN_IF_ERROR(
                     Impl::first_apply(first_col.type.get(), first_col.column.get(),
-                                      input_rows_count, col_to->get_data()));
+                                      input_rows_count, column->assume_mutable_ref()));
 
             for (size_t i = 1; i < arguments.size(); ++i) {
                 const ColumnWithTypeAndName& col = block.get_by_position(arguments[i]);
                 RETURN_IF_ERROR(
-                        Impl::combine_apply(first_col.type.get(), col.column.get(),
-                                            input_rows_count, col_to->get_data()));
+                        Impl::combine_apply(col.type.get(), col.column.get(),
+                                            input_rows_count, column->assume_mutable_ref()));
             }
         }
 
-        block.get_by_position(result).column = std::move(col_to);
+        block.get_by_position(result).column = std::move(column);
         return Status::OK();
     }
 };
