@@ -161,6 +161,8 @@ public:
 
     void reserve(size_t n) override { data.reserve(n); }
 
+    void resize(size_t n) override { data.resize(n); }
+
     const char* get_family_name() const override;
 
     MutableColumnPtr clone_resized(size_t size) const override;

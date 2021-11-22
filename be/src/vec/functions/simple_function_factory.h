@@ -30,6 +30,7 @@ void register_function_hll_cardinality(SimpleFunctionFactory& factory);
 void register_function_hll_empty(SimpleFunctionFactory& factory);
 void register_function_hll_hash(SimpleFunctionFactory& factory);
 void register_function_logical(SimpleFunctionFactory& factory);
+void register_function_case(SimpleFunctionFactory& factory);
 void register_function_cast(SimpleFunctionFactory& factory);
 void register_function_plus(SimpleFunctionFactory& factory);
 void register_function_minus(SimpleFunctionFactory& factory);
@@ -132,6 +133,7 @@ public:
             register_function_hll_hash(instance);
             register_function_comparison(instance);
             register_function_logical(instance);
+            register_function_case(instance);
             register_function_cast(instance);
             register_function_plus(instance);
             register_function_minus(instance);
