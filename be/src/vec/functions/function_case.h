@@ -134,57 +134,44 @@ public:
     bool use_default_implementation_for_nulls() const override { return false; }
 
     template <typename ColumnType, bool when_null, bool then_null>
-    Status execute_impl_has_case(const DataTypePtr& data_type, Block& block, size_t result,
-                                 CaseWhenColumnHolder column_holder) {
+    Status execute_impl(const DataTypePtr& data_type, Block& block, size_t result,
+                        CaseWhenColumnHolder column_holder) {
         int rows_count = column_holder.rows_count;
 
         // `then` data index corresponding to each row of results, 0 represents `else`.
         uint8_t __restrict then_idx[rows_count];
         memset(then_idx, 0, sizeof(then_idx));
 
-        auto case_column_ptr = column_holder.when_ptrs[0].value();
-        // TODO: need simd here
-        for (uint8_t i = 1; i < column_holder.pair_count; i++) {
-            auto when_column_ptr = column_holder.when_ptrs[i].value();
-            for (int row_idx = 0; row_idx < rows_count; row_idx++) {
-                if (!then_idx[row_idx] &&
-                    case_column_ptr->compare_at(row_idx, row_idx, *when_column_ptr, -1) == 0) {
-                    then_idx[row_idx] = i;
-                }
-            }
-        }
-
-        return execute_update_result<ColumnType, then_null>(data_type, result, block, then_idx,
-                                                            column_holder);
-    }
-
-    template <typename ColumnType, bool when_null, bool then_null>
-    Status execute_impl_no_case(const DataTypePtr& data_type, Block& block, size_t result,
-                                CaseWhenColumnHolder column_holder) {
-        int rows_count = column_holder.rows_count;
-
-        // `then` data index corresponding to each row of results, 0 represents `else`.
-        uint8_t __restrict then_idx[rows_count];
-        memset(then_idx, 0, sizeof(then_idx));
+        auto case_column_ptr = column_holder.when_ptrs[0].value_or(nullptr);
 
         for (uint8_t i = 1; i < column_holder.pair_count; i++) {
             auto when_column_ptr = column_holder.when_ptrs[i].value();
-            if constexpr (when_null) {
+            if constexpr (has_case) {
                 // TODO: need simd
                 for (int row_idx = 0; row_idx < rows_count; row_idx++) {
-                    if (!then_idx[row_idx] && when_column_ptr->get_bool(row_idx)) {
+                    if (!then_idx[row_idx] &&
+                        case_column_ptr->compare_at(row_idx, row_idx, *when_column_ptr, -1) == 0) {
                         then_idx[row_idx] = i;
                     }
                 }
             } else {
-                auto* __restrict cond_raw_data =
-                        reinterpret_cast<const ColumnUInt8*>(when_column_ptr.get())
-                                ->get_data()
-                                .data();
+                if constexpr (when_null) {
+                    // TODO: need simd
+                    for (int row_idx = 0; row_idx < rows_count; row_idx++) {
+                        if (!then_idx[row_idx] && when_column_ptr->get_bool(row_idx)) {
+                            then_idx[row_idx] = i;
+                        }
+                    }
+                } else {
+                    auto* __restrict cond_raw_data =
+                            reinterpret_cast<const ColumnUInt8*>(when_column_ptr.get())
+                                    ->get_data()
+                                    .data();
 
-                // simd automatically
-                for (int row_idx = 0; row_idx < rows_count; row_idx++) {
-                    then_idx[row_idx] |= (!then_idx[row_idx]) * cond_raw_data[row_idx] * i;
+                    // simd automatically
+                    for (int row_idx = 0; row_idx < rows_count; row_idx++) {
+                        then_idx[row_idx] |= (!then_idx[row_idx]) * cond_raw_data[row_idx] * i;
+                    }
                 }
             }
         }
@@ -255,21 +242,6 @@ public:
         }
     }
 
-    template <typename ColumnType, bool when_null, bool then_null>
-    Status execute_impl_raw(const DataTypePtr& data_type, Block& block,
-                            const ColumnNumbers& arguments, size_t result,
-                            size_t input_rows_count) {
-        CaseWhenColumnHolder column_holder = CaseWhenColumnHolder(
-                block, arguments, input_rows_count, has_case, has_else, when_null, then_null);
-        if constexpr (has_case) {
-            return execute_impl_has_case<ColumnType, when_null, then_null>(data_type, block, result,
-                                                                           column_holder);
-        } else {
-            return execute_impl_no_case<ColumnType, when_null, then_null>(data_type, block, result,
-                                                                          column_holder);
-        }
-    }
-
     template <typename ColumnType, bool when_null>
     Status execute_get_then_null(const DataTypePtr& data_type, Block& block,
                                  const ColumnNumbers& arguments, size_t result,
@@ -288,12 +260,15 @@ public:
             }
         }
 
+        CaseWhenColumnHolder column_holder = CaseWhenColumnHolder(
+                block, arguments, input_rows_count, has_case, has_else, when_null, then_null);
+
         if (then_null) {
-            return execute_impl_raw<ColumnType, when_null, true>(data_type, block, arguments,
-                                                                 result, input_rows_count);
+            return execute_impl<ColumnType, when_null, true>(data_type, block, result,
+                                                             column_holder);
         } else {
-            return execute_impl_raw<ColumnType, when_null, false>(data_type, block, arguments,
-                                                                  result, input_rows_count);
+            return execute_impl<ColumnType, when_null, false>(data_type, block, result,
+                                                              column_holder);
         }
     }
 
