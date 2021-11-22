@@ -319,12 +319,84 @@ struct BitmapToString {
     }
 };
 
+struct NameBitmapAndCount {
+    static constexpr auto name = "bitmap_and_count";
+};
+template <typename LeftDataType, typename RightDataType>
+struct BitmapAndCount {
+    using ResultDataType = DataTypeInt64;
+    using T0 = typename LeftDataType::FieldType;
+    using T1 = typename RightDataType::FieldType;
+    using TData = std::vector<BitmapValue>;
+    using ResTData = typename ColumnVector<Int64>::Container;
+
+    static Status vector_vector(const TData& lvec, const TData& rvec, ResTData& res) {
+        size_t size = lvec.size();
+        for (size_t i = 0; i < size; ++i) {
+            BitmapValue val = lvec[i];
+            val &= rvec[i];
+            res[i] = val.cardinality();
+        }
+        return Status::OK();
+    }
+};
+
+struct NameBitmapOrCount {
+    static constexpr auto name = "bitmap_or_count";
+};
+template <typename LeftDataType, typename RightDataType>
+struct BitmapOrCount {
+    using ResultDataType = DataTypeInt64;
+    using T0 = typename LeftDataType::FieldType;
+    using T1 = typename RightDataType::FieldType;
+    using TData = std::vector<BitmapValue>;
+    using ResTData = typename ColumnVector<Int64>::Container;
+
+    static Status vector_vector(const TData& lvec, const TData& rvec, ResTData& res) {
+        size_t size = lvec.size();
+        for (size_t i = 0; i < size; ++i) {
+            BitmapValue val = lvec[i];
+            val |= rvec[i];
+            res[i] = val.cardinality();
+        }
+        return Status::OK();
+    }
+};
+
+struct NameBitmapXorCount {
+    static constexpr auto name = "bitmap_xor_count";
+};
+template <typename LeftDataType, typename RightDataType>
+struct BitmapXorCount {
+    using ResultDataType = DataTypeInt64;
+    using T0 = typename LeftDataType::FieldType;
+    using T1 = typename RightDataType::FieldType;
+    using TData = std::vector<BitmapValue>;
+    using ResTData = typename ColumnVector<Int64>::Container;
+
+    static Status vector_vector(const TData& lvec, const TData& rvec, ResTData& res) {
+        size_t size = lvec.size();
+        for (size_t i = 0; i < size; ++i) {
+            BitmapValue val = lvec[i];
+            val ^= rvec[i];
+            res[i] = val.cardinality();
+        }
+        return Status::OK();
+    }
+};
+
 using FunctionBitmapEmpty = FunctionConst<BitmapEmpty, false>;
 using FunctionToBitmap = FunctionUnaryToType<ToBitmapImpl, NameToBitmap>;
 using FunctionBitmapFromString = FunctionUnaryToType<BitmapFromString,NameBitmapFromString>;
 using FunctionBitmapHash = FunctionUnaryToType<BitmapHash, NameBitmapHash>;
 
 using FunctionBitmapCount = FunctionUnaryToType<BitmapCount, NameBitmapCount>;
+using FunctionBitmapAndCount =
+        FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapAndCount, NameBitmapAndCount>;
+using FunctionBitmapOrCount =
+        FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapOrCount, NameBitmapOrCount>;
+using FunctionBitmapXorCount =
+        FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapXorCount, NameBitmapXorCount>;
 using FunctionBitmapMin = FunctionUnaryToType<BitmapMin, NameBitmapMin>;
 using FunctionBitmapToString = FunctionUnaryToType<BitmapToString, NameBitmapToString>;
 
@@ -349,6 +421,9 @@ void register_function_bitmap(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionBitmapFromString>();
     factory.register_function<FunctionBitmapHash>();
     factory.register_function<FunctionBitmapCount>();
+    factory.register_function<FunctionBitmapAndCount>();
+    factory.register_function<FunctionBitmapOrCount>();
+    factory.register_function<FunctionBitmapXorCount>();
     factory.register_function<FunctionBitmapMin>();
     factory.register_function<FunctionBitmapToString>();
     factory.register_function<FunctionBitmapAnd>();
