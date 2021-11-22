@@ -285,6 +285,10 @@ void ColumnString::reserve(size_t n) {
     offsets.reserve(n);
 }
 
+void ColumnString::resize(size_t n) {
+    offsets.resize(n);
+}
+
 void ColumnString::get_extremes(Field& min, Field& max) const {
     min = String();
     max = String();

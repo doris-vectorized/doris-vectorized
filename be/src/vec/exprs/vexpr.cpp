@@ -27,6 +27,7 @@
 #include "vec/exprs/vin_predicate.h"
 #include "vec/exprs/vliteral.h"
 #include "vec/exprs/vslot_ref.h"
+#include "vec/exprs/vcase_expr.h"
 
 namespace doris::vectorized {
 using doris::Status;
@@ -111,6 +112,13 @@ Status VExpr::create_expr(doris::ObjectPool* pool, const doris::TExprNode& texpr
     }
     case doris::TExprNodeType::IN_PRED: {
         *expr = pool->add(new VInPredicate(texpr_node));
+        break;
+    }
+    case doris::TExprNodeType::CASE_EXPR: {
+        if (!texpr_node.__isset.case_expr) {
+            return Status::InternalError("Case expression not set in thrift node");
+        }
+        *expr = pool->add(new VCaseExpr(texpr_node));
         break;
     }
     default:
