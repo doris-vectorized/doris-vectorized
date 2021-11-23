@@ -56,8 +56,8 @@ Status VCaseExpr::prepare(doris::RuntimeState* state, const doris::RowDescriptor
     _function = SimpleFunctionFactory::instance().get_function(_function_name, argument_template,
                                                                _data_type);
     if (_function == nullptr) {
-        return Status::NotSupported(fmt::format("vcase_expr Function {} is not implemented",
-                                                _fn.name.function_name));
+        return Status::NotSupported(
+                fmt::format("vcase_expr Function {} is not implemented", _fn.name.function_name));
     }
 
     VExpr::register_function_context(state, context);
@@ -100,8 +100,8 @@ Status VCaseExpr::execute(VExprContext* context, Block* block, int* result_colum
     size_t num_columns_without_result = block->columns();
     block->insert({nullptr, _data_type, _expr_name});
 
-    _function->execute(context->fn_context(_fn_context_index), *block, arguments,
-                       num_columns_without_result, block->rows(), false);
+    RETURN_IF_ERROR(_function->execute(context->fn_context(_fn_context_index), *block, arguments,
+                                       num_columns_without_result, block->rows(), false));
     *result_column_id = num_columns_without_result;
 
     return Status::OK();

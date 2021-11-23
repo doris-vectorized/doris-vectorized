@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "vec/data_types/data_type_decimal.h"
 #include "vec/data_types/data_type_nullable.h"
 #include "vec/functions/function.h"
 #include "vec/functions/function_helpers.h"
@@ -341,14 +342,16 @@ public:
         } else if (which.is_float64()) {
             return execute_get_when_null<ColumnFloat64>(data_type, block, arguments, result,
                                                         input_rows_count);
+        } else if (which.is_decimal()) {
+            return execute_get_when_null<ColumnDecimal<Decimal128>>(data_type, block, arguments,
+                                                                    result, input_rows_count);
         } else if (which.is_string()) {
             return execute_get_when_null<ColumnString>(data_type, block, arguments, result,
                                                        input_rows_count);
         } else {
-            LOG(FATAL) << fmt::format("Unexpected type {} of argument of function {}",
-                                      data_type->get_name(), get_name());
+            return Status::NotSupported(fmt::format("Unexpected type {} of argument of function {}",
+                                                    data_type->get_name(), get_name()));
         }
-        return Status::OK();
     }
 
     Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
