@@ -338,7 +338,6 @@ private:
                 execute_num_right_type<T0, UInt16>(block, result, col_left, col_right_untyped) ||
                 execute_num_right_type<T0, UInt32>(block, result, col_left, col_right_untyped) ||
                 execute_num_right_type<T0, UInt64>(block, result, col_left, col_right_untyped) ||
-                execute_num_right_type<T0, UInt128>(block, result, col_left, col_right_untyped) ||
                 execute_num_right_type<T0, Int8>(block, result, col_left, col_right_untyped) ||
                 execute_num_right_type<T0, Int16>(block, result, col_left, col_right_untyped) ||
                 execute_num_right_type<T0, Int32>(block, result, col_left, col_right_untyped) ||
@@ -362,8 +361,6 @@ private:
                                                          col_right_untyped) ||
                 execute_num_const_right_type<T0, UInt64>(block, result, col_left_const,
                                                          col_right_untyped) ||
-                execute_num_const_right_type<T0, UInt128>(block, result, col_left_const,
-                                                          col_right_untyped) ||
                 execute_num_const_right_type<T0, Int8>(block, result, col_left_const,
                                                        col_right_untyped) ||
                 execute_num_const_right_type<T0, Int16>(block, result, col_left_const,
@@ -529,7 +526,6 @@ public:
                   execute_num_left_type<UInt16>(block, result, col_left_untyped, col_right_untyped) ||
                   execute_num_left_type<UInt32>(block, result, col_left_untyped, col_right_untyped) ||
                   execute_num_left_type<UInt64>(block, result, col_left_untyped, col_right_untyped) ||
-                  execute_num_left_type<UInt128>(block, result, col_left_untyped, col_right_untyped) ||
                   execute_num_left_type<Int8>(block, result, col_left_untyped, col_right_untyped) ||
                   execute_num_left_type<Int16>(block, result, col_left_untyped, col_right_untyped) ||
                   execute_num_left_type<Int32>(block, result, col_left_untyped, col_right_untyped) ||
