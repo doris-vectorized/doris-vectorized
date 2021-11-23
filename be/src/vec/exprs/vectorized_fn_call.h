@@ -21,7 +21,7 @@
 #include "vec/functions/function.h"
 
 namespace doris::vectorized {
-class VectorizedFnCall final : public VExpr {
+class VectorizedFnCall : public VExpr {
 public:
     VectorizedFnCall(const doris::TExprNode& node);
     virtual doris::Status execute(VExprContext* context, doris::vectorized::Block* block,

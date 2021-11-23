@@ -322,6 +322,10 @@ public class ArithmeticExpr extends Expr {
                 case BITAND:
                 case BITOR:
                 case BITXOR:
+                    if (t1 == Type.BOOLEAN && t2 == Type.BOOLEAN) {
+                        t1 = Type.TINYINT;
+                        t2 = Type.TINYINT;
+                    }
                     commonType = Type.getAssignmentCompatibleType(t1, t2, false);
                     if (commonType.getPrimitiveType().ordinal() > PrimitiveType.LARGEINT.ordinal()) {
                         commonType = Type.BIGINT;

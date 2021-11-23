@@ -17,17 +17,19 @@
 
 #include "vec/exprs/vexpr.h"
 
-#include <memory>
 #include <fmt/format.h>
+
+#include <memory>
 
 #include "exprs/anyval_util.h"
 #include "gen_cpp/Exprs_types.h"
+#include "vec/exprs/vcase_expr.h"
 #include "vec/exprs/vcast_expr.h"
+#include "vec/exprs/vcompound_pred.h"
 #include "vec/exprs/vectorized_fn_call.h"
 #include "vec/exprs/vin_predicate.h"
 #include "vec/exprs/vliteral.h"
 #include "vec/exprs/vslot_ref.h"
-#include "vec/exprs/vcase_expr.h"
 
 namespace doris::vectorized {
 using doris::Status;
@@ -97,8 +99,11 @@ Status VExpr::create_expr(doris::ObjectPool* pool, const doris::TExprNode& texpr
         *expr = pool->add(new VSlotRef(texpr_node));
         break;
     }
+    case doris::TExprNodeType::COMPOUND_PRED: {
+        *expr = pool->add(new VcompoundPred(texpr_node));
+        break;
+    }
     case doris::TExprNodeType::ARITHMETIC_EXPR:
-    case doris::TExprNodeType::COMPOUND_PRED:
     case doris::TExprNodeType::BINARY_PRED:
     case doris::TExprNodeType::INFO_FUNC:
     case doris::TExprNodeType::FUNCTION_CALL:
