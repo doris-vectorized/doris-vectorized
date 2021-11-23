@@ -258,16 +258,15 @@ Status BinaryDictPageDecoder::next_batch(size_t* n, vectorized::MutableColumnPtr
     const int32_t* data_array = reinterpret_cast<const int32_t*>(_bit_shuffle_ptr->_decoded.data());
     size_t start_index = _bit_shuffle_ptr->_cur_index;
 
-    // todo(wb) we can move this logic to columnNullable, binaryDictDecoder should only see IColumn
     // todo(wb) support nullable
     if (dst->is_complex_column()) {
+        // cast columnptr to columnstringvalue just for avoid virtual function call overhead
         vectorized::ColumnStringValue& string_value_vector = reinterpret_cast<vectorized::ColumnStringValue&>(*dst);
         for (int i = 0; i < max_fetch; i++, start_index++) {
             int32_t codeword = data_array[start_index];
             uint32_t start_offset = _start_offset_array[codeword];
             uint32_t str_len = _len_array[codeword];
-            StringValue sv(const_cast<char*>(&_dict_decoder->_data[start_offset]), str_len);
-            string_value_vector.get_data().push_back_without_reserve(sv);
+            string_value_vector.insert_data(&_dict_decoder->_data[start_offset], str_len);
         }
  
         _bit_shuffle_ptr->_cur_index += max_fetch;

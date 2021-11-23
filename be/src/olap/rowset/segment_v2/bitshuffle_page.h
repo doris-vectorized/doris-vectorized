@@ -358,7 +358,7 @@ public:
         int end = _cur_index + max_fetch;
  
         // todo(wb) Try to eliminate type judgment in pagedecoder
-        if (dst->is_column_decimal() || (dst->is_nullable() && dst->is_column_decimal())) { // decimal non-predicate column
+        if (dst->is_column_decimal()) { // decimal non-predicate column
             for (; begin < end; begin++) {
                 const char* cur_ptr = (const char*)&_decoded[begin * SIZE_OF_TYPE];
                 int64_t int_value = *(int64_t*)(cur_ptr);
@@ -366,15 +366,7 @@ public:
                 DecimalV2Value data(int_value, frac_value);
                 dst->insert_data(reinterpret_cast<char*>(&data), 0);
             }
-        } else if (dst->is_complex_column() || (dst->is_nullable() && dst->is_complex_column())) { //  decimal predicate column
-            for (; begin < end; begin++) {
-                const char* cur_ptr = (const char*)&_decoded[begin * SIZE_OF_TYPE];
-                decimal12_t dc12_value;
-                dc12_value.integer = *(int64_t*)(cur_ptr);
-                dc12_value.fraction = *(int32_t*)(cur_ptr + sizeof(int64_t));
-                dst->insert_data(reinterpret_cast<char*>(&dc12_value), 0);
-            }
-        } else if (dst->is_date_type() || (dst->is_date_type() && dst->is_nullable())) {
+        } else if (dst->is_date_type()) {
             for (; begin < end; begin++) {
                 const char* cur_ptr = (const char*)&_decoded[begin * SIZE_OF_TYPE];
                 uint64_t value = 0;
