@@ -23,6 +23,7 @@
 namespace doris::vectorized {
 VExprContext::VExprContext(VExpr* expr)
         : _root(expr),
+          _is_clone(false),
           _prepared(false),
           _opened(false),
           _closed(false),
