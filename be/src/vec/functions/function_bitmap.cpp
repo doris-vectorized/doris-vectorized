@@ -50,9 +50,9 @@ struct ToBitmapImpl {
                          std::vector<BitmapValue>& res) {
         auto size = offsets.size();
         res.reserve(size);
-        for (int i = 0; i < size; ++i) {
+        for (size_t i = 0; i < size; ++i) {
             const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
-            int str_size = offsets[i] - offsets[i - 1] - 1;
+            size_t str_size = offsets[i] - offsets[i - 1] - 1;
             StringParser::ParseResult parse_result = StringParser::PARSE_SUCCESS;
             uint64_t int_value = StringParser::string_to_unsigned_int<uint64_t>(raw_str, str_size,
                                                                                 &parse_result);
@@ -84,7 +84,7 @@ struct BitmapFromString {
         auto size = offsets.size();
         res.reserve(size);
         std::vector<uint64_t> bits;
-        for (int i = 0; i < size; ++i) {
+        for (size_t i = 0; i < size; ++i) {
             const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
             int str_size = offsets[i] - offsets[i - 1] - 1;
             if (SplitStringAndParse({raw_str, str_size},
@@ -112,9 +112,9 @@ struct BitmapHash {
                          std::vector<BitmapValue>& res) {
         auto size = offsets.size();
         res.reserve(size);
-        for (int i = 0; i < size; ++i) {
+        for (size_t i = 0; i < size; ++i) {
             const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
-            int str_size = offsets[i] - offsets[i - 1] - 1;
+            size_t str_size = offsets[i] - offsets[i - 1] - 1;
             uint32_t hash_value =
                 HashUtil::murmur_hash3_32(raw_str, str_size, HashUtil::MURMUR3_32_SEED);
             res.emplace_back();
@@ -138,7 +138,7 @@ struct BitmapCount {
     static Status vector(const std::vector<BitmapValue>& data, ReturnColumnContainer& res) {
         size_t size = data.size();
         res.reserve(size);
-        for (int i = 0; i < size; ++i) {
+        for (size_t i = 0; i < size; ++i) {
             res.push_back(data[i].cardinality());
         }
         return Status::OK();
@@ -157,8 +157,8 @@ struct BitmapAnd {
     using TData = std::vector<BitmapValue>;
 
     static Status vector_vector(const TData& lvec, const TData& rvec, TData& res) {
-        int size = lvec.size();
-        for (int i = 0; i < size; ++i) {
+        size_t size = lvec.size();
+        for (size_t i = 0; i < size; ++i) {
             res[i] = lvec[i];
             res[i] &= rvec[i];
         }
@@ -178,8 +178,8 @@ struct BitmapOr {
     using TData = std::vector<BitmapValue>;
 
     static Status vector_vector(const TData& lvec, const TData& rvec, TData& res) {
-        int size = lvec.size();
-        for (int i = 0; i < size; ++i) {
+        size_t size = lvec.size();
+        for (size_t i = 0; i < size; ++i) {
             res[i] = lvec[i];
             res[i] |= rvec[i];
         }
@@ -199,8 +199,8 @@ struct BitmapXor {
     using TData = std::vector<BitmapValue>;
 
     static Status vector_vector(const TData& lvec, const TData& rvec, TData& res) {
-        int size = lvec.size();
-        for (int i = 0; i < size; ++i) {
+        size_t size = lvec.size();
+        for (size_t i = 0; i < size; ++i) {
             res[i] = lvec[i];
             res[i] ^= rvec[i];
         }
@@ -220,8 +220,8 @@ struct BitmapNot {
     using TData = std::vector<BitmapValue>;
 
     static Status vector_vector(const TData& lvec, const TData& rvec, TData& res) {
-        int size = lvec.size();
-        for (int i = 0; i < size; ++i) {
+        size_t size = lvec.size();
+        for (size_t i = 0; i < size; ++i) {
             res[i] = lvec[i];
             res[i] -= rvec[i];
         }
@@ -243,8 +243,8 @@ struct BitmapContains {
     using ResTData = typename ColumnVector<UInt8>::Container;
 
     static Status vector_vector(const LTData& lvec, const RTData& rvec, ResTData& res) {
-        int size = lvec.size();
-        for (int i = 0; i < size; ++i) {
+        size_t size = lvec.size();
+        for (size_t i = 0; i < size; ++i) {
             res[i] = lvec[i].contains(rvec[i]);
         }
         return Status::OK();
@@ -264,9 +264,9 @@ struct BitmapHasAny {
     using ResTData = typename ColumnVector<UInt8>::Container;
 
     static Status vector_vector(const TData& lvec, const TData& rvec, ResTData& res) {
-        int size = lvec.size();
-        for (int i = 0; i < size; ++i) {
-            BitmapValue bitmap = lvec[i];
+        size_t size = lvec.size();
+        for (size_t i = 0; i < size; ++i) {
+            auto bitmap = const_cast<BitmapValue&>(lvec[i]);
             bitmap &= rvec[i];
             res[i] = bitmap.cardinality() != 0;
         }
@@ -288,7 +288,7 @@ struct BitmapMin {
     static Status vector(const std::vector<BitmapValue>& data, ReturnColumnContainer& res) {
         size_t size = data.size();
         res.reserve(size);
-        for (int i = 0; i < size; ++i) {
+        for (size_t i = 0; i < size; ++i) {
             auto min = const_cast<std::vector<BitmapValue>&>(data)[i].minimum();
             res.push_back(min.val);
         }
@@ -312,7 +312,7 @@ struct BitmapToString {
         size_t size = data.size();
         offsets.resize(size);
         chars.reserve(size);
-        for (int i = 0; i < size; ++i) {
+        for (size_t i = 0; i < size; ++i) {
             StringOP::push_value_string(const_cast<std::vector<BitmapValue>&>(data)[i].to_string(), i, chars, offsets);
         }
         return Status::OK();
@@ -333,7 +333,7 @@ struct BitmapAndCount {
     static Status vector_vector(const TData& lvec, const TData& rvec, ResTData& res) {
         size_t size = lvec.size();
         for (size_t i = 0; i < size; ++i) {
-            BitmapValue val = lvec[i];
+            auto val = const_cast<BitmapValue&>(lvec[i]);
             val &= rvec[i];
             res[i] = val.cardinality();
         }
@@ -355,7 +355,7 @@ struct BitmapOrCount {
     static Status vector_vector(const TData& lvec, const TData& rvec, ResTData& res) {
         size_t size = lvec.size();
         for (size_t i = 0; i < size; ++i) {
-            BitmapValue val = lvec[i];
+            auto val = const_cast<BitmapValue&>(lvec[i]);
             val |= rvec[i];
             res[i] = val.cardinality();
         }
@@ -377,7 +377,7 @@ struct BitmapXorCount {
     static Status vector_vector(const TData& lvec, const TData& rvec, ResTData& res) {
         size_t size = lvec.size();
         for (size_t i = 0; i < size; ++i) {
-            BitmapValue val = lvec[i];
+            auto val = const_cast<BitmapValue&>(lvec[i]);
             val ^= rvec[i];
             res[i] = val.cardinality();
         }
