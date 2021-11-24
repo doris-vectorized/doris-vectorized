@@ -313,7 +313,7 @@ struct BitmapToString {
         offsets.resize(size);
         chars.reserve(size);
         for (size_t i = 0; i < size; ++i) {
-            StringOP::push_value_string(const_cast<std::vector<BitmapValue>&>(data)[i].to_string(), i, chars, offsets);
+            StringOP::push_value_string(data[i].to_string(), i, chars, offsets);
         }
         return Status::OK();
     }
