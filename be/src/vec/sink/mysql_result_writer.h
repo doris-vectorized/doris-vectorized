@@ -17,6 +17,7 @@
 
 #pragma once
 #include "runtime/primitive_type.h"
+#include "util/mysql_row_buffer.h"
 #include "util/runtime_profile.h"
 #include "vec/core/block.h"
 #include "vec/sink/result_writer.h"
@@ -25,6 +26,7 @@ namespace doris {
 class BufferControlBlock;
 class RowBatch;
 class MysqlRowBuffer;
+class TFetchDataResult;
 
 namespace vectorized {
 class VExprContext;
@@ -34,8 +36,6 @@ public:
     VMysqlResultWriter(BufferControlBlock* sinker,
                        const std::vector<vectorized::VExprContext*>& output_vexpr_ctxs,
                        RuntimeProfile* parent_profile);
-
-    virtual ~VMysqlResultWriter();
 
     virtual Status init(RuntimeState* state) override;
 
@@ -49,14 +49,12 @@ private:
     void _init_profile();
 
     template <PrimitiveType type, bool is_nullable>
-    Status _add_one_column(const ColumnPtr& column_ptr);
+    Status _add_one_column(const ColumnPtr& column_ptr, std::unique_ptr<TFetchDataResult>& result);
 
 private:
     BufferControlBlock* _sinker;
 
     const std::vector<vectorized::VExprContext*>& _output_vexpr_ctxs;
-
-    std::vector<MysqlRowBuffer*> _vec_buffers;
 
     RuntimeProfile* _parent_profile; // parent profile from result sink. not owned
     // total time cost on append batch operation
