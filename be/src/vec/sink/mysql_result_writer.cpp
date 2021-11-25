@@ -25,7 +25,7 @@
 #include "vec/common/assert_cast.h"
 #include "vec/exprs/vexpr.h"
 #include "vec/exprs/vexpr_context.h"
-
+#include "vec/runtime/vdatetime_value.h"
 namespace doris {
 namespace vectorized {
 VMysqlResultWriter::VMysqlResultWriter(BufferControlBlock* sinker,

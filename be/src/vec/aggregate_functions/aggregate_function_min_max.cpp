@@ -46,7 +46,7 @@ static IAggregateFunction* create_aggregate_function_single_value(const String& 
         return new AggregateFunctionTemplate<Data<SingleValueDataString>, false>(argument_type);
     }
     if (which.idx == TypeIndex::DateTime || which.idx == TypeIndex::Date) {
-        return new AggregateFunctionTemplate<Data<SingleValueDataFixed<Int128>>, false>(argument_type);
+        return new AggregateFunctionTemplate<Data<SingleValueDataFixed<Int64>>, false>(argument_type);
     }
     if (which.idx == TypeIndex::Decimal128) {
         return new AggregateFunctionTemplate<Data<SingleValueDataFixed<DecimalV2Value>>, false>(argument_type);

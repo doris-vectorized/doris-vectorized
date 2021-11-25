@@ -37,7 +37,7 @@
 #include "vec/functions/function_helpers.h"
 #include "vec/io/io_helper.h"
 #include "vec/io/reader_buffer.h"
-
+#include "vec/runtime/vdatetime_value.h"
 namespace doris::vectorized {
 /** Type conversion functions.
   * toType - conversion in "natural way";
@@ -115,7 +115,7 @@ struct ConvertImpl {
                                 vec_from[i], vec_to.get_scale());
                     else if constexpr (IsTimeType<FromDataType> && IsDataTypeDecimal<ToDataType>) {
                         vec_to[i] = convert_to_decimal<DataTypeInt64, ToDataType>
-                                (reinterpret_cast<const DateTimeValue&>(vec_from[i]).to_int64(), vec_to.get_scale());
+                                (reinterpret_cast<const VecDateTimeValue&>(vec_from[i]).to_int64(), vec_to.get_scale());
                     }
                 } else if constexpr (IsTimeType<FromDataType>) {
                     if constexpr (IsTimeType<ToDataType>) {
@@ -126,7 +126,7 @@ struct ConvertImpl {
                             DataTypeDate::cast_to_date(vec_to[i]);
                         }
                     } else {
-                        vec_to[i] = reinterpret_cast<const DateTimeValue&>(vec_from[i]).to_int64();
+                        vec_to[i] = reinterpret_cast<const VecDateTimeValue&>(vec_from[i]).to_int64();
                     }
                 } else
                     vec_to[i] = static_cast<ToFieldType>(vec_from[i]);
@@ -167,7 +167,7 @@ struct ConvertImplToTimeType {
         using ColVecFrom =
                 std::conditional_t<IsDecimalNumber<FromFieldType>, ColumnDecimal<FromFieldType>,
                                    ColumnVector<FromFieldType>>;
-        using ColVecTo = ColumnVector<Int128>;
+        using ColVecTo = ColumnVector<Int64>;
 
         if (const ColVecFrom* col_from =
                     check_and_get_column<ColVecFrom>(named_from.column.get())) {
@@ -184,7 +184,7 @@ struct ConvertImplToTimeType {
             auto& vec_null_map_to = col_null_map_to->get_data();
 
             for (size_t i = 0; i < size; ++i) {
-                auto& date_value = reinterpret_cast<DateTimeValue&>(vec_to[i]);
+                auto& date_value = reinterpret_cast<VecDateTimeValue&>(vec_to[i]);
                 if constexpr (IsDecimalNumber<FromFieldType>) {
                     vec_null_map_to[i] = !date_value.from_date_int64(
                             convert_from_decimal<FromDataType, DataTypeInt64>(
@@ -192,7 +192,7 @@ struct ConvertImplToTimeType {
                 } else {
                     vec_null_map_to[i] = !date_value.from_date_int64(vec_from[i]);
                 }
-                // DateType of DateTimeValue should cast to date
+                // DateType of VecDateTimeValue should cast to date
                 if constexpr (IsDateType<ToDataType>) {
                     date_value.cast_to_date();
                 }

@@ -20,16 +20,16 @@
 #include "runtime/datetime_value.h"
 #include "vec/columns/columns_number.h"
 #include "util/binary_cast.hpp"
-
+#include "vec/runtime/vdatetime_value.h"
 namespace doris::vectorized {
 bool DataTypeDate::equals(const IDataType& rhs) const {
     return typeid(rhs) == typeid(*this);
 }
 
 std::string DataTypeDate::to_string(const IColumn& column, size_t row_num) const {
-    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convert_to_full_column_if_const().get())
+    Int64 int_val = assert_cast<const ColumnInt64&>(*column.convert_to_full_column_if_const().get())
                              .get_data()[row_num];
-    doris::DateTimeValue value = binary_cast<Int128, doris::DateTimeValue>(int_val);
+    doris::vectorized::VecDateTimeValue value = binary_cast<Int64, doris::vectorized::VecDateTimeValue>(int_val);
     std::stringstream ss;
     // Year
     uint32_t temp = value.year() / 100;
@@ -44,9 +44,9 @@ std::string DataTypeDate::to_string(const IColumn& column, size_t row_num) const
 }
 
 void DataTypeDate::to_string(const IColumn & column, size_t row_num, BufferWritable & ostr) const {
-    Int128 int_val = assert_cast<const ColumnInt128&>(*column.convert_to_full_column_if_const().get())
+    Int64 int_val = assert_cast<const ColumnInt64&>(*column.convert_to_full_column_if_const().get())
                              .get_data()[row_num];
-    doris::DateTimeValue value = binary_cast<Int128, doris::DateTimeValue>(int_val);
+    doris::vectorized::VecDateTimeValue value = binary_cast<Int64, doris::vectorized::VecDateTimeValue>(int_val);
 
     char buf[64];
     char* pos = value.to_string(buf);
@@ -54,10 +54,10 @@ void DataTypeDate::to_string(const IColumn & column, size_t row_num, BufferWrita
     ostr.write(buf, pos - buf - 1);
 }
 
-void DataTypeDate::cast_to_date(Int128 &x) {
-    auto value = binary_cast<Int128, DateTimeValue>(x);
+void DataTypeDate::cast_to_date(Int64& x) {
+    auto value = binary_cast<Int64, VecDateTimeValue>(x);
     value.cast_to_date();
-    x = binary_cast<DateTimeValue, Int128>(value);
+    x = binary_cast<VecDateTimeValue, Int64>(value);
 }
 
 } // namespace doris::vectorized

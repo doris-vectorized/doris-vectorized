@@ -27,6 +27,7 @@ using FunctionYear = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToYearImpl
 using FunctionQuarter = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToQuarterImpl>;
 using FunctionMonth = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToMonthImpl>;
 using FunctionDay = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToDayImpl>;
+using FunctionWeek = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToWeekImpl>;
 using FunctionHour = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToHourImpl>;
 using FunctionMinute = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToMinuteImpl>;
 using FunctionSecond = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToSecondImpl>;
@@ -41,6 +42,7 @@ void register_function_to_time_fuction(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionMinute>();
     factory.register_function<FunctionHour>();
     factory.register_function<FunctionDay>();
+    factory.register_function<FunctionWeek>();
     factory.register_function<FunctionMonth>();
     factory.register_function<FunctionYear>();
     factory.register_function<FunctionQuarter>();

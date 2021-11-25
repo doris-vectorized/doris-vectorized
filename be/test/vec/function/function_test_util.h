@@ -33,20 +33,20 @@
 #include "vec/functions/function_string.h"
 #include "vec/functions/function_string_to_string.h"
 #include "vec/functions/simple_function_factory.h"
-
+#include "vec/runtime/vdatetime_value.h"
 namespace doris {
 namespace vectorized {
 
 using DataSet = std::vector<std::pair<std::vector<std::any>, std::any>>;
-__int128 str_to_data_time(std::string datetime_str, bool data_time = true) {
-    DateTimeValue v;
+int64_t str_to_data_time(std::string datetime_str, bool data_time = true) {
+    VecDateTimeValue v;
     v.from_date_str(datetime_str.c_str(), datetime_str.size());
     if (data_time) { //bool data_time only to simplifly means data_time or data to cast, just use in time-functions uint test
         v.to_datetime();
     } else {
         v.cast_to_date();
     }
-    return binary_cast<doris::DateTimeValue, Int128>(v);
+    return binary_cast<doris::vectorized::VecDateTimeValue, Int64>(v);
 }
 
 template <typename ColumnType, typename Column, typename NullColumn>
@@ -171,7 +171,7 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
                                                     is_const, row_size);
         } else if (tp == TypeIndex::DateTime) {
             static std::string date_time_format("%Y-%m-%d %H:%i:%s");
-            auto col = ColumnInt128::create();
+            auto col = ColumnInt64::create();
 
             for (int j = 0; j < row_size; j++) {
                 if (data_set[j].first[i].type() == typeid(Null)) {
@@ -180,7 +180,7 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
                     continue;
                 }
                 auto datetime_str = std::any_cast<std::string>(data_set[j].first[i]);
-                DateTimeValue v;
+                VecDateTimeValue v;
                 v.from_date_format_str(date_time_format.c_str(), date_time_format.size(),
                                        datetime_str.c_str(), datetime_str.size());
                 v.to_datetime();
@@ -191,7 +191,7 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
                                                      is_const, row_size);
         } else if (tp == TypeIndex::Date) {
             static std::string date_time_format("%Y-%m-%d");
-            auto col = ColumnInt128::create();
+            auto col = ColumnInt64::create();
 
             for (int j = 0; j < row_size; j++) {
                 if (data_set[j].first[i].type() == typeid(Null)) {
@@ -200,7 +200,7 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
                     continue;
                 }
                 auto datetime_str = std::any_cast<std::string>(data_set[j].first[i]);
-                DateTimeValue v;
+                VecDateTimeValue v;
                 v.from_date_format_str(date_time_format.c_str(), date_time_format.size(),
                                        datetime_str.c_str(), datetime_str.size());
                 v.cast_to_date();

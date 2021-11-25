@@ -21,7 +21,7 @@
 #include "testutil/desc_tbl_builder.h"
 #include "vec/exprs/vliteral.h"
 #include "vec/utils/util.hpp"
-
+#include "vec/runtime/vdatetime_value.h"
 TEST(TEST_VEXPR, ABSTEST) {
     doris::ChunkAllocator::init_instance(4096);
     doris::ObjectPool object_pool;
@@ -310,17 +310,17 @@ TEST(TEST_VEXPR, LITERALTEST) {
         ASSERT_FLOAT_EQ(v, 1024.0);
     }
     {
-        DateTimeValue data_time_value;
+        vectorized::VecDateTimeValue data_time_value;
         const char* date = "20210407";
         data_time_value.from_date_str(date, strlen(date));
-        __int128_t dt;
-        memcpy(&dt, &data_time_value, sizeof(__int128_t));
+        __int64_t dt;
+        memcpy(&dt, &data_time_value, sizeof(__int64_t));
         VLiteral literal(create_literal<TYPE_DATETIME, std::string>(std::string(date)));
         Block block;
         int ret = -1;
         literal.execute(nullptr, &block, &ret);
         auto ctn = block.safe_get_by_position(ret);
-        auto v = (*ctn.column)[0].get<__int128_t>();
+        auto v = (*ctn.column)[0].get<__int64_t>();
         ASSERT_EQ(v, dt);
     }
     {
