@@ -207,7 +207,7 @@ OLAPStatus BetaRowsetReader::next_block(vectorized::Block* block) {
             _input_block->convert_to_vec_block(block);
         }
         is_first = false;
-    } while (block->rows() < _input_block->capacity()); // here we should keep block.rows() < batch_size
+    } while (block->rows() < _context->runtime_state->batch_size()); // here we should keep block.rows() < batch_size
 
     return OLAP_SUCCESS;
 }
