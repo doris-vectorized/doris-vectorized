@@ -29,24 +29,26 @@ namespace vectorized {
 
 class VOlapScanner;
 
-class VOlapScanNode : public OlapScanNode {
+class VOlapScanNode final : public OlapScanNode {
 public:
     VOlapScanNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs);
-    ~VOlapScanNode();
-    virtual void transfer_thread(RuntimeState* state);
-    virtual void scanner_thread(VOlapScanner* scanner);
-    virtual Status get_next(RuntimeState* state, RowBatch* row_batch, bool* eos) {
-        return Status::NotSupported("Not Implemented VOlapScanNode Node::get_next scalar");
-    }
-    virtual Status get_next(RuntimeState* state, Block* block, bool* eos);
-    virtual Status add_one_block(Block* block);
-    virtual Status start_scan_thread(RuntimeState* state);
-    virtual Status close(RuntimeState* state);
-
     friend class VOlapScanner;
 
+    Status get_next(RuntimeState* state, RowBatch* row_batch, bool* eos) override {
+        return Status::NotSupported("Not Implemented VOlapScanNode Node::get_next scalar");
+    }
+    Status get_next(RuntimeState* state, Block* block, bool* eos) override;
+    Status close(RuntimeState* state) override;
 private:
-    std::list<Block*> _scan_blocks;
+    void transfer_thread(RuntimeState* state);
+    void scanner_thread(VOlapScanner* scanner);
+    Status start_scan_thread(RuntimeState* state) override;
+
+    Status _add_blocks(std::vector<Block*>& block);
+    int _start_scanner_thread_task(RuntimeState* state, int block_per_scanner);
+    Block* _alloc_block(bool& get_free_block);
+
+    std::vector<Block*> _scan_blocks;
     std::vector<Block*> _materialized_blocks;
     std::mutex _blocks_lock;
     std::condition_variable _block_added_cv;
@@ -59,6 +61,7 @@ private:
     std::mutex _free_blocks_lock;
 
     std::list<VOlapScanner*> _volap_scanners;
+    std::mutex _volap_scanners_lock;
 
     int _max_materialized_blocks;
 };
