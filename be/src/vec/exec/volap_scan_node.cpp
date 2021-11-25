@@ -63,10 +63,8 @@ void VOlapScanNode::transfer_thread(RuntimeState* state) {
     _nice = 18 + std::max(0, 2 - (int)_volap_scanners.size() / 5);
 
     auto block_per_scanner = (config::doris_scanner_row_num + (state->batch_size() - 1)) / state->batch_size();
-    auto blocks = new Block[_volap_scanners.size() * block_per_scanner];
-    
     for (int i = 0; i < _volap_scanners.size() * block_per_scanner; ++i) {
-        auto block = blocks + i;
+        auto block = new Block;
         for (const auto slot_desc : _tuple_desc->slots()) {
             auto column_ptr = slot_desc->get_empty_mutable_column();
             column_ptr->reserve(state->batch_size());
@@ -503,6 +501,8 @@ Status VOlapScanNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     return _status;
 }
 
+// TODO: we should register the mem cost of new Block in
+// alloc block
 Block* VOlapScanNode::_alloc_block(bool& get_free_block) {
     {
         std::lock_guard<std::mutex> l(_free_blocks_lock);

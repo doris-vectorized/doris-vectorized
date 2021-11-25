@@ -31,10 +31,7 @@ namespace doris::vectorized {
 
 VOlapScanner::VOlapScanner(RuntimeState* runtime_state, VOlapScanNode* parent, bool aggregation,
                            bool need_agg_finalize, const TPaloScanRange& scan_range)
-        : OlapScanner(runtime_state, parent, aggregation, need_agg_finalize, scan_range),
-          _runtime_state(runtime_state),
-          _parent(parent),
-          _profile(parent->runtime_profile()) {
+        : OlapScanner(runtime_state, parent, aggregation, need_agg_finalize, scan_range) {
     _reader.reset(new BlockReader);
 }
 

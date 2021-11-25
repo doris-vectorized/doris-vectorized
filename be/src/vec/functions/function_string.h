@@ -926,7 +926,7 @@ public:
 
         const auto* url_col = check_and_get_column<ColumnString>(argument_columns[0].get());
         const auto* part_col = check_and_get_column<ColumnString>(argument_columns[1].get());
-        const ColumnString* key_col;
+        const ColumnString* key_col = nullptr;
         if (has_key) {
             key_col = check_and_get_column<ColumnString>(argument_columns[2].get());
         }
