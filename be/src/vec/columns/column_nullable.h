@@ -139,6 +139,8 @@ public:
 
     const ColumnPtr& get_nested_column_ptr() const { return nested_column; }
 
+    MutableColumnPtr get_nested_column_ptr() { return nested_column->assume_mutable(); }
+
     /// Return the column that represents the byte map.
     const ColumnPtr& get_null_map_column_ptr() const { return null_map; }
 

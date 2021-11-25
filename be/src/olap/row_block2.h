@@ -74,7 +74,7 @@ public:
     Status convert_to_row_block(RowCursor* helper, RowBlock* dst);
 
     // convert RowBlockV2 to vectorized::Block
-    Status convert_to_vec_block(vectorized::Block* block, bool is_first = true);
+    Status convert_to_vec_block(vectorized::Block* block);
 
     // low-level API to access memory for each column block(including data array and nullmap).
     // `cid` must be one of `schema()->column_ids()`.
