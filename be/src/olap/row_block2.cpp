@@ -98,16 +98,23 @@ void RowBlockV2::_copy_data_to_column(int cid, doris::vectorized::MutableColumnP
     auto* column = origin_column.get();
     bool nullable_mark_array[_selected_size];
 
-    bool is_nullable = _schema.column(cid)->is_nullable();
-    if (is_nullable) {
+    bool column_nullable = origin_column->is_nullable();
+    bool origin_nullable = _schema.column(cid)->is_nullable();
+    if (column_nullable) {
         auto nullable_column = assert_cast<vectorized::ColumnNullable*>(
                     origin_column.get());
         auto& null_map = nullable_column->get_null_map_data();
         column = nullable_column->get_nested_column_ptr().get();
-        for (uint16_t i = 0; i < _selected_size; ++i) {
-            uint16_t row_idx = _selection_vector[i];
-            null_map.push_back(_column_vector_batches[cid]->is_null_at(row_idx));
-            nullable_mark_array[i] = null_map.back();
+
+        if (origin_nullable) {
+            for (uint16_t i = 0; i < _selected_size; ++i) {
+                uint16_t row_idx = _selection_vector[i];
+                null_map.push_back(_column_vector_batches[cid]->is_null_at(row_idx));
+                nullable_mark_array[i] = null_map.back();
+            }
+        } else {
+            null_map.resize_fill(null_map.size() + _selected_size, 0);
+            memset(nullable_mark_array, false, _selected_size * sizeof(bool));
         }
     } else {
         memset(nullable_mark_array, false, _selected_size * sizeof(bool));
