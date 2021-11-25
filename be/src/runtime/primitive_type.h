@@ -99,7 +99,7 @@ inline bool is_string_type(PrimitiveType type) {
 }
 
 inline bool has_variable_type(PrimitiveType type) {
-    return type == TYPE_CHAR || type == TYPE_VARCHAR || type == TYPE_OBJECT;
+    return type == TYPE_CHAR || type == TYPE_VARCHAR || type == TYPE_OBJECT || type == TYPE_STRING;
 }
 
 // Returns the byte size of 'type'  Returns 0 for variable length types.
