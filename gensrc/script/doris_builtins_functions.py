@@ -1197,7 +1197,7 @@ visible_functions = [
         '', '', 'vec', ''],
     [['bitmap_max'], 'BIGINT', ['BITMAP'],
         '_ZN5doris15BitmapFunctions10bitmap_maxEPN9doris_udf15FunctionContextERKNS1_9StringValE',
-        '', '', '', ''],
+        '', '', 'vec', ''],
     [['bitmap_subset_in_range'], 'BITMAP', ['BITMAP', 'BIGINT', 'BIGINT'],
         '_ZN5doris15BitmapFunctions22bitmap_subset_in_rangeEPN9doris_udf15FunctionContextERKNS1_9StringValERKNS1_9BigIntValES9_',
         '', '', 'vec', ''],
