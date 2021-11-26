@@ -87,8 +87,7 @@ struct BitmapFromString {
         for (size_t i = 0; i < size; ++i) {
             const char* raw_str = reinterpret_cast<const char*>(&data[offsets[i - 1]]);
             int str_size = offsets[i] - offsets[i - 1] - 1;
-            if (SplitStringAndParse({raw_str, str_size},
-                                                        ",", &safe_strtou64, &bits)) {
+            if (SplitStringAndParse({raw_str, str_size}, ",", &safe_strtou64, &bits)) {
                 res.emplace_back(bits);
             } else {
                 res.emplace_back();
@@ -296,6 +295,28 @@ struct BitmapMin {
     }
 };
 
+struct NameBitmapMax {
+    static constexpr auto name = "bitmap_max";
+};
+
+struct BitmapMax {
+    using ReturnType = DataTypeInt64;
+    static constexpr auto TYPE_INDEX = TypeIndex::BitMap;
+    using Type = DataTypeBitMap::FieldType;
+    using ReturnColumnType = ColumnVector<Int64>;
+    using ReturnColumnContainer = ColumnVector<Int64>::Container;
+
+    static Status vector(const std::vector<BitmapValue>& data, ReturnColumnContainer& res) {
+        size_t size = data.size();
+        res.reserve(size);
+        for (size_t i = 0; i < size; ++i) {
+            auto max = const_cast<std::vector<BitmapValue>&>(data)[i].maximum();
+            res.push_back(max.val);
+        }
+        return Status::OK();
+    }
+};
+
 struct NameBitmapToString {
     static constexpr auto name = "bitmap_to_string";
 };
@@ -332,10 +353,12 @@ struct BitmapAndCount {
 
     static Status vector_vector(const TData& lvec, const TData& rvec, ResTData& res) {
         size_t size = lvec.size();
+        BitmapValue val;
         for (size_t i = 0; i < size; ++i) {
-            auto val = const_cast<BitmapValue&>(lvec[i]);
+            val |= lvec[i];
             val &= rvec[i];
             res[i] = val.cardinality();
+            val.clear();
         }
         return Status::OK();
     }
@@ -354,10 +377,12 @@ struct BitmapOrCount {
 
     static Status vector_vector(const TData& lvec, const TData& rvec, ResTData& res) {
         size_t size = lvec.size();
+        BitmapValue val;
         for (size_t i = 0; i < size; ++i) {
-            auto val = const_cast<BitmapValue&>(lvec[i]);
+            val |= lvec[i];
             val |= rvec[i];
             res[i] = val.cardinality();
+            val.clear();
         }
         return Status::OK();
     }
@@ -376,10 +401,12 @@ struct BitmapXorCount {
 
     static Status vector_vector(const TData& lvec, const TData& rvec, ResTData& res) {
         size_t size = lvec.size();
+        BitmapValue val;
         for (size_t i = 0; i < size; ++i) {
-            auto val = const_cast<BitmapValue&>(lvec[i]);
+            val |= lvec[i];
             val ^= rvec[i];
             res[i] = val.cardinality();
+            val.clear();
         }
         return Status::OK();
     }
@@ -398,6 +425,7 @@ using FunctionBitmapOrCount =
 using FunctionBitmapXorCount =
         FunctionBinaryToType<DataTypeBitMap, DataTypeBitMap, BitmapXorCount, NameBitmapXorCount>;
 using FunctionBitmapMin = FunctionUnaryToType<BitmapMin, NameBitmapMin>;
+using FunctionBitmapMax = FunctionUnaryToType<BitmapMax, NameBitmapMax>;
 using FunctionBitmapToString = FunctionUnaryToType<BitmapToString, NameBitmapToString>;
 
 using FunctionBitmapAnd =
@@ -425,6 +453,7 @@ void register_function_bitmap(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionBitmapOrCount>();
     factory.register_function<FunctionBitmapXorCount>();
     factory.register_function<FunctionBitmapMin>();
+    factory.register_function<FunctionBitmapMax>();
     factory.register_function<FunctionBitmapToString>();
     factory.register_function<FunctionBitmapAnd>();
     factory.register_function<FunctionBitmapOr>();

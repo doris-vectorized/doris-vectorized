@@ -41,6 +41,20 @@ TEST(function_bitmap_test, function_bitmap_min_test) {
 
     vectorized::check_function<vectorized::DataTypeInt64, true>(func_name, input_types, data_set);
 }
+TEST(function_bitmap_test, function_bitmap_max_test) {
+    std::string func_name = "bitmap_max";
+    std::vector<std::any> input_types = {TypeIndex::BitMap};
+    
+    auto bitmap1 = new BitmapValue(1);
+    auto bitmap2 = new BitmapValue(std::vector<uint64_t>({1, 9999999}));
+    auto empty_bitmap = new BitmapValue();
+    DataSet data_set = {{{bitmap1}, (int64_t)1},
+                        {{bitmap2}, (int64_t)9999999},
+                        {{empty_bitmap}, (int64_t)0},
+                        {{Null()}, Null()}};
+
+    vectorized::check_function<vectorized::DataTypeInt64, true>(func_name, input_types, data_set);
+}
 
 TEST(function_bitmap_test, function_bitmap_to_string_test) {
     std::string func_name = "bitmap_to_string";
