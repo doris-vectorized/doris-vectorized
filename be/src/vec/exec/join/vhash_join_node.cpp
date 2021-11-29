@@ -396,7 +396,7 @@ struct ProcessHashTableProbe {
                 auto& filter_map = new_filter_column->get_data();
 
                 for (int i = 0; i < column->size(); ++i) {
-                    if (column->get_bool(i)) {
+                    if (!column->get_bool(i)) {
                         filter_map.push_back(true);
                         if (same_to_prev[i]) filter_map[i - 1] = false;
                     } else {
@@ -504,12 +504,9 @@ HashJoinNode::HashJoinNode(ObjectPool* pool, const TPlanNode& tnode, const Descr
           _mem_used(0),
           _match_all_probe(_join_op == TJoinOp::LEFT_OUTER_JOIN ||
                            _join_op == TJoinOp::FULL_OUTER_JOIN),
-          _match_one_build(_join_op == TJoinOp::LEFT_SEMI_JOIN),
           _match_all_build(_join_op == TJoinOp::RIGHT_OUTER_JOIN ||
                            _join_op == TJoinOp::FULL_OUTER_JOIN),
           _build_unique(_join_op == TJoinOp::LEFT_ANTI_JOIN || _join_op == TJoinOp::LEFT_SEMI_JOIN),
-          _is_left_semi_anti(_join_op == TJoinOp::LEFT_ANTI_JOIN ||
-                             _join_op == TJoinOp::LEFT_SEMI_JOIN),
           _is_right_semi_anti(_join_op == TJoinOp::RIGHT_ANTI_JOIN ||
                               _join_op == TJoinOp::RIGHT_SEMI_JOIN),
           _is_outer_join(_match_all_build || _match_all_probe) {

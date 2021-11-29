@@ -186,11 +186,9 @@ private:
     Sizes _build_key_sz;
 
     const bool _match_all_probe; // output all rows coming from the probe input. Full/Left Join
-    const bool _match_one_build; // match at most one build row to each probe row. Left semi Join
     const bool _match_all_build; // output all rows coming from the build input. Full/Right Join
     bool _build_unique;          // build a hash table without duplicated rows. Left semi/anti Join
 
-    const bool _is_left_semi_anti;
     const bool _is_right_semi_anti;
     const bool _is_outer_join;
     bool _have_other_join_conjunct = false;
