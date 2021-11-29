@@ -200,7 +200,7 @@ visible_functions = [
         '15FunctionContextERKNS1_11DateTimeValE', '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['yearweek'], 'INT', ['DATETIME'],
         '_ZN5doris18TimestampFunctions9year_weekEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE',
-        '', '', '', ''],
+        '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['yearweek'], 'INT', ['DATETIME', 'INT'],
         '_ZN5doris18TimestampFunctions9year_weekEPN9doris_udf15FunctionContextERKNS1_11DateTimeValERKNS1_6IntValE',
         '', '', '', ''],

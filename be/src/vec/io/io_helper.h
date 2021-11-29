@@ -31,6 +31,7 @@
 #include "vec/core/types.h"
 #include "vec/io/reader_buffer.h"
 #include "vec/io/var_int.h"
+#include "vec/runtime/vdatetime_value.h"
 
 #define DEFAULT_MAX_STRING_SIZE (1ULL << 30)
 #define WRITE_HELPERS_MAX_INT_WIDTH 40U
@@ -339,26 +340,26 @@ bool read_int_text_impl(T& x, ReadBuffer& buf) {
 
 template <typename T>
 bool read_datetime_text_impl(T& x, ReadBuffer& buf) {
-    static_assert(std::is_same_v<Int128, T>);
-    auto dv = binary_cast<Int128, DateTimeValue>(x);
+    static_assert(std::is_same_v<Int64, T>);
+    auto dv = binary_cast<Int64, VecDateTimeValue>(x);
     auto ans = dv.from_date_str(buf.position(), buf.count());
 
     // only to match the is_all_read() check to prevent return null
     buf.position() = buf.end();
-    x = binary_cast<DateTimeValue, Int128>(dv);
+    x = binary_cast<VecDateTimeValue, Int64>(dv);
     return ans;
 }
 
 template <typename T>
 bool read_date_text_impl(T& x, ReadBuffer& buf) {
-    static_assert(std::is_same_v<Int128, T>);
-    auto dv = binary_cast<Int128, DateTimeValue>(x);
+    static_assert(std::is_same_v<Int64, T>);
+    auto dv = binary_cast<Int64, VecDateTimeValue>(x);
     auto ans = dv.from_date_str(buf.position(), buf.count());
     dv.cast_to_date();
 
     // only to match the is_all_read() check to prevent return null
     buf.position() = buf.end();
-    x = binary_cast<DateTimeValue, Int128>(dv);
+    x = binary_cast<VecDateTimeValue, Int64>(dv);
     return ans;
 }
 

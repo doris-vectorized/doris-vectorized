@@ -34,7 +34,7 @@
 #include "vec/common/exception.h"
 #include "vec/data_types/data_type.h"
 #include "vec/data_types/data_type_nullable.h"
-
+#include "vec/runtime/vdatetime_value.h"
 namespace doris {
 
 using vectorized::Int32;
@@ -47,7 +47,7 @@ TEST(BlockTest, RowBatchCovertToBlock) {
             {"k4", TYPE_VARCHAR, sizeof(StringValue), false},
             {"k5", TYPE_DECIMALV2, sizeof(DecimalV2Value), false},
             {"k6", TYPE_LARGEINT, sizeof(__int128), false},
-            {"k7", TYPE_DATETIME, sizeof(__int128), false}};
+            {"k7", TYPE_DATETIME, sizeof(int64_t), false}};
 
     SchemaScanner schema_scanner(column_descs,
                                  sizeof(column_descs) / sizeof(SchemaScanner::ColumnDesc));
@@ -98,11 +98,11 @@ TEST(BlockTest, RowBatchCovertToBlock) {
         memcpy(tuple->get_slot(slot_desc->tuple_offset()), &k6, column_descs[5].size);
 
         slot_desc = tuple_desc->slots()[6];
-        DateTimeValue k7;
+        vectorized::VecDateTimeValue k7;
         std::string now_time("2020-12-02");
         k7.from_date_str(now_time.c_str(), now_time.size());
-        TimeInterval time_interval(TimeUnit::DAY, k1, false);
-        k7.date_add_interval(time_interval, TimeUnit::DAY);
+        vectorized::TimeInterval time_interval(vectorized::TimeUnit::DAY, k1, false);
+        k7.date_add_interval(time_interval, vectorized::TimeUnit::DAY);
         memcpy(tuple->get_slot(slot_desc->tuple_offset()), &k7, column_descs[6].size);
 
         tuple_row->set_tuple(0, tuple);
@@ -139,13 +139,13 @@ TEST(BlockTest, RowBatchCovertToBlock) {
         ASSERT_EQ(column6->operator[](i).get<vectorized::Int128>(), k1);
 
         larget_int = column7->operator[](i).get<vectorized::Int128>();
-        DateTimeValue k7;
+        vectorized::VecDateTimeValue k7;
         memcpy(&k7, &larget_int, column_descs[6].size);
-        DateTimeValue date_time_value;
+        vectorized::VecDateTimeValue date_time_value;
         std::string now_time("2020-12-02");
         date_time_value.from_date_str(now_time.c_str(), now_time.size());
-        TimeInterval time_interval(TimeUnit::DAY, k1, false);
-        date_time_value.date_add_interval(time_interval, TimeUnit::DAY);
+        vectorized::TimeInterval time_interval(vectorized::TimeUnit::DAY, k1, false);
+        date_time_value.date_add_interval(time_interval, vectorized::TimeUnit::DAY);
 
         ASSERT_EQ(k7, date_time_value);
 
@@ -275,23 +275,23 @@ TEST(BlockTest, dump_data) {
     vectorized::ColumnWithTypeAndName test_nullable_int32(mutable_nullable_vector->get_ptr(),
                                                           nint32_type, "test_nullable_int32");
 
-    auto column_vector_date = vectorized::ColumnVector<vectorized::Int128>::create();
+    auto column_vector_date = vectorized::ColumnVector<vectorized::Int64>::create();
     auto& date_data = column_vector_date->get_data();
     for (int i = 0; i < 1024; ++i) {
-        DateTimeValue value;
+        vectorized::VecDateTimeValue value;
         value.from_date_int64(20210501);
-        date_data.push_back(*reinterpret_cast<vectorized::Int128*>(&value));
+        date_data.push_back(*reinterpret_cast<vectorized::Int64*>(&value));
     }
     vectorized::DataTypePtr date_type(std::make_shared<vectorized::DataTypeDate>());
     vectorized::ColumnWithTypeAndName test_date(column_vector_date->get_ptr(), date_type,
                                                 "test_date");
 
-    auto column_vector_datetime = vectorized::ColumnVector<vectorized::Int128>::create();
+    auto column_vector_datetime = vectorized::ColumnVector<vectorized::Int64>::create();
     auto& datetime_data = column_vector_datetime->get_data();
     for (int i = 0; i < 1024; ++i) {
-        DateTimeValue value;
+        vectorized::VecDateTimeValue value;
         value.from_date_int64(20210501080910);
-        datetime_data.push_back(*reinterpret_cast<vectorized::Int128*>(&value));
+        datetime_data.push_back(*reinterpret_cast<vectorized::Int64*>(&value));
     }
     vectorized::DataTypePtr datetime_type(std::make_shared<vectorized::DataTypeDateTime>());
     vectorized::ColumnWithTypeAndName test_datetime(column_vector_datetime->get_ptr(), datetime_type,

@@ -20,7 +20,7 @@
 #include "runtime/datetime_value.h"
 #include "util/binary_cast.hpp"
 #include "vec/columns/columns_number.h"
-
+#include "vec/runtime/vdatetime_value.h"
 namespace doris::vectorized {
 
 DataTypeDateTime::DataTypeDateTime() {}
@@ -34,11 +34,11 @@ bool DataTypeDateTime::equals(const IDataType& rhs) const {
 }
 
 std::string DataTypeDateTime::to_string(const IColumn& column, size_t row_num) const {
-    Int128 int_val =
-            assert_cast<const ColumnInt128&>(*column.convert_to_full_column_if_const().get())
+    Int64 int_val =
+            assert_cast<const ColumnInt64&>(*column.convert_to_full_column_if_const().get())
                     .get_data()[row_num];
     // TODO: Rethink we really need to do copy replace const reference here?
-    doris::DateTimeValue value = binary_cast<Int128, doris::DateTimeValue>(int_val);
+    doris::vectorized::VecDateTimeValue value = binary_cast<Int64, doris::vectorized::VecDateTimeValue>(int_val);
 
     std::stringstream ss;
     // Year
@@ -65,24 +65,17 @@ std::string DataTypeDateTime::to_string(const IColumn& column, size_t row_num) c
     ss << (char)('0' + (value.minute() / 10)) << (char)('0' + (value.minute() % 10)) << ':';
     /* Second */
     ss << (char)('0' + (value.second() / 10)) << (char)('0' + (value.second() % 10));
-    if (value.microsecond() > 0) {
-        ss << '.';
-        uint32_t first = value.microsecond() / 10000;
-        uint32_t second = (value.microsecond() % 10000) / 100;
-        uint32_t third = value.microsecond() % 100;
-        ss << (char)('0' + first / 10) << (char)('0' + first % 10) << (char)('0' + second / 10);
-        ss << (char)('0' + second % 10) << (char)('0' + third / 10) << (char)('0' + third % 10);
-    }
+
     return ss.str();
 }
 
 void DataTypeDateTime::to_string(const IColumn& column, size_t row_num,
                                  BufferWritable& ostr) const {
-    Int128 int_val =
-            assert_cast<const ColumnInt128&>(*column.convert_to_full_column_if_const().get())
+    Int64 int_val =
+            assert_cast<const ColumnInt64&>(*column.convert_to_full_column_if_const().get())
                     .get_data()[row_num];
     // TODO: Rethink we really need to do copy replace const reference here?
-    doris::DateTimeValue value = binary_cast<Int128, doris::DateTimeValue>(int_val);
+    doris::vectorized::VecDateTimeValue value = binary_cast<Int64, doris::vectorized::VecDateTimeValue>(int_val);
 
     char buf[64];
     char* pos = value.to_string(buf);
@@ -90,10 +83,10 @@ void DataTypeDateTime::to_string(const IColumn& column, size_t row_num,
     ostr.write(buf, pos - buf - 1);
 }
 
-void DataTypeDateTime::cast_to_date_time(Int128& x) {
-    auto value = binary_cast<Int128, doris::DateTimeValue>(x);
+void DataTypeDateTime::cast_to_date_time(Int64& x) {
+    auto value = binary_cast<Int64, doris::vectorized::VecDateTimeValue>(x);
     value.to_datetime();
-    x = binary_cast<doris::DateTimeValue, Int128>(value);
+    x = binary_cast<doris::vectorized::VecDateTimeValue, Int64>(value);
 }
 
 } // namespace doris::vectorized

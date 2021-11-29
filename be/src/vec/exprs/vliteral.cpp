@@ -22,7 +22,7 @@
 #include "util/string_parser.hpp"
 #include "vec/core/field.h"
 #include "vec/data_types/data_type_nullable.h"
-
+#include "vec/runtime/vdatetime_value.h"
 namespace doris::vectorized {
 VLiteral::VLiteral(const TExprNode& node) : VExpr(node) {
     Field field;
@@ -84,17 +84,17 @@ VLiteral::VLiteral(const TExprNode& node) : VExpr(node) {
                 break;
             }
             case TYPE_DATE: {
-                DateTimeValue value;
+                VecDateTimeValue value;
                 value.from_date_str(node.date_literal.value.c_str(), node.date_literal.value.size());
                 value.cast_to_date();
-                field = Int128(*reinterpret_cast<__int128_t*>(&value));
+                field = Int64(*reinterpret_cast<__int64_t*>(&value));
                 break;
             }
             case TYPE_DATETIME: {
-                DateTimeValue value;
+                VecDateTimeValue value;
                 value.from_date_str(node.date_literal.value.c_str(), node.date_literal.value.size());
                 value.to_datetime();
-                field = Int128(*reinterpret_cast<__int128_t*>(&value));
+                field = Int64(*reinterpret_cast<__int64_t*>(&value));
                 break;
             }
             case TYPE_STRING:

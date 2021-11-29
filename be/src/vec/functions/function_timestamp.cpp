@@ -23,13 +23,13 @@
 #include "vec/data_types/data_type_date_time.h"
 #include "vec/functions/function_totype.h"
 #include "vec/functions/simple_function_factory.h"
-
+#include "vec/runtime/vdatetime_value.h"
 namespace doris::vectorized {
 
 struct StrToDate {
     static constexpr auto name = "str_to_date";
     using ReturnType = DataTypeDateTime;
-    using ColumnType = ColumnVector<Int128>;
+    using ColumnType = ColumnVector<Int64>;
 
     static void vector_vector(const ColumnString::Chars& ldata,
                               const ColumnString::Offsets& loffsets,
@@ -45,7 +45,7 @@ struct StrToDate {
             const char* r_raw_str = reinterpret_cast<const char*>(&rdata[roffsets[i - 1]]);
             int r_str_size = roffsets[i] - roffsets[i - 1] - 1;
 
-            auto& ts_val = *reinterpret_cast<DateTimeValue*>(&res[i]);
+            auto& ts_val = *reinterpret_cast<VecDateTimeValue*>(&res[i]);
             if (!ts_val.from_date_format_str(r_raw_str, r_str_size, l_raw_str, l_str_size)) {
                 null_map[i] = 1;
             }
@@ -63,7 +63,7 @@ struct MakeDateImpl {
     using ResultDataType = DataTypeDateTime;
     using LeftDataColumnType = ColumnVector<typename LeftDataType::FieldType>;
     using RightDataColumnType = ColumnVector<typename RightDataType::FieldType>;
-    using ColumnType = ColumnVector<Int128>;
+    using ColumnType = ColumnVector<Int64>;
 
     static void vector_vector(const typename LeftDataColumnType::Container& ldata,
                               const typename RightDataColumnType::Container& rdata,
@@ -79,9 +79,9 @@ struct MakeDateImpl {
                 continue;
             }
 
-            auto& res_val = *reinterpret_cast<DateTimeValue*>(&res[i]);
+            auto& res_val = *reinterpret_cast<VecDateTimeValue*>(&res[i]);
 
-            DateTimeValue ts_value{l * 10000000000 + 101000000};
+            VecDateTimeValue ts_value{l * 10000000000 + 101000000};
             ts_value.set_type(TIME_DATE);
             DateTimeVal ts_val;
             ts_value.to_datetime_val(&ts_val);
@@ -91,7 +91,7 @@ struct MakeDateImpl {
             }
 
             TimeInterval interval(DAY, r - 1, false);
-            res_val = DateTimeValue::from_datetime_val(ts_val);
+            res_val = VecDateTimeValue::from_datetime_val(ts_val);
             if (!res_val.date_add_interval(interval, DAY)) {
                 null_map[i] = 1;
                 continue;
