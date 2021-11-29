@@ -1691,6 +1691,12 @@ public:
         }
         return count;
     }
+    
+    void clear() {
+        _type = EMPTY;
+        _bitmap.clear();
+        _sv = 0;
+    }
 
 private:
     void _convert_to_smaller_type() {
