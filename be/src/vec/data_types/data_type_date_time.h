@@ -44,7 +44,7 @@ namespace doris::vectorized {
   * Server time zone is the time zone specified in 'timezone' parameter in configuration file,
   *  or system time zone at the moment of server startup.
   */
-class DataTypeDateTime final : public DataTypeNumberBase<Int128> {
+class DataTypeDateTime final : public DataTypeNumberBase<Int64> {
 public:
     DataTypeDateTime();
 
@@ -61,7 +61,7 @@ public:
 
     void to_string(const IColumn &column, size_t row_num, BufferWritable &ostr) const override;
 
-    static void cast_to_date_time(Int128 &x);
+    static void cast_to_date_time(Int64& x);
 };
 
 template <typename DataType>

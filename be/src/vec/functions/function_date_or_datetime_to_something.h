@@ -80,7 +80,7 @@ public:
         const IDataType* from_type = block.get_by_position(arguments[0]).type.get();
         WhichDataType which(from_type);
 
-        return DateTimeTransformImpl<Int128, typename ToDataType::FieldType, Transform>::execute(
+        return DateTimeTransformImpl<Int64, typename ToDataType::FieldType, Transform>::execute(
                 block, arguments, result, input_rows_count);
     }
 

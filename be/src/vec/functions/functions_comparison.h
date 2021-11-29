@@ -36,7 +36,7 @@
 #include "vec/functions/function.h"
 #include "vec/functions/function_helpers.h"
 #include "vec/functions/functions_logical.h"
-
+#include "vec/runtime/vdatetime_value.h"
 namespace doris::vectorized {
 
 /** Comparison functions: ==, !=, <, >, <=, >=.
@@ -101,7 +101,7 @@ struct NumComparisonImpl {
 template <typename Op>
 struct DateTimeValueComparisonImpl {
     /// If you don't specify NO_INLINE, the compiler will inline this function, but we don't need this as this function contains tight loop inside.
-    static void NO_INLINE vector_vector(const PaddedPODArray<Int128>& a, const PaddedPODArray<Int128>& b,
+    static void NO_INLINE vector_vector(const PaddedPODArray<Int64>& a, const PaddedPODArray<Int64>& b,
                                         PaddedPODArray<UInt8>& c) {
         /** GCC 4.8.2 vectorizes a loop only if it is written in this form.
           * In this case, if you loop through the array index (the code will look simpler),
@@ -122,7 +122,7 @@ struct DateTimeValueComparisonImpl {
         }
     }
 
-    static void NO_INLINE vector_constant(const PaddedPODArray<Int128>& a, Int128 b,
+    static void NO_INLINE vector_constant(const PaddedPODArray<Int64>& a, Int64 b,
                                           PaddedPODArray<UInt8>& c) {
         size_t size = a.size();
         const auto* a_pos = a.data();
@@ -136,7 +136,7 @@ struct DateTimeValueComparisonImpl {
         }
     }
 
-    static void constant_vector(Int128 a, const PaddedPODArray<Int128>& b, PaddedPODArray<UInt8>& c) {
+    static void constant_vector(Int64 a, const PaddedPODArray<Int64>& b, PaddedPODArray<UInt8>& c) {
         size_t size = b.size();
         const auto* b_pos = b.data();
         UInt8* c_pos = c.data();
@@ -415,8 +415,8 @@ private:
 
         if (c0_const && c1_const) {
             UInt8 res = 0;
-            DateTimeValueComparisonImpl<Op<DateTimeValue, DateTimeValue>>::constant_constant(
-                    *(Int128*)c0->get_data_at(0).data, *(Int128*)c1->get_data_at(0).data, res);
+            DateTimeValueComparisonImpl<Op<VecDateTimeValue, VecDateTimeValue>>::constant_constant(
+                    *(Int64*)c0->get_data_at(0).data, *(Int64*)c1->get_data_at(0).data, res);
             block.replace_by_position(
                     result, DataTypeUInt8().create_column_const(c0->size(), to_field(res)));
         } else {
@@ -425,14 +425,14 @@ private:
             vec_res.resize(c0->size());
 
             if (c0_const)
-                DateTimeValueComparisonImpl<Op<DateTimeValue, DateTimeValue>>::constant_vector(
-                    *((Int128*)c0->get_data_at(0).data), check_and_get_column<ColumnVector<Int128>>(c1)->get_data(), vec_res);
+                DateTimeValueComparisonImpl<Op<VecDateTimeValue, VecDateTimeValue>>::constant_vector(
+                    *((Int64*)c0->get_data_at(0).data), check_and_get_column<ColumnVector<Int64>>(c1)->get_data(), vec_res);
             else if (c1_const)
-                DateTimeValueComparisonImpl<Op<DateTimeValue, DateTimeValue>>::vector_constant(
-                    check_and_get_column<ColumnVector<Int128>>(c0)->get_data(), *(Int128*)c1->get_data_at(0).data, vec_res);
+                DateTimeValueComparisonImpl<Op<VecDateTimeValue, VecDateTimeValue>>::vector_constant(
+                    check_and_get_column<ColumnVector<Int64>>(c0)->get_data(), *(Int64*)c1->get_data_at(0).data, vec_res);
             else
-                DateTimeValueComparisonImpl<Op<DateTimeValue, DateTimeValue>>::vector_vector(
-                    check_and_get_column<ColumnVector<Int128>>(c0)->get_data(), check_and_get_column<ColumnVector<Int128>>(c1)->get_data(), vec_res);
+                DateTimeValueComparisonImpl<Op<VecDateTimeValue, VecDateTimeValue>>::vector_vector(
+                    check_and_get_column<ColumnVector<Int64>>(c0)->get_data(), check_and_get_column<ColumnVector<Int64>>(c1)->get_data(), vec_res);
             block.replace_by_position(result, std::move(c_res));
         }
 
