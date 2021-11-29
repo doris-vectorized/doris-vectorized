@@ -27,6 +27,10 @@
 #include "runtime/decimalv2_value.h"
 #include "runtime/large_int_value.h"
 #include "runtime/string_value.h"
+#include "vec/columns/column_decimal.h"
+#include "vec/columns/column_string.h"
+#include "vec/columns/columns_number.h"
+#include "vec/core/types.h"
 
 namespace doris {
 
@@ -224,63 +228,78 @@ struct PrimitiveTypeTraits {};
 template <>
 struct PrimitiveTypeTraits<TYPE_BOOLEAN> {
     using CppType = bool;
+    using ColumnType = vectorized::ColumnUInt8;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_TINYINT> {
     using CppType = int8_t;
+    using ColumnType = vectorized::ColumnInt8;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_SMALLINT> {
     using CppType = int16_t;
+    using ColumnType = vectorized::ColumnInt16;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_INT> {
     using CppType = int32_t;
+    using ColumnType = vectorized::ColumnInt32;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_BIGINT> {
     using CppType = int64_t;
+    using ColumnType = vectorized::ColumnInt64;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_FLOAT> {
     using CppType = float;
+    using ColumnType = vectorized::ColumnFloat32;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_TIME> {
     using CppType = double;
+    using ColumnType = vectorized::ColumnFloat64;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_DOUBLE> {
     using CppType = double;
+    using ColumnType = vectorized::ColumnFloat64;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_DATE> {
     using CppType = DateTimeValue;
+    using ColumnType = vectorized::ColumnVector<vectorized::DateTime>;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_DATETIME> {
     using CppType = DateTimeValue;
+    using ColumnType = vectorized::ColumnVector<vectorized::DateTime>;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_DECIMALV2> {
     using CppType = DecimalV2Value;
+    using ColumnType = vectorized::ColumnDecimal<vectorized::Decimal128>;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_LARGEINT> {
     using CppType = __int128_t;
+    using ColumnType = vectorized::ColumnInt128;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_CHAR> {
     using CppType = StringValue;
+    using ColumnType = vectorized::ColumnString;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_VARCHAR> {
     using CppType = StringValue;
+    using ColumnType = vectorized::ColumnString;
 };
 
 template <>
 struct PrimitiveTypeTraits<TYPE_STRING> {
     using CppType = StringValue;
+    using ColumnType = vectorized::ColumnString;
 };
 
 } // namespace doris
