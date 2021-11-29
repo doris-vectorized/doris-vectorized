@@ -75,6 +75,7 @@
 #include "vec/exec/vintersect_node.h"
 #include "vec/exec/vexcept_node.h"
 #include "vec/exprs/vexpr.h"
+#include "vec/exec/vempty_set_node.h"
 namespace doris {
 
 const std::string ExecNode::ROW_THROUGHPUT_COUNTER = "RowsReturnedRate";
@@ -381,6 +382,7 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         case TPlanNodeType::INTERSECT_NODE:
         case TPlanNodeType::EXCEPT_NODE:
         case TPlanNodeType::ES_HTTP_SCAN_NODE:
+        case TPlanNodeType::EMPTY_SET_NODE:
             break;
         default: {
             const auto& i = _TPlanNodeType_VALUES_TO_NAMES.find(tnode.node_type);
@@ -476,7 +478,11 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         return Status::OK();
 
     case TPlanNodeType::EMPTY_SET_NODE:
-        *node = pool->add(new EmptySetNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new vectorized::VEmptySetNode(pool, tnode, descs));
+        } else {
+            *node = pool->add(new EmptySetNode(pool, tnode, descs));
+        }
         return Status::OK();
 
     case TPlanNodeType::EXCHANGE_NODE:
