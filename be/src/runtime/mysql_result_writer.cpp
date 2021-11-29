@@ -211,7 +211,6 @@ int MysqlResultWriter::_add_row_value(int index, const TypeDescriptor& type, voi
 }
 
 Status MysqlResultWriter::_add_one_row(TupleRow* row) {
-    SCOPED_TIMER(_convert_tuple_timer);
     _row_buffer->reset();
     int num_columns = _output_expr_ctxs.size();
     int buf_ret = 0;
