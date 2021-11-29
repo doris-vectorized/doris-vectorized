@@ -24,6 +24,7 @@
 #include "vec/columns/column_vector.h"
 #include "vec/columns/column_string.h"
 #include "vec/columns/column_nullable.h"
+#include "vec/columns/predicate_column.h"
 
 namespace doris {
 namespace segment_v2 {
@@ -259,7 +260,7 @@ Status BinaryDictPageDecoder::next_batch(size_t* n, vectorized::MutableColumnPtr
     size_t start_index = _bit_shuffle_ptr->_cur_index;
 
     // todo(wb) support nullable
-    if (dst->is_complex_column()) {
+    if (dst->is_predicate_column()) {
         // cast columnptr to columnstringvalue just for avoid virtual function call overhead
         vectorized::ColumnStringValue& string_value_vector = reinterpret_cast<vectorized::ColumnStringValue&>(*dst);
         for (int i = 0; i < max_fetch; i++, start_index++) {
@@ -268,19 +269,15 @@ Status BinaryDictPageDecoder::next_batch(size_t* n, vectorized::MutableColumnPtr
             uint32_t str_len = _len_array[codeword];
             string_value_vector.insert_data(&_dict_decoder->_data[start_offset], str_len);
         }
- 
-        _bit_shuffle_ptr->_cur_index += max_fetch;
-        return Status::OK();
+    } else {
+             // todo(wb) research whether using batch memcpy to insert columnString can has better performance when data set is big
+        for (int i = 0; i < max_fetch; i++, start_index++) {
+            int32_t codeword = data_array[start_index];
+            const uint32_t start_offset = _start_offset_array[codeword];
+            const uint32_t str_len = _len_array[codeword];
+            dst->insert_data(&_dict_decoder->_data[start_offset], str_len);
+        }
     }
- 
-     // todo(wb) research whether using batch memcpy to insert columnString can has better performance when data set is big
-    for (int i = 0; i < max_fetch; i++, start_index++) {
-         int32_t codeword = data_array[start_index];
-        const uint32_t start_offset = _start_offset_array[codeword];
-        const uint32_t str_len = _len_array[codeword];
-        dst->insert_data(&_dict_decoder->_data[start_offset], str_len);
-    }
-
     _bit_shuffle_ptr->_cur_index += max_fetch;
  
     return Status::OK();

@@ -38,7 +38,6 @@
 #include "runtime/mem_pool.h"
 #include "util/coding.h"
 #include "util/faststring.h"
-#include "vec/columns/column_complex.h"
 
 namespace doris {
 namespace segment_v2 {
@@ -236,7 +235,7 @@ public:
         }
         const size_t max_fetch = std::min(*n, static_cast<size_t>(_num_elems - _cur_idx));
 
-        if (dst->is_complex_column()) {
+        if (dst->is_predicate_column()) {
             // todo(wb) padding sv here for better comparison performance
             for (size_t i = 0; i < max_fetch; i++, _cur_idx++) {
                 const uint32_t start_offset  = offset(_cur_idx);
@@ -244,15 +243,13 @@ public:
                 StringValue sv(const_cast<char*>(&_data[start_offset]), len);
                 dst->insert_data(reinterpret_cast<char*>(&sv), 0);
             }
-            *n = max_fetch;
-            return Status::OK();
-        }
-
-        for (size_t i = 0; i < max_fetch; i++, _cur_idx++) {
-            // todo(wb) need more test case and then improve here
-            const uint32_t start_offset  = offset(_cur_idx);
-            uint32_t len = offset(_cur_idx + 1) - start_offset;
-            dst->insert_data(&_data[start_offset], len);
+        } else {
+            for (size_t i = 0; i < max_fetch; i++, _cur_idx++) {
+                // todo(wb) need more test case and then improve here
+                const uint32_t start_offset  = offset(_cur_idx);
+                uint32_t len = offset(_cur_idx + 1) - start_offset;
+                dst->insert_data(&_data[start_offset], len);
+            }
         }
  
         *n = max_fetch;

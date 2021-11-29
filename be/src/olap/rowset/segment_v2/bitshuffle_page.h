@@ -37,8 +37,6 @@
 #include "util/faststring.h"
 #include "util/slice.h"
 
-#include "vec/columns/column_complex.h"
-
 namespace doris {
 namespace segment_v2 {
 

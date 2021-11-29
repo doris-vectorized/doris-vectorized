@@ -214,10 +214,6 @@ public:
     virtual Ptr filter_by_selector(const uint16_t* sel, size_t sel_size, Ptr* ptr = nullptr) {
         return nullptr;
     };
- 
-    virtual Ptr filter_date_by_selector(const uint16_t* sel, size_t sel_size, Ptr* ptr = nullptr) {
-        return nullptr;
-    };
 
     /// Permutes elements using specified permutation. Is used in sortings.
     /// limit - if it isn't 0, puts only first limit elements in the result.
@@ -380,9 +376,8 @@ public:
     virtual bool is_numeric() const { return false; }
 
     virtual bool is_column_decimal() const { return false; }
- 
-    // bitmap/decimal/stringvalue
-    virtual bool is_complex_column() const { return false; }
+
+    virtual bool is_predicate_column() const { return false; }
 
     /// If the only value column can contain is NULL.
     /// Does not imply type of object, because it can be ColumnNullable(ColumnNothing) or ColumnConst(ColumnNullable(ColumnNothing))
