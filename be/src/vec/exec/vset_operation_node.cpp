@@ -158,11 +158,11 @@ void VSetOperationNode::hash_table_init() {
             break;
         case TYPE_BIGINT:
         case TYPE_DOUBLE:
+        case TYPE_DATETIME:
+        case TYPE_DATE:
             _hash_table_variants.emplace<I64HashTableContext>();
             break;
         case TYPE_LARGEINT:
-        case TYPE_DATETIME:
-        case TYPE_DATE:
         case TYPE_DECIMALV2:
             _hash_table_variants.emplace<I128HashTableContext>();
             break;
@@ -183,6 +183,8 @@ void VSetOperationNode::hash_table_init() {
         const auto& data_type = vexpr->data_type();
         auto result_type = vexpr->result_type();
         has_null |= data_type->is_nullable();
+        //TODO: if(result_type == Date or DateTimeValue),get_real_byte_size() return bytes =16 bytes
+        //But Now in VecDateTimeValue (Not DateTimeValue) it's 8 bytes; so here could waste 8 bytes
         _build_key_sz[i] = get_real_byte_size(result_type);
         _probe_key_sz[i] = _build_key_sz[i];
 

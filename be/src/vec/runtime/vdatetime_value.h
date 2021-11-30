@@ -30,8 +30,12 @@
 #include "udf/udf.h"
 #include "util/hash_util.hpp"
 #include "util/timezone_utils.h"
+#include "runtime/datetime_value.h"
 
-namespace doris::vectorized {
+
+namespace doris {
+    class DateTimeValue;
+namespace vectorized {
 
 enum TimeUnit {
     SECOND,
@@ -547,7 +551,8 @@ public:
 
     bool is_valid_date() const { return !check_range(_year, _month, _day,
             _hour, _minute, _second, _type) && _month > 0 && _day > 0; }
-
+            
+    void convert_vec_dt_to_dt(doris::DateTimeValue* dt);
 private:
     // Used to make sure sizeof VecDateTimeValue
     friend class UnusedClass;
@@ -647,6 +652,7 @@ std::ostream& operator<<(std::ostream& os, const VecDateTimeValue& value);
 std::size_t hash_value(VecDateTimeValue const& value);
 
 } // namespace doris
+}
 
 namespace std {
 template <>

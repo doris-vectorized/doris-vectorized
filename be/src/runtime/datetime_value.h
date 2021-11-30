@@ -30,7 +30,7 @@
 #include "udf/udf.h"
 #include "util/hash_util.hpp"
 #include "util/timezone_utils.h"
-
+#include "vec/runtime/vdatetime_value.h"
 namespace doris {
 
 enum TimeUnit {
@@ -558,10 +558,22 @@ public:
     bool is_valid_date() const { return !check_range(_year, _month, _day,
             _hour, _minute, _second, _microsecond, _type) && _month > 0 && _day > 0; }
 
+    // DateTimeValue(doris::vectorized::VecDateTimeValue dt) {  //use convert VecDateTimeValue to DateTimeValue
+    //     this->_neg = dt.neg();
+    //     this->_type = dt.type();
+    //     this->_hour = dt.hour();
+    //     this->_minute = dt.minute();
+    //     this->_second = dt.second();
+    //     this->_year = dt.year();
+    //     this->_month = dt.month();
+    //     this->_day = dt.day();
+    //     this->_microsecond = 0;
+    // }
+    friend void doris::vectorized::VecDateTimeValue::convert_vec_dt_to_dt(DateTimeValue* dt); 
 private:
     // Used to make sure sizeof DateTimeValue
     friend class UnusedClass;
-
+    
     void from_packed_time(int64_t packed_time) {
         _microsecond = packed_time % (1LL << 24);
         int64_t ymdhms = packed_time >> 24;
