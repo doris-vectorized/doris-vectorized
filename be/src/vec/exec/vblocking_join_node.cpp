@@ -104,6 +104,7 @@ Status VBlockingJoinNode::open(RuntimeState* state) {
 
     RETURN_IF_ERROR(open_status);
 
+    _left_side_eos = false;
     // Seed left child in preparation for get_next().
     while (true) {
         _left_block.clear_column_data();

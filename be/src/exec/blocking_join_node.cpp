@@ -118,6 +118,7 @@ Status BlockingJoinNode::open(RuntimeState* state) {
 
     RETURN_IF_ERROR(open_status);
 
+    _left_side_eos = false;
     // Seed left child in preparation for get_next().
     while (true) {
         RETURN_IF_ERROR(child(0)->get_next(state, _left_batch.get(), &_left_side_eos));
