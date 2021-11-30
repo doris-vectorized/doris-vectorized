@@ -63,7 +63,6 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
 
         // If we reach end of this scanner, break
         if (UNLIKELY(*eof)) {
-            DCHECK(block->rows() == 0);
             break;
         }
 

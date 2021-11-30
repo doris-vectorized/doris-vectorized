@@ -123,6 +123,10 @@ public:
 
     bool is_dummy() const override { return true; }
 
+    void replace_column_data(const IColumn& rhs, size_t row) override {
+        DCHECK(false) << "should not call the method in column dummy";
+    }
+
 protected:
     size_t s;
 };
