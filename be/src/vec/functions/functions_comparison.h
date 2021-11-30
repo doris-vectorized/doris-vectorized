@@ -98,61 +98,6 @@ struct NumComparisonImpl {
     static void constant_constant(A a, B b, UInt8& c) { c = Op::apply(a, b); }
 };
 
-template <typename Op>
-struct DateTimeValueComparisonImpl {
-    /// If you don't specify NO_INLINE, the compiler will inline this function, but we don't need this as this function contains tight loop inside.
-    static void NO_INLINE vector_vector(const PaddedPODArray<Int64>& a, const PaddedPODArray<Int64>& b,
-                                        PaddedPODArray<UInt8>& c) {
-        /** GCC 4.8.2 vectorizes a loop only if it is written in this form.
-          * In this case, if you loop through the array index (the code will look simpler),
-          *  the loop will not be vectorized.
-          */
-
-        size_t size = a.size();
-        const auto* a_pos = a.data();
-        const auto* b_pos = b.data();
-        UInt8* c_pos = c.data();
-        const auto* a_end = a_pos + size;
-
-        while (a_pos < a_end) {
-            *c_pos = Op::apply(*a_pos, *b_pos);
-            ++a_pos;
-            ++b_pos;
-            ++c_pos;
-        }
-    }
-
-    static void NO_INLINE vector_constant(const PaddedPODArray<Int64>& a, Int64 b,
-                                          PaddedPODArray<UInt8>& c) {
-        size_t size = a.size();
-        const auto* a_pos = a.data();
-        UInt8* c_pos = c.data();
-        const auto* a_end = a_pos + size;
-
-        while (a_pos < a_end) {
-            *c_pos = Op::apply(*a_pos, b);
-            ++a_pos;
-            ++c_pos;
-        }
-    }
-
-    static void constant_vector(Int64 a, const PaddedPODArray<Int64>& b, PaddedPODArray<UInt8>& c) {
-        size_t size = b.size();
-        const auto* b_pos = b.data();
-        UInt8* c_pos = c.data();
-        const auto* b_end = b_pos + size;
-
-        while (b_pos < b_end) {
-            *c_pos = Op::apply(a, *b_pos);
-            ++b_pos;
-            ++c_pos;
-        }
-    }
-
-    static void constant_constant(Int128 a, Int128 b, UInt8& c) {
-        c = Op::apply(a, b); }
-};
-
 /// Generic version, implemented for columns of same type.
 template <typename Op>
 struct GenericComparisonImpl {
@@ -408,37 +353,6 @@ private:
         return Status::OK();
     }
 
-    Status execute_datetime(Block& block, size_t result, const IColumn* c0,
-                                         const IColumn* c1) {
-        bool c0_const = is_column_const(*c0);
-        bool c1_const = is_column_const(*c1);
-
-        if (c0_const && c1_const) {
-            UInt8 res = 0;
-            DateTimeValueComparisonImpl<Op<VecDateTimeValue, VecDateTimeValue>>::constant_constant(
-                    *(Int64*)c0->get_data_at(0).data, *(Int64*)c1->get_data_at(0).data, res);
-            block.replace_by_position(
-                    result, DataTypeUInt8().create_column_const(c0->size(), to_field(res)));
-        } else {
-            auto c_res = ColumnUInt8::create();
-            ColumnUInt8::Container& vec_res = c_res->get_data();
-            vec_res.resize(c0->size());
-
-            if (c0_const)
-                DateTimeValueComparisonImpl<Op<VecDateTimeValue, VecDateTimeValue>>::constant_vector(
-                    *((Int64*)c0->get_data_at(0).data), check_and_get_column<ColumnVector<Int64>>(c1)->get_data(), vec_res);
-            else if (c1_const)
-                DateTimeValueComparisonImpl<Op<VecDateTimeValue, VecDateTimeValue>>::vector_constant(
-                    check_and_get_column<ColumnVector<Int64>>(c0)->get_data(), *(Int64*)c1->get_data_at(0).data, vec_res);
-            else
-                DateTimeValueComparisonImpl<Op<VecDateTimeValue, VecDateTimeValue>>::vector_vector(
-                    check_and_get_column<ColumnVector<Int64>>(c0)->get_data(), check_and_get_column<ColumnVector<Int64>>(c1)->get_data(), vec_res);
-            block.replace_by_position(result, std::move(c_res));
-        }
-
-        return Status::OK();
-    }
-
     void execute_generic_identical_types(Block& block, size_t result, const IColumn* c0,
                                          const IColumn* c1) {
         bool c0_const = is_column_const(*c0);
@@ -518,10 +432,12 @@ public:
         const bool left_is_num = col_left_untyped->is_numeric();
         const bool right_is_num = col_right_untyped->is_numeric();
 
-        bool date_and_datetime = (left_type != right_type) && which_left.is_date_or_datetime() &&
-                                 which_right.is_date_or_datetime();
+        // Compare date and datetime direct use the Int64 compare. Keep the comment
+        // may we should refactor the code.
+//        bool date_and_datetime = (left_type != right_type) && which_left.is_date_or_datetime() &&
+//                                 which_right.is_date_or_datetime();
 
-        if (left_is_num && right_is_num && !date_and_datetime) {
+        if (left_is_num && right_is_num) {
             if (!(execute_num_left_type<UInt8>(block, result, col_left_untyped, col_right_untyped) ||
                   execute_num_left_type<UInt16>(block, result, col_left_untyped, col_right_untyped) ||
                   execute_num_left_type<UInt32>(block, result, col_left_untyped, col_right_untyped) ||
@@ -543,13 +459,10 @@ public:
                                                         get_name(), left_type->get_name(),
                                                         right_type->get_name()));
             }
-
             return execute_decimal(block, result, col_with_type_and_name_left,
                                    col_with_type_and_name_right);
-        } else if (date_and_datetime) {
-            return execute_datetime(block, result,
-                    col_with_type_and_name_left.column.get(), col_with_type_and_name_right.column.get());
         } else {
+            // TODO: varchar and string maybe need a quickly way
             return execute_generic(block, result, col_with_type_and_name_left,
                                    col_with_type_and_name_right);
         }
