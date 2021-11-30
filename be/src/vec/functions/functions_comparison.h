@@ -467,8 +467,6 @@ private:
 
     Status execute_generic(Block& block, size_t result, const ColumnWithTypeAndName& c0,
                            const ColumnWithTypeAndName& c1) {
-        DCHECK(!c0.type->equals(*c1.type));
-
         execute_generic_identical_types(block, result, c0.column.get(), c1.column.get());
         return Status::OK();
     }
