@@ -151,15 +151,6 @@ public:
     const char* get_header_file_path() const override { return __FILE__; }
 };
 
-template <typename T>
-struct LeadData {
-    StringRef value;  
-    StringRef default_value;
-    bool is_init = false;
-    bool is_null = false;
-    bool defualt_is_null = false;
-};
-
 template <typename T, bool is_nullable, bool is_string>
 struct LeadAndLagData {
 public:
@@ -293,11 +284,11 @@ struct WindowFunctionLagData : Data {
 };
 
 template <typename Data>
-class WindowFunctionLeadLead  final
-        : public IAggregateFunctionDataHelper<Data, WindowFunctionLeadLead<Data>> {
+class WindowFunctionLeadLag  final
+        : public IAggregateFunctionDataHelper<Data, WindowFunctionLeadLag<Data>> {
 public:
-    WindowFunctionLeadLead(const DataTypes& argument_types)
-            : IAggregateFunctionDataHelper<Data, WindowFunctionLeadLead<Data>>(
+    WindowFunctionLeadLag(const DataTypes& argument_types)
+            : IAggregateFunctionDataHelper<Data, WindowFunctionLeadLag<Data>>(
                       argument_types, {}),_argument_type(argument_types[0]) {
     }
 

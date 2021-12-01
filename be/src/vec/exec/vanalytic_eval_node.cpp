@@ -166,12 +166,12 @@ Status VAnalyticEvalNode::prepare(RuntimeState* state) {
             }
             /// Extend total_size to next alignment requirement
             /// Add padding by rounding up 'total_size_of_aggregate_states' to be a multiplier of alignment_of_next_state.
-            _total_size_of_aggregate_states =(_total_size_of_aggregate_states + alignment_of_next_state - 1) / alignment_of_next_state * alignment_of_next_state;
+            _total_size_of_aggregate_states = (_total_size_of_aggregate_states + alignment_of_next_state - 1) / alignment_of_next_state * alignment_of_next_state;
         }
     }
     _fn_place_ptr = _agg_arena_pool.aligned_alloc(_total_size_of_aggregate_states,_align_aggregate_states);
     _create_agg_status(_fn_place_ptr);
-    _executor.insert_result= std::bind<void>(&VAnalyticEvalNode::_insert_result,this, std::placeholders::_1, std::placeholders::_2);
+    _executor.insert_result = std::bind<void>(&VAnalyticEvalNode::_insert_result,this, std::placeholders::_1, std::placeholders::_2);
 
     for (const auto& ctx : _agg_expr_ctxs) {
         VExpr::prepare(ctx, state, child(0)->row_desc(), expr_mem_tracker());
@@ -283,8 +283,9 @@ Status VAnalyticEvalNode::_get_next_for_range(RuntimeState* state, Block* block,
                 DCHECK_GE(_peer_group_end, _peer_group_start);
                 _executor.execute(_peer_group_start, _peer_group_end, _peer_group_start, _peer_group_end); 
             }
-            int64_t get_value_start = _current_row_position;
-            _window_result_position = std::min<int64_t>(_peer_group_end, block_rows);
+            int64_t first_block_row_position = input_block_first_row_positions[_output_block_index];
+            int64_t get_value_start = _current_row_position - first_block_row_position;
+            _window_result_position = std::min<int64_t>(_peer_group_end - first_block_row_position, block_rows);
             _executor.insert_result(get_value_start, _window_result_position);  
             _current_row_position += (_window_result_position - get_value_start);
         }
@@ -326,7 +327,7 @@ Status VAnalyticEvalNode::_get_next_for_rows(RuntimeState* state, Block* block, 
             }
             _executor.execute(_partition_start, _partition_end, range_start, range_end);
             _window_result_position++;
-            int64_t get_value_start = _current_row_position;
+            int64_t get_value_start = _current_row_position - input_block_first_row_positions[_output_block_index];
             _executor.insert_result(get_value_start, _window_result_position);  
             _current_row_position++; 
         }
@@ -394,9 +395,9 @@ Status VAnalyticEvalNode::_fetch_next_block(RuntimeState* state) {
     RETURN_IF_CANCELLED(state);
     do {
         RETURN_IF_ERROR(_children[0]->get_next(state, &block, &_input_eos));
-    } while (!_input_eos && block.rows()==0);
+    } while (!_input_eos && block.rows() == 0);
 
-    if (_input_eos && block.rows()==0) {
+    if (_input_eos && block.rows() == 0) {
         return Status::OK();
     }
 
@@ -519,7 +520,7 @@ Status VAnalyticEvalNode::_init_result_columns() {
     if (!_window_result_position) {  
         _result_window_columns.resize(_agg_functions_size);
         for (size_t i = 0; i < _agg_functions_size; ++i) {
-            _result_window_columns[i] =_agg_functions[i]->data_type()->create_column();//return type
+            _result_window_columns[i] = _agg_functions[i]->data_type()->create_column();//return type
         }
     }
     return Status::OK();
@@ -595,7 +596,6 @@ std::string VAnalyticEvalNode::debug_window_bound_string(TAnalyticWindowBoundary
 }
 
 } // namespace doris
-
 
 
 

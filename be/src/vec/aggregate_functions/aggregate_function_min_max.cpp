@@ -79,7 +79,7 @@ AggregateFunctionPtr create_aggregate_function_first(const std::string& name,
                                                    const bool result_is_nullable) {
     return AggregateFunctionPtr(
             create_aggregate_function_single_value<AggregateFunctionsSingleValue,
-                                                   AggregateFunctionAnyData>(name, argument_types,
+                                                   AggregateFunctionFirstData>(name, argument_types,
                                                                              parameters));
 }
 
@@ -89,7 +89,7 @@ AggregateFunctionPtr create_aggregate_function_last(const std::string& name,
                                                        const bool result_is_nullable) {
     return AggregateFunctionPtr(
             create_aggregate_function_single_value<AggregateFunctionsSingleValue,
-                                                   AggregateFunctionAnyLastData>(
+                                                   AggregateFunctionLastData>(
                     name, argument_types, parameters));
 }
 } // namespace

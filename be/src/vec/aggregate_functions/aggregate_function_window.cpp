@@ -77,21 +77,21 @@ static IAggregateFunction* create_function_single_value(const String& name,
 }
 
 template <bool is_nullable>
-AggregateFunctionPtr create_aggregate_function_laglag(const std::string& name,
+AggregateFunctionPtr create_aggregate_function_lag(const std::string& name,
                                                       const DataTypes& argument_types,
                                                       const Array& parameters,
                                                       const bool result_is_nullable) {
     return AggregateFunctionPtr(
-            create_function_single_value<WindowFunctionLeadLead, WindowFunctionLagData, is_nullable>(
+            create_function_single_value<WindowFunctionLeadLag, WindowFunctionLagData, is_nullable>(
                     name, argument_types, parameters));
 }
 template <bool is_nullable>
-AggregateFunctionPtr create_aggregate_function_leadlead(const std::string& name,
+AggregateFunctionPtr create_aggregate_function_lead(const std::string& name,
                                                       const DataTypes& argument_types,
                                                       const Array& parameters,
                                                       const bool result_is_nullable) {
     return AggregateFunctionPtr(
-            create_function_single_value<WindowFunctionLeadLead, WindowFunctionLeadData, is_nullable>(
+            create_function_single_value<WindowFunctionLeadLag, WindowFunctionLeadData, is_nullable>(
                     name, argument_types, parameters));
 }
 
@@ -102,9 +102,9 @@ void register_aggregate_function_window(AggregateFunctionSimpleFactory& factory)
     factory.register_function("dense_rank", create_aggregate_function_dense_rank, true);
     factory.register_function("rank", create_aggregate_function_rank, true);
     factory.register_function("row_number", create_aggregate_function_row_number, true);
-    factory.register_function("lead", create_aggregate_function_leadlead<false>);
-    factory.register_function("lead", create_aggregate_function_leadlead<true>, true);
-    factory.register_function("lag", create_aggregate_function_laglag<false>);
-    factory.register_function("lag", create_aggregate_function_laglag<true>, true);
+    factory.register_function("lead", create_aggregate_function_lead<false>);
+    factory.register_function("lead", create_aggregate_function_lead<true>, true);
+    factory.register_function("lag", create_aggregate_function_lag<false>);
+    factory.register_function("lag", create_aggregate_function_lag<true>, true);
 }
 } // namespace doris::vectorized

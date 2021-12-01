@@ -297,6 +297,7 @@ public:
         if (size != -1) {
             size = -1;    
             capacity = 0; 
+            delete large_data;
             large_data = nullptr;
         }
     }
@@ -476,8 +477,8 @@ struct AggregateFunctionMinData : Data {
 };
 
 template <typename Data>
-struct AggregateFunctionAnyData : Data {
-    using Self = AggregateFunctionAnyData;
+struct AggregateFunctionFirstData : Data {
+    using Self = AggregateFunctionFirstData;
 
     bool change_if_better(const IColumn& column, size_t row_num, Arena* arena) {
         return this->change_first_time(column, row_num, arena);
@@ -488,8 +489,8 @@ struct AggregateFunctionAnyData : Data {
 };
 
 template <typename Data>
-struct AggregateFunctionAnyLastData : Data {
-    using Self = AggregateFunctionAnyLastData;
+struct AggregateFunctionLastData : Data {
+    using Self = AggregateFunctionLastData;
 
     bool change_if_better(const IColumn& column, size_t row_num, Arena* arena) {
         return this->change_every_time(column, row_num, arena);
