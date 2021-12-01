@@ -507,7 +507,8 @@ public:
             // DateTime->DateTimeValue
             vectorized::DateTime date_time =*reinterpret_cast<const vectorized::DateTime*>(value.data);
             vectorized::VecDateTimeValue vec_date_time_value = binary_cast<vectorized::Int64, vectorized::VecDateTimeValue>(date_time);
-            doris::DateTimeValue date_time_value;//(vec_date_time_value);
+            doris::DateTimeValue date_time_value;
+            vec_date_time_value.convert_vec_dt_to_dt(&date_time_value);
             insert(reinterpret_cast<const void*>(&date_time_value));
             break;
         }
