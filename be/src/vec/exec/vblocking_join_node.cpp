@@ -30,7 +30,8 @@ namespace doris::vectorized {
 VBlockingJoinNode::VBlockingJoinNode(const std::string& node_name, const TJoinOp::type join_op,
                                    ObjectPool* pool, const TPlanNode& tnode,
                                    const DescriptorTbl& descs)
-        : ExecNode(pool, tnode, descs), _node_name(node_name), _join_op(join_op) {}
+        : ExecNode(pool, tnode, descs), _node_name(node_name), _join_op(join_op),
+          _left_side_eos(false) {}
 
 Status VBlockingJoinNode::init(const TPlanNode& tnode, RuntimeState* state) {
     return ExecNode::init(tnode, state);
@@ -104,7 +105,6 @@ Status VBlockingJoinNode::open(RuntimeState* state) {
 
     RETURN_IF_ERROR(open_status);
 
-    _left_side_eos = false;
     // Seed left child in preparation for get_next().
     while (true) {
         _left_block.clear_column_data();
