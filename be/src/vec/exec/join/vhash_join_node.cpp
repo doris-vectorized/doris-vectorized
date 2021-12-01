@@ -395,32 +395,39 @@ struct ProcessHashTableProbe {
                 auto new_filter_column = ColumnVector<UInt8>::create();
                 auto& filter_map = new_filter_column->get_data();
 
-                for (int i = 0; i < column->size(); ++i) {
-                    if (column->get_bool(i)) {
+                if (!column->empty()) filter_map.emplace_back(column->get_bool(0));
+                for (int i = 1; i < column->size(); ++i) {
+                    if (column->get_bool(i) || (same_to_prev[i] && filter_map[i - 1])) {
+                        // Only last same element is true, output last one
                         filter_map.push_back(true);
-                        if (same_to_prev[i]) filter_map[i - 1] = false;
+                        filter_map[i - 1] = !same_to_prev[i] && filter_map[i - 1];
                     } else {
                         filter_map.push_back(false);
                     }
                 }
+
                 output_block->get_by_position(result_column_id).column =
                         std::move(new_filter_column);
             } else if (_join_node->_join_op == TJoinOp::LEFT_ANTI_JOIN) {
                 auto new_filter_column = ColumnVector<UInt8>::create();
                 auto& filter_map = new_filter_column->get_data();
-                for (int i = 0; i < column->size(); ++i) {
-                    if ((!visited_map[i] || !column->get_bool(i))) {
+
+                if (!column->empty()) filter_map.emplace_back(column->get_bool(0) && visited_map[0]);
+                for (int i = 1; i < column->size(); ++i) {
+                    if ((visited_map[i] && column->get_bool(i)) || (same_to_prev[i] && filter_map[i - 1])) {
                         filter_map.push_back(true);
-                        auto loc = i;
-                        if (same_to_prev[loc]) {
-                            do {
-                                filter_map[--loc] = false;
-                            } while (same_to_prev[loc]);
-                        }
+                        filter_map[i - 1] = !same_to_prev[i] && filter_map[i - 1];
                     } else {
                         filter_map.push_back(false);
                     }
                 }
+
+                // Same to the semi join, but change the last value to opposite value
+                for (int i = 1; i < same_to_prev.size(); ++i) {
+                    if (!same_to_prev[i]) filter_map[i - 1] = !filter_map[i - 1];
+                }
+                filter_map[same_to_prev.size() - 1] = !filter_map[same_to_prev.size() - 1];
+
                 output_block->get_by_position(result_column_id).column =
                         std::move(new_filter_column);
             } else if (_join_node->_is_right_semi_anti) {
