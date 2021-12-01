@@ -60,8 +60,7 @@ Status VSchemaScanNode::get_next(RuntimeState* state, vectorized::Block* block, 
         }
         while (true) {
             RETURN_IF_CANCELLED(state);
-            int batch_size = state->batch_size();
-            if (columns[0]->size() == batch_size) {
+            if (columns[0]->size() == state->batch_size()) {
                 break;
             }
 
