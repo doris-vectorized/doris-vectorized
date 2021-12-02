@@ -27,6 +27,7 @@
 #include "vec/core/block.h"
 #include "vec/columns/column_vector.h"
 #include "vec/core/types.h"
+#include "vec/runtime/vdatetime_value.h"
 
 using strings::Substitute;
 namespace doris {
@@ -163,7 +164,7 @@ void RowBlockV2::_copy_data_to_column(int cid, doris::vectorized::MutableColumnP
             }
             break;
         } case OLAP_FIELD_TYPE_DATE: {
-            auto column_int = assert_cast<vectorized::ColumnVector<vectorized::Int128>*>(column);
+            auto column_int = assert_cast<vectorized::ColumnVector<vectorized::Int64>*>(column);
 
             for (uint16_t j = 0; j < _selected_size; ++j) {
                 if (!nullable_mark_array[j]) {
@@ -176,7 +177,7 @@ void RowBlockV2::_copy_data_to_column(int cid, doris::vectorized::MutableColumnP
                     value |= *(unsigned char *) (ptr + 1);
                     value <<= 8;
                     value |= *(unsigned char *) (ptr);
-                    DateTimeValue date;
+                    vectorized::VecDateTimeValue date;
                     date.from_olap_date(value);
                     (column_int)->insert_data(reinterpret_cast<char *>(&date), 0);
                 } else
@@ -184,7 +185,7 @@ void RowBlockV2::_copy_data_to_column(int cid, doris::vectorized::MutableColumnP
             }
             break;
         } case OLAP_FIELD_TYPE_DATETIME: {
-            auto column_int = assert_cast<vectorized::ColumnVector<vectorized::Int128>*>(column);
+            auto column_int = assert_cast<vectorized::ColumnVector<vectorized::Int64>*>(column);
 
             for (uint16_t j = 0; j < _selected_size; ++j) {
                 if (!nullable_mark_array[j]) {
@@ -192,7 +193,7 @@ void RowBlockV2::_copy_data_to_column(int cid, doris::vectorized::MutableColumnP
                     auto ptr = reinterpret_cast<const char *>(column_block(cid).cell_ptr(row_idx));
 
                     uint64_t value = *reinterpret_cast<const uint64_t *>(ptr);
-                    DateTimeValue data(value);
+                    vectorized::VecDateTimeValue data(value);
                     (column_int)->insert_data(reinterpret_cast<char *>(&data), 0);
                 } else {
                     column_int->insert_default();

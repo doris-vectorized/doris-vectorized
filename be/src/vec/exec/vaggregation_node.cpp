@@ -140,11 +140,11 @@ void AggregationNode::_init_hash_method(std::vector<VExprContext*>& probe_exprs)
             return;
         case TYPE_BIGINT:
         case TYPE_DOUBLE:
+        case TYPE_DATE:
+        case TYPE_DATETIME:
             _agg_data.init(AggregatedDataVariants::Type::int64_key, is_nullable);
             return;
         case TYPE_LARGEINT:
-        case TYPE_DATE:
-        case TYPE_DATETIME:
         case TYPE_DECIMALV2:
             _agg_data.init(AggregatedDataVariants::Type::int128_key, is_nullable);
             return;
@@ -163,6 +163,8 @@ void AggregationNode::_init_hash_method(std::vector<VExprContext*>& probe_exprs)
             auto result_type = vexpr->result_type();
 
             has_null |= data_type->is_nullable();
+            //TODO: if(result_type == Date or DateTimeValue),get_real_byte_size() return bytes =16 bytes
+            //But Now in VecDateTimeValue (Not DateTimeValue) it's 8 bytes; so here could waste 8 bytes
             _probe_key_sz[i] = get_real_byte_size(result_type);
             key_byte_size += _probe_key_sz[i];
 

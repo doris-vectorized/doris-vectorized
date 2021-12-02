@@ -30,6 +30,7 @@
 #include "vec/exprs/vin_predicate.h"
 #include "vec/exprs/vliteral.h"
 #include "vec/exprs/vslot_ref.h"
+#include "vec/exprs/vinfo_func.h"
 
 namespace doris::vectorized {
 using doris::Status;
@@ -105,7 +106,6 @@ Status VExpr::create_expr(doris::ObjectPool* pool, const doris::TExprNode& texpr
     }
     case doris::TExprNodeType::ARITHMETIC_EXPR:
     case doris::TExprNodeType::BINARY_PRED:
-    case doris::TExprNodeType::INFO_FUNC:
     case doris::TExprNodeType::FUNCTION_CALL:
     case doris::TExprNodeType::COMPUTE_FUNCTION_CALL: {
         *expr = pool->add(new VectorizedFnCall(texpr_node));
@@ -124,6 +124,10 @@ Status VExpr::create_expr(doris::ObjectPool* pool, const doris::TExprNode& texpr
             return Status::InternalError("Case expression not set in thrift node");
         }
         *expr = pool->add(new VCaseExpr(texpr_node));
+        break;
+    }
+    case TExprNodeType::INFO_FUNC: {
+        *expr = pool->add(new VInfoFunc(texpr_node));
         break;
     }
     default:
