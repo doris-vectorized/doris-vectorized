@@ -42,7 +42,7 @@ OLAPStatus VCollectIterator::add_child(RowsetReaderSharedPtr rs_reader) {
 // Build a merge heap. If _merge is true, a rowset with the max rownum
 // status will be used as the base rowset, and the other rowsets will be merged first and
 // then merged with the base rowset.
-void VCollectIterator::build_heap(const std::vector<RowsetReaderSharedPtr>& rs_readers) {
+void VCollectIterator::build_heap(std::vector<RowsetReaderSharedPtr>& rs_readers) {
     DCHECK(rs_readers.size() == _children.size());
     _reverse = _reader->_tablet->tablet_schema().keys_type() == KeysType::UNIQUE_KEYS;
     if (_children.empty()) {
@@ -50,13 +50,16 @@ void VCollectIterator::build_heap(const std::vector<RowsetReaderSharedPtr>& rs_r
         return;
     } else if (_merge) {
         DCHECK(!rs_readers.empty());
-        for (auto iter = _children.begin(); iter != _children.end(); ) {
-            if ((*iter)->init() != OLAP_SUCCESS) {
-                iter = _children.erase(iter);
+        for (auto [c_iter, r_iter] = std::pair{_children.begin(), rs_readers.begin()}; c_iter != _children.end();) {
+            if ((*c_iter)->init() != OLAP_SUCCESS) {
+                c_iter = _children.erase(c_iter);
+                r_iter = rs_readers.erase(r_iter);
             } else {
-                ++iter;
+                ++c_iter;
+                ++r_iter;
             }
         }
+
         // build merge heap with two children, a base rowset as level0iterator and
         // other cumulative rowsets as a level1iterator
         if (_children.size() > 1) {
@@ -180,10 +183,10 @@ OLAPStatus VCollectIterator::Level0Iterator::_refresh_current_row() {
         if (_block.rows() != 0 && _current_row < _block.rows()) {
             return OLAP_SUCCESS;
         } else {
+            _current_row = 0;
             _block.clear_column_data();
             auto res = _rs_reader->next_block(&_block);
             if (res != OLAP_SUCCESS) {
-                _current_row = 0;
                 return res;
             }
         }
