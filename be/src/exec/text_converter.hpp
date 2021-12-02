@@ -33,7 +33,7 @@
 #include "util/binary_cast.hpp"
 #include "util/string_parser.hpp"
 #include "util/types.h"
-
+#include "vec/runtime/vdatetime_value.h"
 namespace doris {
 
 // Note: this function has a codegen'd version.  Changing this function requires
@@ -241,25 +241,25 @@ inline bool TextConverter::write_column(const SlotDescriptor* slot_desc,
         break;
     }
     case TYPE_DATE: {
-        DateTimeValue ts_slot;
+        vectorized::VecDateTimeValue ts_slot;
         if (!ts_slot.from_date_str(data, len)) {
             parse_result = StringParser::PARSE_FAILURE;
             break;
         }
         ts_slot.cast_to_date();
-        reinterpret_cast<vectorized::ColumnVector<vectorized::Int128>*>(col_ptr)->insert_data(
+        reinterpret_cast<vectorized::ColumnVector<vectorized::Int64>*>(col_ptr)->insert_data(
                 reinterpret_cast<char*>(&ts_slot), 0);
         break;
     }
 
     case TYPE_DATETIME: {
-        DateTimeValue ts_slot;
+        vectorized::VecDateTimeValue ts_slot;
         if (!ts_slot.from_date_str(data, len)) {
             parse_result = StringParser::PARSE_FAILURE;
             break;
         }
         ts_slot.to_datetime();
-        reinterpret_cast<vectorized::ColumnVector<vectorized::Int128>*>(col_ptr)->insert_data(
+        reinterpret_cast<vectorized::ColumnVector<vectorized::Int64>*>(col_ptr)->insert_data(
                 reinterpret_cast<char*>(&ts_slot), 0);
         break;
     }

@@ -155,8 +155,8 @@ Status VMysqlResultWriter::_add_one_column(const ColumnPtr& column_ptr,
             if constexpr (type == TYPE_DATETIME) {
                 char buf[64];
                 auto time_num = data[i];
-                DateTimeValue time_val;
-                memcpy(static_cast<void*>(&time_val), &time_num, sizeof(Int128));
+                VecDateTimeValue time_val;
+                memcpy(static_cast<void*>(&time_val), &time_num, sizeof(Int64));
                 // TODO(zhaochun), this function has core risk
                 char* pos = time_val.to_string(buf);
                 buf_ret = _buffer.push_string(buf, pos - buf - 1);

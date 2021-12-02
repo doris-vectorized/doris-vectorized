@@ -31,6 +31,7 @@
 #include "vec/columns/column_string.h"
 #include "vec/columns/columns_number.h"
 #include "vec/core/types.h"
+#include "vec/runtime/vdatetime_value.h"
 
 namespace doris {
 
@@ -133,9 +134,9 @@ inline int get_byte_size(PrimitiveType type) {
     case TYPE_DOUBLE:
         return 8;
 
-    case TYPE_LARGEINT:
     case TYPE_DATETIME:
     case TYPE_DATE:
+    case TYPE_LARGEINT:
     case TYPE_DECIMALV2:
         return 16;
 
@@ -267,12 +268,12 @@ struct PrimitiveTypeTraits<TYPE_DOUBLE> {
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_DATE> {
-    using CppType = DateTimeValue;
+    using CppType = doris::DateTimeValue;
     using ColumnType = vectorized::ColumnVector<vectorized::DateTime>;
 };
 template <>
 struct PrimitiveTypeTraits<TYPE_DATETIME> {
-    using CppType = DateTimeValue;
+    using CppType = doris::DateTimeValue;
     using ColumnType = vectorized::ColumnVector<vectorized::DateTime>;
 };
 template <>
