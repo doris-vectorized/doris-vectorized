@@ -51,9 +51,8 @@ Status VInfoFunc::execute(VExprContext* context, vectorized::Block* block, int* 
     if (rows < 1) {
         rows = 1;
     }
-    size_t res = block->columns();
+    *result_column_id = block->columns();
     block->insert({_column_ptr->clone_resized(rows), _data_type, _expr_name});
-    *result_column_id = res;
     return Status::OK();
 }
 
