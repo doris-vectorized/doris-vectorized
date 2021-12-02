@@ -261,6 +261,10 @@ public:
 
     MutableColumns& mutable_columns() { return _columns; }
 
+    void set_muatable_columns(MutableColumns&& columns) {
+        _columns = std::move(columns);
+    }
+
     DataTypes& data_types() { return _data_types; }
 
     void merge(Block&& block) {
