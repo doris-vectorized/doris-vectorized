@@ -286,6 +286,15 @@ public:
                // Nullable<DataTypeNothing> when `use_default_implementation_for_nulls` is true.
                (return_type->is_nullable() && func_return_type->is_nullable() &&
                 is_nothing(((DataTypeNullable*)func_return_type.get())->get_nested_type())) ||
+                // For VARCHAR DATE_FORMAT(DATETIME date, VARCHAR format)
+                (is_string(
+                        return_type->is_nullable()
+                                ? ((DataTypeNullable*)return_type.get())->get_nested_type()
+                                : return_type) &&
+                is_string(get_return_type(arguments)->is_nullable()
+                                            ? ((DataTypeNullable*)get_return_type(arguments).get())
+                                                      ->get_nested_type()
+                                            : get_return_type(arguments))) ||
                (is_date_or_datetime(
                         return_type->is_nullable()
                                 ? ((DataTypeNullable*)return_type.get())->get_nested_type()
