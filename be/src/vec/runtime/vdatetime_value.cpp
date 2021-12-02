@@ -26,6 +26,7 @@
 
 #include "common/logging.h"
 #include "util/timezone_utils.h"
+#include "runtime/datetime_value.h"
 
 namespace doris::vectorized {
 
@@ -1581,6 +1582,18 @@ void VecDateTimeValue::set_time(uint32_t year, uint32_t month, uint32_t day, uin
     _hour = hour;
     _minute = minute;
     _second = second;
+}
+
+void VecDateTimeValue::convert_vec_dt_to_dt(doris::DateTimeValue* dt) {  //use convert VecDateTimeValue to DateTimeValue  
+    dt->_neg = this->_neg;
+    dt->_type = this->_type;
+    dt->_hour = this->_hour;
+    dt->_minute = this->_minute;
+    dt->_second = this->_second;
+    dt->_year = this->_year;
+    dt->_month = this->_month;
+    dt->_day = this->_day;
+    dt->_microsecond = 0;
 }
 
 std::ostream& operator<<(std::ostream& os, const VecDateTimeValue& value) {

@@ -31,6 +31,7 @@
 #include "util/coding.h"       // for get_varint32
 #include "util/rle_encoding.h" // for RleDecoder
 #include "vec/core/types.h"
+#include "vec/runtime/vdatetime_value.h" //for VecDateTime
 
 namespace doris {
 namespace segment_v2 {
@@ -773,20 +774,20 @@ void DefaultValueColumnIterator::insert_default_data(vectorized::MutableColumnPt
         assert(_type_size == sizeof(FieldTypeTraits<OLAP_FIELD_TYPE_DATE>::CppType)); //uint24_t
         std::string str = FieldTypeTraits<OLAP_FIELD_TYPE_DATE>::to_string(_mem_value);
 
-        DateTimeValue value;
+        vectorized::VecDateTimeValue value;
         value.from_date_str(str.c_str(), str.length());
         value.cast_to_date();
-
-        int128 = binary_cast<DateTimeValue, vectorized::Int128>(value);
+        //TODO: here is int128 = int64
+        int128 = binary_cast<vectorized::VecDateTimeValue, vectorized::Int64>(value);
     } else if (type == OLAP_FIELD_TYPE_DATETIME) {
         assert(_type_size == sizeof(FieldTypeTraits<OLAP_FIELD_TYPE_DATETIME>::CppType)); //int64_t
         std::string str = FieldTypeTraits<OLAP_FIELD_TYPE_DATETIME>::to_string(_mem_value);
 
-        DateTimeValue value;
+        vectorized::VecDateTimeValue value;
         value.from_date_str(str.c_str(), str.length());
         value.to_datetime();
 
-        int128 = binary_cast<DateTimeValue, vectorized::Int128>(value);
+        int128 = binary_cast<vectorized::VecDateTimeValue, vectorized::Int64>(value);
     } else if (type == OLAP_FIELD_TYPE_DECIMAL) {
         assert(_type_size == sizeof(FieldTypeTraits<OLAP_FIELD_TYPE_DECIMAL>::CppType)); //decimal12_t
         decimal12_t* d = (decimal12_t*)_mem_value;

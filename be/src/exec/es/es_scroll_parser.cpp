@@ -31,6 +31,7 @@
 #include "runtime/mem_pool.h"
 #include "runtime/mem_tracker.h"
 #include "util/string_parser.hpp"
+#include "vec/runtime/vdatetime_value.h"
 
 namespace doris {
 
@@ -837,7 +838,7 @@ Status ScrollParser::fill_date_slot_with_timestamp(void* slot, const rapidjson::
 
 Status ScrollParser::fill_date_col_with_strval(vectorized::IColumn* col_ptr,
                                                const rapidjson::Value& col, PrimitiveType type) {
-    DateTimeValue dt_val;
+    vectorized::VecDateTimeValue dt_val;
     const std::string& val = col.GetString();
     size_t val_size = col.GetStringLength();
     if (!dt_val.from_date_str(val.c_str(), val_size)) {
@@ -849,26 +850,26 @@ Status ScrollParser::fill_date_col_with_strval(vectorized::IColumn* col_ptr,
         dt_val.to_datetime();
     }
 
-    auto date_packed_int = binary_cast<doris::DateTimeValue, int128_t>(
-            *reinterpret_cast<DateTimeValue*>(&dt_val));
+    auto date_packed_int = binary_cast<doris::vectorized::VecDateTimeValue, int64_t>(
+            *reinterpret_cast<vectorized::VecDateTimeValue*>(&dt_val));
     col_ptr->insert_data(const_cast<const char*>(reinterpret_cast<char*>(&date_packed_int)), 0);
     return Status::OK();
 }
 
 Status ScrollParser::fill_date_col_with_timestamp(vectorized::IColumn* col_ptr,
                                                   const rapidjson::Value& col, PrimitiveType type) {
-    DateTimeValue dt_val;
+    vectorized::VecDateTimeValue dt_val;
     if (!dt_val.from_unixtime(col.GetInt64() / 1000, "+08:00")) {
         RETURN_ERROR_IF_CAST_FORMAT_ERROR(col, type);
     }
     if (type == TYPE_DATE) {
-        reinterpret_cast<DateTimeValue*>(&dt_val)->cast_to_date();
+        reinterpret_cast<vectorized::VecDateTimeValue*>(&dt_val)->cast_to_date();
     } else {
-        reinterpret_cast<DateTimeValue*>(&dt_val)->set_type(TIME_DATETIME);
+        reinterpret_cast<vectorized::VecDateTimeValue*>(&dt_val)->set_type(TIME_DATETIME);
     }
 
-    auto date_packed_int = binary_cast<doris::DateTimeValue, int128_t>(
-            *reinterpret_cast<DateTimeValue*>(&dt_val));
+    auto date_packed_int = binary_cast<doris::vectorized::VecDateTimeValue, int64_t>(
+            *reinterpret_cast<vectorized::VecDateTimeValue*>(&dt_val));
     col_ptr->insert_data(const_cast<const char*>(reinterpret_cast<char*>(&date_packed_int)), 0);
 
     return Status::OK();
