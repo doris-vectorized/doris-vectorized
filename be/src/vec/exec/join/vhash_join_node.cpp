@@ -207,18 +207,34 @@ struct ProcessHashTableProbe {
                     // do nothing
                 } else {
                     auto& mapped = find_result.get_mapped();
-
-                    for (auto it = mapped.begin(); it.ok(); ++it) {
+                    // TODO: Iterators are currently considered to be a heavy operation and have a certain impact on performance.
+                    // We should rethink whether to use this iterator mode in the future. Now just opt the one row case
+                    if (mapped.get_row_count() == 1) {
+                        mapped.visited = true;
                         // right semi/anti join should dispose the data in hash table
                         // after probe data eof
                         if (!_join_node->_is_right_semi_anti) {
                             ++current_offset;
                             for (size_t j = 0; j < right_col_len; ++j) {
-                                auto& column = *it->block->get_by_position(j).column;
-                                mcol[j + right_col_idx]->insert_from(column, it->row_num);
+                                auto &column = *mapped.block->get_by_position(j).column;
+                                mcol[j + right_col_idx]->insert_from(column, mapped.row_num);
                             }
                         }
-                        it->visited = true;
+                    } else {
+                        for (auto it = mapped.begin(); it.ok(); ++it) {
+                            // right semi/anti join should dispose the data in hash table
+                            // after probe data eof
+                            if (!_join_node->_is_right_semi_anti) {
+                                ++current_offset;
+                                for (size_t j = 0; j < right_col_len; ++j) {
+                                    auto& column = *it->block->get_by_position(j).column;
+                                    // TODO: interface insert from cause serious performance problems
+                                    //  when column is nullable. Try to make more effective way
+                                    mcol[j + right_col_idx]->insert_from(column, it->row_num);
+                                }
+                            }
+                            it->visited = true;
+                        }
                     }
                 }
             } else if (_join_node->_match_all_probe ||
