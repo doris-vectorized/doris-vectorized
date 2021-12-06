@@ -42,7 +42,7 @@ OLAPStatus VCollectIterator::add_child(RowsetReaderSharedPtr rs_reader) {
 // Build a merge heap. If _merge is true, a rowset with the max rownum
 // status will be used as the base rowset, and the other rowsets will be merged first and
 // then merged with the base rowset.
-void VCollectIterator::build_heap(const std::vector<RowsetReaderSharedPtr>& rs_readers) {
+void VCollectIterator::build_heap(std::vector<RowsetReaderSharedPtr>& rs_readers) {
     DCHECK(rs_readers.size() == _children.size());
     _reverse = _reader->_tablet->tablet_schema().keys_type() == KeysType::UNIQUE_KEYS;
     if (_children.empty()) {
@@ -50,7 +50,16 @@ void VCollectIterator::build_heap(const std::vector<RowsetReaderSharedPtr>& rs_r
         return;
     } else if (_merge) {
         DCHECK(!rs_readers.empty());
-        for (auto& child : _children) { child->init(); }
+        for (auto [c_iter, r_iter] = std::pair{_children.begin(), rs_readers.begin()}; c_iter != _children.end();) {
+            if ((*c_iter)->init() != OLAP_SUCCESS) {
+                c_iter = _children.erase(c_iter);
+                r_iter = rs_readers.erase(r_iter);
+            } else {
+                ++c_iter;
+                ++r_iter;
+            }
+        }
+
         // build merge heap with two children, a base rowset as level0iterator and
         // other cumulative rowsets as a level1iterator
         if (_children.size() > 1) {
@@ -108,14 +117,12 @@ bool VCollectIterator::LevelIteratorComparator::operator()(const LevelIterator* 
         return cmp_res > 0;
     }
 
-    if (lhs->tablet_schema().has_sequence_col()) {
-        int32_t sequence_col_idx = lhs->tablet_schema().sequence_col_idx();
-        cmp_res = lhs_block->get_by_position(sequence_col_idx)
-                          .column->compare_at(
+    if (_sequence != -1) {
+        cmp_res = lhs_block->get_by_position(_sequence).column->compare_at(
                                   lhs_id, rhs_id,
-                                  *(rhs_block->get_by_position(sequence_col_idx).column), -1);
+                                  *(rhs_block->get_by_position(_sequence).column), -1);
         if (cmp_res != 0) {
-            return cmp_res > 0;
+            return cmp_res < 0;
         }
     }
     // if row cursors equal, compare data version.
@@ -154,6 +161,7 @@ OLAPStatus VCollectIterator::next(Block* block) {
 VCollectIterator::Level0Iterator::Level0Iterator(RowsetReaderSharedPtr rs_reader, Reader* reader)
         : _rs_reader(rs_reader), _reader(reader), _current_row(0) {
     DCHECK_EQ(RowsetReader::BETA, rs_reader->type());
+    _block = _reader->tablet()->tablet_schema().create_block(_reader->_return_columns);
 }
 
 OLAPStatus VCollectIterator::Level0Iterator::init() {
@@ -175,14 +183,14 @@ OLAPStatus VCollectIterator::Level0Iterator::_refresh_current_row() {
         if (_block.rows() != 0 && _current_row < _block.rows()) {
             return OLAP_SUCCESS;
         } else {
+            _current_row = 0;
+            _block.clear_column_data();
             auto res = _rs_reader->next_block(&_block);
             if (res != OLAP_SUCCESS) {
-                _current_row = 0;
                 return res;
             }
         }
     } while (_block.rows() != 0);
-    _current_row = 0;
     return OLAP_ERR_DATA_EOF;
 }
 
@@ -230,7 +238,6 @@ OLAPStatus VCollectIterator::Level1Iterator::next(const Block** block, uint32_t*
     if (_merge) {
         return _merge_next(block, row);
     } else {
-        DCHECK(false) << "should not use this method.";
         return _normal_next(block, row);
     }
 }
@@ -269,7 +276,14 @@ OLAPStatus VCollectIterator::Level1Iterator::init() {
 
     // Only when there are multiple children that need to be merged
     if (_merge && _children.size() > 1) {
-        _heap.reset(new MergeHeap(LevelIteratorComparator(_reverse)));
+        auto sequence_loc = -1;
+        for (int loc = 0; loc < _reader->_return_columns.size(); loc++) {
+            if (_reader->_return_columns[loc] == _reader->_sequence_col_idx) {
+                sequence_loc = loc;
+                break;
+            }
+        }
+        _heap.reset(new MergeHeap(LevelIteratorComparator(_reverse, sequence_loc)));
         for (auto child : _children) {
             DCHECK(child != nullptr);
             //DCHECK(child->current_row() == OLAP_SUCCESS);

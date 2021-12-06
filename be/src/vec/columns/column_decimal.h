@@ -156,6 +156,11 @@ public:
     const T& get_element(size_t n) const { return data[n]; }
     T& get_element(size_t n) { return data[n]; }
 
+    void replace_column_data(const IColumn& rhs, size_t row) override {
+        DCHECK(size() == 1);
+        data[0] = static_cast<const Self&>(rhs).data[row];
+    }
+
 protected:
     Container data;
     UInt32 scale;
