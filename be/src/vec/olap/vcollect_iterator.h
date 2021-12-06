@@ -35,7 +35,7 @@ public:
 
     OLAPStatus add_child(RowsetReaderSharedPtr rs_reader);
 
-    void build_heap(const std::vector<RowsetReaderSharedPtr>& rs_readers);
+    void build_heap(std::vector<RowsetReaderSharedPtr>& rs_readers);
     // Get top row of the heap, nullptr if reach end.
     OLAPStatus current_row(const Block** block, uint32_t* row) const;
 
@@ -47,6 +47,8 @@ public:
     OLAPStatus next(const Block** block, uint32_t* row);
 
     OLAPStatus next(Block* block);
+
+    bool is_merge() const { return _merge; };
 
 private:
     // This interface is the actual implementation of the new version of iterator.
@@ -75,12 +77,13 @@ private:
     // if row cursors equal, compare data version.
     class LevelIteratorComparator {
     public:
-        LevelIteratorComparator(const bool reverse = false) : _reverse(reverse) {}
+        LevelIteratorComparator(const bool reverse = false, int sequence = -1) : _reverse(reverse), _sequence(sequence) {}
 
         bool operator()(const LevelIterator* lhs, const LevelIterator* rhs);
 
     private:
         bool _reverse;
+        int _sequence;
     };
 
     typedef std::priority_queue<LevelIterator*, std::vector<LevelIterator*>,

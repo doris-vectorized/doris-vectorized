@@ -847,6 +847,17 @@ std::string MutableBlock::dump_data(size_t row_limit) const {
     }
     return out.str();
 }
+
+std::unique_ptr<Block> Block::create_same_struct_block(size_t size) const {
+    auto temp_block = std::make_unique<Block>();
+    for (const auto& d : data) {
+        auto column = d.type->create_column();
+        column->insert_many_defaults(size);
+        temp_block->insert({std::move(column), d.type, d.name});
+    }
+    return temp_block;
+}
+
 int Block::compare_at(size_t n, size_t m, const Block& rhs, int nan_direction_hint) const {
     DCHECK_EQ(columns(), rhs.columns());
     return compare_at(n, m, columns(), rhs, nan_direction_hint);
@@ -856,9 +867,9 @@ int Block::compare_at(size_t n, size_t m, size_t num_columns, const Block& rhs, 
     DCHECK_GE(columns(), num_columns);
     DCHECK_GE(rhs.columns(), num_columns);
 
-    DCHECK_GE(n, rows());
-    DCHECK_GE(n, rhs.rows());
-    for (size_t i = 0; i <= num_columns; ++i) {
+    DCHECK_LE(n, rows());
+    DCHECK_LE(m, rhs.rows());
+    for (size_t i = 0; i < num_columns; ++i) {
         DCHECK(get_by_position(i).type->equals(*rhs.get_by_position(i).type));
         auto res = get_by_position(i).column->compare_at(n, m, *(rhs.get_by_position(i).column),
                                                          nan_direction_hint);
