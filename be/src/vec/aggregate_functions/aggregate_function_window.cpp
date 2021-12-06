@@ -67,8 +67,11 @@ static IAggregateFunction* create_function_single_value(const String& name,
                 argument_types);
     FOR_NUMERIC_TYPES(DISPATCH)
 #undef DISPATCH
-    if (which.is_decimal() || which.is_date_or_datetime()) {
+    if (which.is_decimal()) {
         return new AggregateFunctionTemplate<Data<LeadAndLagData<Int128,is_nullable,false>>>(argument_types);
+    }
+    if (which.is_date_or_datetime()) {
+        return new AggregateFunctionTemplate<Data<LeadAndLagData<Int64,is_nullable,false>>>(argument_types);
     }
     if (which.is_string_or_fixed_string())
          return new AggregateFunctionTemplate<Data<LeadAndLagData<StringRef,is_nullable,true>>>(argument_types);

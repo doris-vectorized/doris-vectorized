@@ -21,12 +21,19 @@
 #include "exprs/expr.h"
 #include "runtime/tuple.h"
 #include "thrift/protocol/TDebugProtocol.h"
-#include "vec/exprs/vexpr.h"
-#include "vec/exprs/vexpr_context.h"
+#include "vec/common/arena.h"
 #include "vec/core/block.h"
 #include "vec/exprs/vectorized_agg_fn.h"
-#include "vec/common/arena.h"
+#include "vec/exprs/vexpr.h"
+#include "vec/exprs/vexpr_context.h"
 namespace doris::vectorized {
+
+struct BlockRowPos {
+    BlockRowPos() : block_num(0), row_num(0), pos(0) {}
+    int64_t block_num; //the pos at which block
+    int64_t row_num;   //the pos at which row
+    int64_t pos;       //pos = all blocks size + row_num
+};
 
 class AggFnEvaluator;
 class VAnalyticEvalNode : public ExecNode {
@@ -40,37 +47,46 @@ public:
     virtual Status get_next(RuntimeState* state, RowBatch* row_batch, bool* eos);
     virtual Status get_next(RuntimeState* state, vectorized::Block* block, bool* eos);
     virtual Status close(RuntimeState* state);
+
 protected:
     virtual std::string debug_string();
-private:
-    
-    Status _get_next_for_unbounded(RuntimeState* state, Block* block, bool* eos);
-    Status _get_next_for_range(RuntimeState* state, Block* block, bool* eos);
-    Status _get_next_for_rows(RuntimeState* state, Block* block, bool* eos);
 
-    void _insert_result(int32_t start, int32_t end);
+private:
+    Status _get_next_for_rows(RuntimeState* state, Block* block, bool* eos);
+    Status _get_next_for_range(RuntimeState* state, Block* block, bool* eos);
+    Status _get_next_for_unbounded(RuntimeState* state, Block* block, bool* eos);
+
+    void _execute_for_no_column(BlockRowPos peer_group_start, BlockRowPos peer_group_end,
+                                BlockRowPos frame_start, BlockRowPos frame_end);
+    void _execute_for_one_column(BlockRowPos peer_group_start, BlockRowPos peer_group_end,
+                                 BlockRowPos frame_start, BlockRowPos frame_end);
+    void _execute_for_three_column(BlockRowPos peer_group_start, BlockRowPos peer_group_end,
+                                   BlockRowPos frame_start, BlockRowPos frame_end);
+
+    Status _reset_agg_status();
+    Status _init_result_columns();
     Status _output_result_block(Block* block);
-    void _get_peer_group_end();
-    int64_t _compare_row(IColumn* column, int64_t start, int64_t end);
-    Status _insert_range_column(vectorized::Block* block, VExprContext* expr, IColumn* dst_column,size_t length);
-    Status _init_result_columns(); 
     Status _create_agg_status(AggregateDataPtr data);
     Status _destory_agg_status(AggregateDataPtr data);
-    Status _reset_agg_status();
-    bool _init_next_partition(int64_t found_partition_end);
-    Status _try_fetch_next_partition_data(RuntimeState* state, int64_t* partition_end);
-    int64_t _get_partition_end();
-    bool _need_fetch_next_block(int64_t found_partition_end);
-    Status _fetch_next_block(RuntimeState* state);
+    Status _insert_range_column(vectorized::Block* block, VExprContext* expr, IColumn* dst_column,
+                                size_t length);
 
-    void _execute_for_rank(int64_t peer_group_start, int64_t peer_group_end, int64_t frame_start,int64_t frame_end);
-    void _execute_for_lead(int64_t peer_group_start, int64_t peer_group_end, int64_t frame_start,int64_t frame_end);
-    void _execute_for_agg (int64_t peer_group_start, int64_t peer_group_end, int64_t frame_start,int64_t frame_end);
+    void _update_order_by_range();
+    void _insert_result_info(int64_t start, int64_t end);
+    bool _init_next_partition(BlockRowPos found_partition_end);
+    BlockRowPos _get_partition_by_end();
+    BlockRowPos _compare_row_to_find_end(int idx, BlockRowPos start, BlockRowPos end);
+    
+    Status _consumed_block_to_fetch_next(RuntimeState* state, BlockRowPos* found_partition_end);
+    bool whether_need_next_partition(BlockRowPos found_partition_end);
+    Status _fetch_next_block_data(RuntimeState* state);
 
     std::string debug_window_bound_string(TAnalyticWindowBoundary b);
-    using vectorized_execute = std::function<void(int64_t peer_group_start, int64_t peer_group_end, int64_t frame_start,int64_t frame_end)>;
+    using vectorized_execute =
+            std::function<void(BlockRowPos peer_group_start, BlockRowPos peer_group_end,
+                               BlockRowPos frame_start, BlockRowPos frame_end)>;
     using vectorized_get_next = std::function<Status(RuntimeState* state, Block* block, bool* eos)>;
-    using vectorized_get_result =std::function<void(int32_t start, int32_t end)>;
+    using vectorized_get_result = std::function<void(int64_t start, int64_t end)>;
     using vectorized_closer = std::function<void()>;
 
     struct executor {
@@ -81,32 +97,31 @@ private:
     };
 
     executor _executor;
+
 private:
-    enum AnalyticFnScope {
-        PARTITION,
-        RANGE,
-        ROWS
-    };
-    std::vector<Block> _input_blocks; 
+    enum AnalyticFnScope { PARTITION, RANGE, ROWS };
+    std::vector<Block> _input_blocks;
     std::vector<int64_t> input_block_first_row_positions;
     std::vector<AggFnEvaluator*> _agg_functions;
     std::vector<std::vector<VExprContext*>> _agg_expr_ctxs;
     std::vector<VExprContext*> _partition_by_eq_expr_ctxs;
     std::vector<VExprContext*> _order_by_eq_expr_ctxs;
     std::vector<std::vector<MutableColumnPtr>> _agg_intput_columns;
-    std::vector<MutableColumnPtr> _partition_by_columns;
-    std::vector<MutableColumnPtr> _order_by_columns;
     std::vector<MutableColumnPtr> _result_window_columns;
+
+    BlockRowPos _order_by_start;
+    BlockRowPos _order_by_end;
+    BlockRowPos _partition_by_start;
+    BlockRowPos _partition_by_end;
+    BlockRowPos _all_block_end;
+    std::vector<int64_t> _ordey_by_column_idxs;
+    std::vector<int64_t> _partition_by_column_idxs;
 
     bool _input_eos = false;
     int64_t _input_total_rows = 0;
     int64_t _output_block_index = 0;
     int64_t _window_result_position = 0;
     int64_t _current_row_position = 0;
-    int64_t _partition_start = 0;
-    int64_t _partition_end = 0;
-    int64_t _peer_group_start = 0;
-    int64_t _peer_group_end = 0;
     int64_t _rows_start_offset = 0;
     int64_t _rows_end_offset = 0;
     size_t _agg_functions_size = 0;
@@ -124,11 +139,11 @@ private:
     TTupleId _buffered_tuple_id = 0;
     TupleId _intermediate_tuple_id;
     TupleId _output_tuple_id;
-    TAnalyticWindow _window ;
+    TAnalyticWindow _window;
     AnalyticFnScope _fn_scope;
     TupleDescriptor* _intermediate_tuple_desc;
     TupleDescriptor* _output_tuple_desc;
-    std::vector<int> _origin_cols;
+    std::vector<int64_t> _origin_cols;
 
     RuntimeProfile::Counter* _evaluation_timer;
 };
