@@ -76,6 +76,7 @@
 #include "vec/exec/vexcept_node.h"
 #include "vec/exprs/vexpr.h"
 #include "vec/exec/vempty_set_node.h"
+#include "vec/exec/vschema_scan_node.h"
 namespace doris {
 
 const std::string ExecNode::ROW_THROUGHPUT_COUNTER = "RowsReturnedRate";
