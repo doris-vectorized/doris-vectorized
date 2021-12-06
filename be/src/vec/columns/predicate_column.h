@@ -279,7 +279,7 @@ public:
                 insert_decimal_to_res_column(sel, sel_size, res_ptr);
             }
         }
-        return nullptr;
+        return *ptr;
     }
     
     ColumnPtr filter_date_by_selector(const uint16_t* sel, size_t sel_size, ColumnPtr* ptr = nullptr) {
@@ -297,7 +297,7 @@ public:
                 insert_date_to_res_column(sel, sel_size, res_ptr);
             }
         }
-        return nullptr;
+        return *ptr;
     }
 
     ColumnPtr filter_string_value_by_selector(const uint16_t* sel, size_t sel_size, ColumnPtr* ptr = nullptr) {
@@ -315,7 +315,7 @@ public:
                 insert_string_to_res_column(sel, sel_size, ptr_res);
             }
         }
-        return nullptr;
+        return *ptr;
     }
 
     template <typename Y>
