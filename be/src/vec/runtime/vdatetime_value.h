@@ -552,6 +552,7 @@ public:
             _hour, _minute, _second, _type) && _month > 0 && _day > 0; }
             
     void convert_vec_dt_to_dt(doris::DateTimeValue* dt);
+    void convert_dt_to_vec_dt(doris::DateTimeValue* dt);
 private:
     // Used to make sure sizeof VecDateTimeValue
     friend class UnusedClass;
