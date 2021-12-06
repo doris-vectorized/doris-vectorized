@@ -1596,6 +1596,17 @@ void VecDateTimeValue::convert_vec_dt_to_dt(doris::DateTimeValue* dt) {  //use c
     dt->_microsecond = 0;
 }
 
+void VecDateTimeValue::convert_dt_to_vec_dt(doris::DateTimeValue* dt) {  //use convert DateTimeValue to VecDateTimeValue
+    this->_neg = dt->_neg;
+    this->_type = dt->_type;
+    this->_hour = dt->_hour;
+    this->_minute = dt->_minute;
+    this->_second = dt->_second;
+    this->_year = dt->_year;
+    this->_month = dt->_month;
+    this->_day = dt->_day;
+}
+
 std::ostream& operator<<(std::ostream& os, const VecDateTimeValue& value) {
     char buf[64];
     value.to_string(buf);

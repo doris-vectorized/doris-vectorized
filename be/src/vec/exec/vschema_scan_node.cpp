@@ -60,9 +60,6 @@ Status VSchemaScanNode::get_next(RuntimeState* state, vectorized::Block* block, 
         }
         while (true) {
             RETURN_IF_CANCELLED(state);
-            if (columns[0]->size() == state->batch_size()) {
-                break;
-            }
 
             // get all slots from schema table.
             RETURN_IF_ERROR(_schema_scanner->get_next_row(_src_single_tuple, _tuple_pool.get(), &schema_eos));
@@ -70,8 +67,7 @@ Status VSchemaScanNode::get_next(RuntimeState* state, vectorized::Block* block, 
             if (schema_eos) {
                 *eos = true;
                 break;
-           } 
-
+            }
             // tuple project
             project_tuple();
 
@@ -97,21 +93,26 @@ Status VSchemaScanNode::get_next(RuntimeState* state, vectorized::Block* block, 
                             write_slot_to_vectorized_column(_dest_single_tuple->get_slot(slot_desc->tuple_offset()), slot_desc, &columns[i]));
                 }
             }
-        }
-        auto n_columns = 0;
-        if (!mem_reuse) {
-            for (const auto slot_desc : _dest_tuple_desc->slots()) {
-                block->insert(ColumnWithTypeAndName(std::move(columns[n_columns++]),
-                                                    slot_desc->get_data_type_ptr(),
-                                                    slot_desc->col_name()));
+            if (columns[0]->size() == state->batch_size()) {
+                break;
             }
-        } else {
-            columns.clear();
         }
-        RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, block, _dest_tuple_desc->slots().size()));
-        _num_rows_returned += block->rows();
-        COUNTER_SET(_rows_returned_counter, _num_rows_returned);
-        VLOG_ROW << "VSchemaScanNode output rows: " << block->rows();
+        if (!columns.empty() && !columns[0]->empty()) {
+            auto n_columns = 0;
+            if (!mem_reuse) {
+                for (const auto slot_desc : _dest_tuple_desc->slots()) {
+                    block->insert(ColumnWithTypeAndName(std::move(columns[n_columns++]),
+                                                        slot_desc->get_data_type_ptr(),
+                                                        slot_desc->col_name()));
+                }
+            } else {
+                columns.clear();
+            }
+            RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, block, _dest_tuple_desc->slots().size()));
+            _num_rows_returned += block->rows();
+            COUNTER_SET(_rows_returned_counter, _num_rows_returned);
+            VLOG_ROW << "VSchemaScanNode output rows: " << block->rows();
+        }
     } while (block->rows() == 0 && !(*eos));
     return Status::OK();
 }
@@ -185,16 +186,20 @@ Status VSchemaScanNode::write_slot_to_vectorized_column(void* slot,
         }
 
         case TYPE_DATE: {
+            VecDateTimeValue value;
             DateTimeValue* ts_slot = reinterpret_cast<DateTimeValue*>(slot);
-            reinterpret_cast<vectorized::ColumnVector<vectorized::Int128>*>(col_ptr)->insert_data(
-                reinterpret_cast<char*>(&ts_slot), 0);
+            value.convert_dt_to_vec_dt(ts_slot);
+            reinterpret_cast<vectorized::ColumnVector<vectorized::Int64>*>(col_ptr)->insert_data(
+                reinterpret_cast<char*>(&value), 0);
             break;
         }
 
         case TYPE_DATETIME: {
+            VecDateTimeValue value;
             DateTimeValue* ts_slot = reinterpret_cast<DateTimeValue*>(slot);
-            reinterpret_cast<vectorized::ColumnVector<vectorized::Int128>*>(col_ptr)->insert_data(
-                reinterpret_cast<char*>(&ts_slot), 0);
+            value.convert_dt_to_vec_dt(ts_slot);
+            reinterpret_cast<vectorized::ColumnVector<vectorized::Int64>*>(col_ptr)->insert_data(
+                reinterpret_cast<char*>(&value), 0);
             break;
         }
 
