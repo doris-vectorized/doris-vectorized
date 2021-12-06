@@ -89,7 +89,6 @@ public:
     }
 
     /// References are invalidated after calling functions above.
-
     ColumnWithTypeAndName& get_by_position(size_t position) { return data[position]; }
     const ColumnWithTypeAndName& get_by_position(size_t position) const { return data[position]; }
 
@@ -208,6 +207,8 @@ public:
 
     // serialize block to PRowbatch
     void serialize(RowBatch*, const RowDescriptor&);
+
+    std::unique_ptr<Block> create_same_struct_block(size_t size) const;
 
     /** Compares (*this) n-th row and rhs m-th row. 
       * Returns negative number, 0, or positive number  (*this) n-th row is less, equal, greater than rhs m-th row respectively.

@@ -160,6 +160,11 @@ public:
     T get_value() const {
         return get_field().safe_get<NearestFieldType<T>>();
     }
+
+    void replace_column_data(const IColumn& rhs, size_t row) override {
+        DCHECK(size() == 1);
+        data->replace_column_data(rhs, row);
+    }
 };
 
 } // namespace doris::vectorized

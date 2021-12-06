@@ -89,10 +89,22 @@ private:
     OLAPStatus _unique_key_next_block(Block* block, MemPool* mem_pool, ObjectPool* agg_pool,
                                     bool* eof);
 
-    OLAPStatus _init_collect_iter(const ReaderParams& read_params, std::vector<RowsetReaderSharedPtr>* valid_rs_readers );
+    OLAPStatus _init_collect_iter(const ReaderParams& read_params, std::vector<RowsetReaderSharedPtr>* valid_rs_readers);
+
+    void _insert_tmp_block_to(MutableColumns& columns);
+
+    void _replace_data_in_column();
 
 private:
     std::unique_ptr<VCollectIterator> _collect_iter;
+
+    std::pair<const Block*, uint32_t> _next_row{nullptr, 0};
+    std::unique_ptr<Block> _unique_key_tmp_block;
+    MutableColumns _unique_row_columns;
+    std::vector<uint32_t> _return_columns_loc;
+    int _batch_size;
+    bool _need_compare = true;
+    bool _eof = false;
 
     OLAPStatus (BlockReader::*_next_block_func)(Block* block, MemPool* mem_pool,
                                          ObjectPool* agg_pool, bool* eof) = nullptr;

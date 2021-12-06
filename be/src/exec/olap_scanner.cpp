@@ -184,6 +184,8 @@ Status OlapScanner::_init_params(
              _params.rs_readers[1]->rowset()->start_version() == 2 &&
              !_params.rs_readers[1]->rowset()->rowset_meta()->is_segments_overlapping());
 
+    _params.origin_return_columns = &_return_columns;
+    _params.single_version = single_version;
     if (_aggregation || single_version) {
         _params.return_columns = _return_columns;
     } else {

@@ -245,6 +245,17 @@ public:
         chars.clear();
         offsets.clear();
     }
+
+    void replace_column_data(const IColumn& rhs, size_t row) override {
+        DCHECK(size() == 1);
+        const auto& r = assert_cast<const ColumnString&>(rhs);
+        auto data = r.get_data_at(row);
+
+        offsets[0] = data.size + 1;
+        chars.clear();
+        chars.insert(data.data, data.data + data.size);
+        chars.emplace_back('\0');
+    }
 };
 
 } // namespace doris::vectorized

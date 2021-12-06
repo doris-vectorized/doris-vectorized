@@ -174,6 +174,11 @@ public:
         LOG(FATAL) << "scatter not implemented";
     }
 
+    void replace_column_data(const IColumn& rhs, size_t row) override {
+        DCHECK(size() == 1);
+        data[0] = static_cast<const Self&>(rhs).data[row];
+    }
+
 private:
     Container data;
 };

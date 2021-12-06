@@ -385,6 +385,9 @@ public:
       */
     String dump_structure() const;
 
+    // Only use in column have only one row, use in unique key replace only
+    virtual void replace_column_data(const IColumn&, size_t row) = 0;
+
 protected:
     /// Template is to devirtualize calls to insert_from method.
     /// In derived classes (that use final keyword), implement scatter method as call to scatter_impl.
