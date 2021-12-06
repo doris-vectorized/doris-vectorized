@@ -19,8 +19,6 @@ Status VDataStreamSender::Channel::init(RuntimeState* state) {
     _be_number = state->be_number();
 
     _capacity = std::max(1, _buffer_size / std::max(_row_desc.get_row_size(), 1));
-    //_batch.reset(new RowBatch(_row_desc, capacity, _parent->_mem_tracker.get()));
-    _mutable_block.reset(new MutableBlock());
 
     if (_brpc_dest_addr.hostname.empty()) {
         LOG(WARNING) << "there is no brpc destination address's hostname"
@@ -54,14 +52,21 @@ Status VDataStreamSender::Channel::init(RuntimeState* state) {
 }
 
 Status VDataStreamSender::Channel::send_current_block(bool eos) {
-    if (is_local()) {
-        return send_local_block(eos);
-    }
+// TODO: Now, local exchange will cause the performance problem is in a multi-threaded scenario
+//  so this feature is turned off here. We need to re-examine this logic
+//    if (is_local()) {
+//        return send_local_block(eos);
+//    }
     {
         SCOPED_TIMER(_parent->_serialize_batch_timer);
         _pb_block.Clear();
-        auto uncompressed_bytes = _mutable_block->to_block().serialize(&_pb_block);
-        _mutable_block->clear();
+
+        // mem-reuse of the mutable_block which reduces the overhead of memory allocation
+        // and improve cache affinity
+        auto block = _mutable_block->to_block();
+        auto uncompressed_bytes = block.serialize(&_pb_block);
+        block.clear_column_data();
+        _mutable_block->set_muatable_columns(block.mutate_columns());
 
         auto bytes = _pb_block.ByteSizeLong();
         COUNTER_UPDATE(_parent->_bytes_sent_counter, bytes);
@@ -132,16 +137,17 @@ Status VDataStreamSender::Channel::add_row(Block* block, int row) {
     if (_fragment_instance_id.lo == -1) {
         return Status::OK();
     }
-    int batch_size = _parent->state()->batch_size();
-    if (block->rows() == batch_size) {
-        RETURN_IF_ERROR(send_current_block());
-    }
-    if (_mutable_block->rows() == 0) {
+
+    if (_mutable_block.get() == nullptr) {
         auto empty_block = block->clone_empty();
         _mutable_block.reset(
                 new MutableBlock(empty_block.mutate_columns(), empty_block.get_data_types()));
     }
     _mutable_block->add_row(block, row);
+
+    if (_mutable_block->rows() == _parent->state()->batch_size()) {
+        RETURN_IF_ERROR(send_current_block());
+    }
     return Status::OK();
 }
 
