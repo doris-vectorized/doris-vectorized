@@ -383,6 +383,7 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         case TPlanNodeType::EXCEPT_NODE:
         case TPlanNodeType::ES_HTTP_SCAN_NODE:
         case TPlanNodeType::EMPTY_SET_NODE:
+        case TPlanNodeType::SCHEMA_SCAN_NODE:
             break;
         default: {
             const auto& i = _TPlanNodeType_VALUES_TO_NAMES.find(tnode.node_type);
@@ -434,7 +435,11 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         return Status::OK();
 
     case TPlanNodeType::SCHEMA_SCAN_NODE:
-        *node = pool->add(new SchemaScanNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new vectorized::VSchemaScanNode(pool, tnode, descs));
+        } else {
+            *node = pool->add(new SchemaScanNode(pool, tnode, descs));
+        }
         return Status::OK();
 
     case TPlanNodeType::OLAP_SCAN_NODE:
