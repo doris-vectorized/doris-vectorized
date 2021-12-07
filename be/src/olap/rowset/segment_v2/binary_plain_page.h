@@ -234,11 +234,22 @@ public:
             return Status::OK();
         }
         const size_t max_fetch = std::min(*n, static_cast<size_t>(_num_elems - _cur_idx));
-        for (size_t i = 0; i < max_fetch; i++, _cur_idx++) {
-            // todo(wb) need more test case and then improve here
-            const uint32_t start_offset  = offset(_cur_idx);
-            uint32_t len = offset(_cur_idx + 1) - start_offset;
-            dst->insert_data(&_data[start_offset], len);
+
+        if (dst->is_predicate_column()) {
+            // todo(wb) padding sv here for better comparison performance
+            for (size_t i = 0; i < max_fetch; i++, _cur_idx++) {
+                const uint32_t start_offset  = offset(_cur_idx);
+                uint32_t len = offset(_cur_idx + 1) - start_offset;
+                StringValue sv(const_cast<char*>(&_data[start_offset]), len);
+                dst->insert_data(reinterpret_cast<char*>(&sv), 0);
+            }
+        } else {
+            for (size_t i = 0; i < max_fetch; i++, _cur_idx++) {
+                // todo(wb) need more test case and then improve here
+                const uint32_t start_offset  = offset(_cur_idx);
+                uint32_t len = offset(_cur_idx + 1) - start_offset;
+                dst->insert_data(&_data[start_offset], len);
+            }
         }
  
         *n = max_fetch;
@@ -282,6 +293,7 @@ private:
     // Index of the currently seeked element in the page.
     uint32_t _cur_idx;
     friend class BinaryDictPageDecoder;
+    friend class FileColumnIterator;
 };
 
 } // namespace segment_v2

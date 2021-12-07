@@ -370,6 +370,16 @@ public:
         }
     }
 
+    /**
+     * you must make sure to reserve podarray before calling this method
+     * remove branch if can improve performance
+     */
+    template <typename U, typename... TAllocatorParams>
+    void push_back_without_reserve(U&& x, TAllocatorParams&&... allocator_params) {
+        new (t_end()) T(std::forward<U>(x));
+        this->c_end += this->byte_size(1);
+    }
+
     /** This method doesn't allow to pass parameters for Allocator,
       *  and it couldn't be used if Allocator requires custom parameters.
       */

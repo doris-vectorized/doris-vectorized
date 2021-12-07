@@ -171,6 +171,12 @@ ColumnPtr ColumnNullable::filter(const Filter& filt, ssize_t result_size_hint) c
     return ColumnNullable::create(filtered_data, filtered_null_map);
 }
 
+ColumnPtr ColumnNullable::filter_by_selector(const uint16_t* sel, size_t sel_size, ColumnPtr* ptr) {
+    ColumnPtr filtered_data = get_nested_column().filter_by_selector(sel, sel_size, ptr);
+    ColumnPtr filtered_null_map = get_null_map_column().filter_by_selector(sel, sel_size, ptr);
+    return ColumnNullable::create(filtered_data, filtered_null_map);
+}
+
 ColumnPtr ColumnNullable::permute(const Permutation& perm, size_t limit) const {
     ColumnPtr permuted_data = get_nested_column().permute(perm, limit);
     ColumnPtr permuted_null_map = get_null_map_column().permute(perm, limit);
