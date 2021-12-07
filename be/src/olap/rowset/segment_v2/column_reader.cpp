@@ -459,6 +459,9 @@ FileColumnIterator::FileColumnIterator(ColumnReader* reader) : _reader(reader) {
 
 FileColumnIterator::~FileColumnIterator() {
     _opts.mem_tracker->Release(_opts.mem_tracker->consumption());
+
+    delete[] _dict_start_offset_array;
+    delete[] _dict_len_array;
 }
 
 Status FileColumnIterator::seek_to_first() {
@@ -607,6 +610,10 @@ Status FileColumnIterator::next_batch(size_t* n, vectorized::MutableColumnPtr &d
                     DCHECK_EQ(this_run, num_rows);
                 } else {
                     *has_null = true;
+                    // todo(wb) add a DCHECK here to check whether type is column nullable
+                    for (size_t x = 0; x < this_run; x++) {
+                        dst->insert_data(nullptr, 0); // todo(wb) vectorized here
+                    }
                 }
 
                 nrows_to_read -= this_run;
@@ -670,8 +677,21 @@ Status FileColumnIterator::_read_data_page(const OrdinalPageIndexIterator& iter)
                 // PLAIN_ENCODING is supported for dict page right now
                 _dict_decoder.reset(new BinaryPlainPageDecoder(dict_data));
                 RETURN_IF_ERROR(_dict_decoder->init());
+
+                BinaryPlainPageDecoder* pd_decoder = (BinaryPlainPageDecoder*)_dict_decoder.get();
+                _dict_start_offset_array = new uint32_t[pd_decoder->_num_elems];
+                _dict_len_array = new uint32_t[pd_decoder->_num_elems];
+                
+                // todo(wb) padding dict value for SIMD comparison
+                for (int i = 0; i < pd_decoder->_num_elems; i++) {
+                    const uint32_t start_offset = pd_decoder->offset(i);
+                    uint32_t len = pd_decoder->offset(i + 1) - start_offset;
+                    _dict_start_offset_array[i] = start_offset;
+                    _dict_len_array[i] = len;
+                }
+
             }
-            dict_page_decoder->set_dict_decoder(_dict_decoder.get());
+            dict_page_decoder->set_dict_decoder(_dict_decoder.get(), _dict_start_offset_array, _dict_len_array);
         }
     }
     return Status::OK();

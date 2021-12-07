@@ -23,7 +23,16 @@
 #include "vec/columns/column.h"
 #include "vec/columns/column_impl.h"
 
+#include "runtime/string_value.h"
+#include "olap/decimal12.h"
+#include "olap/uint24.h"
+#include "vec/columns/column_string.h"
+#include "vec/columns/column_decimal.h"
+#include "vec/columns/column_vector.h"
+#include "vec/core/types.h"
+
 namespace doris::vectorized {
+
 template <typename T>
 class ColumnComplexType final : public COWHelper<IColumn, ColumnComplexType<T>> {
 private:
