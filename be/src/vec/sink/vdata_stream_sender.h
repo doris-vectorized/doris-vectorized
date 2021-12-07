@@ -154,7 +154,7 @@ public:
                         LOG(INFO) << "will use local Exchange, dest_node_id is : "<<_dest_node_id;
                     }
                 }
-
+    
     virtual ~Channel() {
         if (_closure != nullptr && _closure->unref()) {
             delete _closure;
