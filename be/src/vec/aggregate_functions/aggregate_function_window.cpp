@@ -55,56 +55,58 @@ static IAggregateFunction* create_function_single_value(const String& name,
                                                         const DataTypes& argument_types,
                                                         const Array& parameters) {
     assert_arity_at_most<3>(name, argument_types);
+
     auto type = argument_types[0].get();
     if (type->is_nullable()) {
         type = assert_cast<const DataTypeNullable*>(type)->get_nested_type().get();
     }
     WhichDataType which(*type);
 
-#define DISPATCH(TYPE)                                                                       \
-    if (which.idx == TypeIndex::TYPE)                                                        \
-        return new AggregateFunctionTemplate<Data<LeadAndLagData<TYPE,is_nullable,false>>>(  \
+#define DISPATCH(TYPE)                                                                        \
+    if (which.idx == TypeIndex::TYPE)                                                         \
+        return new AggregateFunctionTemplate<Data<LeadAndLagData<TYPE, is_nullable, false>>>( \
                 argument_types);
     FOR_NUMERIC_TYPES(DISPATCH)
 #undef DISPATCH
     if (which.is_decimal()) {
-        return new AggregateFunctionTemplate<Data<LeadAndLagData<Int128,is_nullable,false>>>(argument_types);
+        return new AggregateFunctionTemplate<Data<LeadAndLagData<Int128, is_nullable, false>>>(argument_types);
     }
     if (which.is_date_or_datetime()) {
-        return new AggregateFunctionTemplate<Data<LeadAndLagData<Int64,is_nullable,false>>>(argument_types);
+        return new AggregateFunctionTemplate<Data<LeadAndLagData<Int64, is_nullable, false>>>(argument_types);
     }
     if (which.is_string_or_fixed_string())
-         return new AggregateFunctionTemplate<Data<LeadAndLagData<StringRef,is_nullable,true>>>(argument_types);
+         return new AggregateFunctionTemplate<Data<LeadAndLagData<StringRef, is_nullable, true>>>(argument_types);
     DCHECK(false) << "with unknowed type, failed in  create_aggregate_function_leadlag";
     return nullptr;
 }
 
 template <bool is_nullable>
 AggregateFunctionPtr create_aggregate_function_lag(const std::string& name,
-                                                      const DataTypes& argument_types,
-                                                      const Array& parameters,
-                                                      const bool result_is_nullable) {
+                                                   const DataTypes& argument_types,
+                                                   const Array& parameters,
+                                                   const bool result_is_nullable) {
     return AggregateFunctionPtr(
             create_function_single_value<WindowFunctionLeadLag, WindowFunctionLagData, is_nullable>(
                     name, argument_types, parameters));
 }
+
 template <bool is_nullable>
 AggregateFunctionPtr create_aggregate_function_lead(const std::string& name,
-                                                      const DataTypes& argument_types,
-                                                      const Array& parameters,
-                                                      const bool result_is_nullable) {
+                                                    const DataTypes& argument_types,
+                                                    const Array& parameters,
+                                                    const bool result_is_nullable) {
     return AggregateFunctionPtr(
             create_function_single_value<WindowFunctionLeadLag, WindowFunctionLeadData, is_nullable>(
                     name, argument_types, parameters));
 }
 
-void register_aggregate_function_window(AggregateFunctionSimpleFactory& factory) {
+void register_aggregate_function_window_rank(AggregateFunctionSimpleFactory& factory) {
     factory.register_function("dense_rank", create_aggregate_function_dense_rank);
     factory.register_function("rank", create_aggregate_function_rank);
     factory.register_function("row_number", create_aggregate_function_row_number);
-    factory.register_function("dense_rank", create_aggregate_function_dense_rank, true);
-    factory.register_function("rank", create_aggregate_function_rank, true);
-    factory.register_function("row_number", create_aggregate_function_row_number, true);
+}
+
+void register_aggregate_function_window_lead_lag(AggregateFunctionSimpleFactory& factory) {
     factory.register_function("lead", create_aggregate_function_lead<false>);
     factory.register_function("lead", create_aggregate_function_lead<true>, true);
     factory.register_function("lag", create_aggregate_function_lag<false>);

@@ -1983,15 +1983,6 @@ public class FunctionSet<min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionCo
                     null,
                     t.isStringType()  ? stringValGetValue : null,
                     t.isStringType()  ? stringValSerializeOrFinalize : null));
-            // Implements FIRST_VALUE for some windows that require rewrites during planning.
-        //     addBuiltin(AggregateFunction.createAnalyticBuiltin(
-        //             "first_value_rewrite", Lists.newArrayList(t, Type.BIGINT), t, t,
-        //             t.isStringType() ? initNullString : initNull,
-        //             prefix + FIRST_VALUE_REWRITE_UPDATE_SYMBOL.get(t),
-        //             null,
-        //             t.isStringType() ? stringValGetValue : null,
-        //             t.isStringType() ? stringValSerializeOrFinalize : null,
-        //             false, false));
 
             addBuiltin(AggregateFunction.createAnalyticBuiltin(
                     "last_value", Lists.newArrayList(t), t, t,
@@ -2032,6 +2023,7 @@ public class FunctionSet<min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionCo
                     prefix + OFFSET_FN_INIT_SYMBOL.get(t),
                     prefix + OFFSET_FN_UPDATE_SYMBOL.get(t),
                     null, null, null));
+                    
             addBuiltin(AggregateFunction.createAnalyticBuiltin(
                     "lead", Lists.newArrayList(t, Type.BIGINT, t), t, t,
                     prefix + OFFSET_FN_INIT_SYMBOL.get(t),

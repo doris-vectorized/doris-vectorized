@@ -25,11 +25,11 @@
 #include "vec/columns/column_vector.h"
 #include "vec/data_types/data_type_decimal.h"
 #include "vec/data_types/data_type_number.h"
-#include "vec/io/io_helper.h"
 #include "vec/data_types/data_type_string.h"
+#include "vec/io/io_helper.h"
 
 namespace doris::vectorized {
-    
+
 struct RowNumberData {
     int64_t count;
 };
@@ -58,7 +58,7 @@ public:
     void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
         assert_cast<ColumnInt64&>(to).get_data().push_back(data(place).count);
     }
-    
+
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {}
     void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {}
     void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {}
@@ -154,9 +154,7 @@ public:
 template <typename T, bool is_nullable, bool is_string>
 struct LeadAndLagData {
 public:
-    bool has_init() const {
-        return _is_init;
-    }
+    bool has_init() const { return _is_init; }
 
     void reset() {
         if (has_init()) {
@@ -191,35 +189,39 @@ public:
         }
     }
 
-    void get_result(size_t frame_start, size_t frame_end, const IColumn** columns, Arena* arena,size_t end) {
-        const auto* nullable_column = check_and_get_column<ColumnNullable>(columns[0]);
-        if (nullable_column && nullable_column->is_null_at(frame_end - 1)) {
-            _is_null = true;
-            return;
-        }
-        _is_null = false;
-        if constexpr (is_string) {
-            const auto* sources = check_and_get_column<ColumnString>(
-                    nullable_column ? nullable_column->get_nested_column_ptr().get() : columns[0]);
-            _value = sources->get_data_at(frame_end - 1);
+    void get_result(size_t frame_start, size_t frame_end, const IColumn** columns, Arena* arena, size_t end) {
+        if constexpr (is_nullable) {
+            const auto* nullable_column = check_and_get_column<ColumnNullable>(columns[0]);
+            if (nullable_column && nullable_column->is_null_at(frame_end - 1)) {
+                _is_null = true;
+                return;
+            }
+            if constexpr (is_string) {
+                const auto* sources = check_and_get_column<ColumnString>(
+                        nullable_column->get_nested_column_ptr().get());
+                _value = sources->get_data_at(frame_end - 1);
+            } else {
+                const auto* sources = check_and_get_column<ColumnVector<T>>(
+                        nullable_column->get_nested_column_ptr().get());
+                _value = sources->get_data_at(frame_end - 1);
+            }
         } else {
-            const auto* sources = check_and_get_column<ColumnVector<T>>(
-                    nullable_column ? nullable_column->get_nested_column_ptr().get() : columns[0]);
-            _value = sources->get_data_at(frame_end - 1);
+            _is_null = false;
+            if constexpr (is_string) {
+                const auto* sources = check_and_get_column<ColumnString>(columns[0]);
+                _value = sources->get_data_at(frame_end - 1);
+            } else {
+                const auto* sources = check_and_get_column<ColumnVector<T>>(columns[0]);
+                _value = sources->get_data_at(frame_end - 1);
+            }
         }
     }
 
-    bool defualt_is_null() {
-        return _defualt_is_null;
-    }    
+    bool defualt_is_null() { return _defualt_is_null; }
 
-    void set_is_null() {
-        _is_null = true;
-    }
+    void set_is_null() { _is_null = true; }
 
-    void set_value() {
-        _value = _default_value;
-    }
+    void set_value() { _value = _default_value; }
 
     void check_default(const IColumn* column) {
         if (!has_init()) {
@@ -241,19 +243,20 @@ public:
         }
     }
 
-private:    
-    StringRef _value;  
+private:
+    StringRef _value;
     StringRef _default_value;
     bool _is_init = false;
     bool _is_null = false;
-    bool _defualt_is_null = false;    
+    bool _defualt_is_null = false;
 };
 
 template <typename Data>
 struct WindowFunctionLeadData : Data {
-    void add_range_single_place(size_t frame_start, size_t frame_end,const IColumn** columns, Arena* arena, size_t end) {
+    void add_range_single_place(size_t frame_start, size_t frame_end, const IColumn** columns,
+                                Arena* arena, size_t end) {
         this->check_default(columns[2]);
-        if (frame_end > end) { //output default value 
+        if (frame_end > end) { //output default value
             if (this->defualt_is_null()) {
                 this->set_is_null();
             } else {
@@ -268,9 +271,10 @@ struct WindowFunctionLeadData : Data {
 
 template <typename Data>
 struct WindowFunctionLagData : Data {
-    void add_range_single_place(int64_t frame_start, int64_t frame_end,const IColumn** columns, Arena* arena, int64_t end) {
+    void add_range_single_place(int64_t frame_start, int64_t frame_end, const IColumn** columns,
+                                Arena* arena, int64_t end) {
         this->check_default(columns[2]);
-        if (frame_start >= frame_end) {  //[unbound preceding(0), offset preceding(-123)]
+        if (frame_start >= frame_end) { //[unbound preceding(0), offset preceding(-123)]
             if (this->defualt_is_null()) {
                 this->set_is_null();
             } else {
@@ -284,13 +288,12 @@ struct WindowFunctionLagData : Data {
 };
 
 template <typename Data>
-class WindowFunctionLeadLag  final
+class WindowFunctionLeadLag final
         : public IAggregateFunctionDataHelper<Data, WindowFunctionLeadLag<Data>> {
 public:
     WindowFunctionLeadLag(const DataTypes& argument_types)
-            : IAggregateFunctionDataHelper<Data, WindowFunctionLeadLag<Data>>(
-                      argument_types, {}),_argument_type(argument_types[0]) {
-    }
+            : IAggregateFunctionDataHelper<Data, WindowFunctionLeadLag<Data>>(argument_types, {}),
+              _argument_type(argument_types[0]) {}
 
     String get_name() const override { return Data::name(); }
     DataTypePtr get_return_type() const override { return _argument_type; }
@@ -300,22 +303,20 @@ public:
         this->data(place).add_range_single_place(frame_start, frame_end, columns, arena, end);
     }
 
-    void reset(AggregateDataPtr place) const override{
-        this->data(place).reset();
-    }
+    void reset(AggregateDataPtr place) const override { this->data(place).reset(); }
 
     void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
         this->data(place).insert_result_into(to);
     }
-    
-    void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,Arena*) const override {}
+
+    void add(AggregateDataPtr place, const IColumn** columns, size_t row_num, Arena*) const override {}
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {}
     void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {}
     void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {}
     const char* get_header_file_path() const override { return __FILE__; }
-private:
-    DataTypePtr _argument_type;    
-};
 
+private:
+    DataTypePtr _argument_type;
+};
 
 } // namespace doris::vectorized

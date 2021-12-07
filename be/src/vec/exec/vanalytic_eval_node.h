@@ -66,8 +66,8 @@ private:
     Status _reset_agg_status();
     Status _init_result_columns();
     Status _output_result_block(Block* block);
-    Status _create_agg_status(AggregateDataPtr data);
-    Status _destory_agg_status(AggregateDataPtr data);
+    Status _create_agg_status();
+    Status _destory_agg_status();
     Status _insert_range_column(vectorized::Block* block, VExprContext* expr, IColumn* dst_column,
                                 size_t length);
 

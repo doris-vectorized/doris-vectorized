@@ -38,8 +38,7 @@ VAnalyticEvalNode::VAnalyticEvalNode(ObjectPool* pool, const TPlanNode& tnode,
     }
 
     AnalyticFnScope _fn_scope = AnalyticFnScope::PARTITION;
-    if (!tnode.analytic_node.__isset
-                 .window) { //haven't set window, Unbounded:  [unbounded preceding,unbounded following]
+    if (!tnode.analytic_node.__isset.window) { //haven't set window, Unbounded:  [unbounded preceding,unbounded following]
         _executor.get_next = std::bind<Status>(&VAnalyticEvalNode::_get_next_for_unbounded, this,
                                                std::placeholders::_1, std::placeholders::_2,
                                                std::placeholders::_3);
@@ -62,38 +61,38 @@ VAnalyticEvalNode::VAnalyticEvalNode(ObjectPool* pool, const TPlanNode& tnode,
         }
 
     } else {
-        if (_window.__isset.window_start) { //calculate start boundary
-            TAnalyticWindowBoundary b = _window.window_start;
-            if (b.__isset.rows_offset_value) { //[offset     ,   ]
-                _rows_start_offset = b.rows_offset_value;
-                if (b.type == TAnalyticWindowBoundaryType::PRECEDING) {
-                    _rows_start_offset *= -1;                                //preceding--> negative
-                }                                                            //current_row  0
-            } else {                                                         //following    positive
-                DCHECK_EQ(b.type, TAnalyticWindowBoundaryType::CURRENT_ROW); //[current row,   ]
-                _rows_start_offset = 0;
-            }
-        }
-
-        if (_window.__isset.window_end) { //calculate end boundary
-            TAnalyticWindowBoundary b = _window.window_end;
-            if (b.__isset.rows_offset_value) { //[       , offset]
-                _rows_end_offset = b.rows_offset_value;
-                if (b.type == TAnalyticWindowBoundaryType::PRECEDING) {
-                    _rows_end_offset *= -1;
-                }
-            } else {
-                DCHECK_EQ(b.type, TAnalyticWindowBoundaryType::CURRENT_ROW); //[   ,current row]
-                _rows_end_offset = 0;
-            }
-        }
-
         if (!_window.__isset.window_start &&
             !_window.__isset.window_end) { //haven't set start and end, same as PARTITION
             _executor.get_next = std::bind<Status>(&VAnalyticEvalNode::_get_next_for_unbounded,
                                                    this, std::placeholders::_1,
                                                    std::placeholders::_2, std::placeholders::_3);
         } else {
+            if (_window.__isset.window_start) { //calculate start boundary
+                TAnalyticWindowBoundary b = _window.window_start;
+                if (b.__isset.rows_offset_value) {                               //[offset     ,   ]
+                    _rows_start_offset = b.rows_offset_value;
+                    if (b.type == TAnalyticWindowBoundaryType::PRECEDING) {
+                        _rows_start_offset *= -1; //preceding--> negative
+                    }                             //current_row  0
+                } else {                          //following    positive
+                    DCHECK_EQ(b.type, TAnalyticWindowBoundaryType::CURRENT_ROW); //[current row,   ]
+                    _rows_start_offset = 0;
+                }
+            }
+
+            if (_window.__isset.window_end) { //calculate end boundary
+                TAnalyticWindowBoundary b = _window.window_end;
+                if (b.__isset.rows_offset_value) {                               //[       , offset]
+                    _rows_end_offset = b.rows_offset_value;
+                    if (b.type == TAnalyticWindowBoundaryType::PRECEDING) {
+                        _rows_end_offset *= -1;
+                    }
+                } else {
+                    DCHECK_EQ(b.type, TAnalyticWindowBoundaryType::CURRENT_ROW); //[   ,current row]
+                    _rows_end_offset = 0;
+                }
+            }
+
             _fn_scope = AnalyticFnScope::ROWS;
             _executor.get_next = std::bind<Status>(&VAnalyticEvalNode::_get_next_for_rows, this,
                                                    std::placeholders::_1, std::placeholders::_2,
@@ -142,18 +141,15 @@ Status VAnalyticEvalNode::init(const TPlanNode& tnode, RuntimeState* state) {
         }
 
         AggFnEvaluator* evaluator = nullptr;
-        RETURN_IF_ERROR(
-                AggFnEvaluator::create(_pool, analytic_node.analytic_functions[i], &evaluator));
+        RETURN_IF_ERROR(AggFnEvaluator::create(_pool, analytic_node.analytic_functions[i], &evaluator));
         _agg_functions.emplace_back(evaluator);
         for (size_t j = 0; j < _agg_expr_ctxs[i].size(); ++j) {
             _agg_intput_columns[i][j] = _agg_expr_ctxs[i][j]->root()->data_type()->create_column();
         }
     }
 
-    RETURN_IF_ERROR(VExpr::create_expr_trees(_pool, analytic_node.partition_exprs,
-                                             &_partition_by_eq_expr_ctxs));
-    RETURN_IF_ERROR(
-            VExpr::create_expr_trees(_pool, analytic_node.order_by_exprs, &_order_by_eq_expr_ctxs));
+    RETURN_IF_ERROR(VExpr::create_expr_trees(_pool, analytic_node.partition_exprs, &_partition_by_eq_expr_ctxs));
+    RETURN_IF_ERROR(VExpr::create_expr_trees(_pool, analytic_node.order_by_exprs, &_order_by_eq_expr_ctxs));
     _partition_by_column_idxs.resize(_partition_by_eq_expr_ctxs.size());
     _ordey_by_column_idxs.resize(_order_by_eq_expr_ctxs.size());
     _agg_functions_size = _agg_functions.size();
@@ -198,9 +194,8 @@ Status VAnalyticEvalNode::prepare(RuntimeState* state) {
                     alignment_of_next_state * alignment_of_next_state;
         }
     }
-    _fn_place_ptr =
-            _agg_arena_pool.aligned_alloc(_total_size_of_aggregate_states, _align_aggregate_states);
-    _create_agg_status(_fn_place_ptr);
+    _fn_place_ptr = _agg_arena_pool.aligned_alloc(_total_size_of_aggregate_states, _align_aggregate_states);
+    _create_agg_status();
     _executor.insert_result = std::bind<void>(&VAnalyticEvalNode::_insert_result_info, this,
                                               std::placeholders::_1, std::placeholders::_2);
 
@@ -242,7 +237,7 @@ Status VAnalyticEvalNode::close(RuntimeState* state) {
         return Status::OK();
     }
     ExecNode::close(state);
-    _destory_agg_status(_fn_place_ptr);
+    _destory_agg_status();
     return Status::OK();
 }
 
@@ -261,9 +256,6 @@ Status VAnalyticEvalNode::get_next(RuntimeState* state, vectorized::Block* block
     }
 
     RETURN_IF_ERROR(_executor.get_next(state, block, eos));
-    if (*eos) {
-        return Status::OK();
-    }
     return Status::OK();
 }
 
@@ -572,12 +564,11 @@ Status VAnalyticEvalNode::_output_result_block(Block* block) {
         int64_t num_rows_over = _num_rows_returned - _limit;
         block->set_num_rows(block->rows() - num_rows_over);
         COUNTER_SET(_rows_returned_counter, _limit);
-        return Status::OK();
+    } else {
+        COUNTER_SET(_rows_returned_counter, _num_rows_returned);
+        _output_block_index++;
+        _window_result_position = 0;
     }
-
-    COUNTER_SET(_rows_returned_counter, _num_rows_returned);
-    _output_block_index++;
-    _window_result_position = 0;
     return Status::OK();
 }
 
@@ -613,8 +604,7 @@ void VAnalyticEvalNode::_execute_for_one_column(BlockRowPos peer_group_start,
                                                 BlockRowPos frame_end) {
     for (size_t i = 0; i < _agg_functions_size; ++i) {
         frame_start.pos = std::max<int64_t>(frame_start.pos, _partition_by_start.pos);
-        frame_end.pos = std::min<int64_t>(
-                frame_end.pos, _partition_by_end.pos); //update peer_group or range pos could overstep partition area
+        frame_end.pos = std::min<int64_t>(frame_end.pos, _partition_by_end.pos); //update peer_group or range pos could overstep partition area
         if (frame_start.pos > frame_end.pos) //maybe have set range start=0, but end bound preceding is negative
             return; 
         const IColumn* agg_column = _agg_intput_columns[i][0].get();
@@ -656,16 +646,16 @@ Status VAnalyticEvalNode::_reset_agg_status() {
     return Status::OK();
 }
 
-Status VAnalyticEvalNode::_create_agg_status(AggregateDataPtr data) {
+Status VAnalyticEvalNode::_create_agg_status() {
     for (size_t i = 0; i < _agg_functions_size; ++i) {
-        _agg_functions[i]->create(data + _offsets_of_aggregate_states[i]);
+        _agg_functions[i]->create(_fn_place_ptr + _offsets_of_aggregate_states[i]);
     }
     return Status::OK();
 }
 
-Status VAnalyticEvalNode::_destory_agg_status(AggregateDataPtr data) {
+Status VAnalyticEvalNode::_destory_agg_status() {
     for (size_t i = 0; i < _agg_functions_size; ++i) {
-        _agg_functions[i]->destroy(data + _offsets_of_aggregate_states[i]);
+        _agg_functions[i]->destroy(_fn_place_ptr + _offsets_of_aggregate_states[i]);
     }
     return Status::OK();
 }
