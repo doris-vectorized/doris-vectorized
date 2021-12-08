@@ -82,7 +82,6 @@ struct ReaderParams {
 
     // use only in vec unique key
     std::vector<uint32_t>* origin_return_columns = nullptr;
-    bool single_version = false;
 
     void check_validation() const;
 
