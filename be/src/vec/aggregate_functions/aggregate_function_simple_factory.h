@@ -30,9 +30,8 @@
 namespace doris::vectorized {
 using DataTypePtr = std::shared_ptr<const IDataType>;
 using DataTypes = std::vector<DataTypePtr>;
-using AggregateFunctionCreator =
-        std::function<AggregateFunctionPtr(const std::string&, const DataTypes&,
-                                           const Array&,  const bool)>;
+using AggregateFunctionCreator = std::function<AggregateFunctionPtr(
+        const std::string&, const DataTypes&, const Array&, const bool)>;
 
 class AggregateFunctionSimpleFactory {
 public:
@@ -47,7 +46,8 @@ private:
 public:
     void register_nullable_function_combinator(const Creator& creator) {
         for (const auto& entity : aggregate_functions) {
-            if (nullable_aggregate_functions.find(entity.first) == nullable_aggregate_functions.end()) {
+            if (nullable_aggregate_functions.find(entity.first) ==
+                nullable_aggregate_functions.end()) {
                 nullable_aggregate_functions[entity.first] = creator;
             }
         }
@@ -77,11 +77,13 @@ public:
         if (nullable) {
             return nullable_aggregate_functions.find(name) == nullable_aggregate_functions.end()
                            ? nullptr
-                           : nullable_aggregate_functions[name](name, argument_types, parameters, result_is_nullable);
+                           : nullable_aggregate_functions[name](name, argument_types, parameters,
+                                                                result_is_nullable);
         } else {
             return aggregate_functions.find(name) == aggregate_functions.end()
                            ? nullptr
-                           : aggregate_functions[name](name, argument_types, parameters, result_is_nullable);
+                           : aggregate_functions[name](name, argument_types, parameters,
+                                                       result_is_nullable);
         }
     }
 

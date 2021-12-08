@@ -29,6 +29,7 @@ set(VEC_FILES
   aggregate_functions/aggregate_function_uniq.cpp
   aggregate_functions/aggregate_function_hll_union_agg.cpp
   aggregate_functions/aggregate_function_bitmap.cpp
+  aggregate_functions/aggregate_function_reader.cpp
   aggregate_functions/aggregate_function_window.cpp
   aggregate_functions/aggregate_function_simple_factory.cpp
   columns/collator.cpp

@@ -31,7 +31,7 @@ namespace doris::vectorized {
 
 template <typename T>
 struct AggregateFunctionSumData {
-    T sum{};
+    T sum {};
 
     void add(T value) { sum += value; }
 
@@ -106,5 +106,10 @@ public:
 private:
     UInt32 scale;
 };
+
+AggregateFunctionPtr create_aggregate_function_sum_reader(const std::string& name,
+                                                   const DataTypes& argument_types,
+                                                   const Array& parameters,
+                                                   const bool result_is_nullable);
 
 } // namespace doris::vectorized

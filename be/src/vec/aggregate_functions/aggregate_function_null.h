@@ -202,6 +202,25 @@ public:
                                                           &nested_column, arena);
         }
     }
+
+    void add_batch_range(size_t batch_begin, size_t batch_end, AggregateDataPtr place,
+                         const IColumn** columns, Arena* arena, bool has_null) override {
+        const ColumnNullable* column = assert_cast<const ColumnNullable*>(columns[0]);
+
+        if (has_null) {
+            for (size_t i = batch_begin; i <= batch_end; ++i) {
+                if (!column->is_null_at(i)) {
+                    this->set_flag(place);
+                    this->add(place, columns, i, arena);
+                }
+            }
+        } else {
+            this->set_flag(place);
+            const IColumn* nested_column = &column->get_nested_column();
+            this->nested_function->add_batch_range(
+                    batch_begin, batch_end, this->nested_place(place), &nested_column, arena);
+        }
+    }
 };
 
 template <bool result_is_nullable>
