@@ -172,10 +172,10 @@ inline int get_real_byte_size(PrimitiveType type) {
     case TYPE_BIGINT:
     case TYPE_TIME:
     case TYPE_DOUBLE:
-        return 8;
-
     case TYPE_DATETIME:
     case TYPE_DATE:
+        return 8;
+
     case TYPE_DECIMALV2:
         return 16;
 
