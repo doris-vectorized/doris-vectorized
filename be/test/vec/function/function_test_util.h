@@ -78,7 +78,8 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
     ColumnsWithTypeAndName ctn;
     std::vector<std::shared_ptr<ColumnPtrWrapper>> constant_col_ptrs;
     std::vector<ColumnPtrWrapper*> constant_cols;
-
+    std::vector<doris_udf::FunctionContext::TypeDesc> arg_types;
+    doris_udf::FunctionContext::TypeDesc arg_type;
     // 1. build block and column type and names
     for (int i = 0; i < column_size; i++) {
         TypeIndex tp;
@@ -110,6 +111,7 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
             insert_column_to_block<DataTypeString>(columns, ctn, std::move(col),
                                                    std::move(null_map), block, col_name, i,
                                                    is_const, row_size);
+            arg_type.type = doris_udf::FunctionContext::TYPE_STRING;
         } else if (tp == TypeIndex::BitMap) {
             auto col = ColumnBitmap::create();
             for (int j = 0; j < row_size; j++) {
@@ -124,6 +126,7 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
             insert_column_to_block<DataTypeBitMap>(columns, ctn, std::move(col),
                                                    std::move(null_map), block, col_name, i,
                                                    is_const, row_size);
+            arg_type.type = doris_udf::FunctionContext::TYPE_OBJECT;
         } else if (tp == TypeIndex::Int32) {
             auto col = ColumnInt32::create();
 
@@ -138,7 +141,7 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
             }
             insert_column_to_block<DataTypeInt32>(columns, ctn, std::move(col), std::move(null_map),
                                                   block, col_name, i, is_const, row_size);
-
+            arg_type.type = doris_udf::FunctionContext::TYPE_INT;
         } else if (tp == TypeIndex::Int64) {
             auto col = ColumnInt64::create();
 
@@ -153,7 +156,7 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
             }
             insert_column_to_block<DataTypeInt64>(columns, ctn, std::move(col), std::move(null_map),
                                                   block, col_name, i, is_const, row_size);
-
+            arg_type.type = doris_udf::FunctionContext::TYPE_BIGINT;
         } else if (tp == TypeIndex::Float64) {
             auto col = ColumnFloat64::create();
 
@@ -169,6 +172,7 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
             insert_column_to_block<DataTypeFloat64>(columns, ctn, std::move(col),
                                                     std::move(null_map), block, col_name, i,
                                                     is_const, row_size);
+            arg_type.type = doris_udf::FunctionContext::TYPE_DOUBLE;
         } else if (tp == TypeIndex::DateTime) {
             static std::string date_time_format("%Y-%m-%d %H:%i:%s");
             auto col = ColumnInt64::create();
@@ -189,6 +193,7 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
             insert_column_to_block<DataTypeDateTime>(columns, ctn, std::move(col),
                                                      std::move(null_map), block, col_name, i,
                                                      is_const, row_size);
+            arg_type.type = doris_udf::FunctionContext::TYPE_DATETIME;
         } else if (tp == TypeIndex::Date) {
             static std::string date_time_format("%Y-%m-%d");
             auto col = ColumnInt64::create();
@@ -209,11 +214,13 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
             insert_column_to_block<DataTypeDateTime>(columns, ctn, std::move(col),
                                                      std::move(null_map), block, col_name, i,
                                                      is_const, row_size);
+            arg_type.type = doris_udf::FunctionContext::TYPE_DATE;
         } else {
             DCHECK(false);
+            arg_type.type = doris_udf::FunctionContext::INVALID_TYPE;
         }
         arguments.push_back(i);
-
+        arg_types.push_back(arg_type);
         if (is_const) {
             const auto& column = block.get_by_position(i).column;
             std::shared_ptr<ColumnPtrWrapper> constant_col = std::make_shared<ColumnPtrWrapper>(column);
@@ -229,8 +236,17 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
                                 : std::make_shared<ReturnType>();
     auto func = SimpleFunctionFactory::instance().get_function(func_name, ctn, return_type);
 
-    FunctionUtils fn_utils;
-    auto* fn_ctx = fn_utils.get_fn_ctx();
+    doris_udf::FunctionContext::TypeDesc fn_ctx_return;
+    if (func_name == "random") {
+        fn_ctx_return.type = doris_udf::FunctionContext::TYPE_DOUBLE;
+    } else if (func_name == "like" || func_name == "regexp") {
+        fn_ctx_return.type = doris_udf::FunctionContext::TYPE_BOOLEAN;
+    } else {
+        fn_ctx_return.type = doris_udf::FunctionContext::INVALID_TYPE;
+    }
+    
+    FunctionUtils* fn_utils = new FunctionUtils(fn_ctx_return, arg_types, 0);
+    auto* fn_ctx = fn_utils->get_fn_ctx();
     fn_ctx->impl()->set_constant_cols(constant_cols);
     func->prepare(fn_ctx, FunctionContext::FRAGMENT_LOCAL);
     func->prepare(fn_ctx, FunctionContext::THREAD_LOCAL);

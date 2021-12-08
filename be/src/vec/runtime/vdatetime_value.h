@@ -30,7 +30,6 @@
 #include "udf/udf.h"
 #include "util/hash_util.hpp"
 #include "util/timezone_utils.h"
-#include "runtime/datetime_value.h"
 
 namespace doris {
 class DateTimeValue;
