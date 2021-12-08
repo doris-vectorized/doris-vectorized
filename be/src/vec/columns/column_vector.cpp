@@ -30,6 +30,8 @@
 #include "vec/common/sip_hash.h"
 #include "vec/common/unaligned.h"
 
+#include "runtime/datetime_value.h"
+
 #ifdef __SSE2__
 #include <emmintrin.h>
 #endif

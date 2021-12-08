@@ -31,7 +31,7 @@ Status EmptySegmentIterator::next_batch(RowBlockV2* block) {
 }
 
 Status EmptySegmentIterator::next_batch(vectorized::Block* block) {
-    return Status::NotSupported("not implement now");
+    return Status::EndOfFile("no more data in segment");
 }
 
 } // namespace segment_v2

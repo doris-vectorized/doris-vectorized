@@ -115,7 +115,7 @@ public:
 
     bool is_dict_encoding() const;
 
-    void set_dict_decoder(PageDecoder* dict_decoder);
+    void set_dict_decoder(PageDecoder* dict_decoder, uint32_t* dict_start_offset_array, uint32_t* dict_len_array);
 
     ~BinaryDictPageDecoder();
 
@@ -124,7 +124,7 @@ private:
     PageDecoderOptions _options;
     std::unique_ptr<PageDecoder> _data_page_decoder;
     const BinaryPlainPageDecoder* _dict_decoder = nullptr;
-    const BitShufflePageDecoder<OLAP_FIELD_TYPE_INT>* _bit_shuffle_ptr = nullptr;
+    BitShufflePageDecoder<OLAP_FIELD_TYPE_INT>* _bit_shuffle_ptr = nullptr;
     bool _parsed;
     EncodingTypePB _encoding_type;
     // use as data buf.
