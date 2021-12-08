@@ -160,18 +160,16 @@ void AggregationNode::_init_hash_method(std::vector<VExprContext*>& probe_exprs)
         for (int i = 0; i < _probe_expr_ctxs.size(); ++i) {
             const auto vexpr = _probe_expr_ctxs[i]->root();
             const auto& data_type = vexpr->data_type();
-            auto result_type = vexpr->result_type();
 
-            has_null |= data_type->is_nullable();
-            //TODO: if(result_type == Date or DateTimeValue),get_real_byte_size() return bytes =16 bytes
-            //But Now in VecDateTimeValue (Not DateTimeValue) it's 8 bytes; so here could waste 8 bytes
-            _probe_key_sz[i] = get_real_byte_size(result_type);
-            key_byte_size += _probe_key_sz[i];
-
-            if (has_variable_type(result_type)) {
+            if (!data_type->have_maximum_size_of_value()) {
                 use_fixed_key = false;
                 break;
             }
+
+            auto is_null = data_type->is_nullable();
+            has_null |= is_null;
+            _probe_key_sz[i] = data_type->get_maximum_size_of_value_in_memory() - (is_null ? 1 : 0);
+            key_byte_size += _probe_key_sz[i];
         }
 
         if (std::tuple_size<KeysNullMap<UInt256>>::value + key_byte_size > sizeof(UInt256)) {

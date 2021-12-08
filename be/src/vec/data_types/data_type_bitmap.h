@@ -50,8 +50,7 @@ public:
     bool is_value_unambiguously_represented_in_contiguous_memory_region() const override {
         return true;
     }
-    bool have_maximum_size_of_value() const override { return true; }
-    size_t get_size_of_value_in_memory() const override { return sizeof(BitmapValue); }
+    bool have_maximum_size_of_value() const override { return false; }
 
     bool can_be_used_as_version() const override { return false; }
 

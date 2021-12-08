@@ -181,18 +181,17 @@ void VSetOperationNode::hash_table_init() {
     for (int i = 0; i < _child_expr_lists[0].size(); ++i) {
         const auto vexpr = _child_expr_lists[0][i]->root();
         const auto& data_type = vexpr->data_type();
-        auto result_type = vexpr->result_type();
-        has_null |= data_type->is_nullable();
-        //TODO: if(result_type == Date or DateTimeValue),get_real_byte_size() return bytes =16 bytes
-        //But Now in VecDateTimeValue (Not DateTimeValue) it's 8 bytes; so here could waste 8 bytes
-        _build_key_sz[i] = get_real_byte_size(result_type);
-        _probe_key_sz[i] = _build_key_sz[i];
 
-        key_byte_size += _build_key_sz[i];
-        if (has_variable_type(result_type)) {
+        if (!data_type->have_maximum_size_of_value()) {
             use_fixed_key = false;
             break;
         }
+
+        auto is_null = data_type->is_nullable();
+        has_null |= is_null;
+        _build_key_sz[i] = data_type->get_maximum_size_of_value_in_memory() - (is_null ? 1 : 0);
+        _probe_key_sz[i] = _build_key_sz[i];
+        key_byte_size += _probe_key_sz[i];
     }
 
     if (std::tuple_size<KeysNullMap<UInt256>>::value + key_byte_size > sizeof(UInt256)) {

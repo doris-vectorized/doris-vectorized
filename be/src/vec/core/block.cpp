@@ -757,14 +757,19 @@ doris::Tuple* Block::deep_copy_tuple(const doris::TupleDescriptor& desc, MemPool
             dst->set_not_null(slot_desc->null_indicator_offset());
         }
 
-        if (!slot_desc->type().is_string_type()) {
+        if (!slot_desc->type().is_string_type() && !slot_desc->type().is_date_type()) {
             memcpy((void*)dst->get_slot(slot_desc->tuple_offset()), data_ref.data, data_ref.size);
-        } else {
+        } else if (slot_desc->type().is_string_type() ){
             memcpy((void*)dst->get_slot(slot_desc->tuple_offset()), (const void*)(&data_ref), sizeof(data_ref));
             // Copy the content of string
             auto str_ptr = pool->allocate(data_ref.size);
             memcpy(str_ptr, data_ref.data, data_ref.size);
             dst->get_string_slot(slot_desc->tuple_offset())->ptr = reinterpret_cast<char *>(str_ptr);
+        } else {
+            VecDateTimeValue ts = *reinterpret_cast<const doris::vectorized::VecDateTimeValue*>(data_ref.data);
+            DateTimeValue dt;
+            ts.convert_vec_dt_to_dt(&dt);
+            memcpy((void*)dst->get_slot(slot_desc->tuple_offset()), &dt, sizeof(DateTimeValue));
         }
     }
     return dst;
