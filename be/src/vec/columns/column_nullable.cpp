@@ -190,7 +190,6 @@ int ColumnNullable::compare_at(size_t n, size_t m, const IColumn& rhs_,
     /// instead of the usual nan_direction_hint and is used to implement
     /// the ordering specified by either NULLS FIRST or NULLS LAST in the
     /// ORDER BY construction.
-
     const ColumnNullable& nullable_rhs = assert_cast<const ColumnNullable&>(rhs_);
 
     bool lval_is_null = is_null_at(n);
