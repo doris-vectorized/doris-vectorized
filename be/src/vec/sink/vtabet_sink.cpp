@@ -50,10 +50,15 @@ Status VOlapTableSink::send(RuntimeState* state, vectorized::Block* input_block)
     if (UNLIKELY(input_block->rows() == 0)) { return status; }
 
     if (_output_vexpr_ctxs.empty()) {
-        if (UNLIKELY(_input_batch == nullptr)) {
-            _input_batch.reset(new RowBatch(_input_row_desc, 4096, _mem_tracker.get()));
+        if (UNLIKELY(_input_batch == nullptr || _input_batch->capacity() < input_block->rows())) {
+            _input_batch.reset(new RowBatch(_input_row_desc,
+                                            state->batch_size() > input_block->rows() ? state->batch_size()
+                                                                                      : input_block->rows(),
+                                            _mem_tracker.get()));
+        } else {
+            _input_batch->reset();
         }
-        _input_batch->reset();
+
         input_block->serialize(_input_batch.get(), _input_row_desc);
         return OlapTableSink::send(state, _input_batch.get());
     }
@@ -64,7 +69,12 @@ Status VOlapTableSink::send(RuntimeState* state, vectorized::Block* input_block)
     auto num_rows = block.rows();
     if (UNLIKELY(num_rows == 0)) { return status; }
 
-    _output_batch->reset();
+    if (UNLIKELY(_output_batch->capacity() < block.rows())) {
+        _output_batch.reset(new RowBatch(*_output_row_desc, block.rows(), _mem_tracker.get()));
+    } else {
+        _output_batch->reset();
+    }
+
     block.serialize(_output_batch.get(), *_output_row_desc);
     return OlapTableSink::send(state, _output_batch.get());
 }
