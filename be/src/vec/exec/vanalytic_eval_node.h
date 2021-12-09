@@ -54,7 +54,7 @@ protected:
 private:
     Status _get_next_for_rows(RuntimeState* state, Block* block, bool* eos);
     Status _get_next_for_range(RuntimeState* state, Block* block, bool* eos);
-    Status _get_next_for_unbounded(RuntimeState* state, Block* block, bool* eos);
+    Status _get_next_for_partition(RuntimeState* state, Block* block, bool* eos);
 
     void _execute_for_no_column(BlockRowPos peer_group_start, BlockRowPos peer_group_end,
                                 BlockRowPos frame_start, BlockRowPos frame_end);
@@ -65,28 +65,28 @@ private:
 
     Status _reset_agg_status();
     Status _init_result_columns();
-    Status _output_result_block(Block* block);
     Status _create_agg_status();
     Status _destory_agg_status();
     Status _insert_range_column(vectorized::Block* block, VExprContext* expr, IColumn* dst_column,
                                 size_t length);
 
     void _update_order_by_range();
-    void _insert_result_info(int64_t start, int64_t end);
     bool _init_next_partition(BlockRowPos found_partition_end);
+    void _insert_result_info(int64_t current_block_rows);
+    Status _output_current_block(Block* block);
     BlockRowPos _get_partition_by_end();
     BlockRowPos _compare_row_to_find_end(int idx, BlockRowPos start, BlockRowPos end);
     
-    Status _consumed_block_to_fetch_next(RuntimeState* state, BlockRowPos* found_partition_end);
-    bool whether_need_next_partition(BlockRowPos found_partition_end);
     Status _fetch_next_block_data(RuntimeState* state);
+    Status _consumed_block_and_init_partition(RuntimeState* state, bool* next_partition, bool* eos);
+    bool whether_need_next_partition(BlockRowPos found_partition_end);
 
     std::string debug_window_bound_string(TAnalyticWindowBoundary b);
     using vectorized_execute =
             std::function<void(BlockRowPos peer_group_start, BlockRowPos peer_group_end,
                                BlockRowPos frame_start, BlockRowPos frame_end)>;
     using vectorized_get_next = std::function<Status(RuntimeState* state, Block* block, bool* eos)>;
-    using vectorized_get_result = std::function<void(int64_t start, int64_t end)>;
+    using vectorized_get_result = std::function<void(int64_t current_block_rows)>;
     using vectorized_closer = std::function<void()>;
 
     struct executor {
@@ -120,7 +120,7 @@ private:
     bool _input_eos = false;
     int64_t _input_total_rows = 0;
     int64_t _output_block_index = 0;
-    int64_t _window_result_position = 0;
+    int64_t _window_end_position = 0;
     int64_t _current_row_position = 0;
     int64_t _rows_start_offset = 0;
     int64_t _rows_end_offset = 0;

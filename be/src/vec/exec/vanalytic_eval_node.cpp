@@ -37,9 +37,9 @@ VAnalyticEvalNode::VAnalyticEvalNode(ObjectPool* pool, const TPlanNode& tnode,
         _buffered_tuple_id = tnode.analytic_node.buffered_tuple_id;
     }
 
-    AnalyticFnScope _fn_scope = AnalyticFnScope::PARTITION;
+    _fn_scope = AnalyticFnScope::PARTITION;
     if (!tnode.analytic_node.__isset.window) { //haven't set window, Unbounded:  [unbounded preceding,unbounded following]
-        _executor.get_next = std::bind<Status>(&VAnalyticEvalNode::_get_next_for_unbounded, this,
+        _executor.get_next = std::bind<Status>(&VAnalyticEvalNode::_get_next_for_partition, this,
                                                std::placeholders::_1, std::placeholders::_2,
                                                std::placeholders::_3);
 
@@ -50,7 +50,7 @@ VAnalyticEvalNode::VAnalyticEvalNode(ObjectPool* pool, const TPlanNode& tnode,
                 << "RANGE window end bound must be CURRENT ROW or UNBOUNDED FOLLOWING";
 
         if (!_window.__isset.window_end) { //haven't set end, so same as PARTITION, [unbounded preceding, unbounded following]
-            _executor.get_next = std::bind<Status>(&VAnalyticEvalNode::_get_next_for_unbounded,
+            _executor.get_next = std::bind<Status>(&VAnalyticEvalNode::_get_next_for_partition,
                                                    this, std::placeholders::_1,
                                                    std::placeholders::_2, std::placeholders::_3);
         } else {
@@ -63,7 +63,7 @@ VAnalyticEvalNode::VAnalyticEvalNode(ObjectPool* pool, const TPlanNode& tnode,
     } else {
         if (!_window.__isset.window_start &&
             !_window.__isset.window_end) { //haven't set start and end, same as PARTITION
-            _executor.get_next = std::bind<Status>(&VAnalyticEvalNode::_get_next_for_unbounded,
+            _executor.get_next = std::bind<Status>(&VAnalyticEvalNode::_get_next_for_partition,
                                                    this, std::placeholders::_1,
                                                    std::placeholders::_2, std::placeholders::_3);
         } else {
@@ -194,10 +194,11 @@ Status VAnalyticEvalNode::prepare(RuntimeState* state) {
                     alignment_of_next_state * alignment_of_next_state;
         }
     }
-    _fn_place_ptr = _agg_arena_pool.aligned_alloc(_total_size_of_aggregate_states, _align_aggregate_states);
+    _fn_place_ptr =
+            _agg_arena_pool.aligned_alloc(_total_size_of_aggregate_states, _align_aggregate_states);
     _create_agg_status();
-    _executor.insert_result = std::bind<void>(&VAnalyticEvalNode::_insert_result_info, this,
-                                              std::placeholders::_1, std::placeholders::_2);
+    _executor.insert_result =
+            std::bind<void>(&VAnalyticEvalNode::_insert_result_info, this, std::placeholders::_1);
 
     for (const auto& ctx : _agg_expr_ctxs) {
         VExpr::prepare(ctx, state, child(0)->row_desc(), expr_mem_tracker());
@@ -259,34 +260,19 @@ Status VAnalyticEvalNode::get_next(RuntimeState* state, vectorized::Block* block
     return Status::OK();
 }
 
-Status VAnalyticEvalNode::_get_next_for_unbounded(RuntimeState* state, Block* block, bool* eos) {
+Status VAnalyticEvalNode::_get_next_for_partition(RuntimeState* state, Block* block, bool* eos) {
     while (!_input_eos || _output_block_index < _input_blocks.size()) {
-        BlockRowPos found_partition_end;
-        RETURN_IF_ERROR(_consumed_block_to_fetch_next(state, &found_partition_end));
-        if (_input_eos && _input_total_rows == 0) {
-            *eos = true;
-            return Status::OK();
-        }
-        SCOPED_TIMER(_evaluation_timer);
-        bool next_partition = _init_next_partition(found_partition_end);
-        size_t block_rows = _input_blocks[_output_block_index].rows();
-        RETURN_IF_ERROR(_init_result_columns());
+        bool next_partition = false;
+        RETURN_IF_ERROR(_consumed_block_and_init_partition(state, &next_partition, eos));
+
+        size_t current_block_rows = _input_blocks[_output_block_index].rows();
         if (next_partition) {
             _executor.execute(_partition_by_start, _partition_by_end, _partition_by_start,
                               _partition_by_end);
         }
-
-        int64_t first_block_row_position = input_block_first_row_positions[_output_block_index];
-        int64_t get_value_start = _current_row_position - first_block_row_position;
-        int64_t get_value_end =
-                std::min<int64_t>(_current_row_position + block_rows, _partition_by_end.pos);
-        _window_result_position =
-                std::min<int64_t>(get_value_end - first_block_row_position, block_rows);
-        _executor.insert_result(get_value_start, _window_result_position);
-        _current_row_position += (_window_result_position - get_value_start);
-
-        if (_window_result_position == block_rows) {
-            return _output_result_block(block);
+        _executor.insert_result(current_block_rows);
+        if (_window_end_position == current_block_rows) {
+            return _output_current_block(block);
         }
     }
     return Status::OK();
@@ -294,33 +280,19 @@ Status VAnalyticEvalNode::_get_next_for_unbounded(RuntimeState* state, Block* bl
 
 Status VAnalyticEvalNode::_get_next_for_range(RuntimeState* state, Block* block, bool* eos) {
     while (!_input_eos || _output_block_index < _input_blocks.size()) {
-        BlockRowPos found_partition_end;
-        RETURN_IF_ERROR(_consumed_block_to_fetch_next(state, &found_partition_end));
-        if (_input_eos && _input_total_rows == 0) {
-            *eos = true;
-            return Status::OK();
-        }
-        SCOPED_TIMER(_evaluation_timer);
-        _init_next_partition(found_partition_end);
-        size_t block_rows = _input_blocks[_output_block_index].rows();
-        RETURN_IF_ERROR(_init_result_columns());
+        bool next_partition = false;
+        RETURN_IF_ERROR(_consumed_block_and_init_partition(state, &next_partition, eos));
 
-        while (_current_row_position < _partition_by_end.pos &&
-               _window_result_position < block_rows) {
+        size_t current_block_rows = _input_blocks[_output_block_index].rows();
+        while (_current_row_position < _partition_by_end.pos && _window_end_position < current_block_rows) {
             if (_current_row_position >= _order_by_end.pos) {
                 _update_order_by_range();
                 _executor.execute(_order_by_start, _order_by_end, _order_by_start, _order_by_end);
             }
-            int64_t first_block_row_position = input_block_first_row_positions[_output_block_index];
-            int64_t get_value_start = _current_row_position - first_block_row_position;
-            _window_result_position =
-                    std::min<int64_t>(_order_by_end.pos - first_block_row_position, block_rows);
-            _executor.insert_result(get_value_start, _window_result_position);
-            _current_row_position += (_window_result_position - get_value_start);
+            _executor.insert_result(current_block_rows);
         }
-
-        if (_window_result_position == block_rows) {
-            return _output_result_block(block);
+        if (_window_end_position == current_block_rows) {
+            return _output_current_block(block);
         }
     }
     return Status::OK();
@@ -328,19 +300,11 @@ Status VAnalyticEvalNode::_get_next_for_range(RuntimeState* state, Block* block,
 
 Status VAnalyticEvalNode::_get_next_for_rows(RuntimeState* state, Block* block, bool* eos) {
     while (!_input_eos || _output_block_index < _input_blocks.size()) {
-        BlockRowPos found_partition_end;
-        RETURN_IF_ERROR(_consumed_block_to_fetch_next(state, &found_partition_end));
-        if (_input_eos && _input_total_rows == 0) {
-            *eos = true;
-            return Status::OK();
-        }
-        SCOPED_TIMER(_evaluation_timer);
-        _init_next_partition(found_partition_end);
-        size_t block_rows = _input_blocks[_output_block_index].rows();
-        RETURN_IF_ERROR(_init_result_columns());
+        bool next_partition = false;
+        RETURN_IF_ERROR(_consumed_block_and_init_partition(state, &next_partition, eos));
 
-        while (_current_row_position < _partition_by_end.pos &&
-               _window_result_position < block_rows) {
+        size_t current_block_rows = _input_blocks[_output_block_index].rows();
+        while (_current_row_position < _partition_by_end.pos && _window_end_position < current_block_rows) {
             BlockRowPos range_start, range_end;
             if (!_window.__isset.window_start &&
                 _window.window_end.type == TAnalyticWindowBoundaryType::CURRENT_ROW) { //[preceding, current_row],[current_row, following]
@@ -356,26 +320,29 @@ Status VAnalyticEvalNode::_get_next_for_rows(RuntimeState* state, Block* block, 
                 range_end.pos = _current_row_position + _rows_end_offset + 1;
             }
             _executor.execute(_partition_by_start, _partition_by_end, range_start, range_end);
-            _window_result_position++;
-            int64_t get_value_start =
-                    _current_row_position - input_block_first_row_positions[_output_block_index];
-            _executor.insert_result(get_value_start, _window_result_position);
-            _current_row_position++;
+            _executor.insert_result(current_block_rows);
         }
-
-        if (_window_result_position == block_rows) {
-            return _output_result_block(block);
+        if (_window_end_position == current_block_rows) {
+            return _output_current_block(block);
         }
     }
     return Status::OK();
 }
 
-Status VAnalyticEvalNode::_consumed_block_to_fetch_next(RuntimeState* state, BlockRowPos* partition_end) {
-    *partition_end = _get_partition_by_end();             //claculate current partition end 
-    while (whether_need_next_partition(*partition_end)) { //check whether need get next partition, if current partition haven't execute done, return false
-        RETURN_IF_ERROR(_fetch_next_block_data(state));   //return true, fetch next block
-        *partition_end = _get_partition_by_end();         //claculate new partition end 
+Status VAnalyticEvalNode::_consumed_block_and_init_partition(RuntimeState* state,
+                                                             bool* next_partition, bool* eos) {
+    BlockRowPos found_partition_end = _get_partition_by_end(); //claculate current partition end
+    while (whether_need_next_partition(found_partition_end)) { //check whether need get next partition, if current partition haven't execute done, return false
+        RETURN_IF_ERROR(_fetch_next_block_data(state)); //return true, fetch next block
+        found_partition_end = _get_partition_by_end();  //claculate new partition end
     }
+    if (_input_eos && _input_total_rows == 0) {
+        *eos = true;
+        return Status::OK();
+    }
+    SCOPED_TIMER(_evaluation_timer);
+    *next_partition = _init_next_partition(found_partition_end);
+    RETURN_IF_ERROR(_init_result_columns());
     return Status::OK();
 }
 
@@ -399,39 +366,44 @@ BlockRowPos VAnalyticEvalNode::_get_partition_by_end() {
     return cal_end;
 }
 
-//_partition_by_columns,_order_by_columns save in blocks, so if need to calculate the boundary, may find in blocks one by one until find a difference
+//_partition_by_columns,_order_by_columns save in blocks, so if need to calculate the boundary, may find in which blocks firstly
 BlockRowPos VAnalyticEvalNode::_compare_row_to_find_end(int idx, BlockRowPos start,
                                                         BlockRowPos end) {
     int64_t start_init_row_num = start.row_num;
-    int64_t start_block_size = _input_blocks[start.block_num].rows();
     ColumnPtr start_column = _input_blocks[start.block_num].get_by_position(idx).column;
     ColumnPtr start_next_block_column = start_column;
 
     DCHECK_LE(start.block_num, end.block_num);
     DCHECK_LE(start.block_num, _input_blocks.size() - 1);
-    //first checked in next block, if found, start block_num add, TODO,maybe binary search find block
-    while ((start.block_num < end.block_num) && (start.block_num < _input_blocks.size() - 1)) {
-        start_next_block_column = _input_blocks[start.block_num + 1].get_by_position(idx).column;
-        if ((start_column->compare_at(start_init_row_num, 0, *start_next_block_column, 1) == 0)) { //find in next block
-            start.row_num = 0;
-            start.block_num++;
+    int64_t start_block_num = start.block_num;
+    int64_t end_block_num = end.block_num;
+    int64_t mid_blcok_num = end.block_num;
+    //binary search find in which block
+    while (start_block_num < end_block_num) {
+        mid_blcok_num = (start_block_num + end_block_num + 1) >> 1;
+        start_next_block_column = _input_blocks[mid_blcok_num].get_by_position(idx).column;
+        if (start_column->compare_at(start_init_row_num, 0, *start_next_block_column, 1) == 0) {
+            start_block_num = mid_blcok_num;
         } else {
-            start_next_block_column = _input_blocks[start.block_num].get_by_position(idx).column;
-            start_block_size = _input_blocks[start.block_num].rows();
-            if ((start_column->compare_at(start_init_row_num, start_block_size - 1,
-                                          *start_next_block_column, 1) == 0)) { //find at cur block last element
-                start.block_num++;
-                start.row_num = 0;
-                return start;
-            } else { //maybe at mid in this block, so binary search
-                break;
-            }
+            end_block_num = mid_blcok_num - 1;
         }
     }
+
+    if (end_block_num == mid_blcok_num - 1) {
+        start_next_block_column = _input_blocks[end_block_num].get_by_position(idx).column;
+        int64_t block_size = _input_blocks[end_block_num].rows();
+        if ((start_column->compare_at(start_init_row_num, block_size - 1, *start_next_block_column, 1) == 0)) {
+            start.block_num = end_block_num + 1;
+            start.row_num = 0;
+            return start;
+        }
+    }
+
     //check whether need get column again, maybe same as first init
     if (start_column != start_next_block_column) {
-        start_column = _input_blocks[start.block_num].get_by_position(idx).column;
         start_init_row_num = 0;
+        start.block_num = start_block_num;
+        start_column = _input_blocks[start.block_num].get_by_position(idx).column;
     }
     //binary search, set start and end pos
     int64_t start_pos = start_init_row_num;
@@ -540,16 +512,33 @@ bool VAnalyticEvalNode::_init_next_partition(BlockRowPos found_partition_end) {
     return false;
 }
 
-void VAnalyticEvalNode::_insert_result_info(int64_t start, int64_t end) {
+void VAnalyticEvalNode::_insert_result_info(int64_t current_block_rows) {
+    int64_t current_block_row_pos = input_block_first_row_positions[_output_block_index];
+    int64_t get_result_start = _current_row_position - current_block_row_pos;
+    if (_fn_scope == AnalyticFnScope::PARTITION) {
+        int64_t get_result_end = std::min<int64_t>(_current_row_position + current_block_rows,
+                                                   _partition_by_end.pos);
+        _window_end_position =
+                std::min<int64_t>(get_result_end - current_block_row_pos, current_block_rows);
+        _current_row_position += (_window_end_position - get_result_start);
+    } else if (_fn_scope == AnalyticFnScope::RANGE) {
+        _window_end_position =
+                std::min<int64_t>(_order_by_end.pos - current_block_row_pos, current_block_rows);
+        _current_row_position += (_window_end_position - get_result_start);
+    } else {
+        _window_end_position++;
+        _current_row_position++;
+    }
+
     for (int i = 0; i < _agg_functions_size; ++i) {
-        for (int j = start; j < end; ++j) {
+        for (int j = get_result_start; j < _window_end_position; ++j) {
             _agg_functions[i]->insert_result_info(_fn_place_ptr + _offsets_of_aggregate_states[i],
                                                   _result_window_columns[i].get());
         }
     }
 }
 
-Status VAnalyticEvalNode::_output_result_block(Block* block) {
+Status VAnalyticEvalNode::_output_current_block(Block* block) {
     block->swap(std::move(_input_blocks[_output_block_index]));
     if (_origin_cols.size() < block->columns()) {
         block->erase_not_in(_origin_cols);
@@ -567,7 +556,7 @@ Status VAnalyticEvalNode::_output_result_block(Block* block) {
     } else {
         COUNTER_SET(_rows_returned_counter, _num_rows_returned);
         _output_block_index++;
-        _window_result_position = 0;
+        _window_end_position = 0;
     }
     return Status::OK();
 }
@@ -606,7 +595,7 @@ void VAnalyticEvalNode::_execute_for_one_column(BlockRowPos peer_group_start,
         frame_start.pos = std::max<int64_t>(frame_start.pos, _partition_by_start.pos);
         frame_end.pos = std::min<int64_t>(frame_end.pos, _partition_by_end.pos); //update peer_group or range pos could overstep partition area
         if (frame_start.pos > frame_end.pos) //maybe have set range start=0, but end bound preceding is negative
-            return; 
+            return;
         const IColumn* agg_column = _agg_intput_columns[i][0].get();
         _agg_functions[i]->function()->add_range_single_place(
                 frame_start.pos, frame_end.pos, _fn_place_ptr + _offsets_of_aggregate_states[i],
@@ -629,7 +618,7 @@ void VAnalyticEvalNode::_update_order_by_range() {
 }
 
 Status VAnalyticEvalNode::_init_result_columns() {
-    if (!_window_result_position) {
+    if (!_window_end_position) {
         _result_window_columns.resize(_agg_functions_size);
         for (size_t i = 0; i < _agg_functions_size; ++i) {
             _result_window_columns[i] =

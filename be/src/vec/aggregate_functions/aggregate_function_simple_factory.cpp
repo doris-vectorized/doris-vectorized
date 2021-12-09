@@ -43,7 +43,7 @@ AggregateFunctionSimpleFactory& AggregateFunctionSimpleFactory::instance() {
         register_aggregate_function_combinator_distinct(instance);
         register_aggregate_function_HLL_union_agg(instance);
         register_aggregate_function_window_rank(instance);      //if you only register function with no nullable,
-        register_aggregate_function_combinator_null(instance);  //and wants to ddd nullable automatically, you should place function above this line
+        register_aggregate_function_combinator_null(instance);  //and wants to add nullable automatically, you should place function above this line
         register_aggregate_function_window_lead_lag(instance);
     });
     return instance;
