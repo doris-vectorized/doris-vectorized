@@ -358,7 +358,7 @@ OLAPStatus VCollectIterator::Level1Iterator::_normal_next(Block* block) {
         _children.pop_front();
         if (!_children.empty()) {
             _cur_child = *(_children.begin());
-            return _cur_child->next(block);
+            return _normal_next(block);
         } else {
             _cur_child = nullptr;
             return OLAP_ERR_DATA_EOF;
