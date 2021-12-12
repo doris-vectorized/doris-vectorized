@@ -237,16 +237,20 @@ void check_function(const std::string& func_name, const std::vector<std::any>& i
     auto func = SimpleFunctionFactory::instance().get_function(func_name, ctn, return_type);
 
     doris_udf::FunctionContext::TypeDesc fn_ctx_return;
-    if (func_name == "random") {
-        fn_ctx_return.type = doris_udf::FunctionContext::TYPE_DOUBLE;
-    } else if (func_name == "like" || func_name == "regexp") {
+    if (std::is_same_v<ReturnType, DataTypeUInt8>) {
         fn_ctx_return.type = doris_udf::FunctionContext::TYPE_BOOLEAN;
+    } else if (std::is_same_v<ReturnType, DataTypeFloat64>) {
+        fn_ctx_return.type = doris_udf::FunctionContext::TYPE_DOUBLE;
+    } else if (std::is_same_v<ReturnType, DataTypeInt32>) {
+        fn_ctx_return.type = doris_udf::FunctionContext::TYPE_INT;
+    } else if (std::is_same_v<ReturnType, DateTime>) {
+        fn_ctx_return.type = doris_udf::FunctionContext::TYPE_DATETIME;
     } else {
         fn_ctx_return.type = doris_udf::FunctionContext::INVALID_TYPE;
     }
     
-    FunctionUtils* fn_utils = new FunctionUtils(fn_ctx_return, arg_types, 0);
-    auto* fn_ctx = fn_utils->get_fn_ctx();
+    FunctionUtils fn_utils(fn_ctx_return, arg_types, 0);
+    auto* fn_ctx = fn_utils.get_fn_ctx();
     fn_ctx->impl()->set_constant_cols(constant_cols);
     func->prepare(fn_ctx, FunctionContext::FRAGMENT_LOCAL);
     func->prepare(fn_ctx, FunctionContext::THREAD_LOCAL);
