@@ -71,6 +71,9 @@ public:
     /// Delete data for aggregation.
     virtual void destroy(AggregateDataPtr place) const noexcept = 0;
 
+    /// Reset aggregation state
+    virtual void reset(AggregateDataPtr place) const = 0;
+
     /// It is not necessary to delete data.
     virtual bool has_trivial_destructor() const = 0;
 
@@ -129,6 +132,9 @@ public:
     virtual void add_batch_single_place(size_t batch_size, AggregateDataPtr place,
                                      const IColumn** columns, Arena* arena) const = 0;
 
+    virtual void add_range_single_place(int64_t frame_start, int64_t frame_end, AggregateDataPtr place,
+                                     const IColumn** columns, Arena* arena, int64_t end=0) const = 0;
+
     /** This is used for runtime code generation to determine, which header files to include in generated source.
       * Always implement it as
       * const char * get_header_file_path() const override { return __FILE__; }
@@ -169,6 +175,13 @@ public:
         for (size_t i = 0; i < batch_size; ++i)
             static_cast<const Derived*>(this)->add(place, columns, i, arena);
     }
+
+    void add_range_single_place(int64_t frame_start, int64_t frame_end, AggregateDataPtr place,
+                                const IColumn** columns, Arena* arena,int64_t end) const override {
+        for (int64_t i = frame_start; i < frame_end; ++i) {
+            static_cast<const Derived*>(this)->add(place, columns, i, arena);
+        }
+    }
 };
 
 /// Implements several methods for manipulation with data. T - type of structure with data for aggregation.
@@ -196,6 +209,8 @@ public:
 
     /// NOTE: Currently not used (structures with aggregation state are put without alignment).
     size_t align_of_data() const override { return alignof(Data); }
+
+    void reset(AggregateDataPtr place) const override {}
 };
 
 using AggregateFunctionPtr = std::shared_ptr<IAggregateFunction>;

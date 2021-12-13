@@ -62,6 +62,8 @@ public:
 
     void insert_result_info(AggregateDataPtr place, IColumn* column);
 
+    void reset(AggregateDataPtr place);
+
     DataTypePtr& data_type() { return _data_type; }
 
     const AggregateFunctionPtr& function() { return _function; }

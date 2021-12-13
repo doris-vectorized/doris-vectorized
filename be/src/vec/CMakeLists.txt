@@ -29,6 +29,7 @@ set(VEC_FILES
   aggregate_functions/aggregate_function_uniq.cpp
   aggregate_functions/aggregate_function_hll_union_agg.cpp
   aggregate_functions/aggregate_function_bitmap.cpp
+  aggregate_functions/aggregate_function_window.cpp
   aggregate_functions/aggregate_function_simple_factory.cpp
   columns/collator.cpp
   columns/column.cpp
@@ -80,6 +81,7 @@ set(VEC_FILES
   exec/vmysql_scan_node.cpp
   exec/vschema_scan_node.cpp
   exec/vempty_set_node.cpp
+  exec/vanalytic_eval_node.cpp
   exec/join/vhash_join_node.cpp
   exprs/vectorized_agg_fn.cpp
   exprs/vectorized_fn_call.cpp
