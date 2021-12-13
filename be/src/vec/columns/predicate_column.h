@@ -104,11 +104,11 @@ public:
          LOG(FATAL) << "insert_range_from not supported in PredicateColumnType";
     }
 
-    void pop_back(size_t n) {
+    void pop_back(size_t n) override {
         LOG(FATAL) << "pop_back not supported in PredicateColumnType";
     }
 
-    void update_hash_with_value(size_t n, SipHash& hash) const {
+    void update_hash_with_value(size_t n, SipHash& hash) const override {
          LOG(FATAL) << "update_hash_with_value not supported in PredicateColumnType";
     }
 
@@ -361,6 +361,10 @@ public:
         } else {
             return filter_default_type_by_selector<T>(sel, sel_size, ptr);
         }
+    }
+
+    void replace_column_data(const IColumn& rhs, size_t row) override {
+        LOG(FATAL) << "should not call the method in predicate column";
     }
 
 private:
