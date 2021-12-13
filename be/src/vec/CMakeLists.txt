@@ -125,6 +125,7 @@ set(VEC_FILES
   functions/if.cpp
   functions/function_ifnull.cpp
   functions/nullif.cpp
+  functions/random.cpp
   functions/function_date_or_datetime_computation.cpp
   functions/function_date_or_datetime_to_string.cpp
   functions/function_datetime_string_to_string.cpp
