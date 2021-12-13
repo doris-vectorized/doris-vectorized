@@ -133,6 +133,11 @@ void AggFnEvaluator::execute_single_merge(AggregateDataPtr place, ConstAggregate
 void AggFnEvaluator::insert_result_info(AggregateDataPtr place, IColumn* column) {
     _function->insert_result_into(place, *column);
 }
+
+void AggFnEvaluator::reset(AggregateDataPtr place) {
+    _function->reset(place);
+}
+
 std::string AggFnEvaluator::debug_string(const std::vector<AggFnEvaluator*>& exprs) {
     std::stringstream out;
     out << "[";

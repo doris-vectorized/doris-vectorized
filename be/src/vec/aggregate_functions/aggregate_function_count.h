@@ -47,6 +47,10 @@ public:
         ++data(place).count;
     }
 
+    void reset(AggregateDataPtr place) const override {
+        this->data(place).count = 0;
+    }
+
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {
         data(place).count += data(rhs).count;
     }
@@ -90,6 +94,10 @@ public:
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
         data(place).count += !assert_cast<const ColumnNullable&>(*columns[0]).is_null_at(row_num);
+    }
+
+    void reset(AggregateDataPtr place) const override {
+        data(place).count = 0;
     }
 
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {

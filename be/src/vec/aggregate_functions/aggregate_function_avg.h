@@ -93,6 +93,11 @@ public:
         ++this->data(place).count;
     }
 
+    void reset(AggregateDataPtr place) const override {
+        this->data(place).sum = 0;
+        this->data(place).count = 0;
+    }
+
     void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {
         this->data(place).sum += this->data(rhs).sum;
         this->data(place).count += this->data(rhs).count;
