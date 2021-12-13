@@ -193,7 +193,7 @@ public:
     void update_hash(SipHash& hash) const;
 
     /** Get block data in string. */
-    std::string dump_data(size_t row_limit = 100) const;
+    std::string dump_data(size_t begin = 0, size_t row_limit = 100) const;
 
     static Status filter_block(Block* block, int filter_conlumn_id, int column_to_keep);
 
@@ -245,8 +245,9 @@ public:
         return 0;
     }
 
+    doris::Tuple* deep_copy_tuple(const TupleDescriptor&, MemPool*, int, int, bool padding_char = false);
+
 private:
-    doris::Tuple* deep_copy_tuple(const TupleDescriptor&, MemPool*, int, int);
     void erase_impl(size_t position);
     void initialize_index_by_name();
 };

@@ -424,7 +424,7 @@ std::string Block::dump_names() const {
     return out.str();
 }
 
-std::string Block::dump_data(size_t row_limit) const {
+std::string Block::dump_data(size_t begin, size_t row_limit) const {
     if (rows() == 0) {
         return "empty block.";
     }
@@ -454,7 +454,7 @@ std::string Block::dump_data(size_t row_limit) const {
     // header bottom line
     line();
     // content
-    for (size_t row_num = 0; row_num < rows() && row_num < row_limit; ++row_num) {
+    for (size_t row_num = begin; row_num < rows() && row_num < row_limit + begin; ++row_num) {
         for (size_t i = 0; i < columns(); ++i) {
             std::string s = "";
             if (data[i].column) {
@@ -745,7 +745,8 @@ void Block::serialize(RowBatch* output_batch, const RowDescriptor& row_desc) {
     }
 }
 
-doris::Tuple* Block::deep_copy_tuple(const doris::TupleDescriptor& desc, MemPool* pool, int row, int column_offset) {
+doris::Tuple* Block::deep_copy_tuple(const doris::TupleDescriptor& desc, MemPool* pool,
+        int row, int column_offset, bool padding_char) {
     auto dst = reinterpret_cast<doris::Tuple*>(pool->allocate(desc.byte_size()));
 
     for (int i = 0; i < desc.slots().size(); ++i) {
@@ -765,9 +766,18 @@ doris::Tuple* Block::deep_copy_tuple(const doris::TupleDescriptor& desc, MemPool
         } else if (slot_desc->type().is_string_type() && slot_desc->type() != TYPE_OBJECT){
             memcpy((void*)dst->get_slot(slot_desc->tuple_offset()), (const void*)(&data_ref), sizeof(data_ref));
             // Copy the content of string
-            auto str_ptr = pool->allocate(data_ref.size);
-            memcpy(str_ptr, data_ref.data, data_ref.size);
-            dst->get_string_slot(slot_desc->tuple_offset())->ptr = reinterpret_cast<char *>(str_ptr);
+            if (padding_char && slot_desc->type() == TYPE_CHAR) {
+                // serialize the content of string
+                auto string_slot = dst->get_string_slot(slot_desc->tuple_offset());
+                string_slot->ptr = reinterpret_cast<char*>(pool->allocate(slot_desc->type().len));
+                string_slot->len = slot_desc->type().len;
+                memset(string_slot->ptr, 0, slot_desc->type().len);
+                memcpy(string_slot->ptr, data_ref.data, data_ref.size);
+            } else {
+                auto str_ptr = pool->allocate(data_ref.size);
+                memcpy(str_ptr, data_ref.data, data_ref.size);
+                dst->get_string_slot(slot_desc->tuple_offset())->ptr = reinterpret_cast<char *>(str_ptr);
+            }
         } else if (slot_desc->type() == TYPE_OBJECT) {
             auto bitmap_value = (BitmapValue*)(data_ref.data);
             auto size = bitmap_value->getSizeInBytes();
