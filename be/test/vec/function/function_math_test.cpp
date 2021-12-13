@@ -401,6 +401,22 @@ TEST(MathFunctionTest, hex_test) {
     vectorized::check_function<vectorized::DataTypeString, true>(func_name, input_types, data_set);
 }
 
+TEST(MathFunctionTest, random_test) {
+    std::string func_name = "random"; // random(x)
+    std::vector<std::any> input_types = {vectorized::Consted {vectorized::TypeIndex::Int64}};
+    DataSet data_set = {{{Null()}, Null()},
+                        {{(int64_t)0}, 0.15979336337046085},
+                        {{(int64_t)10}, 0.60128310734097479},
+                        {{(int64_t)123}, 0.31320017867847078},
+                        {{(int64_t)std::numeric_limits<int64_t>::max()}, 0.20676730979843233},
+                        {{(int64_t)std::numeric_limits<int64_t>::min()}, 0.15979336337046085}};
+
+    for (const auto& data : data_set) {
+        DataSet data_line = {data};
+        vectorized::check_function<vectorized::DataTypeFloat64, true>(func_name, input_types, data_line);
+     }
+}
+
 } // namespace doris
 
 int main(int argc, char** argv) {
