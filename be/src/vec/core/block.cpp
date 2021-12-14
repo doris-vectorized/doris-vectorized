@@ -759,12 +759,21 @@ doris::Tuple* Block::deep_copy_tuple(const doris::TupleDescriptor& desc, MemPool
 
         if (!slot_desc->type().is_string_type() && !slot_desc->type().is_date_type()) {
             memcpy((void*)dst->get_slot(slot_desc->tuple_offset()), data_ref.data, data_ref.size);
-        } else if (slot_desc->type().is_string_type() ){
+        } else if (slot_desc->type().is_string_type() && slot_desc->type() != TYPE_OBJECT){
             memcpy((void*)dst->get_slot(slot_desc->tuple_offset()), (const void*)(&data_ref), sizeof(data_ref));
             // Copy the content of string
             auto str_ptr = pool->allocate(data_ref.size);
             memcpy(str_ptr, data_ref.data, data_ref.size);
             dst->get_string_slot(slot_desc->tuple_offset())->ptr = reinterpret_cast<char *>(str_ptr);
+        } else if (slot_desc->type() == TYPE_OBJECT) {
+            auto bitmap_value = (BitmapValue*)(data_ref.data);
+            auto size = bitmap_value->getSizeInBytes();
+
+            // serialize the content of string
+            auto string_slot = dst->get_string_slot(slot_desc->tuple_offset());
+            string_slot->ptr = reinterpret_cast<char*>(pool->allocate(size));
+            bitmap_value->write(string_slot->ptr);
+            string_slot->len = size;
         } else {
             VecDateTimeValue ts = *reinterpret_cast<const doris::vectorized::VecDateTimeValue*>(data_ref.data);
             DateTimeValue dt;
