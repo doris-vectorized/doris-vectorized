@@ -287,39 +287,8 @@ public:
 
     DataTypes& data_types() { return _data_types; }
 
-    void merge(Block&& block) {
-        if (_columns.size() == 0 && _data_types.size() == 0) {
-            _data_types = std::move(block.get_data_types());
-            _columns.resize(block.columns());
-            for (size_t i = 0; i < block.columns(); ++i) {
-                if (block.get_by_position(i).column) {
-                    _columns[i] = (*std::move(block.get_by_position(i)
-                                                      .column->convert_to_full_column_if_const()))
-                                          .mutate();
-                } else {
-                    _columns[i] = _data_types[i]->create_column();
-                }
-            }
-        } else {
-            for (int i = 0; i < _columns.size(); ++i) {
-                if (!_data_types[i]->equals(*block.get_by_position(i).type)) {
-                    DCHECK(_data_types[i]->is_nullable());
-                    DCHECK(((DataTypeNullable*)_data_types[i].get())->get_nested_type()
-                        ->equals(*block.get_by_position(i).type));
-                    DCHECK(!block.get_by_position(i).type->is_nullable());
-                    _columns[i]->insert_range_from(
-                        *make_nullable(block.get_by_position(i).column)->convert_to_full_column_if_const(),
-                        0, block.rows());
-                } else {
-                    _columns[i]->insert_range_from(
-                        *block.get_by_position(i).column->convert_to_full_column_if_const().get(),
-                        0, block.rows());
-                }
-            }
-        }
-    }
-
-    void merge(Block& block) {
+    template <typename T>
+    void merge(T&& block) {
         if (_columns.size() == 0 && _data_types.size() == 0) {
             _data_types = block.get_data_types();
             _columns.resize(block.columns());
