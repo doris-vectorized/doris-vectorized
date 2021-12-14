@@ -44,42 +44,17 @@ private:
 
     PredicateColumnType(const PredicateColumnType& src) : data(src.data.begin(), src.data.end()) {}
 
-    void insert_date_to_res_column(const uint16_t* sel, size_t sel_size, MutableColumnPtr res_ptr) {
-        const T* data_pos = data.data();
-        for (size_t i = 0; i < sel_size; i++) {
-            const T val = data_pos[sel[i]];
-            const char* val_ptr = reinterpret_cast<const char*>(&val);
-        
-            uint64_t value = 0;
-            value = *(unsigned char*)(val_ptr + 2);
-            value <<= 8;
-            value |= *(unsigned char*)(val_ptr + 1);
-            value <<= 8;
-            value |= *(unsigned char*)(val_ptr);
-            DateTimeValue date;
-            date.from_olap_date(value);
-        
-            res_ptr->insert_data(reinterpret_cast<char*>(&date), 0);
-        }
+    uint64_t get_date_at(uint16_t idx) {
+        const T val = data[idx];
+        const char* val_ptr = reinterpret_cast<const char*>(&val);
+        uint64_t value = 0;
+        value = *(unsigned char*)(val_ptr + 2);
+        value <<= 8;
+        value |= *(unsigned char*)(val_ptr + 1);
+        value <<= 8;
+        value |= *(unsigned char*)(val_ptr);
+        return value;
     }
-
-    void insert_string_to_res_column(const uint16_t* sel, size_t sel_size, MutableColumnPtr res_ptr) {
-        for (size_t i = 0; i < sel_size; i++) {
-                uint16_t n = sel[i];
-                auto& sv = reinterpret_cast<StringValue&>(data[n]);
-                res_ptr->insert_data(sv.ptr, sv.len);
-        }
-    }
-
-    void insert_decimal_to_res_column(const uint16_t* sel, size_t sel_size, MutableColumnPtr res_ptr) {
-        for (size_t i = 0; i < sel_size; i++) {
-            uint16_t n = sel[i];
-            auto& dv = reinterpret_cast<const decimal12_t&>(data[n]);
-            DecimalV2Value dv_data(dv.integer, dv.fraction);
-            res_ptr->insert_data(reinterpret_cast<char*>(&dv_data), 0);
-        }
-    }
-
 
 public:
     using Self = PredicateColumnType;
@@ -271,12 +246,20 @@ public:
             if (sel_size == 0) {
                 return res;
             }
-            insert_decimal_to_res_column(sel, sel_size, res);
+            for (size_t i = 0; i < sel_size; i++) {
+                auto& dv = reinterpret_cast<const decimal12_t&>(data[sel[i]]);
+                DecimalV2Value dv_data(dv.integer, dv.fraction);
+                res->insert_data(reinterpret_cast<char*>(&dv_data), 0);
+            }
             return res;
         } else {
             if (sel_size != 0) {
                 MutableColumnPtr res_ptr = (*std::move(*ptr)).assume_mutable();
-                insert_decimal_to_res_column(sel, sel_size, res_ptr);
+                for (size_t i = 0; i < sel_size; i++) {
+                    auto& dv = reinterpret_cast<const decimal12_t&>(data[sel[i]]);
+                    DecimalV2Value dv_data(dv.integer, dv.fraction);
+                    res_ptr->insert_data(reinterpret_cast<char*>(&dv_data), 0);
+                }
             }
         }
         return *ptr;
@@ -289,12 +272,20 @@ public:
                 return res;
             }
 
-            insert_date_to_res_column(sel, sel_size, res);
+            for (size_t i = 0; i < sel_size; i++) {
+                DateTimeValue date;
+                date.from_olap_date(get_date_at(sel[i]));
+                res->insert_data(reinterpret_cast<char*>(&date), 0);
+            }
             return res;
         } else {
             if (sel_size != 0) {
                 MutableColumnPtr res_ptr = (*std::move(*ptr)).assume_mutable();
-                insert_date_to_res_column(sel, sel_size, res_ptr);
+                for (size_t i = 0; i < sel_size; i++) {
+                    DateTimeValue date;
+                    date.from_olap_date(get_date_at(sel[i]));
+                    res_ptr->insert_data(reinterpret_cast<char*>(&date), 0);
+                }
             }
         }
         return *ptr;
@@ -307,12 +298,20 @@ public:
                 return res;
             }
             res->reserve(sel_size);
-            insert_string_to_res_column(sel, sel_size, res);
+            for (size_t i = 0; i < sel_size; i++) {
+                uint16_t n = sel[i];
+                auto& sv = reinterpret_cast<StringValue&>(data[n]);
+                res->insert_data(sv.ptr, sv.len);
+            }
             return res;
         } else {
             if (sel_size != 0) {
                 MutableColumnPtr ptr_res = (*std::move(*ptr)).assume_mutable();
-                insert_string_to_res_column(sel, sel_size, ptr_res);
+                for (size_t i = 0; i < sel_size; i++) {
+                    uint16_t n = sel[i];
+                    auto& sv = reinterpret_cast<StringValue&>(data[n]);
+                    ptr_res->insert_data(sv.ptr, sv.len);
+                }
             }
         }
         return *ptr;
