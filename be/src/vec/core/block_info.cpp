@@ -14,6 +14,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+// This file is copied from
+// https://github.com/ClickHouse/ClickHouse/src/Core/BlockInfo.cpp
+// and modified by Doris
 
 #include "vec/core/block_info.h"
 

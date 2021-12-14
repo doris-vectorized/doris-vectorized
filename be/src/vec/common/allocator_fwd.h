@@ -14,6 +14,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+// This file is copied from
+// https://github.com/ClickHouse/ClickHouse/src/Common/Allocator_fwd.h
+// and modified by Doris
 
 /**
   * This file provides forward declarations for Allocator.

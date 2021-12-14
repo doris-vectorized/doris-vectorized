@@ -14,6 +14,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+// This file is copied from
+// https://github.com/ClickHouse/ClickHouse/src/Columns/ColumnNullable.cpp
+// and modified by Doris
 
 #include "vec/columns/column_nullable.h"
 
