@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Functions/divide.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Functions/divide.cpp
 // and modified by Doris
 
 

@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Commom/StringUtils/StringUtils.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Commom/StringUtils/StringUtils.cpp
 // and modified by Doris
 
 #include "vec/common/string_utils/string_utils.h"

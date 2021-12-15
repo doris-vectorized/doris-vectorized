@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/AggregateFunctions/IColumnImpl.h
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/AggregateFunctions/IColumnImpl.h
 // and modified by Doris
 
 /**

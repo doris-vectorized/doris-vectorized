@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/DataStreams/materializeBlock.h
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/DataStreams/materializeBlock.h
 // and modified by Doris
 
 #pragma once

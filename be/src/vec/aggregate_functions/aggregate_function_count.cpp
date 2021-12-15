@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/AggregateFunctions/AggregateFunctionCount.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/AggregateFunctions/AggregateFunctionCount.cpp
 // and modified by Doris
 
 #include "vec/aggregate_functions/aggregate_function_count.h"

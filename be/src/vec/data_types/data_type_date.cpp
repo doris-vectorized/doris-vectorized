@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/DataTypes/DataTypeDate.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/DataTypes/DataTypeDate.cpp
 // and modified by Doris
 
 #include "vec/data_types/data_type_date.h"

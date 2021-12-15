@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/DataStreams/materializeBlock.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/DataStreams/materializeBlock.cpp
 // and modified by Doris
 
 #include "vec/core/materialize_block.h"

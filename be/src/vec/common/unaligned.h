@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/libs/libcommon/include/common/unaligned.h
+// https://github.com/ClickHouse/ClickHouse/blob/master/base/base/unaligned.h
 // and modified by Doris
 
 #pragma once

@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Functions/FunctionsConversion.h
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Functions/FunctionsConversion.h
 // and modified by Doris
 
 #pragma once

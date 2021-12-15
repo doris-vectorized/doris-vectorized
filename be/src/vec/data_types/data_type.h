@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/DataTypes/IDataType.h
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/DataTypes/IDataType.h
 // and modified by Doris
 
 #pragma once

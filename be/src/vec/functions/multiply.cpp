@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Functions/Multiply.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Functions/Multiply.cpp
 // and modified by Doris
 
 #include "vec/common/arithmetic_overflow.h"

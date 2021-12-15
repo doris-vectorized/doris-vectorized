@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Functions/Modulo.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Functions/Modulo.cpp
 // and modified by Doris
 
 #ifdef __SSE2__

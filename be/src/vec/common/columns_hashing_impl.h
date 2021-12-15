@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Common/ColumnsHashingImpl.h
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/ColumnsHashingImpl.h
 // and modified by Doris
 
 #pragma once

@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Columns/ColumnConst.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Columns/ColumnConst.cpp
 // and modified by Doris
 
 #include "vec/columns/column_const.h"

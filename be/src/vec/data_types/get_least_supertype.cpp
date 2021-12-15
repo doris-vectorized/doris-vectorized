@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/DataTypes/getLeastSupertype.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/DataTypes/getLeastSupertype.cpp
 // and modified by Doris
 
 #include "vec/data_types/get_least_supertype.h"

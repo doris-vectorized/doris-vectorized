@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Common/Exception.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/Exception.cpp
 // and modified by Doris
 
 #include "vec/common/exception.h"

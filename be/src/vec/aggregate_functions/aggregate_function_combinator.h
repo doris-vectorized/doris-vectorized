@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/AggregateFunctions/IAggregateFunctionCombinator.h
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/AggregateFunctions/IAggregateFunctionCombinator.h
 // and modified by Doris
 
 #pragma once

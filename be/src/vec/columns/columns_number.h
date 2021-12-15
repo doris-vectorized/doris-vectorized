@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Columns/ColumnsNumber.h
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Columns/ColumnsNumber.h
 // and modified by Doris
 
 #pragma once

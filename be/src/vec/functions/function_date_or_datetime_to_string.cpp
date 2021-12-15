@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Functions/FunctionDateOrDatetimeToString.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Functions/FunctionDateOrDatetimeToString.cpp
 // and modified by Doris
 
 #include "vec/functions/function_date_or_datetime_to_string.h"

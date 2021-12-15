@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Common/BitHelpers.h
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/BitHelpers.h
 // and modified by Doris
 
 #pragma once

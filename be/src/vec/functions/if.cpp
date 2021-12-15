@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Functions/If.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Functions/If.cpp
 // and modified by Doris
 
 #include "vec/columns/column_nullable.h"

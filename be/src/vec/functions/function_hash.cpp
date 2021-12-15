@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Functions/FunctionHash.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Functions/FunctionHash.cpp
 // and modified by Doris
 
 #include "vec/functions/function_hash.h"

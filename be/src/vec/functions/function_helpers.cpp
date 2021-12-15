@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Functions/FunctionHelpers.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Functions/FunctionHelpers.cpp
 // and modified by Doris
 
 #include "vec/functions/function_helpers.h"

@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/libs/libcommon/src/demangle.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/base/base/demangle.cpp
 // and modified by Doris
 
 #include "vec/common/demangle.h"

@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Functions/Ifnull.cpp
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Functions/Ifnull.cpp
 // and modified by Doris
 
 #include "function_ifnull.h"

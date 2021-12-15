@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/src/Core/BlockInfo.h
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Core/BlockInfo.h
 // and modified by Doris
 
 #pragma once
