@@ -54,25 +54,19 @@ public:
     virtual Status evaluate(const Schema& schema,
                             const std::vector<BitmapIndexIterator*>& iterators, uint32_t num_rows,
                             roaring::Roaring* roaring) const = 0;
-    
+
     // evaluate predicate on IColumn
     // a short circuit eval way
     virtual void evaluate(vectorized::IColumn& column, uint16_t* sel, uint16_t* size) const {};
-    virtual void evaluate_and(vectorized::IColumn& column, uint16_t* sel, uint16_t size, bool* flags) const {};
-    virtual void evaluate_or(vectorized::IColumn& column, uint16_t* sel, uint16_t size, bool* flags) const {};
-    
+    virtual void evaluate_and(vectorized::IColumn& column, uint16_t* sel, uint16_t size,
+                              bool* flags) const {};
+    virtual void evaluate_or(vectorized::IColumn& column, uint16_t* sel, uint16_t size,
+                             bool* flags) const {};
+
     // used to evaluate pre read column in lazy matertialization
     // now only support integer/float
     // a vectorized eval way
     virtual void evaluate_vec(vectorized::IColumn& column, uint16_t size, bool* flags) const {};
-
-    // evaluate predicate on vectorized::IColumn
-    virtual void evaluate(vectorized::IColumn& column, uint16_t* sel, uint16_t* size) const = 0;
-    virtual void evaluate_or(vectorized::IColumn& column, uint16_t* sel, uint16_t size,
-                             bool* flags) const = 0;
-    virtual void evaluate_and(vectorized::IColumn& column, uint16_t* sel, uint16_t size,
-                              bool* flags) const = 0;
-
     uint32_t column_id() const { return _column_id; }
 
 protected:
