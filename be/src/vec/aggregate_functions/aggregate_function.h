@@ -125,15 +125,21 @@ public:
       *  and do a single call to "add_batch" for devirtualization and inlining.
       */
     virtual void add_batch(size_t batch_size, AggregateDataPtr* places, size_t place_offset,
-                          const IColumn** columns, Arena* arena) const = 0;
+                           const IColumn** columns, Arena* arena) const = 0;
 
     /** The same for single place.
       */
     virtual void add_batch_single_place(size_t batch_size, AggregateDataPtr place,
-                                     const IColumn** columns, Arena* arena) const = 0;
+                                        const IColumn** columns, Arena* arena) const = 0;
 
-    virtual void add_range_single_place(int64_t frame_start, int64_t frame_end, AggregateDataPtr place,
-                                     const IColumn** columns, Arena* arena, int64_t end=0) const = 0;
+    // only used at agg reader
+    virtual void add_batch_range(size_t batch_begin, size_t batch_end, AggregateDataPtr place,
+                                 const IColumn** columns, Arena* arena, bool has_null = false) = 0;
+
+    // only used at window function
+    virtual void add_range_single_place(int64_t frame_start, int64_t frame_end,
+                                        AggregateDataPtr place, const IColumn** columns,
+                                        Arena* arena, int64_t end = 0) const = 0;
 
     /** This is used for runtime code generation to determine, which header files to include in generated source.
       * Always implement it as
@@ -154,7 +160,7 @@ template <typename Derived>
 class IAggregateFunctionHelper : public IAggregateFunction {
 private:
     static void add_free(const IAggregateFunction* that, AggregateDataPtr place,
-                        const IColumn** columns, size_t row_num, Arena* arena) {
+                         const IColumn** columns, size_t row_num, Arena* arena) {
         static_cast<const Derived&>(*that).add(place, columns, row_num, arena);
     }
 
@@ -165,22 +171,28 @@ public:
     AddFunc get_address_of_add_function() const override { return &add_free; }
 
     void add_batch(size_t batch_size, AggregateDataPtr* places, size_t place_offset,
-                  const IColumn** columns, Arena* arena) const override {
+                   const IColumn** columns, Arena* arena) const override {
         for (size_t i = 0; i < batch_size; ++i)
             static_cast<const Derived*>(this)->add(places[i] + place_offset, columns, i, arena);
     }
 
     void add_batch_single_place(size_t batch_size, AggregateDataPtr place, const IColumn** columns,
-                             Arena* arena) const override {
+                                Arena* arena) const override {
         for (size_t i = 0; i < batch_size; ++i)
             static_cast<const Derived*>(this)->add(place, columns, i, arena);
     }
 
     void add_range_single_place(int64_t frame_start, int64_t frame_end, AggregateDataPtr place,
-                                const IColumn** columns, Arena* arena,int64_t end) const override {
+                                const IColumn** columns, Arena* arena, int64_t end) const override {
         for (int64_t i = frame_start; i < frame_end; ++i) {
             static_cast<const Derived*>(this)->add(place, columns, i, arena);
         }
+    }
+
+    void add_batch_range(size_t batch_begin, size_t batch_end, AggregateDataPtr place,
+                         const IColumn** columns, Arena* arena, bool has_null) override {
+        for (size_t i = batch_begin; i <= batch_end; ++i)
+            static_cast<const Derived*>(this)->add(place, columns, i, arena);
     }
 };
 

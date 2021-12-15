@@ -18,10 +18,9 @@
 #pragma once
 
 #include "common/logging.h"
-
 #include "vec/aggregate_functions/aggregate_function.h"
-#include "vec/columns/column_vector.h"
 #include "vec/columns/column_decimal.h"
+#include "vec/columns/column_vector.h"
 #include "vec/common/assert_cast.h"
 #include "vec/io/io_helper.h"
 
@@ -148,7 +147,8 @@ struct SingleValueDataFixed<DecimalV2Value> {
 private:
     using Self = SingleValueDataFixed;
 
-    bool has_value = false; /// We need to remember if at least one value has been passed. This is necessary for AggregateFunctionIf.
+    bool has_value =
+            false; /// We need to remember if at least one value has been passed. This is necessary for AggregateFunctionIf.
     int128_t value;
 
 public:
@@ -157,9 +157,8 @@ public:
     void insert_result_into(IColumn& to) const {
         if (has()) {
             DecimalV2Value decimal(value);
-            assert_cast<ColumnDecimal<Decimal128> &>(to).insert_data((const char *) &decimal, 0);
-        }
-        else
+            assert_cast<ColumnDecimal<Decimal128>&>(to).insert_data((const char*)&decimal, 0);
+        } else
             assert_cast<ColumnDecimal<Decimal128>&>(to).insert_default();
     }
 
@@ -220,7 +219,8 @@ public:
     }
 
     bool change_if_less(const IColumn& column, size_t row_num, Arena* arena) {
-        if (!has() || assert_cast<const ColumnDecimal<Decimal128>&>(column).get_data()[row_num] < value) {
+        if (!has() ||
+            assert_cast<const ColumnDecimal<Decimal128>&>(column).get_data()[row_num] < value) {
             change(column, row_num, arena);
             return true;
         } else
@@ -236,7 +236,8 @@ public:
     }
 
     bool change_if_greater(const IColumn& column, size_t row_num, Arena* arena) {
-        if (!has() || assert_cast<const ColumnDecimal<Decimal128>&>(column).get_data()[row_num] > value) {
+        if (!has() ||
+            assert_cast<const ColumnDecimal<Decimal128>&>(column).get_data()[row_num] > value) {
             change(column, row_num, arena);
             return true;
         } else
@@ -254,7 +255,8 @@ public:
     bool is_equal_to(const Self& to) const { return has() && to.value == value; }
 
     bool is_equal_to(const IColumn& column, size_t row_num) const {
-        return has() && assert_cast<const ColumnDecimal<Decimal128>&>(column).get_data()[row_num] == value;
+        return has() &&
+               assert_cast<const ColumnDecimal<Decimal128>&>(column).get_data()[row_num] == value;
     }
 };
 
@@ -278,9 +280,7 @@ private:
     char small_data[MAX_SMALL_STRING_SIZE]; /// Including the terminating zero.
 
 public:
-    ~SingleValueDataString() {
-        delete large_data;
-    }
+    ~SingleValueDataString() { delete large_data; }
 
     bool has() const { return size >= 0; }
 
@@ -288,9 +288,9 @@ public:
 
     void insert_result_into(IColumn& to) const {
         if (has())
-            assert_cast<ColumnString &>(to).insert_data(get_data(), size);
+            assert_cast<ColumnString&>(to).insert_data(get_data(), size);
         else
-            assert_cast<ColumnString &>(to).insert_default();
+            assert_cast<ColumnString&>(to).insert_default();
     }
 
     void reset() {
@@ -311,21 +311,15 @@ public:
         Int32 rhs_size;
         read_binary(rhs_size, buf);
 
-        if (rhs_size >= 0)
-        {
-            if (rhs_size <= MAX_SMALL_STRING_SIZE)
-            {
+        if (rhs_size >= 0) {
+            if (rhs_size <= MAX_SMALL_STRING_SIZE) {
                 /// Don't free large_data here.
 
                 size = rhs_size;
 
-                if (size > 0)
-                    buf.read(small_data, size);
-            }
-            else
-            {
-                if (capacity < rhs_size)
-                {
+                if (size > 0) buf.read(small_data, size);
+            } else {
+                if (capacity < rhs_size) {
                     capacity = static_cast<UInt32>(round_up_to_power_of_two_or_zero(rhs_size));
                     delete large_data;
                     large_data = new char[capacity];
@@ -334,9 +328,7 @@ public:
                 size = rhs_size;
                 buf.read(large_data, size);
             }
-        }
-        else
-        {
+        } else {
             /// Don't free large_data here.
             size = rhs_size;
         }
@@ -348,18 +340,15 @@ public:
     void change_impl(StringRef value, Arena* arena) {
         Int32 value_size = value.size;
 
-        if (value_size <= MAX_SMALL_STRING_SIZE)
-        {
+        if (value_size <= MAX_SMALL_STRING_SIZE) {
             /// Don't free large_data here.
             size = value_size;
 
-            if (size > 0)
+            if (size > 0) {
                 memcpy(small_data, value.data, size);
-        }
-        else
-        {
-            if (capacity < value_size)
-            {
+            }
+        } else {
+            if (capacity < value_size) {
                 /// Don't free large_data here.
                 capacity = round_up_to_power_of_two_or_zero(value_size);
                 delete large_data;
@@ -372,28 +361,26 @@ public:
     }
 
     void change(const IColumn& column, size_t row_num, Arena* arena) {
-        change_impl(assert_cast<const ColumnString &>(column).get_data_at(row_num), arena);
+        change_impl(assert_cast<const ColumnString&>(column).get_data_at(row_num), arena);
     }
 
     void change(const Self& to, Arena* arena) { change_impl(to.get_string_ref(), arena); }
 
     bool change_if_less(const IColumn& column, size_t row_num, Arena* arena) {
-        if (!has() || assert_cast<const ColumnString &>(column).get_data_at(row_num) < get_string_ref())
-        {
+        if (!has() ||
+            assert_cast<const ColumnString&>(column).get_data_at(row_num) < get_string_ref()) {
             change(column, row_num, arena);
             return true;
-        }
-        else
+        } else
             return false;
     }
 
     bool change_if_greater(const IColumn& column, size_t row_num, Arena* arena) {
-        if (!has() || assert_cast<const ColumnString &>(column).get_data_at(row_num) > get_string_ref())
-        {
+        if (!has() ||
+            assert_cast<const ColumnString&>(column).get_data_at(row_num) > get_string_ref()) {
             change(column, row_num, arena);
             return true;
-        }
-        else
+        } else
             return false;
     }
 
@@ -448,7 +435,6 @@ public:
 
     bool is_equal_to(const IColumn& column, size_t row_num) const { return false; }
 };
-
 
 template <typename Data>
 struct AggregateFunctionMaxData : Data {
@@ -559,5 +545,15 @@ public:
 
     const char* get_header_file_path() const override { return __FILE__; }
 };
+
+AggregateFunctionPtr create_aggregate_function_max(const std::string& name,
+                                                   const DataTypes& argument_types,
+                                                   const Array& parameters,
+                                                   const bool result_is_nullable);
+
+AggregateFunctionPtr create_aggregate_function_min(const std::string& name,
+                                                   const DataTypes& argument_types,
+                                                   const Array& parameters,
+                                                   const bool result_is_nullable);
 
 } // namespace doris::vectorized

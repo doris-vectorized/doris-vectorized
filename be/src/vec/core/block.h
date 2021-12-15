@@ -179,13 +179,9 @@ public:
     void swap(Block&& other) noexcept;
     void clear_column_data() noexcept;
 
-    bool mem_reuse() {
-        return !data.empty();
-    }
+    bool mem_reuse() { return !data.empty(); }
 
-    bool is_empty_column() {
-        return data.empty();
-    }
+    bool is_empty_column() { return data.empty(); }
 
     /** Updates SipHash of the Block, using update method of columns.
       * Returns hash for block, that could be used to differentiate blocks
@@ -199,7 +195,9 @@ public:
     static Status filter_block(Block* block, int filter_conlumn_id, int column_to_keep);
 
     static inline void erase_useless_column(Block* block, int column_to_keep) {
-        for (size_t i = block->columns() - 1; i >= column_to_keep; --i) { block->erase(i); }
+        for (size_t i = block->columns() - 1; i >= column_to_keep; --i) {
+            block->erase(i);
+        }
     }
 
     // serialize block to PBlock
@@ -226,7 +224,8 @@ public:
         return compare_at(n, m, columns(), rhs, nan_direction_hint);
     }
 
-    int compare_at(size_t n, size_t m, size_t num_columns, const Block& rhs, int nan_direction_hint) const {
+    int compare_at(size_t n, size_t m, size_t num_columns, const Block& rhs,
+                   int nan_direction_hint) const {
         DCHECK_GE(columns(), num_columns);
         DCHECK_GE(rhs.columns(), num_columns);
 
@@ -242,7 +241,6 @@ public:
         }
         return 0;
     }
-
 
 private:
     doris::Tuple* deep_copy_tuple(const TupleDescriptor&, MemPool*, int, int);
@@ -281,9 +279,7 @@ public:
 
     MutableColumns& mutable_columns() { return _columns; }
 
-    void set_muatable_columns(MutableColumns&& columns) {
-        _columns = std::move(columns);
-    }
+    void set_muatable_columns(MutableColumns&& columns) { _columns = std::move(columns); }
 
     DataTypes& data_types() { return _data_types; }
 
@@ -305,16 +301,19 @@ public:
             for (int i = 0; i < _columns.size(); ++i) {
                 if (!_data_types[i]->equals(*block.get_by_position(i).type)) {
                     DCHECK(_data_types[i]->is_nullable());
-                    DCHECK(((DataTypeNullable*)_data_types[i].get())->get_nested_type()
-                        ->equals(*block.get_by_position(i).type));
+                    DCHECK(((DataTypeNullable*)_data_types[i].get())
+                                   ->get_nested_type()
+                                   ->equals(*block.get_by_position(i).type));
                     DCHECK(!block.get_by_position(i).type->is_nullable());
-                    _columns[i]->insert_range_from(
-                        *make_nullable(block.get_by_position(i).column)->convert_to_full_column_if_const(),
-                        0, block.rows());
+                    _columns[i]->insert_range_from(*make_nullable(block.get_by_position(i).column)
+                                                            ->convert_to_full_column_if_const(),
+                                                   0, block.rows());
                 } else {
                     _columns[i]->insert_range_from(
-                        *block.get_by_position(i).column->convert_to_full_column_if_const().get(),
-                        0, block.rows());
+                            *block.get_by_position(i)
+                                     .column->convert_to_full_column_if_const()
+                                     .get(),
+                            0, block.rows());
                 }
             }
         }

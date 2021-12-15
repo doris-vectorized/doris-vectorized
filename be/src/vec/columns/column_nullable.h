@@ -94,7 +94,8 @@ public:
 
     void pop_back(size_t n) override;
     ColumnPtr filter(const Filter& filt, ssize_t result_size_hint) const override;
-    ColumnPtr filter_by_selector(const uint16_t* sel, size_t sel_size, ColumnPtr* ptr = nullptr) override;
+    ColumnPtr filter_by_selector(const uint16_t* sel, size_t sel_size,
+                                 ColumnPtr* ptr = nullptr) override;
     ColumnPtr permute(const Permutation& perm, size_t limit) const override;
     //    ColumnPtr index(const IColumn & indexes, size_t limit) const override;
     int compare_at(size_t n, size_t m, const IColumn& rhs_, int null_direction_hint) const override;
@@ -128,6 +129,7 @@ public:
 
     bool is_nullable() const override { return true; }
     bool is_column_decimal() const override { return get_nested_column().is_column_decimal(); }
+    bool is_column_string() const override { return get_nested_column().is_column_string(); }
     bool is_fixed_and_contiguous() const override { return false; }
     bool values_have_fixed_size() const override { return nested_column->values_have_fixed_size(); }
     size_t size_of_value_if_fixed() const override {
@@ -171,7 +173,7 @@ public:
     /// Check that size of null map equals to size of nested column.
     void check_consistency() const;
 
-    bool has_null() const {
+    bool has_null() const override {
         size_t size = get_null_map_data().size();
         const UInt8* null_pos = get_null_map_data().data();
         const UInt8* null_pos_end = get_null_map_data().data() + size;
@@ -204,14 +206,14 @@ public:
         return false;
     }
 
-    void replace_column_data(const IColumn& rhs, size_t row) override {
-        DCHECK(size() == 1);
+    void replace_column_data(const IColumn& rhs, size_t row, size_t self_row = 0) override {
+        DCHECK(size() > 1);
         const ColumnNullable& nullable_rhs = assert_cast<const ColumnNullable&>(rhs);
-        null_map->replace_column_data(*nullable_rhs.null_map, row);
+        null_map->replace_column_data(*nullable_rhs.null_map, row, self_row);
 
-        bool rval_is_null = nullable_rhs.is_null_at(row);
-        if (!rval_is_null)
-            nested_column->replace_column_data(*nullable_rhs.nested_column, row);
+        if (!nullable_rhs.is_null_at(row)) {
+            nested_column->replace_column_data(*nullable_rhs.nested_column, row, self_row);
+        }
     }
 
 private:

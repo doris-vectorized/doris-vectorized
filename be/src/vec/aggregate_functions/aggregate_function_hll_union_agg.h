@@ -34,7 +34,7 @@
 namespace doris::vectorized {
 
 struct AggregateFunctionHLLData {
-    doris::HyperLogLog dst_hll{};
+    HyperLogLog dst_hll {};
 
     void add(const StringRef& src) { dst_hll.merge(HyperLogLog(Slice(src.data, src.size))); }
 
@@ -76,7 +76,9 @@ public:
     AggregateFunctionHLLUnionAgg(const IDataType& data_type, const DataTypes& argument_types_)
             : IAggregateFunctionDataHelper(argument_types_, {}) {}
 
-    virtual DataTypePtr get_return_type() const override { return std::make_shared<DataTypeInt64>(); }
+    virtual DataTypePtr get_return_type() const override {
+        return std::make_shared<DataTypeInt64>();
+    }
 
     void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
              Arena*) const override {
@@ -109,7 +111,7 @@ public:
     String get_name() const override { return "hll_union"; }
 
     AggregateFunctionHLLUnion(const DataTypes& argument_types_)
-            : AggregateFunctionHLLUnionAgg{argument_types_} {}
+            : AggregateFunctionHLLUnionAgg {argument_types_} {}
 
     AggregateFunctionHLLUnion(const IDataType& data_type, const DataTypes& argument_types_)
             : AggregateFunctionHLLUnionAgg(data_type, argument_types_) {}
@@ -122,5 +124,10 @@ public:
         column.insert_data(result.c_str(), result.length());
     }
 };
+
+AggregateFunctionPtr create_aggregate_function_HLL_union(const std::string& name,
+                                                         const DataTypes& argument_types,
+                                                         const Array& parameters,
+                                                         const bool result_is_nullable);
 
 } // namespace doris::vectorized

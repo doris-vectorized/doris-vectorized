@@ -87,9 +87,7 @@ public:
 
     void insert_from(const IColumn&, size_t) override { ++s; }
 
-    void clear() override {
-        s = 0;
-    }
+    void clear() override { s = 0; }
 
     void insert_default() override { ++s; }
 
@@ -117,9 +115,7 @@ public:
     void get_permutation(bool reverse, size_t limit, int nan_direction_hint,
                          Permutation& res) const override;
 
-    size_t byte_size() const override {
-        return s > 0 ? data->byte_size() + sizeof(s) : 0;
-    }
+    size_t byte_size() const override { return s > 0 ? data->byte_size() + sizeof(s) : 0; }
 
     size_t allocated_bytes() const override { return data->allocated_bytes() + sizeof(s); }
 
@@ -161,9 +157,9 @@ public:
         return get_field().safe_get<NearestFieldType<T>>();
     }
 
-    void replace_column_data(const IColumn& rhs, size_t row) override {
-        DCHECK(size() == 1);
-        data->replace_column_data(rhs, row);
+    void replace_column_data(const IColumn& rhs, size_t row, size_t self_row = 0) override {
+        DCHECK(size() > self_row);
+        data->replace_column_data(rhs, row, self_row);
     }
 };
 

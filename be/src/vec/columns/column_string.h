@@ -139,7 +139,7 @@ public:
 
             chars.resize(new_size);
             memcpy_small_allow_read_write_overflow15(chars.data() + old_size, &src.chars[offset],
-                                                size_to_append);
+                                                     size_to_append);
             offsets.push_back(new_size);
         }
     }
@@ -199,21 +199,23 @@ public:
     }
 
     int compare_at(size_t n, size_t m, const IColumn& rhs_,
-                  int /*nan_direction_hint*/) const override {
+                   int /*nan_direction_hint*/) const override {
         const ColumnString& rhs = assert_cast<const ColumnString&>(rhs_);
         return memcmp_small_allow_overflow15(chars.data() + offset_at(n), size_at(n) - 1,
-                                          rhs.chars.data() + rhs.offset_at(m), rhs.size_at(m) - 1);
+                                             rhs.chars.data() + rhs.offset_at(m),
+                                             rhs.size_at(m) - 1);
     }
 
     /// Variant of compare_at for string comparison with respect of collation.
     int compare_at_with_collation(size_t n, size_t m, const IColumn& rhs_,
-                               const Collator& collator) const;
+                                  const Collator& collator) const;
 
-    void get_permutation(bool reverse, size_t limit, int nan_direction_hint, Permutation & res) const override;
+    void get_permutation(bool reverse, size_t limit, int nan_direction_hint,
+                         Permutation& res) const override;
 
     /// Sorting with respect of collation.
     void get_permutation_with_collation(const Collator& collator, bool reverse, size_t limit,
-                                     Permutation& res) const;
+                                        Permutation& res) const;
 
     ColumnPtr replicate(const Offsets& replicate_offsets) const override;
 
@@ -231,6 +233,8 @@ public:
 
     bool can_be_inside_nullable() const override { return true; }
 
+    bool is_column_string() const override { return true; }
+
     bool structure_equals(const IColumn& rhs) const override {
         return typeid(rhs) == typeid(ColumnString);
     }
@@ -246,13 +250,18 @@ public:
         offsets.clear();
     }
 
-    void replace_column_data(const IColumn& rhs, size_t row) override {
-        DCHECK(size() == 1);
+    void replace_column_data(const IColumn& rhs, size_t row, size_t self_row = 0) override {
+        DCHECK(size() > self_row);
         const auto& r = assert_cast<const ColumnString&>(rhs);
         auto data = r.get_data_at(row);
 
-        offsets[0] = data.size + 1;
-        chars.clear();
+        if (!self_row) {
+            chars.clear();
+            offsets[self_row] = data.size + 1;
+        } else {
+            offsets[self_row] = offsets[self_row - 1] + data.size + 1;
+        }
+
         chars.insert(data.data, data.data + data.size);
         chars.emplace_back('\0');
     }
