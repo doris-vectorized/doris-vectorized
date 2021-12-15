@@ -164,6 +164,11 @@ public:
         DCHECK(size() > self_row);
         data->replace_column_data(rhs, row, self_row);
     }
+
+    void replace_column_data_default(size_t self_row = 0) override {
+        DCHECK(size() > self_row);
+        LOG(FATAL) << "should not call the method in column const";
+    }
 };
 
 } // namespace doris::vectorized

@@ -163,6 +163,11 @@ public:
         data[self_row] = static_cast<const Self&>(rhs).data[row];
     }
 
+    void replace_column_data_default(size_t self_row = 0) override {
+        DCHECK(size() > self_row);
+        data[self_row] = T();
+    }
+
 protected:
     Container data;
     UInt32 scale;

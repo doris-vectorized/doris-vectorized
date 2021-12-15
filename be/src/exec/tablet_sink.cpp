@@ -798,7 +798,7 @@ Status OlapTableSink::send(RuntimeState* state, RowBatch* input_batch) {
         batch = _output_batch.get();
     }
     int num_invalid_rows = 0;
-    if (_need_validate_data) {
+    {
         SCOPED_RAW_TIMER(&_validate_data_ns);
         _filter_bitmap.Reset(batch->num_rows());
         num_invalid_rows = _validate_data(state, batch, &_filter_bitmap);

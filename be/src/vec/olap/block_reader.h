@@ -106,7 +106,9 @@ private:
     std::unique_ptr<Block> _stored_data_block;
     MutableColumns _stored_data_columns;
     std::vector<IteratorRowRef> _stored_row_ref;
+
     std::vector<bool> _stored_has_null_tag;
+    std::vector<bool> _stored_has_string_tag;
 
     bool _eof = false;
 

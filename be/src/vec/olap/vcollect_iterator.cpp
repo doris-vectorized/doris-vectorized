@@ -190,11 +190,12 @@ OLAPStatus VCollectIterator::Level0Iterator::_refresh_current_row() {
             }
         }
     } while (_block.rows() != 0);
+    _ref.row_pos = -1;
     return OLAP_ERR_DATA_EOF;
 }
 
 OLAPStatus VCollectIterator::Level0Iterator::next(IteratorRowRef* ref) {
-    ++_ref.row_pos;
+    _ref.row_pos++;
     RETURN_NOT_OK(_refresh_current_row());
 
     *ref = _ref;
@@ -232,6 +233,7 @@ VCollectIterator::Level1Iterator::~Level1Iterator() {
 //      Others when error happens
 OLAPStatus VCollectIterator::Level1Iterator::next(IteratorRowRef* ref) {
     if (UNLIKELY(_cur_child == nullptr)) {
+        _ref.row_pos = -1;
         return OLAP_ERR_DATA_EOF;
     }
     if (_merge) {
@@ -305,6 +307,7 @@ OLAPStatus VCollectIterator::Level1Iterator::_merge_next(IteratorRowRef* ref) {
             _cur_child = _heap->top();
         } else {
             _cur_child = nullptr;
+            _ref.row_pos = -1;
             return OLAP_ERR_DATA_EOF;
         }
     } else {
@@ -319,13 +322,14 @@ OLAPStatus VCollectIterator::Level1Iterator::_merge_next(IteratorRowRef* ref) {
         return _merge_next(ref);
     }
 
-    _ref = *ref = *_cur_child->current_row_ref();
+    *ref = _ref = *_cur_child->current_row_ref();
     return OLAP_SUCCESS;
 }
 
 OLAPStatus VCollectIterator::Level1Iterator::_normal_next(IteratorRowRef* ref) {
     auto res = _cur_child->next(ref);
     if (LIKELY(res == OLAP_SUCCESS)) {
+        _ref = *ref;
         return OLAP_SUCCESS;
     } else if (res == OLAP_ERR_DATA_EOF) {
         // current child has been read, to read next
@@ -333,7 +337,9 @@ OLAPStatus VCollectIterator::Level1Iterator::_normal_next(IteratorRowRef* ref) {
         _children.pop_front();
         if (!_children.empty()) {
             _cur_child = *(_children.begin());
-            return _cur_child->next(ref);
+            auto result = _cur_child->next(ref);
+            _ref = *ref;
+            return result;
         } else {
             _cur_child = nullptr;
             return OLAP_ERR_DATA_EOF;

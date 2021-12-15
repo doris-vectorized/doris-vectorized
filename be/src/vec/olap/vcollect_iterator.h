@@ -89,9 +89,8 @@ private:
 
         const TabletSchema& tablet_schema() const { return _schema; };
 
-        const TabletSchema& _schema;
-
     protected:
+        const TabletSchema& _schema;
         IteratorRowRef _ref;
     };
 
