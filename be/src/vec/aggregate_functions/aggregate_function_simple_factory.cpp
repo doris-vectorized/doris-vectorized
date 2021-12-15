@@ -17,6 +17,8 @@
 
 #include "vec/aggregate_functions/aggregate_function_simple_factory.h"
 
+#include "vec/aggregate_functions/aggregate_function_reader.h"
+
 namespace doris::vectorized {
 class AggregateFunctionSimpleFactory;
 void register_aggregate_function_sum(AggregateFunctionSimpleFactory& factory);
@@ -42,8 +44,10 @@ AggregateFunctionSimpleFactory& AggregateFunctionSimpleFactory::instance() {
         register_aggregate_function_bitmap(instance);
         register_aggregate_function_combinator_distinct(instance);
         register_aggregate_function_HLL_union_agg(instance);
-        register_aggregate_function_window_rank(instance);      //if you only register function with no nullable,
-        register_aggregate_function_combinator_null(instance);  //and wants to add nullable automatically, you should place function above this line
+        register_aggregate_function_reader(instance); // register aggregate function for agg reader
+        register_aggregate_function_window_rank(instance);
+        register_aggregate_function_combinator_null(
+                instance); // if you only register function with no nullable, and wants to add nullable automatically, you should place function above this line
         register_aggregate_function_window_lead_lag(instance);
     });
     return instance;

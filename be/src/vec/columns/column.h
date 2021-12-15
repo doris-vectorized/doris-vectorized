@@ -330,6 +330,9 @@ public:
     /// True if column contains something nullable inside. It's true for ColumnNullable, can be true or false for ColumnConst, etc.
     virtual bool is_nullable() const { return false; }
 
+    // true iff column has null element
+    virtual bool has_null() const { return false; }
+
     /// It's a special kind of column, that contain single value, but is not a ColumnConst.
     virtual bool is_dummy() const { return false; }
 
@@ -375,6 +378,8 @@ public:
     /// Implies is_fixed_and_contiguous.
     virtual bool is_numeric() const { return false; }
 
+    virtual bool is_column_string() const { return false; }
+
     virtual bool is_column_decimal() const { return false; }
 
     virtual bool is_predicate_column() const { return false; }
@@ -396,16 +401,14 @@ public:
       */
     String dump_structure() const;
 
-    // Only use in column have only one row, use in unique key replace only
-    virtual void replace_column_data(const IColumn&, size_t row) = 0;
-    
-    bool is_date_type() {
-        return is_date;
-    }
+    // only used in agg value replace
+    // ColumnString should replace according to 0,1,2... ,size,0,1,2...
+    virtual void replace_column_data(const IColumn&, size_t row, size_t self_row = 0) = 0;
 
-// todo(wb): a temporary implemention, need refactor here
-public:
-  bool is_date = false;
+    bool is_date_type() { return is_date; }
+
+    // todo(wb): a temporary implemention, need refactor here
+    bool is_date = false;
 
 protected:
     /// Template is to devirtualize calls to insert_from method.

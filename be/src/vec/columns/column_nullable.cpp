@@ -157,7 +157,9 @@ void ColumnNullable::insert_range_from_not_nullable(const IColumn& src, size_t s
 
 void ColumnNullable::insert_many_from_not_nullable(const IColumn& src, size_t position,
                                                    size_t length) {
-    for (size_t i = 0; i < length; ++i) insert_from_not_nullable(src, position);
+    for (size_t i = 0; i < length; ++i) {
+        insert_from_not_nullable(src, position);
+    }
 }
 
 void ColumnNullable::pop_back(size_t n) {
@@ -192,18 +194,14 @@ int ColumnNullable::compare_at(size_t n, size_t m, const IColumn& rhs_,
     /// ORDER BY construction.
     const ColumnNullable& nullable_rhs = assert_cast<const ColumnNullable&>(rhs_);
 
-    bool lval_is_null = is_null_at(n);
-    bool rval_is_null = nullable_rhs.is_null_at(m);
-
-    if (UNLIKELY(lval_is_null || rval_is_null)) {
-        if (lval_is_null && rval_is_null)
-            return 0;
-        else
-            return lval_is_null ? null_direction_hint : -null_direction_hint;
+    if (is_null_at(n)) {
+        return nullable_rhs.is_null_at(m) ? 0 : null_direction_hint;
+    } else if (nullable_rhs.is_null_at(m)) {
+        return -null_direction_hint;
     }
 
-    const IColumn& nested_rhs = nullable_rhs.get_nested_column();
-    return get_nested_column().compare_at(n, m, nested_rhs, null_direction_hint);
+    return get_nested_column().compare_at(n, m, nullable_rhs.get_nested_column(),
+                                          null_direction_hint);
 }
 
 void ColumnNullable::get_permutation(bool reverse, size_t limit, int null_direction_hint,

@@ -228,7 +228,7 @@ public:
                                                     const Field& /*right*/) const {
         LOG(FATAL) << fmt::format("Function {} has no information about its monotonicity.",
                                   get_name());
-        return Monotonicity{};
+        return Monotonicity {};
     }
 };
 
@@ -260,7 +260,8 @@ public:
     virtual void check_number_of_arguments(size_t number_of_arguments) const = 0;
 
     /// Check arguments and return IFunctionBase.
-    virtual FunctionBasePtr build(const ColumnsWithTypeAndName& arguments, const DataTypePtr& return_type) const = 0;
+    virtual FunctionBasePtr build(const ColumnsWithTypeAndName& arguments,
+                                  const DataTypePtr& return_type) const = 0;
 
     /// For higher-order functions (functions, that have lambda expression as at least one argument).
     /// You pass data types with empty DataTypeFunction for lambda arguments.
@@ -279,7 +280,8 @@ using FunctionBuilderPtr = std::shared_ptr<IFunctionBuilder>;
 
 class FunctionBuilderImpl : public IFunctionBuilder {
 public:
-    FunctionBasePtr build(const ColumnsWithTypeAndName& arguments, const DataTypePtr& return_type) const final {
+    FunctionBasePtr build(const ColumnsWithTypeAndName& arguments,
+                          const DataTypePtr& return_type) const final {
         const DataTypePtr& func_return_type = get_return_type(arguments);
         DCHECK(return_type->equals(*func_return_type) ||
                // For null constant argument, `get_return_type` would return
@@ -353,10 +355,8 @@ protected:
 
     virtual FunctionBasePtr build_impl(const ColumnsWithTypeAndName& arguments,
                                        const DataTypePtr& return_type) const = 0;
-    
-    virtual DataTypes get_variadic_argument_types_impl() const {
-        return DataTypes();
-    }
+
+    virtual DataTypes get_variadic_argument_types_impl() const { return DataTypes(); }
 
 private:
     DataTypePtr get_return_type_without_low_cardinality(

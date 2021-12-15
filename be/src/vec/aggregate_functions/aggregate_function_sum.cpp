@@ -25,8 +25,6 @@
 
 namespace doris::vectorized {
 
-namespace {
-
 template <typename T>
 struct SumSimple {
     /// @note It uses slow Decimal128 (cause we need such a variant). sumWithOverflow is faster for Decimal32/64
@@ -61,7 +59,24 @@ AggregateFunctionPtr create_aggregate_function_sum(const std::string& name,
     return res;
 }
 
-} // namespace
+// do not level up return type for agg reader
+template <typename T>
+struct SumSimpleReader {
+    using ResultType = T;
+    using AggregateDataType = AggregateFunctionSumData<ResultType>;
+    using Function = AggregateFunctionSum<T, ResultType, AggregateDataType>;
+};
+
+template <typename T>
+using AggregateFunctionSumSimpleReader = typename SumSimpleReader<T>::Function;
+
+AggregateFunctionPtr create_aggregate_function_sum_reader(const std::string& name,
+                                                          const DataTypes& argument_types,
+                                                          const Array& parameters,
+                                                          const bool result_is_nullable) {
+    return create_aggregate_function_sum<AggregateFunctionSumSimpleReader>(
+            name, argument_types, parameters, result_is_nullable);
+}
 
 void register_aggregate_function_sum(AggregateFunctionSimpleFactory& factory) {
     factory.register_function("sum", create_aggregate_function_sum<AggregateFunctionSumSimple>);

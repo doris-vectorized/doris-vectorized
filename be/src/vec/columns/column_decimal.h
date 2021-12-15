@@ -124,9 +124,7 @@ public:
     UInt64 get64(size_t n) const override;
     bool is_default_at(size_t n) const override { return data[n] == 0; }
 
-    void clear() override {
-        data.clear();
-    }
+    void clear() override { data.clear(); }
 
     ColumnPtr filter(const IColumn::Filter& filt, ssize_t result_size_hint) const override;
     ColumnPtr permute(const IColumn::Permutation& perm, size_t limit) const override;
@@ -157,9 +155,9 @@ public:
     const T& get_element(size_t n) const { return data[n]; }
     T& get_element(size_t n) { return data[n]; }
 
-    void replace_column_data(const IColumn& rhs, size_t row) override {
-        DCHECK(size() == 1);
-        data[0] = static_cast<const Self&>(rhs).data[row];
+    void replace_column_data(const IColumn& rhs, size_t row, size_t self_row = 0) override {
+        DCHECK(size() > self_row);
+        data[self_row] = static_cast<const Self&>(rhs).data[row];
     }
 
 protected:

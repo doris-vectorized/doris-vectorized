@@ -167,4 +167,9 @@ public:
     const char* get_header_file_path() const override { return __FILE__; }
 };
 
+AggregateFunctionPtr create_aggregate_function_bitmap_union(const std::string& name,
+                                                            const DataTypes& argument_types,
+                                                            const Array& parameters,
+                                                            const bool result_is_nullable);
+
 } // namespace doris::vectorized
