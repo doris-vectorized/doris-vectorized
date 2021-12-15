@@ -14,6 +14,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+// This file is copied from
+// https://github.com/ClickHouse/ClickHouse/blob/master/src/Functions/FunctionBitmap.h
+// and modified by Doris
 
 #include "util/string_parser.hpp"
 #include "vec/functions/function_totype.h"
