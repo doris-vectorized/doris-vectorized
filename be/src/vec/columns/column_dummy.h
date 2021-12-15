@@ -127,6 +127,10 @@ public:
         LOG(FATAL) << "should not call the method in column dummy";
     }
 
+    void replace_column_data_default(size_t self_row = 0) override {
+        LOG(FATAL) << "should not call the method in column dummy";
+    }
+
 protected:
     size_t s;
 };

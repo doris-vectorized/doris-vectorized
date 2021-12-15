@@ -262,8 +262,20 @@ public:
             offsets[self_row] = offsets[self_row - 1] + data.size + 1;
         }
 
-        chars.insert(data.data, data.data + data.size);
-        chars.emplace_back('\0');
+        chars.insert(data.data, data.data + data.size + 1);
+    }
+
+    void replace_column_data_default(size_t self_row = 0) override {
+        DCHECK(size() > self_row);
+
+        if (!self_row) {
+            chars.clear();
+            offsets[self_row] = 1;
+        } else {
+            offsets[self_row] = offsets[self_row - 1] + 1;
+        }
+
+        chars.emplace_back(0);
     }
 };
 

@@ -24,50 +24,57 @@
 
 namespace doris::vectorized {
 
-template <typename Impl, typename Name, bool is_injective = false>
-class FunctionStringToString : public IFunction {
+template <typename Function>
+class FunctionAlwaysNotNullable : public IFunction {
 public:
-    static constexpr auto name = Name::name;
-    static constexpr bool has_variadic_argument =
-            !std::is_void_v<decltype(has_variadic_argument_types(std::declval<Impl>()))>;
+    static constexpr auto name = Function::name;
 
-    static FunctionPtr create() { return std::make_shared<FunctionStringToString>(); }
+    static FunctionPtr create() { return std::make_shared<FunctionAlwaysNotNullable>(); }
 
-    String get_name() const override { return name; }
+    String get_name() const override { return Function::name; }
 
     size_t get_number_of_arguments() const override { return 1; }
 
-    bool get_is_injective(const Block&) override { return is_injective; }
-
     DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
-        if (!is_string_or_fixed_string(arguments[0])) {
-            LOG(FATAL) << fmt::format("Illegal type {} of argument of function {}",
-                                      arguments[0]->get_name(), get_name());
-        }
-
-        return arguments[0];
+        return std::make_shared<typename Function::ReturnType>();
     }
 
     bool use_default_implementation_for_constants() const override { return true; }
-
-    DataTypes get_variadic_argument_types_impl() const override {
-        if constexpr (has_variadic_argument) return Impl::get_variadic_argument_types();
-        return {};
-    }
+    bool use_default_implementation_for_nulls() const override { return false; }
 
     Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
                         size_t result, size_t input_rows_count) override {
-        const ColumnPtr column = block.get_by_position(arguments[0]).column;
-        if (const ColumnString* col = check_and_get_column<ColumnString>(column.get())) {
-            auto col_res = ColumnString::create();
-            Impl::vector(col->get_chars(), col->get_offsets(), col_res->get_chars(),
-                         col_res->get_offsets());
-            block.replace_by_position(result, std::move(col_res));
+        auto column = block.get_by_position(arguments[0]).column;
+
+        MutableColumnPtr column_result = get_return_type_impl({})->create_column();
+        column_result->resize(input_rows_count);
+
+        if (const ColumnNullable* col_nullable =
+                    check_and_get_column<ColumnNullable>(column.get())) {
+            const ColumnString* col =
+                    check_and_get_column<ColumnString>(col_nullable->get_nested_column_ptr().get());
+            const ColumnUInt8* col_nullmap = check_and_get_column<ColumnUInt8>(
+                    col_nullable->get_null_map_column_ptr().get());
+
+            if (col != nullptr && col_nullmap != nullptr) {
+                Function::vector_nullable(col->get_chars(), col->get_offsets(),
+                                          col_nullmap->get_data(), column_result);
+
+                block.replace_by_position(result, std::move(column_result));
+                return Status::OK();
+            }
+        } else if (const ColumnString* col = check_and_get_column<ColumnString>(column.get())) {
+            Function::vector(col->get_chars(), col->get_offsets(), column_result);
+
+            block.replace_by_position(result, std::move(column_result));
+            return Status::OK();
         } else {
             return Status::RuntimeError(fmt::format(
                     "Illegal column {} of argument of function {}",
                     block.get_by_position(arguments[0]).column->get_name(), get_name()));
         }
+
+        block.replace_by_position(result, std::move(column_result));
         return Status::OK();
     }
 };

@@ -405,6 +405,9 @@ public:
     // ColumnString should replace according to 0,1,2... ,size,0,1,2...
     virtual void replace_column_data(const IColumn&, size_t row, size_t self_row = 0) = 0;
 
+    // only used in ColumnNullable replace_column_data
+    virtual void replace_column_data_default(size_t self_row = 0) = 0;
+
     bool is_date_type() { return is_date; }
 
     // todo(wb): a temporary implemention, need refactor here
