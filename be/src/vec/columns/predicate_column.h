@@ -44,7 +44,7 @@ private:
 
     PredicateColumnType(const PredicateColumnType& src) : data(src.data.begin(), src.data.end()) {}
 
-    void insert_date_to_res_column(const uint16_t* sel, size_t sel_size, MutableColumnPtr res_ptr) {
+    void insert_date_to_res_column(const uint16_t* sel, size_t sel_size, vectorized::ColumnVector<Int128>& res_ref) {
         const T* data_pos = data.data();
         for (size_t i = 0; i < sel_size; i++) {
             const T val = data_pos[sel[i]];
@@ -59,24 +59,24 @@ private:
             DateTimeValue date;
             date.from_olap_date(value);
         
-            res_ptr->insert_data(reinterpret_cast<char*>(&date), 0);
+            res_ref.insert_data(reinterpret_cast<char*>(&date), 0);
         }
     }
 
-    void insert_string_to_res_column(const uint16_t* sel, size_t sel_size, MutableColumnPtr res_ptr) {
+    void insert_string_to_res_column(const uint16_t* sel, size_t sel_size, vectorized::ColumnString& res_ref) {
         for (size_t i = 0; i < sel_size; i++) {
                 uint16_t n = sel[i];
                 auto& sv = reinterpret_cast<StringValue&>(data[n]);
-                res_ptr->insert_data(sv.ptr, sv.len);
+                res_ref.insert_data(sv.ptr, sv.len);
         }
     }
 
-    void insert_decimal_to_res_column(const uint16_t* sel, size_t sel_size, MutableColumnPtr res_ptr) {
+    void insert_decimal_to_res_column(const uint16_t* sel, size_t sel_size, vectorized::ColumnDecimal<Decimal128>& res_ref) {
         for (size_t i = 0; i < sel_size; i++) {
             uint16_t n = sel[i];
             auto& dv = reinterpret_cast<const decimal12_t&>(data[n]);
             DecimalV2Value dv_data(dv.integer, dv.fraction);
-            res_ptr->insert_data(reinterpret_cast<char*>(&dv_data), 0);
+            res_ref.insert_data(reinterpret_cast<char*>(&dv_data), 0);
         }
     }
 
@@ -271,12 +271,12 @@ public:
             if (sel_size == 0) {
                 return res;
             }
-            insert_decimal_to_res_column(sel, sel_size, res);
+            insert_decimal_to_res_column(sel, sel_size, *res);
             return res;
         } else {
             if (sel_size != 0) {
                 MutableColumnPtr res_ptr = (*std::move(*ptr)).assume_mutable();
-                insert_decimal_to_res_column(sel, sel_size, res_ptr);
+                insert_decimal_to_res_column(sel, sel_size, reinterpret_cast<vectorized::ColumnDecimal<Decimal128>&>(*res_ptr));
             }
         }
         return *ptr;
@@ -289,12 +289,13 @@ public:
                 return res;
             }
 
-            insert_date_to_res_column(sel, sel_size, res);
+            insert_date_to_res_column(sel, sel_size, *res);
             return res;
         } else {
             if (sel_size != 0) {
                 MutableColumnPtr res_ptr = (*std::move(*ptr)).assume_mutable();
-                insert_date_to_res_column(sel, sel_size, res_ptr);
+                insert_date_to_res_column(sel, sel_size, 
+                    reinterpret_cast<vectorized::ColumnVector<Int128>>(*res_ptr));
             }
         }
         return *ptr;
@@ -307,12 +308,13 @@ public:
                 return res;
             }
             res->reserve(sel_size);
-            insert_string_to_res_column(sel, sel_size, res);
+            insert_string_to_res_column(sel, sel_size, *res);
             return res;
         } else {
             if (sel_size != 0) {
                 MutableColumnPtr ptr_res = (*std::move(*ptr)).assume_mutable();
-                insert_string_to_res_column(sel, sel_size, ptr_res);
+                // This ```reinterpret_cast``` is just for the clang compilation to pass
+                insert_string_to_res_column(sel, sel_size, reinterpret_cast<vectorized::ColumnString&>(*ptr_res));
             }
         }
         return *ptr;
