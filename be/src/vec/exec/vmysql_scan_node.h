@@ -14,6 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
 #pragma once
 
 #include <memory>
@@ -42,8 +43,7 @@ public:
 
 private:
     Status write_text_column(char* value, int value_length, SlotDescriptor* slot,
-                           vectorized::MutableColumnPtr* column_ptr, RuntimeState* state);
-
+                             vectorized::MutableColumnPtr* column_ptr, RuntimeState* state);
 };
 } // namespace vectorized
 } // namespace doris

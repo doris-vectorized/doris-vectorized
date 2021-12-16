@@ -1,3 +1,20 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 #include "vec/exec/vexchange_node.h"
 
 #include "runtime/exec_env.h"
@@ -11,8 +28,10 @@ VExchangeNode::VExchangeNode(ObjectPool* pool, const TPlanNode& tnode, const Des
           _num_senders(0),
           _is_merging(tnode.exchange_node.__isset.sort_info),
           _stream_recvr(nullptr),
-          _input_row_desc(descs, tnode.exchange_node.input_row_tuples,std::vector<bool>(tnode.nullable_tuples.begin(),
-                  tnode.nullable_tuples.begin() + tnode.exchange_node.input_row_tuples.size())),
+          _input_row_desc(descs, tnode.exchange_node.input_row_tuples,
+                          std::vector<bool>(tnode.nullable_tuples.begin(),
+                                            tnode.nullable_tuples.begin() +
+                                                    tnode.exchange_node.input_row_tuples.size())),
           _offset(tnode.exchange_node.__isset.offset ? tnode.exchange_node.offset : 0) {}
 
 Status VExchangeNode::init(const TPlanNode& tnode, RuntimeState* state) {

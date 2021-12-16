@@ -14,12 +14,13 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
 #pragma once
 
 #include <memory>
 
-#include "exec/schema_scan_node.h"
 #include "exec/scan_node.h"
+#include "exec/schema_scan_node.h"
 #include "runtime/descriptors.h"
 namespace doris {
 
@@ -39,8 +40,8 @@ public:
     virtual Status get_next(RuntimeState* state, vectorized::Block* block, bool* eos);
 
 private:
-    Status write_slot_to_vectorized_column(void* slot, 
-                SlotDescriptor* slot_desc, vectorized::MutableColumnPtr* col_ptr);
+    Status write_slot_to_vectorized_column(void* slot, SlotDescriptor* slot_desc,
+                                           vectorized::MutableColumnPtr* col_ptr);
     void project_tuple();
     doris::Tuple* _src_single_tuple;
     doris::Tuple* _dest_single_tuple;
