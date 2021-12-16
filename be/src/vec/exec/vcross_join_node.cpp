@@ -119,7 +119,6 @@ Status VCrossJoinNode::get_next(RuntimeState* state, Block* block, bool* eos) {
                         timer.start();
                     } while (_left_block.rows() == 0 && !_left_side_eos);
                     COUNTER_UPDATE(_left_child_row_counter, _left_block.rows());
-                    *eos = _eos = _left_side_eos;
                 }
             }
         }
