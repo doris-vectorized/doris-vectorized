@@ -14,6 +14,7 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
+
 #pragma once
 
 #include <memory>
@@ -37,6 +38,7 @@ public:
     virtual Status get_next(RuntimeState* state, vectorized::Block* block, bool* eos);
 
     virtual Status close(RuntimeState* state) override;
+
 private:
     virtual Status scanner_scan(std::unique_ptr<VEsHttpScanner> scanner);
 
