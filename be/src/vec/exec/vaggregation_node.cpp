@@ -392,6 +392,7 @@ Status AggregationNode::close(RuntimeState* state) {
     RETURN_IF_ERROR(ExecNode::close(state));
     VExpr::close(_probe_expr_ctxs, state);
     if (_executor.close) _executor.close();
+    delete [] _streaming_pre_agg_buffer;
     return Status::OK();
 }
 
@@ -640,10 +641,20 @@ Status AggregationNode::_pre_agg_with_serialized_key(doris::vectorized::Block* i
                     if (!_should_expand_preagg_hash_tables()) {
                         ret_flag = true;
                         if (_streaming_pre_agg_buffer == nullptr) {
-                            _streaming_pre_agg_buffer = _agg_arena_pool.aligned_alloc(
-                                    _total_size_of_aggregate_states *
-                                            _max_size_of_stream_pre_agg_buffer,
-                                    _align_aggregate_states);
+                            _streaming_pre_agg_buffer =
+                                    new char[((_total_size_of_aggregate_states *
+                                               _max_size_of_stream_pre_agg_buffer) /
+                                                      _align_aggregate_states +
+                                              1) *
+                                             _align_aggregate_states];
+                        }
+
+                        if (UNLIKELY(_max_size_of_stream_pre_agg_buffer < rows)) {
+                            delete[] _streaming_pre_agg_buffer;
+                            _streaming_pre_agg_buffer = new char[((_total_size_of_aggregate_states *
+                                                                   rows) / _align_aggregate_states +
+                                                                  1) *
+                                                                 _align_aggregate_states];
                         }
 
                         auto aggregate_data = _streaming_pre_agg_buffer;
