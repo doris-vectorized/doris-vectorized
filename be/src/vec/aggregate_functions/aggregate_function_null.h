@@ -53,23 +53,25 @@ protected:
       * We use prefix_size bytes for flag to satisfy the alignment requirement of nested state.
       */
 
-    AggregateDataPtr nested_place(AggregateDataPtr place) const noexcept {
+    AggregateDataPtr nested_place(AggregateDataPtr __restrict place) const noexcept {
         return place + prefix_size;
     }
 
-    ConstAggregateDataPtr nested_place(ConstAggregateDataPtr place) const noexcept {
+    ConstAggregateDataPtr nested_place(ConstAggregateDataPtr __restrict place) const noexcept {
         return place + prefix_size;
     }
 
-    static void init_flag(AggregateDataPtr place) noexcept {
-        if (result_is_nullable) place[0] = 0;
+    static void init_flag(AggregateDataPtr __restrict place) noexcept {
+        if constexpr (result_is_nullable)
+            place[0] = 0;
     }
 
-    static void set_flag(AggregateDataPtr place) noexcept {
-        if (result_is_nullable) place[0] = 1;
+    static void set_flag(AggregateDataPtr __restrict place) noexcept {
+        if constexpr (result_is_nullable)
+            place[0] = 1;
     }
 
-    static bool get_flag(ConstAggregateDataPtr place) noexcept {
+    static bool get_flag(ConstAggregateDataPtr __restrict place) noexcept {
         return result_is_nullable ? place[0] : 1;
     }
 
@@ -94,12 +96,12 @@ public:
                                   : nested_function->get_return_type();
     }
 
-    void create(AggregateDataPtr place) const override {
+    void create(AggregateDataPtr __restrict place) const override {
         init_flag(place);
         nested_function->create(nested_place(place));
     }
 
-    void destroy(AggregateDataPtr place) const noexcept override {
+    void destroy(AggregateDataPtr __restrict place) const noexcept override {
         nested_function->destroy(nested_place(place));
     }
     void reset(AggregateDataPtr place) const override {
@@ -115,13 +117,13 @@ public:
 
     size_t align_of_data() const override { return nested_function->align_of_data(); }
 
-    void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena* arena) const override {
+    void merge(AggregateDataPtr __restrict place, ConstAggregateDataPtr rhs, Arena* arena) const override {
         if (result_is_nullable && get_flag(rhs)) set_flag(place);
 
         nested_function->merge(nested_place(place), nested_place(rhs), arena);
     }
 
-    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
+    void serialize(ConstAggregateDataPtr __restrict place, BufferWritable& buf) const override {
         bool flag = get_flag(place);
         if (result_is_nullable) write_binary(flag, buf);
         if (flag) {
@@ -129,7 +131,7 @@ public:
         }
     }
 
-    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena* arena) const override {
+    void deserialize(AggregateDataPtr __restrict place, BufferReadable& buf, Arena* arena) const override {
         bool flag = true;
         if (result_is_nullable) read_binary(flag, buf);
         if (flag) {
@@ -138,8 +140,8 @@ public:
         }
     }
 
-    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
-        if (result_is_nullable) {
+    void insert_result_into(ConstAggregateDataPtr __restrict place, IColumn& to) const override {
+        if constexpr (result_is_nullable) {
             ColumnNullable& to_concrete = assert_cast<ColumnNullable&>(to);
             if (get_flag(place)) {
                 nested_function->insert_result_into(nested_place(place),
@@ -176,7 +178,7 @@ public:
                                         AggregateFunctionNullUnary<result_is_nullable>>(
                       std::move(nested_function_), arguments, params) {}
 
-    void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
+    void add(AggregateDataPtr __restrict place, const IColumn** columns, size_t row_num,
              Arena* arena) const override {
         const ColumnNullable* column = assert_cast<const ColumnNullable*>(columns[0]);
         if (!column->is_null_at(row_num)) {
@@ -252,7 +254,7 @@ public:
             is_nullable[i] = arguments[i]->is_nullable();
     }
 
-    void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
+    void add(AggregateDataPtr __restrict place, const IColumn** columns, size_t row_num,
              Arena* arena) const override {
         /// This container stores the columns we really pass to the nested function.
         const IColumn* nested_columns[number_of_arguments];

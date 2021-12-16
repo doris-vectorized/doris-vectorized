@@ -176,11 +176,11 @@ public:
         this->data(place).merge(this->data(rhs), arena);
     }
 
-    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
+    void serialize(ConstAggregateDataPtr __restrict place, BufferWritable& buf) const override {
         this->data(place).serialize(buf);
     }
 
-    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena* arena) const override {
+    void deserialize(AggregateDataPtr __restrict place, BufferReadable& buf, Arena* arena) const override {
         this->data(place).deserialize(buf, arena);
     }
 
@@ -202,12 +202,12 @@ public:
 
     size_t size_of_data() const override { return prefix_size + nested_func->size_of_data(); }
 
-    void create(AggregateDataPtr place) const override {
+    void create(AggregateDataPtr __restrict place) const override {
         new (place) Data;
         nested_func->create(get_nested_place(place));
     }
 
-    void destroy(AggregateDataPtr place) const noexcept override {
+    void destroy(AggregateDataPtr __restrict place) const noexcept override {
         this->data(place).~Data();
         nested_func->destroy(get_nested_place(place));
     }

@@ -80,25 +80,25 @@ public:
         return std::make_shared<DataTypeInt64>();
     }
 
-    void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
+    void add(AggregateDataPtr __restrict place, const IColumn** columns, size_t row_num,
              Arena*) const override {
         const auto& column = static_cast<const ColumnString&>(*columns[0]);
         this->data(place).add(column.get_data_at(row_num));
     }
 
-    void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {
+    void merge(AggregateDataPtr __restrict place, ConstAggregateDataPtr rhs, Arena*) const override {
         this->data(place).merge(this->data(rhs));
     }
 
-    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
+    void serialize(ConstAggregateDataPtr __restrict place, BufferWritable& buf) const override {
         this->data(place).write(buf);
     }
 
-    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {
+    void deserialize(AggregateDataPtr __restrict place, BufferReadable& buf, Arena*) const override {
         this->data(place).read(buf);
     }
 
-    virtual void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
+    virtual void insert_result_into(ConstAggregateDataPtr __restrict place, IColumn& to) const override {
         auto& column = static_cast<ColumnVector<Int64>&>(to);
         column.get_data().push_back(this->data(place).get_cardinality());
     }
@@ -118,7 +118,7 @@ public:
 
     DataTypePtr get_return_type() const override { return std::make_shared<DataTypeString>(); }
 
-    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
+    void insert_result_into(ConstAggregateDataPtr __restrict place, IColumn& to) const override {
         auto& column = static_cast<ColumnString&>(to);
         auto result = this->data(place).get();
         column.insert_data(result.c_str(), result.length());
