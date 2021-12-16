@@ -178,17 +178,7 @@ public:
             BinaryDictPageDecoder page_decoder(src.slice(), decoder_options);
             page_decoder.init();
 
-            BinaryPlainPageDecoder* pd_decoder = (BinaryPlainPageDecoder*)dict_page_decoder.get();
-            std::unique_ptr<uint32_t[]> dict_start_offset_array(new uint32_t[pd_decoder->_num_elems]);
-            std::unique_ptr<uint32_t[]> dict_len_array(new uint32_t[pd_decoder->_num_elems]);
-            for (int i = 0; i < pd_decoder->_num_elems; i++) {
-                const uint32_t start_offset = pd_decoder->offset(i);
-                uint32_t len = pd_decoder->offset(i + 1) - start_offset;
-                dict_start_offset_array[i] = start_offset;
-                dict_len_array[i] = len;
-            }
-
-            page_decoder.set_dict_decoder(dict_page_decoder.get(), dict_start_offset_array.get(), dict_len_array.get());
+            page_decoder.set_dict_decoder(dict_page_decoder.get());
 
             //check values
             size_t num = page_start_ids[slice_index + 1] - page_start_ids[slice_index];

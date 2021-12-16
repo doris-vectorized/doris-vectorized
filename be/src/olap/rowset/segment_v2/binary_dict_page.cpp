@@ -233,10 +233,8 @@ bool BinaryDictPageDecoder::is_dict_encoding() const {
     return _encoding_type == DICT_ENCODING;
 }
 
-void BinaryDictPageDecoder::set_dict_decoder(PageDecoder* dict_decoder, uint32_t* dict_start_offset_array, uint32_t* dict_len_array) {
+void BinaryDictPageDecoder::set_dict_decoder(PageDecoder* dict_decoder) {
     _dict_decoder = (BinaryPlainPageDecoder*)dict_decoder;
-    _start_offset_array = dict_start_offset_array;
-    _len_array = dict_len_array;
     _bit_shuffle_ptr = reinterpret_cast<BitShufflePageDecoder<OLAP_FIELD_TYPE_INT>*>(_data_page_decoder.get());
 };
 
