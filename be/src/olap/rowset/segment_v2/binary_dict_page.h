@@ -115,7 +115,7 @@ public:
 
     bool is_dict_encoding() const;
 
-    void set_dict_decoder(PageDecoder* dict_decoder, uint32_t* dict_start_offset_array, uint32_t* dict_len_array);
+    void set_dict_decoder(PageDecoder* dict_decoder);
 
     ~BinaryDictPageDecoder();
 
