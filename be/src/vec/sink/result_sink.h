@@ -69,8 +69,8 @@ private:
     const std::vector<TExpr>& _t_output_expr;
     std::vector<vectorized::VExprContext*> _output_vexpr_ctxs;
 
-    boost::shared_ptr<BufferControlBlock> _sender;
-    boost::shared_ptr<VResultWriter> _writer;
+    std::shared_ptr<BufferControlBlock> _sender;
+    std::shared_ptr<VResultWriter> _writer;
     RuntimeProfile* _profile; // Allocated from _pool
     int _buf_size;            // Allocated from _pool
 };

@@ -364,10 +364,6 @@ Status ExecNode::create_tree_helper(RuntimeState* state, ObjectPool* pool,
 
 Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanNode& tnode,
                              const DescriptorTbl& descs, ExecNode** node) {
-    if (state->enable_vectorized_exec()) {
-        return Status::InternalError("unsupport enable_vectorized_engine");
-    }
-
     std::stringstream error_msg;
 
     if (state->enable_vectorized_exec()) {

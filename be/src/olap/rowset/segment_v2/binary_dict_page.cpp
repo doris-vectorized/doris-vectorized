@@ -256,7 +256,7 @@ Status BinaryDictPageDecoder::next_batch(size_t* n, vectorized::MutableColumnPtr
     size_t max_fetch = std::min(*n, static_cast<size_t>(_bit_shuffle_ptr->_num_elements - _bit_shuffle_ptr->_cur_index));
     *n = max_fetch;
  
-    const int32_t* data_array = reinterpret_cast<const int32_t*>(_bit_shuffle_ptr->_decoded.data());
+    const int32_t* data_array = reinterpret_cast<const int32_t*>(_bit_shuffle_ptr->_chunk.data);
     size_t start_index = _bit_shuffle_ptr->_cur_index;
 
     // todo(wb) support nullable

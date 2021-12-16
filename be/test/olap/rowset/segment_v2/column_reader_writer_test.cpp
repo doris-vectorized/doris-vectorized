@@ -577,10 +577,10 @@ void test_v_read_default_value(string value, void* result) {
                            type == OLAP_FIELD_TYPE_OBJECT) {
                 } else if (type == OLAP_FIELD_TYPE_DATE || type == OLAP_FIELD_TYPE_DATETIME) {
                     StringRef sr = mcp->get_data_at(j);
-                    ASSERT_EQ(sr.size, sizeof(vectorized::Int128));
+                    ASSERT_EQ(sr.size, sizeof(vectorized::Int64));
 
-                    auto x = unaligned_load<vectorized::Int128>(sr.data);
-                    DateTimeValue value = binary_cast<vectorized::Int128, DateTimeValue>(x);
+                    auto x = unaligned_load<vectorized::Int64>(sr.data);
+                    auto value = binary_cast<vectorized::Int64, vectorized::VecDateTimeValue>(x);
                     char buf[64] = {};
                     value.to_string(buf);
                     int ret = strcmp(buf, (char*)result);

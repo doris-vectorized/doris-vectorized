@@ -18,7 +18,6 @@
 #include "vec/exec/vblocking_join_node.h"
 
 #include <sstream>
-#include <boost/bind.hpp>
 
 #include "exprs/expr.h"
 #include "gen_cpp/PlanNodes_types.h"
@@ -89,7 +88,7 @@ Status VBlockingJoinNode::open(RuntimeState* state) {
     std::promise<Status> build_side_status;
 
     add_runtime_exec_option("Join Build-Side Prepared Asynchronously");
-    boost::thread(boost::bind(&VBlockingJoinNode::build_side_thread, this, state, &build_side_status));
+    std::thread(bind(&VBlockingJoinNode::build_side_thread, this, state, &build_side_status)).detach();
 
     // Open the left child so that it may perform any initialisation in parallel.
     // Don't exit even if we see an error, we still need to wait for the build thread

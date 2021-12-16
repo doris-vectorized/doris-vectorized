@@ -78,7 +78,7 @@ TEST(function_arithmetic_test, bitnot_test) {
                             {{(int32_t)-10.44}, ~(int32_t)-10},
                             {{(int32_t)-999.888}, ~(int32_t)-999}};
 
-        vectorized::check_function<vectorized::DataTypeInt32, false>(func_name, input_types,
+        vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types,
                                                                      data_set);
     }
 }
@@ -95,7 +95,7 @@ TEST(function_arithmetic_test, bitand_test) {
                             {{(int32_t)-10, (int32_t)111}, -10 & 111},
                             {{(int32_t)-999, (int32_t)888}, -999 & 888}};
 
-        vectorized::check_function<vectorized::DataTypeInt32, false>(func_name, input_types,
+        vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types,
                                                                      data_set);
     }
 }
@@ -112,7 +112,7 @@ TEST(function_arithmetic_test, bitor_test) {
                             {{(int32_t)-10, (int32_t)111}, -10 | 111},
                             {{(int32_t)-999, (int32_t)888}, -999 | 888}};
 
-        vectorized::check_function<vectorized::DataTypeInt32, false>(func_name, input_types,
+        vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types,
                                                                      data_set);
     }
 }
@@ -129,7 +129,7 @@ TEST(function_arithmetic_test, bitxor_test) {
                             {{(int32_t)-10, (int32_t)111}, -10 ^ 111},
                             {{(int32_t)-999, (int32_t)888}, -999 ^ 888}};
 
-        vectorized::check_function<vectorized::DataTypeInt32, false>(func_name, input_types,
+        vectorized::check_function<vectorized::DataTypeInt32, true>(func_name, input_types,
                                                                      data_set);
     }
 }

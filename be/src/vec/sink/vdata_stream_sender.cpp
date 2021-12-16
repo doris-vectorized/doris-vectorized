@@ -1,5 +1,6 @@
 #include "vec/sink/vdata_stream_sender.h"
 
+#include <boost/bind.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 

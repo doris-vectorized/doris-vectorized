@@ -18,6 +18,7 @@
 #pragma once
 
 #include <functional>
+#include <variant>
 
 #include "common/object_pool.h"
 #include "exec/exec_node.h"

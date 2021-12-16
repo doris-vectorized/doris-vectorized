@@ -83,7 +83,7 @@ TEST(GenericIteratorsTest, Union) {
     inputs.push_back(new_auto_increment_iterator(schema, 200));
     inputs.push_back(new_auto_increment_iterator(schema, 300));
 
-    auto iter = new_union_iterator(std::move(inputs),
+    auto iter = new_union_iterator(inputs,
                                    MemTracker::CreateTracker(-1, "UnionIterator", nullptr, false));
     StorageReadOptions opts;
     auto st = iter->init(opts);

@@ -363,7 +363,7 @@ public:
         // todo(wb) Try to eliminate type judgment in pagedecoder
         if (dst->is_column_decimal()) { // decimal non-predicate column
             for (; begin < end; begin++) {
-                const char* cur_ptr = (const char*)&_decoded[begin * SIZE_OF_TYPE];
+                const char* cur_ptr = (const char*)&_chunk.data[begin * SIZE_OF_TYPE];
                 int64_t int_value = *(int64_t*)(cur_ptr);
                 int32_t frac_value = *(int32_t*)(cur_ptr + sizeof(int64_t));
                 DecimalV2Value data(int_value, frac_value);
@@ -371,7 +371,7 @@ public:
             }
         } else if (dst->is_date_type()) {
             for (; begin < end; begin++) {
-                const char* cur_ptr = (const char*)&_decoded[begin * SIZE_OF_TYPE];
+                const char* cur_ptr = (const char*)&_chunk.data[begin * SIZE_OF_TYPE];
                 uint64_t value = 0;
                 value = *(unsigned char*)(cur_ptr + 2);
                 value <<= 8;
@@ -385,7 +385,7 @@ public:
         } else {
             // todo(wb) need performance test here, may be batch memory copy?
             for (; begin < end; begin++) {
-                dst->insert_data((const char*)&_decoded[begin * SIZE_OF_TYPE], 0);
+                dst->insert_data((const char*)&_chunk.data[begin * SIZE_OF_TYPE], 0);
             }
         }
 

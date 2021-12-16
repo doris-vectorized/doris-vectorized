@@ -245,8 +245,8 @@ set_target_properties(brpc PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib64/
 add_library(rocksdb STATIC IMPORTED)
 set_target_properties(rocksdb PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/librocksdb.a)
 
-add_library(cyrus-sasl STATIC IMPORTED)
-set_target_properties(cyrus-sasl PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/libsasl2.a)
+#add_library(cyrus-sasl STATIC IMPORTED)
+#set_target_properties(cyrus-sasl PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/libsasl2.a)
 
 add_library(librdkafka_cpp STATIC IMPORTED)
 set_target_properties(librdkafka_cpp PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/librdkafka++.a)
@@ -486,7 +486,7 @@ endif()
 # add it here first.
 set(COMMON_THIRDPARTY
     rocksdb
-    cyrus-sasl
+    #cyrus-sasl
     librdkafka_cpp
     librdkafka
     libs2
