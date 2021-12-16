@@ -69,10 +69,10 @@ public:
     /** Create empty data for aggregation with `placement new` at the specified location.
       * You will have to destroy them using the `destroy` method.
       */
-    virtual void create(AggregateDataPtr place) const = 0;
+    virtual void create(AggregateDataPtr __restrict place) const = 0;
 
     /// Delete data for aggregation.
-    virtual void destroy(AggregateDataPtr place) const noexcept = 0;
+    virtual void destroy(AggregateDataPtr __restrict place) const noexcept = 0;
 
     /// Reset aggregation state
     virtual void reset(AggregateDataPtr place) const = 0;
@@ -91,23 +91,23 @@ public:
      *  row_num is number of row which should be added.
      *  Additional parameter arena should be used instead of standard memory allocator if the addition requires memory allocation.
      */
-    virtual void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
+    virtual void add(AggregateDataPtr __restrict place, const IColumn** columns, size_t row_num,
                      Arena* arena) const = 0;
 
     /// Merges state (on which place points to) with other state of current aggregation function.
-    virtual void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena* arena) const = 0;
+    virtual void merge(AggregateDataPtr __restrict place, ConstAggregateDataPtr rhs, Arena* arena) const = 0;
 
     /// Serializes state (to transmit it over the network, for example).
-    virtual void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const = 0;
+    virtual void serialize(ConstAggregateDataPtr __restrict place, BufferWritable& buf) const = 0;
 
     /// Deserializes state. This function is called only for empty (just created) states.
-    virtual void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena* arena) const = 0;
+    virtual void deserialize(AggregateDataPtr __restrict place, BufferReadable& buf, Arena* arena) const = 0;
 
     /// Returns true if a function requires Arena to handle own states (see add(), merge(), deserialize()).
     virtual bool allocates_memory_in_arena() const { return false; }
 
     /// Inserts results into a column.
-    virtual void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const = 0;
+    virtual void insert_result_into(ConstAggregateDataPtr __restrict place, IColumn& to) const = 0;
 
     /** Returns true for aggregate functions of type -State.
       * They are executed as other aggregate functions, but not finalized (return an aggregation state that can be combined with another).
@@ -205,8 +205,8 @@ class IAggregateFunctionDataHelper : public IAggregateFunctionHelper<Derived> {
 protected:
     using Data = T;
 
-    static Data& data(AggregateDataPtr place) { return *reinterpret_cast<Data*>(place); }
-    static const Data& data(ConstAggregateDataPtr place) {
+    static Data& data(AggregateDataPtr __restrict place) { return *reinterpret_cast<Data*>(place); }
+    static const Data& data(ConstAggregateDataPtr __restrict place) {
         return *reinterpret_cast<const Data*>(place);
     }
 
@@ -214,9 +214,9 @@ public:
     IAggregateFunctionDataHelper(const DataTypes& argument_types_, const Array& parameters_)
             : IAggregateFunctionHelper<Derived>(argument_types_, parameters_) {}
 
-    void create(AggregateDataPtr place) const override { new (place) Data; }
+    void create(AggregateDataPtr __restrict place) const override { new (place) Data; }
 
-    void destroy(AggregateDataPtr place) const noexcept override { data(place).~Data(); }
+    void destroy(AggregateDataPtr __restrict place) const noexcept override { data(place).~Data(); }
 
     bool has_trivial_destructor() const override { return std::is_trivially_destructible_v<Data>; }
 

@@ -46,7 +46,7 @@ public:
 
     DataTypePtr get_return_type() const override { return std::make_shared<DataTypeInt64>(); }
 
-    void add(AggregateDataPtr place, const IColumn**, size_t, Arena*) const override {
+    void add(AggregateDataPtr __restrict place, const IColumn**, size_t, Arena*) const override {
         ++data(place).count;
     }
 
@@ -54,19 +54,19 @@ public:
         this->data(place).count = 0;
     }
 
-    void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {
+    void merge(AggregateDataPtr __restrict place, ConstAggregateDataPtr rhs, Arena*) const override {
         data(place).count += data(rhs).count;
     }
 
-    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
+    void serialize(ConstAggregateDataPtr __restrict place, BufferWritable& buf) const override {
         write_var_uint(data(place).count, buf);
     }
 
-    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {
+    void deserialize(AggregateDataPtr __restrict place, BufferReadable& buf, Arena*) const override {
         read_var_uint(data(place).count, buf);
     }
 
-    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
+    void insert_result_into(ConstAggregateDataPtr __restrict place, IColumn& to) const override {
         assert_cast<ColumnInt64&>(to).get_data().push_back(data(place).count);
     }
 
@@ -94,7 +94,7 @@ public:
 
     DataTypePtr get_return_type() const override { return std::make_shared<DataTypeInt64>(); }
 
-    void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
+    void add(AggregateDataPtr __restrict place, const IColumn** columns, size_t row_num,
              Arena*) const override {
         data(place).count += !assert_cast<const ColumnNullable&>(*columns[0]).is_null_at(row_num);
     }
@@ -103,19 +103,19 @@ public:
         data(place).count = 0;
     }
 
-    void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {
+    void merge(AggregateDataPtr __restrict place, ConstAggregateDataPtr rhs, Arena*) const override {
         data(place).count += data(rhs).count;
     }
 
-    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
+    void serialize(ConstAggregateDataPtr __restrict place, BufferWritable& buf) const override {
         write_var_uint(data(place).count, buf);
     }
 
-    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {
+    void deserialize(AggregateDataPtr __restrict place, BufferReadable& buf, Arena*) const override {
         read_var_uint(data(place).count, buf);
     }
 
-    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
+    void insert_result_into(ConstAggregateDataPtr __restrict place, IColumn& to) const override {
         assert_cast<ColumnInt64&>(to).get_data().push_back(data(place).count);
     }
 

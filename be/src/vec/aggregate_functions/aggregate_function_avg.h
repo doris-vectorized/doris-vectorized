@@ -89,7 +89,7 @@ public:
             return std::make_shared<ResultDataType>();
     }
 
-    void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
+    void add(AggregateDataPtr __restrict place, const IColumn** columns, size_t row_num,
              Arena*) const override {
         const auto& column = static_cast<const ColVecType&>(*columns[0]);
         this->data(place).sum += column.get_data()[row_num];
@@ -101,20 +101,20 @@ public:
         this->data(place).count = 0;
     }
 
-    void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {
+    void merge(AggregateDataPtr __restrict place, ConstAggregateDataPtr rhs, Arena*) const override {
         this->data(place).sum += this->data(rhs).sum;
         this->data(place).count += this->data(rhs).count;
     }
 
-    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
+    void serialize(ConstAggregateDataPtr __restrict place, BufferWritable& buf) const override {
         this->data(place).write(buf);
     }
 
-    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {
+    void deserialize(AggregateDataPtr __restrict place, BufferReadable& buf, Arena*) const override {
         this->data(place).read(buf);
     }
 
-    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
+    void insert_result_into(ConstAggregateDataPtr __restrict place, IColumn& to) const override {
         auto& column = static_cast<ColVecResult&>(to);
         column.get_data().push_back(this->data(place).template result<ResultType>());
     }
