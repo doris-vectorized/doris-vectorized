@@ -835,6 +835,7 @@ Status HashJoinNode::_hash_table_build(RuntimeState* state) {
             _hash_table_variants);
 }
 
+// TODO:: unify the code of extract probe join column
 Status HashJoinNode::extract_build_join_column(Block& block, NullMap& null_map,
                                                ColumnRawPtrs& raw_ptrs, bool& ignore_null,
                                                RuntimeProfile::Counter& expr_call_timer) {
@@ -845,6 +846,11 @@ Status HashJoinNode::extract_build_join_column(Block& block, NullMap& null_map,
             SCOPED_TIMER(&expr_call_timer);
             RETURN_IF_ERROR(_build_expr_ctxs[i]->execute(&block, &result_col_id));
         }
+
+        // TODO: opt the column is const
+        block.get_by_position(result_col_id).column =
+                block.get_by_position(result_col_id).column->convert_to_full_column_if_const();
+
         if (_is_null_safe_eq_join[i]) {
             raw_ptrs[i] = block.get_by_position(result_col_id).column.get();
         } else {
@@ -878,6 +884,11 @@ Status HashJoinNode::extract_probe_join_column(Block& block, NullMap& null_map,
             SCOPED_TIMER(&expr_call_timer);
             RETURN_IF_ERROR(_probe_expr_ctxs[i]->execute(&block, &result_col_id));
         }
+
+        // TODO: opt the column is const
+        block.get_by_position(result_col_id).column =
+                block.get_by_position(result_col_id).column->convert_to_full_column_if_const();
+
         if (_is_null_safe_eq_join[i]) {
             raw_ptrs[i] = block.get_by_position(result_col_id).column.get();
         } else {

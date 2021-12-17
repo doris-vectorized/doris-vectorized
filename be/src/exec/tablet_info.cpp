@@ -617,9 +617,10 @@ uint32_t VOlapTablePartitionParam::_compute_dist_hash(BlockRow* key) const {
     for (int i = 0; i < _distributed_slot_locs.size(); ++i) {
         auto slot_desc = _slots[_distributed_slot_locs[i]];
         auto column = key->first->get_by_position(_distributed_slot_locs[i]).column;
-        void* val = reinterpret_cast<void*>(const_cast<char*>(column->get_data_at(i).data));
-        if (val != nullptr) {
-            hash_val = RawValue::zlib_crc32(val, slot_desc->type().type, hash_val);
+
+        auto val = column->get_data_at(key->second);
+        if (val.data != nullptr) {
+            hash_val = RawValue::zlib_crc32(val.data, val.size, slot_desc->type().type, hash_val);
         } else {
             // NULL is treat as 0 when hash
             static const int INT_VALUE = 0;

@@ -431,10 +431,17 @@ Status VDataStreamSender::send(RuntimeState* state, Block* block) {
         for (int i = 0; i < rows; ++i) {
             size_t hash_val = 0;
             for (int j = 0; j < result.size(); ++j) {
-                auto column = block->get_by_position(result[j]).column;
-                void* val = reinterpret_cast<void*>(const_cast<char*>(column->get_data_at(i).data));
-                hash_val = RawValue::zlib_crc32(val, _partition_expr_ctxs[j]->root()->type(),
-                                                hash_val);
+                auto val = block->get_by_position(result[j]).column->get_data_at(i);
+
+                if (val.data == nullptr) {
+                    //nullptr is treat as 0 when hash
+                    static const int INT_VALUE = 0;
+                    static const TypeDescriptor INT_TYPE(TYPE_INT);
+                    hash_val = RawValue::zlib_crc32(&INT_VALUE, INT_TYPE, hash_val);
+                } else {
+                    hash_val = RawValue::zlib_crc32(val.data, val.size, _partition_expr_ctxs[j]->root()->type(),
+                                                    hash_val);
+                }
             }
             auto target_channel_id = hash_val % num_channels;
             RETURN_IF_ERROR(_channel_shared_ptrs[target_channel_id]->add_row(&send_block, i));

@@ -247,6 +247,11 @@ void RowBlockV2::_copy_data_to_column(int cid, doris::vectorized::MutableColumnP
         insert_data_directly(cid, column_int);
         break;
     }
+    case OLAP_FIELD_TYPE_BOOL: {
+        auto column_int = assert_cast<vectorized::ColumnVector<vectorized::UInt8>*>(column);
+        insert_data_directly(cid, column_int);
+        break;
+    }
     case OLAP_FIELD_TYPE_TINYINT: {
         auto column_int = assert_cast<vectorized::ColumnVector<vectorized::Int8>*>(column);
         insert_data_directly(cid, column_int);
