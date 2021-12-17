@@ -61,16 +61,8 @@ Status VOlapScanner::get_block(RuntimeState* state, vectorized::Block* block, bo
         _num_rows_read += block->rows();
         _update_realtime_counter();
 
-        // If we reach end of this scanner, break
-        if (UNLIKELY(*eof)) {
-            break;
-        }
-
-        VLOG_ROW << "VOlapScanner input row: " << _read_row_cursor.to_string();
-
         RETURN_IF_ERROR(
                 VExprContext::filter_block(_vconjunct_ctx, block, _tuple_desc->slots().size()));
-
     } while (block->rows() == 0 && !(*eof) && raw_rows_read() < raw_rows_threshold);
 
     return Status::OK();
