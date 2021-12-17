@@ -35,8 +35,7 @@ struct SingleValueDataFixed {
 private:
     using Self = SingleValueDataFixed;
 
-    bool has_value =
-            false; /// We need to remember if at least one value has been passed. This is necessary for AggregateFunctionIf.
+    bool has_value = false; /// We need to remember if at least one value has been passed. This is necessary for AggregateFunctionIf.
     T value;
 
 public:

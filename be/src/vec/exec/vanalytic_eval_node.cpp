@@ -264,6 +264,7 @@ Status VAnalyticEvalNode::_get_next_for_partition(RuntimeState* state, Block* bl
     while (!_input_eos || _output_block_index < _input_blocks.size()) {
         bool next_partition = false;
         RETURN_IF_ERROR(_consumed_block_and_init_partition(state, &next_partition, eos));
+        if (*eos) { break; }
 
         size_t current_block_rows = _input_blocks[_output_block_index].rows();
         if (next_partition) {
@@ -282,6 +283,7 @@ Status VAnalyticEvalNode::_get_next_for_range(RuntimeState* state, Block* block,
     while (!_input_eos || _output_block_index < _input_blocks.size()) {
         bool next_partition = false;
         RETURN_IF_ERROR(_consumed_block_and_init_partition(state, &next_partition, eos));
+        if (*eos) { break; }
 
         size_t current_block_rows = _input_blocks[_output_block_index].rows();
         while (_current_row_position < _partition_by_end.pos && _window_end_position < current_block_rows) {
@@ -302,6 +304,7 @@ Status VAnalyticEvalNode::_get_next_for_rows(RuntimeState* state, Block* block, 
     while (!_input_eos || _output_block_index < _input_blocks.size()) {
         bool next_partition = false;
         RETURN_IF_ERROR(_consumed_block_and_init_partition(state, &next_partition, eos));
+        if (*eos) { break; }
 
         size_t current_block_rows = _input_blocks[_output_block_index].rows();
         while (_current_row_position < _partition_by_end.pos && _window_end_position < current_block_rows) {
