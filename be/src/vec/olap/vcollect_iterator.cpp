@@ -323,6 +323,9 @@ OLAPStatus VCollectIterator::Level1Iterator::_merge_next(IteratorRowRef* ref) {
     }
 
     *ref = _ref = *_cur_child->current_row_ref();
+
+    _cur_child->set_same(false);
+
     return OLAP_SUCCESS;
 }
 
