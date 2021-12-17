@@ -27,45 +27,57 @@
 
 namespace doris::vectorized {
 
-template <typename Impl, typename Name, typename ResultType>
-class FunctionStringOrArrayToT : public IFunction {
+template <typename Function>
+class FunctionAlwaysNotNullable : public IFunction {
 public:
-    static constexpr auto name = Name::name;
-    //    static FunctionPtr create(const Context &)
-    static FunctionPtr create() { return std::make_shared<FunctionStringOrArrayToT>(); }
+    static constexpr auto name = Function::name;
 
-    String get_name() const override { return name; }
+    static FunctionPtr create() { return std::make_shared<FunctionAlwaysNotNullable>(); }
+
+    String get_name() const override { return Function::name; }
 
     size_t get_number_of_arguments() const override { return 1; }
 
     DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
-        if (!is_string_or_fixed_string(arguments[0]) && !is_array(arguments[0])) {
-            LOG(FATAL) << fmt::format("Illegal type {} of argument of function {}",
-                                      arguments[0]->get_name(), get_name());
-        }
-
-        return std::make_shared<DataTypeNumber<ResultType>>();
+        return std::make_shared<typename Function::ReturnType>();
     }
 
     bool use_default_implementation_for_constants() const override { return true; }
+    bool use_default_implementation_for_nulls() const override { return false; }
 
     Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
-                        size_t result, size_t /*input_rows_count*/) override {
-        const ColumnPtr column = block.get_by_position(arguments[0]).column;
-        if (const ColumnString* col = check_and_get_column<ColumnString>(column.get())) {
-            auto col_res = ColumnVector<ResultType>::create();
+                        size_t result, size_t input_rows_count) override {
+        auto column = block.get_by_position(arguments[0]).column;
 
-            typename ColumnVector<ResultType>::Container& vec_res = col_res->get_data();
-            vec_res.resize(col->size());
-            Impl::vector(col->get_chars(), col->get_offsets(), vec_res);
+        MutableColumnPtr column_result = get_return_type_impl({})->create_column();
+        column_result->resize(input_rows_count);
 
-            block.replace_by_position(result, std::move(col_res));
+        if (const ColumnNullable* col_nullable =
+                    check_and_get_column<ColumnNullable>(column.get())) {
+            const ColumnString* col =
+                    check_and_get_column<ColumnString>(col_nullable->get_nested_column_ptr().get());
+            const ColumnUInt8* col_nullmap = check_and_get_column<ColumnUInt8>(
+                    col_nullable->get_null_map_column_ptr().get());
+
+            if (col != nullptr && col_nullmap != nullptr) {
+                Function::vector_nullable(col->get_chars(), col->get_offsets(),
+                                          col_nullmap->get_data(), column_result);
+
+                block.replace_by_position(result, std::move(column_result));
+                return Status::OK();
+            }
+        } else if (const ColumnString* col = check_and_get_column<ColumnString>(column.get())) {
+            Function::vector(col->get_chars(), col->get_offsets(), column_result);
+
+            block.replace_by_position(result, std::move(column_result));
+            return Status::OK();
         } else {
             return Status::RuntimeError(fmt::format(
                     "Illegal column {} of argument of function {}",
                     block.get_by_position(arguments[0]).column->get_name(), get_name()));
         }
 
+        block.replace_by_position(result, std::move(column_result));
         return Status::OK();
     }
 };

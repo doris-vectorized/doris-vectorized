@@ -85,7 +85,9 @@ OLAPStatus BlockReader::_init_collect_iter(const ReaderParams& read_params,
 void BlockReader::_init_agg_state() {
     _stored_data_block = _next_row.block->create_same_struct_block(_batch_size);
     _stored_data_columns = _stored_data_block->mutate_columns();
+
     _stored_has_null_tag.resize(_agg_columns_idx.size());
+    _stored_has_string_tag.resize(_stored_data_columns.size());
 
     for (auto idx : _agg_columns_idx) {
         FieldAggregationMethod agg_method = tablet()->tablet_schema().column(idx).aggregation();
@@ -107,6 +109,14 @@ void BlockReader::_init_agg_state() {
         AggregateDataPtr place = new char[function->size_of_data()];
         function->create(place);
         _agg_places.push_back(place);
+
+        //calculate has_string tag
+        _stored_has_string_tag[idx] =
+                _stored_data_columns[idx]->is_column_string() ||
+                (_stored_data_columns[idx]->is_nullable() &&
+                 reinterpret_cast<ColumnNullable*>(_stored_data_columns[idx].get())
+                         ->get_nested_column_ptr()
+                         ->is_column_string());
     }
 }
 
@@ -309,7 +319,7 @@ void BlockReader::_copy_agg_data() {
     }
 
     for (auto idx : _agg_columns_idx) {
-        if (_stored_data_columns[idx]->is_column_string()) {
+        if (_stored_has_string_tag[idx]) {
             //string type should replace ordered
             for (int i = 0; i < _stored_row_ref.size(); i++) {
                 auto ref = _stored_row_ref[i];

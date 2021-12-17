@@ -25,12 +25,7 @@
 #include "util/bitmap_value.h"
 #include "vec/columns/column.h"
 #include "vec/columns/column_impl.h"
-
-#include "runtime/string_value.h"
-#include "olap/decimal12.h"
-#include "olap/uint24.h"
 #include "vec/columns/column_string.h"
-#include "vec/columns/column_decimal.h"
 #include "vec/columns/column_vector.h"
 #include "vec/core/types.h"
 
@@ -189,6 +184,11 @@ public:
     void replace_column_data(const IColumn& rhs, size_t row, size_t self_row = 0) override {
         DCHECK(size() > self_row);
         data[self_row] = static_cast<const Self&>(rhs).data[row];
+    }
+
+    void replace_column_data_default(size_t self_row = 0) override {
+        DCHECK(size() > self_row);
+        data[self_row] = T();
     }
 
 private:
