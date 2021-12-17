@@ -78,7 +78,7 @@ Status VOlapTableSink::send(RuntimeState* state, vectorized::Block* input_block)
 
     auto num_rows = block.rows();
     int num_invalid_rows = 0;
-    if (_need_validate_data) {
+    {
         SCOPED_RAW_TIMER(&_validate_data_ns);
         _filter_vec.resize(num_rows);
         num_invalid_rows = _validate_data(state, &block, reinterpret_cast<bool*>(_filter_vec.data()));
