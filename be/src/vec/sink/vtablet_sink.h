@@ -40,6 +40,7 @@ public:
     VOlapTableSink(ObjectPool* pool, const RowDescriptor& row_desc, const std::vector<TExpr>& texprs,
                   Status* status);
 
+    Status init(const TDataSink& sink) override;
     // TODO: unify the code of prepare/open/close with result sink
     Status prepare(RuntimeState* state) override;
 
@@ -50,8 +51,14 @@ public:
     Status send(RuntimeState* state, vectorized::Block* block) override;
 
 private:
+    // make input data valid for OLAP table
+    // return number of invalid/filtered rows.
+    // invalid row number is set in Bitmap
+    int _validate_data(RuntimeState* state, vectorized::Block* block, bool* filter_map);
+
+    VOlapTablePartitionParam* _vpartition = nullptr;
     std::vector<vectorized::VExprContext*> _output_vexpr_ctxs;
-    std::unique_ptr<RowBatch> _input_batch;
+    std::vector<uint8_t> _filter_vec;
 };
 
 } // namespace stream_load
