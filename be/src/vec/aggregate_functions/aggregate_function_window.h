@@ -380,4 +380,98 @@ private:
     DataTypePtr _argument_type;
 };
 
+template <typename T, bool is_nullable, bool is_string>
+struct FirstAndLastData {
+public:
+    bool has_init() const { return _is_init; }
+
+    void reset() {
+        _value = {};
+        _is_null = false;
+        _is_init = false;
+        _has_value = false;
+    }
+
+    void insert_result_into(IColumn& to) const {
+        if constexpr (is_nullable) {
+            if (_is_null) {
+                auto& col = assert_cast<ColumnNullable&>(to);
+                col.insert_default();
+            } else {
+                auto& col = assert_cast<ColumnNullable&>(to);
+                if constexpr (is_string)
+                    col.insert_data(_value.data, _value.size);
+                else
+                    col.insert_data(_value.data, 0);
+            }
+        } else {
+            if constexpr (is_string) {
+                auto& col = assert_cast<ColumnString&>(to);
+                col.insert_data(_value.data, _value.size);
+            } else {
+                auto& col = assert_cast<ColumnVector<T>&>(to);
+                col.insert_data(_value.data, 0);
+            }
+        }
+    }
+
+    bool has_set_value() { return _has_value; }
+
+    void get_result(const IColumn** columns, int64_t pos) {
+        if constexpr (is_nullable) {
+            const auto* nullable_column = check_and_get_column<ColumnNullable>(columns[0]);
+            if (nullable_column && nullable_column->is_null_at(pos)) { 
+                _is_null = true;
+                _has_value = true;
+                return;
+            }
+            if constexpr (is_string) {
+                const auto* sources = check_and_get_column<ColumnString>(
+                        nullable_column->get_nested_column_ptr().get());
+                _value = sources->get_data_at(pos);
+            } else {
+                const auto* sources = check_and_get_column<ColumnVector<T>>(
+                        nullable_column->get_nested_column_ptr().get());
+                _value = sources->get_data_at(pos);
+            }
+        } else {
+            if constexpr (is_string) {
+                const auto* sources = check_and_get_column<ColumnString>(columns[0]);
+                _value = sources->get_data_at(pos);
+            } else {
+                const auto* sources = check_and_get_column<ColumnVector<T>>(columns[0]);
+                _value = sources->get_data_at(pos);
+            }
+        }
+        _is_null = false;
+        _has_value = true;
+    }
+private:
+    StringRef _value;
+    bool _is_init = false;
+    bool _is_null = false;
+    bool _has_value = false;
+};
+
+template <typename Data>
+struct WindowFunctionFirstData : Data {
+    void add_range_single_place(int64_t frame_start, int64_t frame_end, const IColumn** columns,
+                                Arena* arena, int64_t end) {
+        if (this->has_set_value()) {
+            return;
+        }
+        this->get_result(columns, frame_start);
+    }
+    static const char* name() { return "first_value"; }
+};
+
+template <typename Data>
+struct WindowFunctionLastData : Data {
+    void add_range_single_place(int64_t frame_start, int64_t frame_end, const IColumn** columns,
+                                Arena* arena, int64_t end) {
+        this->get_result(columns, frame_end - 1);
+    }
+    static const char* name() { return "last_value"; }
+};
+
 } // namespace doris::vectorized
