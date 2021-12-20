@@ -464,32 +464,6 @@ struct AggregateFunctionMinData : Data {
     static const char* name() { return "min"; }
 };
 
-template <typename Data>
-struct AggregateFunctionFirstData : Data {
-    using Self = AggregateFunctionFirstData;
-
-    bool change_if_better(const IColumn& column, size_t row_num, Arena* arena) {
-        return this->change_first_time(column, row_num, arena);
-    }
-    bool change_if_better(const Self& to, Arena* arena) { return this->change_first_time(to, arena); }
-
-    static const char* name() { return "first_value"; }
-};
-
-template <typename Data>
-struct AggregateFunctionLastData : Data {
-    using Self = AggregateFunctionLastData;
-
-    bool change_if_better(const IColumn& column, size_t row_num, Arena* arena) {
-        return this->change_every_time(column, row_num, arena);
-    }
-    bool change_if_better(const Self& to, Arena* arena) {
-        return this->change_every_time(to, arena);
-    }
-
-    static const char* name() { return "last_value"; }
-};
-
 template <typename Data, bool AllocatesMemoryInArena>
 class AggregateFunctionsSingleValue final
         : public IAggregateFunctionDataHelper<
