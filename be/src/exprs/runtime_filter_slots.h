@@ -99,7 +99,9 @@ public:
     void insert(std::unordered_map<const vectorized::Block*, std::vector<int>>& datas) {
         for (int i = 0; i < _build_expr_context.size(); ++i) {
             auto iter = _runtime_filters.find(i);
-            if (iter == _runtime_filters.end()) continue;
+            if (iter == _runtime_filters.end()) {
+                continue;
+            }
 
             int result_column_id = _build_expr_context[i]->get_last_result_column_id();
             for (auto it : datas) {

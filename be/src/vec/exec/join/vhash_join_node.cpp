@@ -216,7 +216,7 @@ struct ProcessHashTableProbe {
                         if (!_join_node->_is_right_semi_anti) {
                             ++current_offset;
                             for (size_t j = 0; j < right_col_len; ++j) {
-                                auto &column = *mapped.block->get_by_position(j).column;
+                                auto& column = *mapped.block->get_by_position(j).column;
                                 mcol[j + right_col_idx]->insert_from(column, mapped.row_num);
                             }
                         }
@@ -428,9 +428,13 @@ struct ProcessHashTableProbe {
                 auto new_filter_column = ColumnVector<UInt8>::create();
                 auto& filter_map = new_filter_column->get_data();
 
-                if (!column->empty()) filter_map.emplace_back(column->get_bool(0) && visited_map[0]);
+                if (!column->empty()) {
+                    filter_map.emplace_back(column->get_bool(0) && visited_map[0]);
+                }
+
                 for (int i = 1; i < column->size(); ++i) {
-                    if ((visited_map[i] && column->get_bool(i)) || (same_to_prev[i] && filter_map[i - 1])) {
+                    if ((visited_map[i] && column->get_bool(i)) ||
+                        (same_to_prev[i] && filter_map[i - 1])) {
                         filter_map.push_back(true);
                         filter_map[i - 1] = !same_to_prev[i] && filter_map[i - 1];
                     } else {
@@ -809,6 +813,7 @@ Status HashJoinNode::_hash_table_build(RuntimeState* state) {
     Block block;
 
     bool eos = false;
+
     while (!eos) {
         block.clear();
         RETURN_IF_CANCELLED(state);
@@ -820,6 +825,10 @@ Status HashJoinNode::_hash_table_build(RuntimeState* state) {
 
         RETURN_IF_ERROR(_process_build_block(state, block));
         RETURN_IF_LIMIT_EXCEEDED(state, "Hash join, while constructing the hash table.");
+    }
+
+    if (!_inserted_rows.size()) {
+        return Status::OK();
     }
 
     return std::visit(
