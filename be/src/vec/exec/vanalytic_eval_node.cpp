@@ -134,6 +134,14 @@ Status VAnalyticEvalNode::init(const TPlanNode& tnode, RuntimeState* state) {
             _executor.execute = std::bind<void>(&VAnalyticEvalNode::_execute_for_three_column, this,
                                                 std::placeholders::_1, std::placeholders::_2,
                                                 std::placeholders::_3, std::placeholders::_4);
+        } else if (fn.name.function_name == "last_value" ||
+                   fn.name.function_name == "first_value") {
+            _executor.execute = std::bind<void>(&VAnalyticEvalNode::_execute_for_one_column_with_bound, this,
+                                                std::placeholders::_1, std::placeholders::_2,
+                                                std::placeholders::_3, std::placeholders::_4);
+            if (fn.name.function_name == "first_value") {
+                _is_first_value = true;
+            }
         } else {
             _executor.execute = std::bind<void>(&VAnalyticEvalNode::_execute_for_one_column, this,
                                                 std::placeholders::_1, std::placeholders::_2,
@@ -360,10 +368,10 @@ BlockRowPos VAnalyticEvalNode::_get_partition_by_end() {
         return _all_block_end;
     }
 
-    BlockRowPos cal_end;
+    BlockRowPos cal_end = _all_block_end;
     for (size_t i = 0; i < _partition_by_eq_expr_ctxs.size(); ++i) { //have partition_by, binary search the partiton end
         cal_end = _compare_row_to_find_end(_partition_by_column_idxs[i], _partition_by_end,
-                                           _all_block_end);
+                                           cal_end);
     }
     cal_end.pos = input_block_first_row_positions[cal_end.block_num] + cal_end.row_num;
     return cal_end;
@@ -587,6 +595,23 @@ void VAnalyticEvalNode::_execute_for_three_column(BlockRowPos peer_group_start,
         _agg_functions[i]->function()->add_range_single_place(
                 frame_start.pos, frame_end.pos, _fn_place_ptr + _offsets_of_aggregate_states[i],
                 _agg_columns.data(), nullptr, peer_group_end.pos);
+    }
+}
+
+//now for first_value last_value
+void VAnalyticEvalNode::_execute_for_one_column_with_bound(BlockRowPos peer_group_start,
+                                                           BlockRowPos peer_group_end,
+                                                           BlockRowPos frame_start,
+                                                           BlockRowPos frame_end) {
+    for (size_t i = 0; i < _agg_functions_size; ++i) {
+        if (!_is_first_value) {
+            frame_start.pos = std::max<int64_t>(frame_start.pos, _partition_by_start.pos);
+            frame_end.pos = std::min<int64_t>(frame_end.pos, _partition_by_end.pos);
+        }
+        const IColumn* agg_column = _agg_intput_columns[i][0].get();
+        _agg_functions[i]->function()->add_range_single_place(
+                frame_start.pos, frame_end.pos, _fn_place_ptr + _offsets_of_aggregate_states[i],
+                &agg_column, nullptr, _partition_by_start.pos);
     }
 }
 

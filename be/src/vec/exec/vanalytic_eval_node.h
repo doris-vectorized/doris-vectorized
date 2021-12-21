@@ -60,6 +60,8 @@ private:
                                 BlockRowPos frame_start, BlockRowPos frame_end);
     void _execute_for_one_column(BlockRowPos peer_group_start, BlockRowPos peer_group_end,
                                  BlockRowPos frame_start, BlockRowPos frame_end);
+    void _execute_for_one_column_with_bound(BlockRowPos peer_group_start, BlockRowPos peer_group_end,
+                                 BlockRowPos frame_start, BlockRowPos frame_end);
     void _execute_for_three_column(BlockRowPos peer_group_start, BlockRowPos peer_group_end,
                                    BlockRowPos frame_start, BlockRowPos frame_end);
 
@@ -118,6 +120,7 @@ private:
     std::vector<int64_t> _partition_by_column_idxs;
 
     bool _input_eos = false;
+    bool _is_first_value = false;
     int64_t _input_total_rows = 0;
     int64_t _output_block_index = 0;
     int64_t _window_end_position = 0;
