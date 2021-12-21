@@ -417,6 +417,8 @@ public:
 
     bool has_set_value() { return _has_value; }
 
+    void set_is_null() { _is_null = true; }
+
     void get_result(const IColumn** columns, int64_t pos) {
         if constexpr (is_nullable) {
             const auto* nullable_column = check_and_get_column<ColumnNullable>(columns[0]);
@@ -460,6 +462,11 @@ struct WindowFunctionFirstData : Data {
         if (this->has_set_value()) {
             return;
         }
+        if (frame_start < frame_end && frame_end <= end) { 
+            this->set_is_null();
+            return;
+        } 
+        frame_start = std::max<int64_t>(frame_start, end);
         this->get_result(columns, frame_start);
     }
     static const char* name() { return "first_value"; }
@@ -469,6 +476,10 @@ template <typename Data>
 struct WindowFunctionLastData : Data {
     void add_range_single_place(int64_t frame_start, int64_t frame_end, const IColumn** columns,
                                 Arena* arena, int64_t end) {
+        if (frame_start >= frame_end) { 
+            this->set_is_null();
+            return;
+        }                          
         this->get_result(columns, frame_end - 1);
     }
     static const char* name() { return "last_value"; }

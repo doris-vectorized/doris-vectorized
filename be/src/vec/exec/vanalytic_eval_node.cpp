@@ -134,6 +134,14 @@ Status VAnalyticEvalNode::init(const TPlanNode& tnode, RuntimeState* state) {
             _executor.execute = std::bind<void>(&VAnalyticEvalNode::_execute_for_three_column, this,
                                                 std::placeholders::_1, std::placeholders::_2,
                                                 std::placeholders::_3, std::placeholders::_4);
+        } else if (fn.name.function_name == "last_value" ||
+                   fn.name.function_name == "first_value") {
+            _executor.execute = std::bind<void>(&VAnalyticEvalNode::_execute_for_one_column_with_bound, this,
+                                                std::placeholders::_1, std::placeholders::_2,
+                                                std::placeholders::_3, std::placeholders::_4);
+            if (fn.name.function_name == "first_value") {
+                _is_first_value = true;
+            }
         } else {
             _executor.execute = std::bind<void>(&VAnalyticEvalNode::_execute_for_one_column, this,
                                                 std::placeholders::_1, std::placeholders::_2,
