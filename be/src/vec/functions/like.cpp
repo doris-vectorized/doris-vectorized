@@ -296,8 +296,15 @@ Status FunctionRegexp::prepare(FunctionContext* context,
     return Status::OK();
 }
 
+Status FunctionRegexp::constant_regex_partial_fn(LikeSearchState* state, const StringValue& val,
+                                                  const StringValue& pattern,
+                                                  unsigned char* result) {
+    *result = RE2::PartialMatch(re2::StringPiece(val.ptr, val.len), *state->regex);
+    return Status::OK();
+}
+
 Status FunctionRegexp::regexp_fn(LikeSearchState* state, const StringValue& val,
-                                  const StringValue& pattern, unsigned char* result) {
+                                 const StringValue& pattern, unsigned char* result) {
     std::string re_pattern(pattern.ptr, pattern.len);
     RE2::Options opts;
     opts.set_never_nl(false);
@@ -309,13 +316,6 @@ Status FunctionRegexp::regexp_fn(LikeSearchState* state, const StringValue& val,
     } else {
         return Status::RuntimeError(fmt::format("Invalid pattern: {}", pattern.debug_string()));
     }
-}
-
-Status FunctionRegexp::constant_regex_partial_fn(LikeSearchState* state, const StringValue& val,
-                                                  const StringValue& pattern,
-                                                  unsigned char* result) {
-    *result = RE2::PartialMatch(re2::StringPiece(val.ptr, val.len), *state->regex);
-    return Status::OK();
 }
 
 } // namespace doris::vectorized

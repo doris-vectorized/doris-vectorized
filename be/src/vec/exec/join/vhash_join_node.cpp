@@ -124,7 +124,7 @@ struct ProcessRuntimeFilterBuild {
     ProcessRuntimeFilterBuild(HashJoinNode* join_node) : _join_node(join_node) {}
 
     Status operator()(RuntimeState* state, HashTableContext& hash_table_ctx) {
-        if (_join_node->_runtime_filter_descs.empty()) {
+        if (_join_node->_runtime_filter_descs.empty() || _join_node->_inserted_rows.empty()) {
             return Status::OK();
         }
         VRuntimeFilterSlots* runtime_filter_slots =

@@ -60,12 +60,14 @@ struct ToBitmapImpl {
             uint64_t int_value = StringParser::string_to_unsigned_int<uint64_t>(raw_str, str_size,
                                                                                 &parse_result);
 
-            if (UNLIKELY(parse_result != StringParser::PARSE_SUCCESS)) {
-                return Status::RuntimeError(
-                        fmt::format("The input: {:.{}} is not valid, to_bitmap only support bigint "
-                                    "value from 0 to 18446744073709551615 currently",
-                                    raw_str, str_size));
-            }
+            // TODO: which where cause problem in to_bitmap(null), rethink how to slove the problem
+            // of null
+//            if (UNLIKELY(parse_result != StringParser::PARSE_SUCCESS)) {
+//                return Status::RuntimeError(
+//                        fmt::format("The input: {:.{}} is not valid, to_bitmap only support bigint "
+//                                    "value from 0 to 18446744073709551615 currently",
+//                                    raw_str, str_size));
+//            }
             res.emplace_back();
             res.back().add(int_value);
         }

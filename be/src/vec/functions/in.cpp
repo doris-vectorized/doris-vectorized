@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 // This file is copied from
-// https://github.com/ClickHouse/ClickHouse/blob/master/src/Functions/In.cpp
-// and modified by Doris
 
 #include <fmt/format.h>
+
+#include "exprs/create_predicate_function.h"
 
 #include "vec/columns/column_const.h"
 #include "vec/columns/column_nullable.h"
@@ -30,122 +30,149 @@
 #include "vec/functions/simple_function_factory.h"
 
 namespace doris::vectorized {
-/** in(x, set) - function for evaluating the IN
-  * notIn(x, set) - and NOT IN.
-  */
 
-template <bool negative, bool null_in_set>
-struct FunctionInName;
+struct InState {
+    bool use_set;
 
-template <>
-struct FunctionInName<false, false> {
-    static constexpr auto name = "in";
+    // only use in null in set
+    bool null_in_set;
+    std::unique_ptr<HybridSetBase> hybrid_set;
 };
 
-template <>
-struct FunctionInName<true, false> {
-    static constexpr auto name = "not_in";
-};
-
-template <>
-struct FunctionInName<false, true> {
-    static constexpr auto name = "in_null_in_set";
-};
-
-template <>
-struct FunctionInName<true, true> {
-    static constexpr auto name = "not_in_null_in_set";
-};
-
-template <bool negative, bool null_in_set>
+template <bool negative>
 class FunctionIn : public IFunction {
 public:
-    static constexpr auto name = FunctionInName<negative, null_in_set>::name;
+    static constexpr auto name = negative ? "not_in" : "in";
+
     static FunctionPtr create() { return std::make_shared<FunctionIn>(); }
 
     String get_name() const override { return name; }
 
-    size_t get_number_of_arguments() const override { return 2; }
+    bool is_variadic() const override { return true; }
 
-    DataTypePtr get_return_type_impl(const DataTypes& /*arguments*/) const override {
-        return make_nullable(std::make_shared<DataTypeUInt8>());
+    size_t get_number_of_arguments() const override { return 0; }
+
+    DataTypePtr get_return_type_impl(const DataTypes& args) const override {
+        for (const auto& arg : args) {
+            if (arg->is_nullable()) return make_nullable(std::make_shared<DataTypeUInt8>());
+        }
+        return std::make_shared<DataTypeUInt8>();
     }
 
     bool use_default_implementation_for_nulls() const override { return false; }
 
+    Status prepare(FunctionContext* context, FunctionContext::FunctionStateScope scope) override {
+        if (scope == FunctionContext::THREAD_LOCAL) {
+            return Status::OK();
+        }
+        auto* state = new InState();
+        context->set_function_state(scope, state);
+        state->hybrid_set.reset(create_set(convert_type_to_primitive(
+                context->get_arg_type(0)->type)));
+
+        DCHECK(context->get_num_args() > 1);
+        for (int i = 1; i < context->get_num_args(); ++i) {
+            const auto& const_column_ptr = context->get_constant_col(i);
+            if (const_column_ptr != nullptr) {
+                auto const_data = const_column_ptr->column_ptr->get_data_at(0);
+                if (const_data.data == nullptr) {
+                    state->null_in_set = true;
+                } else {
+                    state->hybrid_set->insert((void *) const_data.data, const_data.size);
+                }
+            } else {
+                state->use_set = false;
+                break;
+            }
+        }
+        return Status::OK();
+    }
+
     Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
                         size_t result, size_t input_rows_count) override {
-        /// NOTE: after updating this code, check that FunctionIgnoreExceptNull returns the same type of column.
-
-        /// Second argument must be ColumnSet.
-        ColumnPtr column_set_ptr = block.get_by_position(arguments[1]).column;
-        const ColumnSet* column_set = typeid_cast<const ColumnSet*>(&*column_set_ptr);
-        if (!column_set) {
-            return Status::RuntimeError(
-                    fmt::format("Second argument for function '{}' must be Set; found {}",
-                                get_name(), column_set_ptr->get_name()));
+        auto in_state = reinterpret_cast<InState*>(
+                    context->get_function_state(FunctionContext::FRAGMENT_LOCAL));
+        if (!in_state) {
+            return Status::RuntimeError(fmt::format("funciton context for function '{}' must have Set;",
+                                get_name()));
         }
-
-        auto set = column_set->get_data();
-        /// First argument may be a single column.
-        const ColumnWithTypeAndName& left_arg = block.get_by_position(arguments[0]);
-
         auto res = ColumnUInt8::create();
         ColumnUInt8::Container& vec_res = res->get_data();
         vec_res.resize(input_rows_count);
 
         ColumnUInt8::MutablePtr col_null_map_to;
-        col_null_map_to = ColumnUInt8::create(left_arg.column->size());
+        col_null_map_to = ColumnUInt8::create(input_rows_count);
         auto& vec_null_map_to = col_null_map_to->get_data();
 
-        if (set->size() == 0) {
-            if (negative)
-                memset(vec_res.data(), 1, vec_res.size());
-            else
-                memset(vec_res.data(), 0, vec_res.size());
-        } else {
-            auto materialized_column = left_arg.column->convert_to_full_column_if_const();
+        /// First argument may be a single column.
+        const ColumnWithTypeAndName& left_arg = block.get_by_position(arguments[0]);
+        auto materialized_column = left_arg.column->convert_to_full_column_if_const();
 
-            if (auto* nullable = check_and_get_column<ColumnNullable>(*materialized_column)) {
-                const auto& nested_column = nullable->get_nested_column();
-                const auto& null_map = nullable->get_null_map_column().get_data();
-
-                for (size_t i = 0; i < input_rows_count; ++i) {
-                    vec_null_map_to[i] = null_map[i];
-                    if (null_map[i]) {
-                        continue;
-                    }
-                    const auto& ref_data = nested_column.get_data_at(i);
-                    vec_res[i] = negative ^ set->find((void*)ref_data.data, ref_data.size);
-                    if constexpr (null_in_set) {
+        if (in_state->use_set) {
+            for (size_t i = 0; i < input_rows_count; ++i) {
+                const auto& ref_data = materialized_column->get_data_at(i);
+                if (ref_data.data) {
+                    vec_res[i] = negative ^ in_state->hybrid_set->find((void *) ref_data.data, ref_data.size);
+                    if (in_state->null_in_set) {
                         vec_null_map_to[i] = negative == vec_res[i];
                     }
+                } else {
+                    vec_null_map_to[i] = true;
                 }
-            } else {
-                /// For all rows
-                for (size_t i = 0; i < input_rows_count; ++i) {
-                    const auto& ref_data = materialized_column->get_data_at(i);
-                    vec_res[i] = negative ^ set->find((void*)ref_data.data, ref_data.size);
-                    if constexpr (null_in_set) {
-                        vec_null_map_to[i] = negative == vec_res[i];
-                    } else {
-                        vec_null_map_to[i] = 0;
-                    }
+            }
+        } else {
+            std::vector<ColumnPtr> set_columns;
+            for (int i = 1; i < arguments.size(); ++i) {
+                set_columns.emplace_back(block.get_by_position(arguments[i]).column);
+            }
+
+            for (size_t i = 0; i < input_rows_count; ++i) {
+                const auto& ref_data = materialized_column->get_data_at(i);
+                if (ref_data.data == nullptr) {
+                    vec_null_map_to[i] = true;
+                    continue;
+                }
+
+                std::unique_ptr<HybridSetBase> hybrid_set(create_set(convert_type_to_primitive(
+                context->get_arg_type(0)->type)));
+                bool null_in_set = false;
+
+                for (const auto& set_column : set_columns) {
+                    auto set_data = set_column->get_data_at(i);
+                    if (set_data.data == nullptr)
+                        null_in_set = true;
+                    else
+                        hybrid_set->insert((void *)(set_data.data), set_data.size);
+                }
+                vec_res[i] = negative ^ hybrid_set->find((void *) ref_data.data, ref_data.size);
+                if (null_in_set) {
+                    vec_null_map_to[i] = negative == vec_res[i];
                 }
             }
         }
 
-        block.replace_by_position(
-                result, ColumnNullable::create(std::move(res), std::move(col_null_map_to)));
+        if (block.get_by_position(result).type->is_nullable()) {
+            block.replace_by_position(result, ColumnNullable::create(std::move(res), std::move(col_null_map_to)));
+        } else {
+            block.replace_by_position(result, std::move(res));
+        }
+
+        return Status::OK();
+    }
+
+    Status close(FunctionContext* context, FunctionContext::FunctionStateScope scope) override {
+        if (scope == FunctionContext::FRAGMENT_LOCAL) {
+            delete reinterpret_cast<InState*>(
+                    context->get_function_state(FunctionContext::FRAGMENT_LOCAL));
+        }
         return Status::OK();
     }
 };
 
+
 void register_function_in(SimpleFunctionFactory& factory) {
-    factory.register_function<FunctionIn<false, false>>();
-    factory.register_function<FunctionIn<true, false>>();
-    factory.register_function<FunctionIn<true, true>>();
-    factory.register_function<FunctionIn<false, true>>();
+    factory.register_function<FunctionIn<false>>();
+    factory.register_function<FunctionIn<true>>();
 }
 
 } // namespace doris::vectorized

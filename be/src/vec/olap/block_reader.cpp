@@ -31,7 +31,7 @@ using std::vector;
 
 namespace doris::vectorized {
 
-BlockReader::BlockReader() : _collect_iter(new VCollectIterator()) {}
+BlockReader::BlockReader() : _collect_iter(new VCollectIterator()), _next_row{nullptr, -1, false} {}
 
 BlockReader::~BlockReader() {
     for (int i = 0; i < _agg_functions.size(); ++i) {
@@ -153,7 +153,7 @@ OLAPStatus BlockReader::init(const ReaderParams& read_params) {
         _next_block_func = &BlockReader::_unique_key_next_block;
         break;
     case KeysType::AGG_KEYS:
-        _next_block_func = &BlockReader::_agg_key_next_block;
+        _next_block_func = _aggregation ? &BlockReader::_direct_next_block : &BlockReader::_agg_key_next_block;
         break;
     default:
         DCHECK(false) << "No next row function for type:" << _tablet->keys_type();

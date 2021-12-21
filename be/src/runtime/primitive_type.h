@@ -27,6 +27,8 @@
 #include "runtime/decimalv2_value.h"
 #include "runtime/large_int_value.h"
 #include "runtime/string_value.h"
+#include "udf/udf.h"
+
 #include "vec/columns/column_decimal.h"
 #include "vec/columns/column_string.h"
 #include "vec/columns/columns_number.h"
@@ -64,6 +66,51 @@ enum PrimitiveType {
     TYPE_OBJECT, /* 22 */
     TYPE_STRING, /* 23 */
 };
+
+inline PrimitiveType convert_type_to_primitive(FunctionContext::Type type) {
+    switch (type) {
+    case FunctionContext::Type::INVALID_TYPE:
+        return PrimitiveType::INVALID_TYPE;
+    case FunctionContext::Type::TYPE_DOUBLE:
+        return PrimitiveType::TYPE_DOUBLE;
+    case FunctionContext::Type::TYPE_NULL:
+        return PrimitiveType::TYPE_NULL;
+    case FunctionContext::Type::TYPE_CHAR:
+        return PrimitiveType::TYPE_CHAR;
+    case FunctionContext::Type::TYPE_VARCHAR:
+        return PrimitiveType::TYPE_VARCHAR;
+    case FunctionContext::Type::TYPE_STRING:
+        return PrimitiveType::TYPE_STRING;
+    case FunctionContext::Type::TYPE_DATETIME:
+        return PrimitiveType::TYPE_DATETIME;
+    case FunctionContext::Type::TYPE_DECIMALV2:
+        return PrimitiveType::TYPE_DECIMALV2;
+    case FunctionContext::Type::TYPE_BOOLEAN:
+        return PrimitiveType::TYPE_BOOLEAN;
+    case FunctionContext::Type::TYPE_ARRAY:
+        return PrimitiveType::TYPE_ARRAY;
+    case FunctionContext::Type::TYPE_OBJECT:
+        return PrimitiveType::TYPE_OBJECT;
+    case FunctionContext::Type::TYPE_HLL:
+        return PrimitiveType::TYPE_HLL;
+    case FunctionContext::Type::TYPE_TINYINT:
+        return PrimitiveType::TYPE_TINYINT;
+    case FunctionContext::Type::TYPE_SMALLINT:
+        return PrimitiveType::TYPE_SMALLINT;
+    case FunctionContext::Type::TYPE_INT:
+        return PrimitiveType::TYPE_INT;
+    case FunctionContext::Type::TYPE_BIGINT:
+        return PrimitiveType::TYPE_BIGINT;
+    case FunctionContext::Type::TYPE_LARGEINT:
+        return PrimitiveType::TYPE_LARGEINT;
+    case FunctionContext::Type::TYPE_DATE:
+        return PrimitiveType::TYPE_DATE;
+    default:
+        DCHECK(false);
+    }
+
+    return PrimitiveType::INVALID_TYPE;
+}
 
 inline bool is_enumeration_type(PrimitiveType type) {
     switch (type) {
