@@ -259,6 +259,8 @@ public:
             if (else_column_ptr->is_nullable()) {
                 then_null = true;
             }
+        } else {
+            then_null = true;
         }
 
         CaseWhenColumnHolder column_holder = CaseWhenColumnHolder(

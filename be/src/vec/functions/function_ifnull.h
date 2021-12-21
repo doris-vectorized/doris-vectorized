@@ -81,7 +81,7 @@ public:
                  new_column,
                  new_result_column
                 });
-        auto func_if = SimpleFunctionFactory::instance().get_function("if", if_columns, new_result_column.type);
+        auto func_if = SimpleFunctionFactory::instance().get_function("if", if_columns, make_nullable(new_result_column.type));
         func_if->execute(context, temporary_block, {0, 1, 2}, 3, input_rows_count);
         /// need to handle nullable type and not nullable type differently,
         /// because `IF` function always return nullable type, but result type is not always

@@ -44,13 +44,8 @@ private:
     FunctionBasePtr _function;
     std::string _expr_name;
 
-    ColumnPtr _set_param;
-
     const bool _is_not_in;
     bool _is_prepare;
-    bool _null_in_set;
-    std::shared_ptr<HybridSetBase> _hybrid_set;
-
 private:
     static const constexpr char* function_name = "in";
 };

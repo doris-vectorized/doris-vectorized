@@ -27,15 +27,12 @@
 #include "vec/data_types/data_type_nullable.h"
 #include "vec/functions/simple_function_factory.h"
 
-// TODO: Refactor `in` implementation via FunctionContext.
 namespace doris::vectorized {
 
 VInPredicate::VInPredicate(const TExprNode& node)
         : VExpr(node),
           _is_not_in(node.in_predicate.is_not_in),
-          _is_prepare(false),
-          _null_in_set(false),
-          _hybrid_set() {}
+          _is_prepare(false) {}
 
 Status VInPredicate::prepare(RuntimeState* state, const RowDescriptor& desc,
                              VExprContext* context) {
@@ -47,64 +44,29 @@ Status VInPredicate::prepare(RuntimeState* state, const RowDescriptor& desc,
     if (_children.size() < 1) {
         return Status::InternalError("no Function operator in.");
     }
-    _hybrid_set.reset(create_set(_children[0]->type().type));
-    if (NULL == _hybrid_set.get()) {
-        return Status::InternalError("Unknown column type.");
-    }
 
     _expr_name =
             fmt::format("({} {} set)", _children[0]->expr_name(), _is_not_in ? "not_in" : "in");
     _is_prepare = true;
 
-    Block block;
-    for (int i = 1; i < _children.size(); ++i) {
-        if (_children[0]->type().is_string_type()) {
-            if (!_children[i]->type().is_string_type()) {
-                return Status::InternalError("InPredicate type not same");
-            }
-        } else {
-            if (_children[i]->type().type != _children[0]->type().type) {
-                return Status::InternalError("InPredicate type not same");
-            }
-        }
-
-        int result = -1;
-        _children[i]->execute(context, &block, &result);
-
-        DCHECK(result != -1);
-        const auto& column = block.get_by_position(result).column;
-        if (column->is_null_at(0)) {
-            _null_in_set = true;
-            continue;
-        }
-        const auto& ref_data = column->get_data_at(0);
-        _hybrid_set->insert((void*)(ref_data.data), ref_data.size);
-    }
-    _set_param = COWHelper<IColumn, ColumnSet>::create(1, _hybrid_set);
-
     DCHECK(_children.size() > 1);
-    auto child = _children[0];
-    const auto& child_name = child->expr_name();
-    auto child_column = child->data_type()->create_column();
     ColumnsWithTypeAndName argument_template;
-    argument_template.reserve(2);
-    argument_template.emplace_back(std::move(child_column), child->data_type(), child_name);
-    // here we should use column_set type, to simplify the code. we dirrect use the child->data_type()
-    argument_template.emplace_back(std::move(child_column), child->data_type(), child_name);
+    argument_template.reserve(_children.size());
+    for (auto child : _children) {
+        auto column = child->data_type()->create_column();
+        argument_template.emplace_back(std::move(column), child->data_type(), child->expr_name());
+    }
 
     // contruct the proper function_name
     std::string head(_is_not_in ? "not_" : "");
-    std::string tail(_null_in_set ? "_null_in_set" : "");
-    std::string real_function_name = head + std::string(function_name) + tail;
+    std::string real_function_name = head + std::string(function_name);
     _function = SimpleFunctionFactory::instance().get_function(real_function_name,
                                                                argument_template, _data_type);
     if (_function == nullptr) {
         return Status::NotSupported(
-                fmt::format("Function {} is not implemented", _fn.name.function_name));
+                fmt::format("Function {} is not implemented", real_function_name));
     }
 
-    // TODO: revisit this, `register_function_context` would create a constant column for every
-    // constant child (each single element in hybrid set) for `in` expression.
     VExpr::register_function_context(state, context);
     return Status::OK();
 }
@@ -123,23 +85,19 @@ void VInPredicate::close(RuntimeState* state, VExprContext* context,
 }
 
 Status VInPredicate::execute(VExprContext* context, Block* block, int* result_column_id) {
-    // for each child call execute
-    ColumnNumbers arguments(2);
-    int column_id = -1;
-    _children[0]->execute(context, block, &column_id);
-    arguments[0] = column_id;
-
-    size_t const_param_id = block->columns();
-    // here we should use column_set type, to simplify the code. we dirrect use the DataTypeInt64
-    block->insert({_set_param, std::make_shared<DataTypeInt64>(), "set"});
-    arguments[1] = const_param_id;
-
+    // TODO: not execute const expr again, but use the const column in function context
+    doris::vectorized::ColumnNumbers arguments(_children.size());
+    for (int i = 0; i < _children.size(); ++i) {
+        int column_id = -1;
+        _children[i]->execute(context, block, &column_id);
+        arguments[i] = column_id;
+    }
     // call function
     size_t num_columns_without_result = block->columns();
     // prepare a column to save result
     block->insert({nullptr, _data_type, _expr_name});
-    _function->execute(context->fn_context(_fn_context_index), *block, arguments,
-                       num_columns_without_result, block->rows(), false);
+    RETURN_IF_ERROR(_function->execute(context->fn_context(_fn_context_index), *block, arguments,
+                                       num_columns_without_result, block->rows(), false));
     *result_column_id = num_columns_without_result;
     return Status::OK();
 }

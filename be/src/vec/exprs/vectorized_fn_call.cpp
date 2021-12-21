@@ -69,7 +69,7 @@ void VectorizedFnCall::close(doris::RuntimeState* state, VExprContext* context,
 
 doris::Status VectorizedFnCall::execute(VExprContext* context, doris::vectorized::Block* block,
                                         int* result_column_id) {
-    // for each child call execute
+    // TODO: not execute const expr again, but use the const column in function context
     doris::vectorized::ColumnNumbers arguments(_children.size());
     for (int i = 0; i < _children.size(); ++i) {
         int column_id = -1;
@@ -89,6 +89,7 @@ doris::Status VectorizedFnCall::execute(VExprContext* context, doris::vectorized
 const std::string& VectorizedFnCall::expr_name() const {
     return _expr_name;
 }
+
 std::string VectorizedFnCall::debug_string() const {
     std::stringstream out;
     out << "VectorizedFn[";
