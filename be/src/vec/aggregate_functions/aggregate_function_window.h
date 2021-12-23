@@ -263,6 +263,8 @@ public:
 
     bool has_set_value() { return _has_value; }
 
+    bool has_set_value() { return _has_value; }
+
     void check_default(const IColumn* column) {
         if (!has_init()) {
             if (is_column_nullable(*column)) {
