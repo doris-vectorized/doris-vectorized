@@ -89,7 +89,7 @@ AggregateFunctionPtr create_aggregate_function_lag(const std::string& name,
                                                    const Array& parameters,
                                                    const bool result_is_nullable) {
     return AggregateFunctionPtr(
-            create_function_single_value<WindowFunctionLeadLag, WindowFunctionLagData, is_nullable>(
+            create_function_single_value<WindowFunctionData, WindowFunctionLagData, is_nullable>(
                     name, argument_types, parameters));
 }
 
@@ -99,38 +99,8 @@ AggregateFunctionPtr create_aggregate_function_lead(const std::string& name,
                                                     const Array& parameters,
                                                     const bool result_is_nullable) {
     return AggregateFunctionPtr(
-            create_function_single_value<WindowFunctionLeadLag, WindowFunctionLeadData, is_nullable>(
+            create_function_single_value<WindowFunctionData, WindowFunctionLeadData, is_nullable>(
                     name, argument_types, parameters));
-}
-
-template <template <typename> class AggregateFunctionTemplate, template <typename> class Data, bool is_nullable>
-static IAggregateFunction* create_function_single_value_first_last(const String& name,
-                                                        const DataTypes& argument_types,
-                                                        const Array& parameters) {
-    assert_arity_at_most<3>(name, argument_types);
-
-    auto type = argument_types[0].get();
-    if (type->is_nullable()) {
-        type = assert_cast<const DataTypeNullable*>(type)->get_nested_type().get();
-    }
-    WhichDataType which(*type);
-
-#define DISPATCH(TYPE)                                                                        \
-    if (which.idx == TypeIndex::TYPE)                                                         \
-        return new AggregateFunctionTemplate<Data<FirstAndLastData<TYPE, is_nullable, false>>>( \
-                argument_types);
-    FOR_NUMERIC_TYPES(DISPATCH)
-#undef DISPATCH
-    if (which.is_decimal()) {
-        return new AggregateFunctionTemplate<Data<FirstAndLastData<Int128, is_nullable, false>>>(argument_types);
-    }
-    if (which.is_date_or_datetime()) {
-        return new AggregateFunctionTemplate<Data<FirstAndLastData<Int64, is_nullable, false>>>(argument_types);
-    }
-    if (which.is_string_or_fixed_string())
-         return new AggregateFunctionTemplate<Data<FirstAndLastData<StringRef, is_nullable, true>>>(argument_types);
-    DCHECK(false) << "with unknowed type, failed in  create_aggregate_function_firstlast";
-    return nullptr;
 }
 
 template <bool is_nullable>
@@ -139,7 +109,7 @@ AggregateFunctionPtr create_aggregate_function_first(const std::string& name,
                                                     const Array& parameters,
                                                     const bool result_is_nullable) {
     return AggregateFunctionPtr(
-            create_function_single_value_first_last<WindowFunctionLeadLag, WindowFunctionFirstData, is_nullable>(
+            create_function_single_value<WindowFunctionData, WindowFunctionFirstData, is_nullable>(
                     name, argument_types, parameters));
 }
 
@@ -149,7 +119,7 @@ AggregateFunctionPtr create_aggregate_function_last(const std::string& name,
                                                     const Array& parameters,
                                                     const bool result_is_nullable) {
     return AggregateFunctionPtr(
-            create_function_single_value_first_last<WindowFunctionLeadLag, WindowFunctionLastData, is_nullable>(
+            create_function_single_value<WindowFunctionData, WindowFunctionLastData, is_nullable>(
                     name, argument_types, parameters));
 }
 

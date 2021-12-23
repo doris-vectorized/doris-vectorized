@@ -51,8 +51,9 @@ public:
         ++data(place).count;
     }
 
-    void add_range_single_place(int64_t frame_start, int64_t frame_end, AggregateDataPtr place,
-                                const IColumn** columns, Arena* arena, int64_t end) const override {
+    void add_range_single_place(int64_t partition_start, int64_t partition_end, int64_t frame_start,
+                                int64_t frame_end, AggregateDataPtr place, const IColumn** columns,
+                                Arena* arena) const override {
         ++data(place).count;
     }
 
@@ -87,8 +88,9 @@ public:
         ++data(place).rank;
     }
 
-    void add_range_single_place(int64_t frame_start, int64_t frame_end, AggregateDataPtr place,
-                                const IColumn** columns, Arena* arena, int64_t end) const override {
+    void add_range_single_place(int64_t partition_start, int64_t partition_end, int64_t frame_start,
+                                int64_t frame_end, AggregateDataPtr place, const IColumn** columns,
+                                Arena* arena) const override {
         int64_t peer_group_count = frame_end - frame_start;
         if (this->data(place).peer_group_start != frame_start) {
             this->data(place).peer_group_start = frame_start;
@@ -131,8 +133,9 @@ public:
         ++data(place).rank;
     }
 
-    void add_range_single_place(int64_t frame_start, int64_t frame_end, AggregateDataPtr place,
-                                const IColumn** columns, Arena* arena, int64_t end) const override {
+    void add_range_single_place(int64_t partition_start, int64_t partition_end, int64_t frame_start,
+                                int64_t frame_end, AggregateDataPtr place, const IColumn** columns,
+                                Arena* arena) const override {
         if (this->data(place).peer_group_start != frame_start) {
             this->data(place).peer_group_start = frame_start;
             this->data(place).rank++;
@@ -160,176 +163,10 @@ public:
     bool has_init() const { return _is_init; }
 
     void reset() {
-        if (has_init()) {
-            _value = {};
-            _default_value = {};
-            _is_null = false;
-            _defualt_is_null = false;
-            _is_init = false;
-        }
-    }
-
-    void insert_result_into(IColumn& to) const {
-        if constexpr (is_nullable) {
-            if (_is_null) {
-                auto& col = assert_cast<ColumnNullable&>(to);
-                col.insert_default();
-            } else {
-                auto& col = assert_cast<ColumnNullable&>(to);
-                if constexpr (is_string)
-                    col.insert_data(_value.data, _value.size);
-                else
-                    col.insert_data(_value.data, 0);
-            }
-        } else {
-            if constexpr (is_string) {
-                auto& col = assert_cast<ColumnString&>(to);
-                col.insert_data(_value.data, _value.size);
-            } else {
-                auto& col = assert_cast<ColumnVector<T>&>(to);
-                col.insert_data(_value.data, 0);
-            }
-        }
-    }
-
-    void get_result(size_t frame_start, size_t frame_end, const IColumn** columns, Arena* arena, size_t end) {
-        if constexpr (is_nullable) {
-            const auto* nullable_column = check_and_get_column<ColumnNullable>(columns[0]);
-            if (nullable_column && nullable_column->is_null_at(frame_end - 1)) {
-                _is_null = true;
-                return;
-            }
-            if constexpr (is_string) {
-                const auto* sources = check_and_get_column<ColumnString>(
-                        nullable_column->get_nested_column_ptr().get());
-                _value = sources->get_data_at(frame_end - 1);
-            } else {
-                const auto* sources = check_and_get_column<ColumnVector<T>>(
-                        nullable_column->get_nested_column_ptr().get());
-                _value = sources->get_data_at(frame_end - 1);
-            }
-        } else {
-            if constexpr (is_string) {
-                const auto* sources = check_and_get_column<ColumnString>(columns[0]);
-                _value = sources->get_data_at(frame_end - 1);
-            } else {
-                const auto* sources = check_and_get_column<ColumnVector<T>>(columns[0]);
-                _value = sources->get_data_at(frame_end - 1);
-            }
-        }
-        _is_null = false;
-    }
-
-    bool defualt_is_null() { return _defualt_is_null; }
-
-    void set_is_null() { _is_null = true; }
-
-    void set_value() { _value = _default_value; }
-
-    void check_default(const IColumn* column) {
-        if (!has_init()) {
-            if (is_column_nullable(*column)) {
-                const auto* nullable_column = check_and_get_column<ColumnNullable>(column);
-                if (nullable_column->is_null_at(0)) {
-                    _defualt_is_null = true;
-                }
-            } else {
-                if constexpr (is_string) {
-                    const auto& col = static_cast<const ColumnString&>(*column);
-                    _default_value = col.get_data_at(0);
-                } else {
-                    const auto& col = static_cast<const ColumnVector<T>&>(*column);
-                    _default_value = col.get_data_at(0);
-                }
-            }
-            _is_init = true;
-        }
-    }
-
-private:
-    StringRef _value;
-    StringRef _default_value;
-    bool _is_init = false;
-    bool _is_null = false;
-    bool _defualt_is_null = false;
-};
-
-template <typename Data>
-struct WindowFunctionLeadData : Data {
-    void add_range_single_place(size_t frame_start, size_t frame_end, const IColumn** columns,
-                                Arena* arena, size_t end) {
-        this->check_default(columns[2]);
-        if (frame_end > end) { //output default value
-            if (this->defualt_is_null()) {
-                this->set_is_null();
-            } else {
-                this->set_value();
-            }
-            return;
-        }
-        this->get_result(frame_start, frame_end, columns, arena, end);
-    }
-    static const char* name() { return "lead"; }
-};
-
-template <typename Data>
-struct WindowFunctionLagData : Data {
-    void add_range_single_place(int64_t frame_start, int64_t frame_end, const IColumn** columns,
-                                Arena* arena, int64_t end) {
-        this->check_default(columns[2]);
-        if (frame_start >= frame_end) { //[unbound preceding(0), offset preceding(-123)]
-            if (this->defualt_is_null()) {
-                this->set_is_null();
-            } else {
-                this->set_value();
-            }
-            return;
-        }
-        this->get_result(frame_start, frame_end, columns, arena, end);
-    }
-    static const char* name() { return "lag"; }
-};
-
-template <typename Data>
-class WindowFunctionLeadLag final
-        : public IAggregateFunctionDataHelper<Data, WindowFunctionLeadLag<Data>> {
-public:
-    WindowFunctionLeadLag(const DataTypes& argument_types)
-            : IAggregateFunctionDataHelper<Data, WindowFunctionLeadLag<Data>>(argument_types, {}),
-              _argument_type(argument_types[0]) {}
-
-    String get_name() const override { return Data::name(); }
-    DataTypePtr get_return_type() const override { return _argument_type; }
-
-    void add_range_single_place(int64_t frame_start, int64_t frame_end, AggregateDataPtr place,
-                                const IColumn** columns, Arena* arena, int64_t end) const override {
-        this->data(place).add_range_single_place(frame_start, frame_end, columns, arena, end);
-    }
-
-    void reset(AggregateDataPtr place) const override { this->data(place).reset(); }
-
-    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
-        this->data(place).insert_result_into(to);
-    }
-
-    void add(AggregateDataPtr place, const IColumn** columns, size_t row_num, Arena*) const override {}
-    void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {}
-    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {}
-    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {}
-    const char* get_header_file_path() const override { return __FILE__; }
-
-private:
-    DataTypePtr _argument_type;
-};
-
-template <typename T, bool is_nullable, bool is_string>
-struct FirstAndLastData {
-public:
-    bool has_init() const { return _is_init; }
-
-    void reset() {
         _value = {};
+        _default_value = {};
         _is_null = false;
+        _defualt_is_null = false;
         _is_init = false;
         _has_value = false;
     }
@@ -357,14 +194,10 @@ public:
         }
     }
 
-    bool has_set_value() { return _has_value; }
-
-    void set_is_null() { _is_null = true; }
-
     void get_result(const IColumn** columns, int64_t pos) {
         if constexpr (is_nullable) {
             const auto* nullable_column = check_and_get_column<ColumnNullable>(columns[0]);
-            if (nullable_column && nullable_column->is_null_at(pos)) { 
+            if (nullable_column && nullable_column->is_null_at(pos)) {
                 _is_null = true;
                 _has_value = true;
                 return;
@@ -390,25 +223,92 @@ public:
         _is_null = false;
         _has_value = true;
     }
+
+    bool defualt_is_null() { return _defualt_is_null; }
+
+    void set_is_null() { _is_null = true; }
+
+    void set_value() { _value = _default_value; }
+
+    bool has_set_value() { return _has_value; }
+
+    void check_default(const IColumn* column) {
+        if (!has_init()) {
+            if (is_column_nullable(*column)) {
+                const auto* nullable_column = check_and_get_column<ColumnNullable>(column);
+                if (nullable_column->is_null_at(0)) {
+                    _defualt_is_null = true;
+                }
+            } else {
+                if constexpr (is_string) {
+                    const auto& col = static_cast<const ColumnString&>(*column);
+                    _default_value = col.get_data_at(0);
+                } else {
+                    const auto& col = static_cast<const ColumnVector<T>&>(*column);
+                    _default_value = col.get_data_at(0);
+                }
+            }
+            _is_init = true;
+        }
+    }
+
 private:
     StringRef _value;
+    StringRef _default_value;
     bool _is_init = false;
     bool _is_null = false;
+    bool _defualt_is_null = false;
     bool _has_value = false;
 };
 
 template <typename Data>
+struct WindowFunctionLeadData : Data {
+    void add_range_single_place(int64_t partition_start, int64_t partition_end, size_t frame_start,
+                                size_t frame_end, const IColumn** columns) {
+        this->check_default(columns[2]);
+        if (frame_end > partition_end) { //output default value, win end is under partition
+            if (this->defualt_is_null()) {
+                this->set_is_null();
+            } else {
+                this->set_value();
+            }
+            return;
+        }
+        this->get_result(columns, frame_end - 1);
+    }
+    static const char* name() { return "lead"; }
+};
+
+template <typename Data>
+struct WindowFunctionLagData : Data {
+    void add_range_single_place(int64_t partition_start, int64_t partition_end, int64_t frame_start,
+                                int64_t frame_end, const IColumn** columns) {
+        this->check_default(columns[2]);
+        if (partition_start >= frame_end) { //[unbound preceding(0), offset preceding(-123)]
+            if (this->defualt_is_null()) {  // win start is beyond partition
+                this->set_is_null();
+            } else {
+                this->set_value();
+            }
+            return;
+        }
+        this->get_result(columns, frame_end - 1);
+    }
+    static const char* name() { return "lag"; }
+};
+
+template <typename Data>
 struct WindowFunctionFirstData : Data {
-    void add_range_single_place(int64_t frame_start, int64_t frame_end, const IColumn** columns,
-                                Arena* arena, int64_t end) {
+    void add_range_single_place(int64_t partition_start, int64_t partition_end, int64_t frame_start,
+                                int64_t frame_end, const IColumn** columns) {
         if (this->has_set_value()) {
             return;
         }
-        if (frame_start < frame_end && frame_end <= end) { 
-            this->set_is_null();
+        if (frame_start < frame_end && frame_end <= partition_start) { //rewrite last_value when under partition
+            this->set_is_null();            //so no need more judge
             return;
-        } 
-        frame_start = std::max<int64_t>(frame_start, end);
+        }
+        frame_start = std::max<int64_t>(frame_start, partition_start);
         this->get_result(columns, frame_start);
     }
     static const char* name() { return "first_value"; }
@@ -416,15 +316,51 @@ struct WindowFunctionFirstData : Data {
 
 template <typename Data>
 struct WindowFunctionLastData : Data {
-    void add_range_single_place(int64_t frame_start, int64_t frame_end, const IColumn** columns,
-                                Arena* arena, int64_t end) {
-        if (frame_start >= frame_end) { 
+    void add_range_single_place(int64_t partition_start, int64_t partition_end, int64_t frame_start,
+                                int64_t frame_end, const IColumn** columns) {
+        if ((frame_start < frame_end) &&
+            ((frame_end <= partition_start) || (frame_start >= partition_end))) { //beyond or under partition, set null
             this->set_is_null();
             return;
-        }                          
+        }
+        frame_end = std::min<int64_t>(frame_end, partition_end);
         this->get_result(columns, frame_end - 1);
     }
     static const char* name() { return "last_value"; }
+};
+
+template <typename Data>
+class WindowFunctionData final
+        : public IAggregateFunctionDataHelper<Data, WindowFunctionData<Data>> {
+public:
+    WindowFunctionData(const DataTypes& argument_types)
+            : IAggregateFunctionDataHelper<Data, WindowFunctionData<Data>>(argument_types, {}),
+              _argument_type(argument_types[0]) {}
+
+    String get_name() const override { return Data::name(); }
+    DataTypePtr get_return_type() const override { return _argument_type; }
+
+    void add_range_single_place(int64_t partition_start, int64_t partition_end, int64_t frame_start,
+                                int64_t frame_end, AggregateDataPtr place, const IColumn** columns,
+                                Arena* arena) const override {
+        this->data(place).add_range_single_place(partition_start, partition_end, frame_start,
+                                                 frame_end, columns);
+    }
+
+    void reset(AggregateDataPtr place) const override { this->data(place).reset(); }
+
+    void insert_result_into(ConstAggregateDataPtr place, IColumn& to) const override {
+        this->data(place).insert_result_into(to);
+    }
+
+    void add(AggregateDataPtr place, const IColumn** columns, size_t row_num, Arena*) const override {}
+    void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {}
+    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {}
+    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {}
+    const char* get_header_file_path() const override { return __FILE__; }
+
+private:
+    DataTypePtr _argument_type;
 };
 
 } // namespace doris::vectorized

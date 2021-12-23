@@ -140,9 +140,10 @@ public:
                                  const IColumn** columns, Arena* arena, bool has_null = false) = 0;
 
     // only used at window function
-    virtual void add_range_single_place(int64_t frame_start, int64_t frame_end,
+    virtual void add_range_single_place(int64_t partition_start, int64_t partition_end,
+                                        int64_t frame_start, int64_t frame_end,
                                         AggregateDataPtr place, const IColumn** columns,
-                                        Arena* arena, int64_t end = 0) const = 0;
+                                        Arena* arena) const = 0;
 
     /** This is used for runtime code generation to determine, which header files to include in generated source.
       * Always implement it as
@@ -184,9 +185,12 @@ public:
         for (size_t i = 0; i < batch_size; ++i)
             static_cast<const Derived*>(this)->add(place, columns, i, arena);
     }
-
-    void add_range_single_place(int64_t frame_start, int64_t frame_end, AggregateDataPtr place,
-                                const IColumn** columns, Arena* arena, int64_t end) const override {
+    //now this is use for sum/count/avg/min/max win function, other win function should override this function in class
+    void add_range_single_place(int64_t partition_start, int64_t partition_end, int64_t frame_start,
+                                int64_t frame_end, AggregateDataPtr place, const IColumn** columns,
+                                Arena* arena) const override {
+        frame_start = std::max<int64_t>(frame_start, partition_start);
+        frame_end = std::min<int64_t>(frame_end, partition_end);
         for (int64_t i = frame_start; i < frame_end; ++i) {
             static_cast<const Derived*>(this)->add(place, columns, i, arena);
         }
