@@ -32,11 +32,11 @@
 namespace doris::vectorized {
 class FunctionNullIf : public IFunction {
 public:
-
     struct NullPresence {
         bool has_nullable = false;
         bool has_null_constant = false;
     };
+
     static constexpr auto name = "nullif";
 
     static FunctionPtr create() { return std::make_shared<FunctionNullIf>(); }

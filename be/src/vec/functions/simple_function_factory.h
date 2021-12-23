@@ -29,6 +29,7 @@ namespace doris::vectorized {
 class SimpleFunctionFactory;
 
 void register_function_comparison(SimpleFunctionFactory& factory);
+void register_function_comparison_eq_for_null(SimpleFunctionFactory& factory);
 void register_function_hll_cardinality(SimpleFunctionFactory& factory);
 void register_function_hll_empty(SimpleFunctionFactory& factory);
 void register_function_hll_hash(SimpleFunctionFactory& factory);
@@ -162,6 +163,7 @@ public:
             register_function_json(instance);
             register_function_function_hash(instance);
             register_function_function_ifnull(instance);
+            register_function_comparison_eq_for_null(instance);
             register_function_like(instance);
             register_function_regexp(instance);
             register_function_random(instance);

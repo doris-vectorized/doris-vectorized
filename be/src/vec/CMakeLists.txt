@@ -108,6 +108,7 @@ set(VEC_FILES
   functions/function_cast.cpp
   functions/function_string.cpp
   functions/function_timestamp.cpp
+  functions/comparison_equal_for_null.cpp
   functions/function_json.cpp
   functions/hll_cardinality.cpp
   functions/hll_empty.cpp
