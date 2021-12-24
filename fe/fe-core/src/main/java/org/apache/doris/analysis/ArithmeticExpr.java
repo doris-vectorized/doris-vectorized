@@ -149,6 +149,10 @@ public class ArithmeticExpr extends Expr {
 
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
                 Operator.MOD.getName(),
+                Lists.<Type>newArrayList(Type.FLOAT, Type.FLOAT),
+                Type.FLOAT, Function.NullableMode.ALWAYS_NULLABLE));
+        functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
+                Operator.MOD.getName(),
                 Lists.<Type>newArrayList(Type.DOUBLE, Type.DOUBLE),
                 Type.DOUBLE, Function.NullableMode.ALWAYS_NULLABLE));
         functionSet.addBuiltin(ScalarFunction.createVecBuiltinOperator(
@@ -292,20 +296,39 @@ public class ArithmeticExpr extends Expr {
             Type t2 = getChild(1).getType();
             Type commonType;
 
+            // Support null operation
+            if (t1.isNull() || t2.isNull()) {
+                castBinaryOp(t1.isNull() ? t2 : t1);
+                t1 = getChild(0).getType();
+                t2 = getChild(1).getType();
+            }
+
+            // dispose the case t1 and t2 is not numeric type
+            if (!t1.isNumericType()) {
+                castChild(t1.getNumResultType(), 0);
+                t1 = t1.getNumResultType();
+            }
+            if (!t2.isNumericType()) {
+                castChild(t2.getNumResultType(), 1);
+                t2 = t2.getNumResultType();
+            }
+
             switch (op) {
                 case MULTIPLY:
                 case ADD:
                 case SUBTRACT:
+                    if (t1.isDecimalV2() || t2.isDecimalV2()) {
+                        castBinaryOp(findCommonType(t1, t2));
+                    }
                 case MOD:
                     if (t1.isDecimalV2() || t2.isDecimalV2()) {
                         castBinaryOp(findCommonType(t1, t2));
+                    } else if ((t1.isFloatingPointType() || t2.isFloatingPointType()) && !t1.equals(t2)) {
+                        castBinaryOp(Type.DOUBLE);
                     }
                     break;
                 case INT_DIVIDE:
-                    if (t1.isDecimalV2() || t2.isDecimalV2()) {
-                        castBinaryOp(findCommonType(t1, t2));
-                    }
-                    else if (t1.isDateType() || t2.isDateType()) {
+                    if (!t1.isFixedPointType() || !t2.isFloatingPointType()) {
                         castBinaryOp(Type.BIGINT);
                     }
                     break;

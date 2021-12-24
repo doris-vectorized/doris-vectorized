@@ -37,9 +37,14 @@ struct ModuloImpl {
 
     template <typename Result = ResultType>
     static inline Result apply(A a, B b, NullMap& null_map, size_t index) {
-        null_map[index] = b == 0;
-        return typename NumberTraits::ToInteger<A>::Type(a) %
-               (typename NumberTraits::ToInteger<B>::Type(b) + (b == 0));
+        if constexpr (std::is_floating_point_v<Result>) {
+            null_map[index] = 0;
+            return fmod(a, b);
+        } else {
+            null_map[index] = b == 0;
+            return typename NumberTraits::ToInteger<A>::Type(a) %
+                   (typename NumberTraits::ToInteger<B>::Type(b) + (b == 0));
+        }
     }
 
     static inline DecimalV2Value apply(DecimalV2Value a, DecimalV2Value b, NullMap& null_map, size_t index) {
