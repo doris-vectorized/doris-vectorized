@@ -47,15 +47,18 @@ class RowCursor;
 class RowBlock;
 class CollectIterator;
 class RuntimeState;
+
 namespace vectorized {
 class VCollectIterator;
 class Block;
-}
+} // namespace vectorized
+
 // Params for Reader,
 // mainly include tablet, data version and fetch range.
 struct ReaderParams {
     TabletSharedPtr tablet;
     ReaderType reader_type = READER_QUERY;
+    bool direct_mode = false;
     bool aggregation = false;
     bool need_agg_finalize = true;
     // 1. when read column data page:
@@ -112,7 +115,7 @@ public:
     // Return OLAP_SUCCESS and set `*eof` to true when no more rows can be read.
     // Return others when unexpected error happens.
     virtual OLAPStatus next_row_with_aggregation(RowCursor* row_cursor, MemPool* mem_pool,
-                                         ObjectPool* agg_pool, bool* eof) = 0;
+                                                 ObjectPool* agg_pool, bool* eof) = 0;
 
     // Read next block with aggregation.
     // Return OLAP_SUCCESS and set `*eof` to false when next block is read
@@ -120,7 +123,7 @@ public:
     // Return others when unexpected error happens.
     // TODO: Rethink here we still need mem_pool and agg_pool?
     virtual OLAPStatus next_block_with_aggregation(vectorized::Block* block, MemPool* mem_pool,
-                                         ObjectPool* agg_pool, bool* eof) {
+                                                   ObjectPool* agg_pool, bool* eof) {
         return OLAP_ERR_READER_INITIALIZE_ERROR;
     }
 
@@ -207,6 +210,7 @@ protected:
     bool _next_delete_flag = false;
     bool _filter_delete = false;
     int32_t _sequence_col_idx = -1;
+    bool _direct_mode = false;
 
     std::unique_ptr<CollectIterator> _collect_iter;
     std::vector<uint32_t> _key_cids;
