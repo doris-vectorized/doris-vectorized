@@ -32,6 +32,8 @@
 #include "vec/common/allocator.h"
 #include "vec/common/memcpy_small.h"
 
+#include "gutil/dynamic_annotations.h"
+
 
 namespace doris::vectorized {
 
