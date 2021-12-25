@@ -252,21 +252,21 @@ Status PreparedFunctionImpl::execute_without_low_cardinality_columns(FunctionCon
 Status PreparedFunctionImpl::execute(FunctionContext* context, Block& block,
                                      const ColumnNumbers& args, size_t result,
                                      size_t input_rows_count, bool dry_run) {
-    if (use_default_implementation_for_low_cardinality_columns()) {
-        auto& res = block.safe_get_by_position(result);
-        Block block_without_low_cardinality = block.clone_without_columns();
-
-        for (auto arg : args)
-            block_without_low_cardinality.safe_get_by_position(arg).column =
-                    block.safe_get_by_position(arg).column;
-
-        {
-            RETURN_IF_ERROR(execute_without_low_cardinality_columns(
-                    context, block_without_low_cardinality, args, result, input_rows_count,
-                    dry_run));
-            res.column = block_without_low_cardinality.safe_get_by_position(result).column;
-        }
-    } else
+//    if (use_default_implementation_for_low_cardinality_columns()) {
+//        auto& res = block.safe_get_by_position(result);
+//        Block block_without_low_cardinality = block.clone_without_columns();
+//
+//        for (auto arg : args)
+//            block_without_low_cardinality.safe_get_by_position(arg).column =
+//                    block.safe_get_by_position(arg).column;
+//
+//        {
+//            RETURN_IF_ERROR(execute_without_low_cardinality_columns(
+//                    context, block_without_low_cardinality, args, result, input_rows_count,
+//                    dry_run));
+//            res.column = block_without_low_cardinality.safe_get_by_position(result).column;
+//        }
+//    } else
         execute_without_low_cardinality_columns(context, block, args, result, input_rows_count,
                                                 dry_run);
     return Status::OK();

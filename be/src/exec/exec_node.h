@@ -221,6 +221,11 @@ protected:
     /// fails.
     Status release_unused_reservation();
 
+    /// Release all memory of block which got from child. The block
+    // 1. clear mem of valid column get from child, make sure child can reuse the mem
+    // 2. delete and release the column which create by function all and other reason
+    void release_block_memory(vectorized::Block& block, uint16_t child_idx = 0);
+
     /// Enable the increase reservation denial probability on 'buffer_pool_client_' based on
     /// the 'debug_action_' set on this node. Returns an error if 'debug_action_param_' is
     /// invalid.

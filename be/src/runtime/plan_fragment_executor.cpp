@@ -324,10 +324,10 @@ Status PlanFragmentExecutor::get_vectorized_internal(::doris::vectorized::Block*
         return Status::OK();
     }
 
+    auto vexec_node = static_cast<doris::ExecNode*>(_plan);
     while (!_done) {
-        _block->clear_column_data();
+        _block->clear_column_data(vexec_node->row_desc().num_materialized_slots());
         SCOPED_TIMER(profile()->total_time_counter());
-        auto vexec_node = static_cast<doris::ExecNode*>(_plan);
         RETURN_IF_ERROR(vexec_node->get_next(_runtime_state.get(), _block.get(), &_done));
 
         if (_block->rows() > 0) {

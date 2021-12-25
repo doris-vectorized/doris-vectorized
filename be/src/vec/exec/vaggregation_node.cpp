@@ -341,7 +341,7 @@ Status AggregationNode::open(RuntimeState* state) {
     Block block;
     while (!eos) {
         RETURN_IF_CANCELLED(state);
-        block.clear_column_data();
+        release_block_memory(block);
         RETURN_IF_ERROR(_children[0]->get_next(state, &block, &eos));
         if (block.rows() == 0) {
             continue;
@@ -366,7 +366,7 @@ Status AggregationNode::get_next(RuntimeState* state, Block* block, bool* eos) {
 
         RETURN_IF_CANCELLED(state);
         do {
-            _preagg_block.clear_column_data();
+            release_block_memory(_preagg_block);
             RETURN_IF_ERROR(_children[0]->get_next(state, &_preagg_block, &child_eos));
         } while (_preagg_block.rows() == 0 && !child_eos);
 

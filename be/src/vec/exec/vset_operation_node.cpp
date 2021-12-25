@@ -278,7 +278,7 @@ Status VSetOperationNode::process_probe_block(RuntimeState* state, int child_id,
         }
         _probe_column_inserted_id.clear();
     }
-    _probe_block.clear_column_data();
+    release_block_memory(_probe_block, child_id);
     _probe_index = 0;
     _probe_rows = 0;
 

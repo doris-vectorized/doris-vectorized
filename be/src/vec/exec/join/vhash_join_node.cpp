@@ -672,7 +672,7 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
                 }
                 _probe_column_disguise_null.clear();
             }
-            _probe_block.clear_column_data();
+            release_block_memory(_probe_block);
         }
 
         do {

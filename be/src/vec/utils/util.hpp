@@ -45,8 +45,10 @@ public:
 
     static void update_null_map(NullMap& dst, const NullMap& src) {
         size_t size = dst.size();
+        auto* __restrict l = dst.data();
+        auto* __restrict r = src.data();
         for (size_t i = 0; i < size; ++i)
-            dst[i] |= src[i];
+            l[i] |= r[i];
     }
 
     static DataTypes get_data_types(const RowDescriptor& row_desc) {
