@@ -47,29 +47,16 @@ Status VSelectNode::get_next(RuntimeState* state, vectorized::Block* block, bool
     RETURN_IF_CANCELLED(state);
     while (true) {
         RETURN_IF_CANCELLED(state);
-<<<<<<< HEAD
         RETURN_IF_ERROR(_children[0]->get_next(state, block, &_child_eos));
-=======
-        RETURN_IF_ERROR(_children[0]->get_next(state, &_child_block, &_child_eos));
->>>>>>> add select node and from_days
         if (reached_limit() || _child_eos) {
             *eos = true;
             break;
         }
-<<<<<<< HEAD
         if (block->rows() == state->batch_size()) {
             break;
         }
     }
     RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, block, block->columns()));
-=======
-        if (_child_block.rows() == state->batch_size()) {
-            break;
-        }
-    }
-    RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, &_child_block, _child_block.columns()));
-    block->swap(std::move(_child_block));
->>>>>>> add select node and from_days
     return Status::OK();
 }
 
