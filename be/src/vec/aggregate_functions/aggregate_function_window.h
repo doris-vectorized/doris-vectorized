@@ -213,7 +213,7 @@ public:
         }
     }
 
-    void get_value(const IColumn** columns, int64_t pos) {
+    void set_value(const IColumn** columns, int64_t pos) {
         if constexpr (is_nullable) {
             const auto* nullable_column = check_and_get_column<ColumnNullable>(columns[0]);
             if (nullable_column && nullable_column->is_null_at(pos)) {
@@ -291,7 +291,7 @@ struct WindowFunctionLeadData : Data {
             }
             return;
         }
-        this->get_value(columns, frame_end - 1);
+        this->set_value(columns, frame_end - 1);
     }
     static const char* name() { return "lead"; }
 };
@@ -309,7 +309,7 @@ struct WindowFunctionLagData : Data {
             }
             return;
         }
-        this->get_value(columns, frame_end - 1);
+        this->set_value(columns, frame_end - 1);
     }
     static const char* name() { return "lag"; }
 };
@@ -326,7 +326,7 @@ struct WindowFunctionFirstData : Data {
             return;
         }
         frame_start = std::max<int64_t>(frame_start, partition_start);
-        this->get_value(columns, frame_start);
+        this->set_value(columns, frame_start);
     }
     static const char* name() { return "first_value"; }
 };
@@ -341,7 +341,7 @@ struct WindowFunctionLastData : Data {
             return;
         }
         frame_end = std::min<int64_t>(frame_end, partition_end);
-        this->get_value(columns, frame_end - 1);
+        this->set_value(columns, frame_end - 1);
     }
     static const char* name() { return "last_value"; }
 };
