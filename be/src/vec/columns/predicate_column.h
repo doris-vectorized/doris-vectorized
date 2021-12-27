@@ -57,10 +57,17 @@ private:
     }
 
     void insert_date_to_res_column(const uint16_t* sel, size_t sel_size, vectorized::ColumnVector<Int128>* res_ptr) {
-        const T* data_pos = data.data();
         for (size_t i = 0; i < sel_size; i++) {
-            DateTimeValue date;
+            VecDateTimeValue date;
             date.from_olap_date(get_date_at(sel[i]));
+            res_ptr->insert_data(reinterpret_cast<char*>(&date), 0);
+        }
+    }
+
+    void insert_datetime_to_res_column(const uint16_t* sel, size_t sel_size, vectorized::ColumnVector<Int64>* res_ptr) {
+        for (size_t i = 0; i < sel_size; i++) {
+            uint64_t value = data[sel[i]];
+            vectorized::VecDateTimeValue date(value);
             res_ptr->insert_data(reinterpret_cast<char*>(&date), 0);
         }
     }
@@ -308,6 +315,24 @@ public:
         }
     }
 
+    ColumnPtr filter_date_time_by_selector(const uint16_t* sel, size_t sel_size, ColumnPtr* ptr = nullptr) {
+        if (ptr == nullptr) {
+            auto res = vectorized::ColumnVector<Int64>::create();
+            if (sel_size == 0) {
+                return res;
+            }
+
+            insert_datetime_to_res_column(sel, sel_size, res.get());
+            return res;
+        } else {
+            if (sel_size != 0) {
+                MutableColumnPtr res_ptr = (*std::move(*ptr)).assume_mutable();
+                insert_datetime_to_res_column(sel, sel_size, reinterpret_cast<vectorized::ColumnVector<Int64>*>(res_ptr.get()));
+            }
+        }
+        return *ptr;
+    }
+
     ColumnPtr filter_string_value_by_selector(const uint16_t* sel, size_t sel_size, ColumnPtr* ptr = nullptr) {
         if (ptr == nullptr) {
             auto res = vectorized::ColumnString::create();
@@ -364,7 +389,7 @@ public:
         } else if constexpr (std::is_same_v<T, doris::vectorized::Float64>) {
             return filter_default_type_by_selector<doris::vectorized::Float64>(sel, sel_size, ptr);
         } else if constexpr (std::is_same_v<T, uint64_t>) {
-            return filter_date_by_selector(sel, sel_size, ptr);
+            return filter_date_time_by_selector(sel, sel_size, ptr);
         } else if constexpr (std::is_same_v<T, uint24_t>) {
             return filter_date_by_selector(sel, sel_size, ptr);
         } else if constexpr (std::is_same_v<T, doris::vectorized::Int128>) {
