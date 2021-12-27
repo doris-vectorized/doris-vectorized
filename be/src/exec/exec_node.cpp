@@ -732,6 +732,11 @@ Status ExecNode::claim_buffer_reservation(RuntimeState* state) {
 Status ExecNode::release_unused_reservation() {
     return _buffer_pool_client.DecreaseReservationTo(_resource_profile.min_reservation);
 }
+
+void ExecNode::release_block_memory(vectorized::Block& block, uint16_t child_idx) {
+    DCHECK(child_idx < _children.size());
+    block.clear_column_data(child(child_idx)->row_desc().num_materialized_slots());
+}
 /*
 Status ExecNode::enable_deny_reservation_debug_action() {
   DCHECK_EQ(debug_action_, TDebugAction::SET_DENY_RESERVATION_PROBABILITY);

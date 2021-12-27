@@ -66,14 +66,12 @@ Status VOlapTableSink::send(RuntimeState* state, vectorized::Block* input_block)
     DorisMetrics::instance()->load_rows->increment(input_block->rows());
     DorisMetrics::instance()->load_bytes->increment(input_block->bytes());
 
-    vectorized::Block block;
+    vectorized::Block block(input_block->get_columns_with_type_and_name());
     if (!_output_vexpr_ctxs.empty()) {
         // Do vectorized expr here to speed up load
         block = vectorized::VExprContext::get_output_block_after_execute_exprs(
             _output_vexpr_ctxs, *input_block, status);
         if (UNLIKELY(block.rows() == 0)) { return status; }
-    } else {
-        block.swap(*input_block);
     }
 
     auto num_rows = block.rows();

@@ -78,8 +78,12 @@ public:
                 const auto& left_null_map = left_column->get_null_map_data();
                 const auto& right_null_map = right_column->get_null_map_data();
 
+                auto* __restrict res = res_map.data();
+                auto* __restrict l = left_null_map.data();
+                auto* __restrict r = right_null_map.data();
+
                 for (int i = 0; i < input_rows_count; ++i) {
-                    res_map[i] |= (left_null_map[i] && left_null_map[i] == right_null_map[i]);
+                    res[i] |= l[i] & (l[i] == r[i]);
                 }
             }
 

@@ -113,7 +113,7 @@ Status VCrossJoinNode::get_next(RuntimeState* state, Block* block, bool* eos) {
                     *eos = _eos = true;
                 } else {
                     do {
-                        _left_block.clear_column_data();
+                        release_block_memory(_left_block);
                         timer.stop();
                         RETURN_IF_ERROR(child(0)->get_next(state, &_left_block, &_left_side_eos));
                         timer.start();

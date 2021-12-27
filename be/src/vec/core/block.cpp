@@ -623,7 +623,14 @@ void Block::clear() {
     index_by_name.clear();
 }
 
-void Block::clear_column_data() noexcept {
+void Block::clear_column_data(int column_size) noexcept {
+    // data.size() greater than column_size, means here have some
+    // function exec result in block, need erase it here
+    if (column_size != -1 and data.size() > column_size) {
+        for (int i = data.size() - 1; i >= column_size; --i) {
+            erase(i);
+        }
+    }
     for (auto& d : data) {
         (*std::move(d.column)).mutate()->clear();
     }

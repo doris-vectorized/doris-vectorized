@@ -35,7 +35,6 @@
 namespace doris {
 
 class QueryFragmentsCtx;
-class HdfsFsCache;
 class ExecNode;
 class RowDescriptor;
 class RowBatch;

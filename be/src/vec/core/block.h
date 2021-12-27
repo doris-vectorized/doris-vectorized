@@ -22,9 +22,9 @@
 
 #include <initializer_list>
 #include <list>
-#include <map>
 #include <set>
 #include <vector>
+#include <parallel_hashmap/phmap.h>
 
 #include "vec/columns/column_nullable.h"
 #include "vec/core/block_info.h"
@@ -53,7 +53,7 @@ namespace vectorized {
 class Block {
 private:
     using Container = ColumnsWithTypeAndName;
-    using IndexByName = std::map<String, size_t>;
+    using IndexByName = phmap::flat_hash_map<String, size_t>;
 
     Container data;
     IndexByName index_by_name;
@@ -180,7 +180,10 @@ public:
     void clear();
     void swap(Block& other) noexcept;
     void swap(Block&& other) noexcept;
-    void clear_column_data() noexcept;
+
+    // Default column size = -1 means clear all column in block
+    // Else clear column [0, column_size) delete column [column_size, data.size)
+    void clear_column_data(int column_size = -1) noexcept;
 
     bool mem_reuse() { return !data.empty(); }
 

@@ -156,6 +156,7 @@ std::string AggFnEvaluator::debug_string() const {
     out << ")";
     return out.str();
 }
+
 void AggFnEvaluator::_calc_argment_columns(Block* block) {
     SCOPED_TIMER(_expr_timer);
     _agg_columns.resize(_input_exprs_ctxs.size());
