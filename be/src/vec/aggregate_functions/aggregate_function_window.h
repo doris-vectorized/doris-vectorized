@@ -169,30 +169,20 @@ public:
         _value = {};
     }
 
-private:
+protected:
     StringRef _value;
     bool _is_null;
 };
 
-struct CopiedValue {
+struct CopiedValue : public Value {
 public:
-    bool is_null() const { return _is_null; }
-    StringRef get_value() const { return _value; }
-
-    void set_null(bool is_null) { _is_null = is_null; }
     void set_value(StringRef value) {
         _copied_value = value.to_string();
         _value = StringRef(_copied_value);
     }
-    void reset() {
-        _is_null = false;
-        _value = {};
-    }
 
 private:
-    StringRef _value;
     std::string _copied_value;
-    bool _is_null;
 };
 
 template <typename T, bool is_nullable, bool is_string, typename StoreType = Value>
