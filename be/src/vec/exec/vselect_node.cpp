@@ -47,17 +47,16 @@ Status VSelectNode::get_next(RuntimeState* state, vectorized::Block* block, bool
     RETURN_IF_CANCELLED(state);
     while (true) {
         RETURN_IF_CANCELLED(state);
-        RETURN_IF_ERROR(_children[0]->get_next(state, &_child_block, &_child_eos));
+        RETURN_IF_ERROR(_children[0]->get_next(state, block, &_child_eos));
         if (reached_limit() || _child_eos) {
             *eos = true;
             break;
         }
-        if (_child_block.rows() == state->batch_size()) {
+        if (block->rows() == state->batch_size()) {
             break;
         }
     }
-    RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, &_child_block, _child_block.columns()));
-    block->swap(std::move(_child_block));
+    RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, block, block->columns()));
     return Status::OK();
 }
 

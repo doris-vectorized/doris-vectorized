@@ -34,8 +34,6 @@ public:
 private:
     // true if last get_next() call on child signalled eos
     bool _child_eos;
-
-    Block _child_block;
 };
 } // namespace vectorized
 } // namespace doris
