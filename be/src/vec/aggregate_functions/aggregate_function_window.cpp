@@ -89,7 +89,7 @@ AggregateFunctionPtr create_aggregate_function_lag(const std::string& name,
                                                    const Array& parameters,
                                                    const bool result_is_nullable) {
     return AggregateFunctionPtr(
-            create_function_single_value<WindowFunctionLeadLag, WindowFunctionLagData, is_nullable>(
+            create_function_single_value<WindowFunctionData, WindowFunctionLagData, is_nullable>(
                     name, argument_types, parameters));
 }
 
@@ -99,7 +99,27 @@ AggregateFunctionPtr create_aggregate_function_lead(const std::string& name,
                                                     const Array& parameters,
                                                     const bool result_is_nullable) {
     return AggregateFunctionPtr(
-            create_function_single_value<WindowFunctionLeadLag, WindowFunctionLeadData, is_nullable>(
+            create_function_single_value<WindowFunctionData, WindowFunctionLeadData, is_nullable>(
+                    name, argument_types, parameters));
+}
+
+template <bool is_nullable>
+AggregateFunctionPtr create_aggregate_function_first(const std::string& name,
+                                                    const DataTypes& argument_types,
+                                                    const Array& parameters,
+                                                    const bool result_is_nullable) {
+    return AggregateFunctionPtr(
+            create_function_single_value<WindowFunctionData, WindowFunctionFirstData, is_nullable>(
+                    name, argument_types, parameters));
+}
+
+template <bool is_nullable>
+AggregateFunctionPtr create_aggregate_function_last(const std::string& name,
+                                                    const DataTypes& argument_types,
+                                                    const Array& parameters,
+                                                    const bool result_is_nullable) {
+    return AggregateFunctionPtr(
+            create_function_single_value<WindowFunctionData, WindowFunctionLastData, is_nullable>(
                     name, argument_types, parameters));
 }
 
@@ -114,5 +134,9 @@ void register_aggregate_function_window_lead_lag(AggregateFunctionSimpleFactory&
     factory.register_function("lead", create_aggregate_function_lead<true>, true);
     factory.register_function("lag", create_aggregate_function_lag<false>);
     factory.register_function("lag", create_aggregate_function_lag<true>, true);
+    factory.register_function("first_value", create_aggregate_function_first<false>);
+    factory.register_function("first_value", create_aggregate_function_first<true>, true);
+    factory.register_function("last_value", create_aggregate_function_last<false>);
+    factory.register_function("last_value", create_aggregate_function_last<true>, true);
 }
 } // namespace doris::vectorized

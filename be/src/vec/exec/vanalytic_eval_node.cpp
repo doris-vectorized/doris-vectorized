@@ -360,10 +360,10 @@ BlockRowPos VAnalyticEvalNode::_get_partition_by_end() {
         return _all_block_end;
     }
 
-    BlockRowPos cal_end;
+    BlockRowPos cal_end = _all_block_end;
     for (size_t i = 0; i < _partition_by_eq_expr_ctxs.size(); ++i) { //have partition_by, binary search the partiton end
         cal_end = _compare_row_to_find_end(_partition_by_column_idxs[i], _partition_by_end,
-                                           _all_block_end);
+                                           cal_end);
     }
     cal_end.pos = input_block_first_row_positions[cal_end.block_num] + cal_end.row_num;
     return cal_end;
@@ -565,19 +565,19 @@ Status VAnalyticEvalNode::_output_current_block(Block* block) {
 }
 
 ////now only for row_number/rank/dense_rank functions
-void VAnalyticEvalNode::_execute_for_no_column(BlockRowPos peer_group_start,
-                                               BlockRowPos peer_group_end, BlockRowPos frame_start,
+void VAnalyticEvalNode::_execute_for_no_column(BlockRowPos partition_start,
+                                               BlockRowPos partition_end, BlockRowPos frame_start,
                                                BlockRowPos frame_end) {
     for (size_t i = 0; i < _agg_functions_size; ++i) {
         _agg_functions[i]->function()->add_range_single_place(
-                peer_group_start.pos, peer_group_end.pos,
+                partition_start.pos, partition_end.pos, frame_start.pos, frame_end.pos,
                 _fn_place_ptr + _offsets_of_aggregate_states[i], nullptr, nullptr);
     }
 }
 
 //now only for lead/lag functions
-void VAnalyticEvalNode::_execute_for_three_column(BlockRowPos peer_group_start,
-                                                  BlockRowPos peer_group_end,
+void VAnalyticEvalNode::_execute_for_three_column(BlockRowPos partition_start,
+                                                  BlockRowPos partition_end,
                                                   BlockRowPos frame_start, BlockRowPos frame_end) {
     for (size_t i = 0; i < _agg_functions_size; ++i) {
         std::vector<const IColumn*> _agg_columns;
@@ -585,24 +585,20 @@ void VAnalyticEvalNode::_execute_for_three_column(BlockRowPos peer_group_start,
             _agg_columns.push_back(_agg_intput_columns[i][j].get());
         }
         _agg_functions[i]->function()->add_range_single_place(
-                frame_start.pos, frame_end.pos, _fn_place_ptr + _offsets_of_aggregate_states[i],
-                _agg_columns.data(), nullptr, peer_group_end.pos);
+                partition_start.pos, partition_end.pos, frame_start.pos, frame_end.pos,
+                _fn_place_ptr + _offsets_of_aggregate_states[i], _agg_columns.data(), nullptr);
     }
 }
 
-//now only for agg functions, sum min max count avg
-void VAnalyticEvalNode::_execute_for_one_column(BlockRowPos peer_group_start,
-                                                BlockRowPos peer_group_end, BlockRowPos frame_start,
+//now only for agg functions, sum min max count avg first_value last_value
+void VAnalyticEvalNode::_execute_for_one_column(BlockRowPos partition_start,
+                                                BlockRowPos partition_end, BlockRowPos frame_start,
                                                 BlockRowPos frame_end) {
     for (size_t i = 0; i < _agg_functions_size; ++i) {
-        frame_start.pos = std::max<int64_t>(frame_start.pos, _partition_by_start.pos);
-        frame_end.pos = std::min<int64_t>(frame_end.pos, _partition_by_end.pos); //update peer_group or range pos could overstep partition area
-        if (frame_start.pos > frame_end.pos) //maybe have set range start=0, but end bound preceding is negative
-            return;
         const IColumn* agg_column = _agg_intput_columns[i][0].get();
         _agg_functions[i]->function()->add_range_single_place(
-                frame_start.pos, frame_end.pos, _fn_place_ptr + _offsets_of_aggregate_states[i],
-                &agg_column, nullptr);
+                partition_start.pos, partition_end.pos, frame_start.pos, frame_end.pos,
+                _fn_place_ptr + _offsets_of_aggregate_states[i], &agg_column, nullptr);
     }
 }
 

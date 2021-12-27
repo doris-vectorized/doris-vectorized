@@ -216,9 +216,9 @@ public class AggregateFunction extends Function {
     }
 
     public static AggregateFunction createAnalyticBuiltin(String name,
-            List<Type> argTypes, Type retType, Type intermediateType) {
+            List<Type> argTypes, Type retType, Type intermediateType, boolean vectorized) {
         return createAnalyticBuiltin(name, argTypes, retType, intermediateType, null,
-                null, null, null, null, true, true);
+                null, null, null, null, true, vectorized);
     }
 
     public static AggregateFunction createAnalyticBuiltin(String name,

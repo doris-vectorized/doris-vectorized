@@ -293,6 +293,9 @@ Status VSetOperationNode::extract_build_column(Block& block, ColumnRawPtrs& raw_
     for (size_t i = 0; i < _child_expr_lists[0].size(); ++i) {
         int result_col_id = -1;
         RETURN_IF_ERROR(_child_expr_lists[0][i]->execute(&block, &result_col_id));
+
+        block.get_by_position(result_col_id).column =
+                 block.get_by_position(result_col_id).column->convert_to_full_column_if_const();
         auto column = block.get_by_position(result_col_id).column.get();
 
         if (auto* nullable = check_and_get_column<ColumnNullable>(*column)) {
@@ -320,6 +323,9 @@ Status VSetOperationNode::extract_probe_column(Block& block, ColumnRawPtrs& raw_
     for (size_t i = 0; i < _child_expr_lists[child_id].size(); ++i) {
         int result_col_id = -1;
         RETURN_IF_ERROR(_child_expr_lists[child_id][i]->execute(&block, &result_col_id));
+
+        block.get_by_position(result_col_id).column =
+                 block.get_by_position(result_col_id).column->convert_to_full_column_if_const();
         auto column = block.get_by_position(result_col_id).column.get();
 
         if (auto* nullable = check_and_get_column<ColumnNullable>(*column)) {

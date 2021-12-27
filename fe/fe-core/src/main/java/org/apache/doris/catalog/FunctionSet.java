@@ -2174,13 +2174,21 @@ public class FunctionSet<min_initIN9doris_udf12DecimalV2ValEEEvPNS2_15FunctionCo
             // lead() and lag() the default offset and the default value should be
             // rewritten to call the overrides that take all parameters.
             addBuiltin(AggregateFunction.createAnalyticBuiltin(
-                    "lag", Lists.newArrayList(t), t, t));
+                    "lag", Lists.newArrayList(t), t, t, false));
             addBuiltin(AggregateFunction.createAnalyticBuiltin(
-                    "lag", Lists.newArrayList(t, Type.BIGINT), t, t));
+                    "lag", Lists.newArrayList(t, Type.BIGINT), t, t, false));
             addBuiltin(AggregateFunction.createAnalyticBuiltin(
-                    "lead", Lists.newArrayList(t), t, t));
+                    "lead", Lists.newArrayList(t), t, t, false));
             addBuiltin(AggregateFunction.createAnalyticBuiltin(
-                    "lead", Lists.newArrayList(t, Type.BIGINT), t, t));
+                    "lead", Lists.newArrayList(t, Type.BIGINT), t, t, false));
+            addBuiltin(AggregateFunction.createAnalyticBuiltin(
+                        "lag", Lists.newArrayList(t), t, t, true));
+            addBuiltin(AggregateFunction.createAnalyticBuiltin(
+                        "lag", Lists.newArrayList(t, Type.BIGINT), t, t, true));
+            addBuiltin(AggregateFunction.createAnalyticBuiltin(
+                        "lead", Lists.newArrayList(t), t, t, true));
+            addBuiltin(AggregateFunction.createAnalyticBuiltin(
+                        "lead", Lists.newArrayList(t, Type.BIGINT), t, t, true));
         }
 
     }
