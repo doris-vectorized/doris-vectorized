@@ -685,12 +685,13 @@ Status Block::filter_block(Block* block, int filter_column_id, int column_to_kee
                     "Illegal type " + filter_column->get_name() +
                     " of column for filter. Must be UInt8 or Nullable(UInt8).");
         }
-        const NullMap& null_map = nullable_column->get_null_map_data();
+        auto* __restrict null_map = nullable_column->get_null_map_data().data();
         IColumn::Filter& filter = concrete_column->get_data();
+        auto* __restrict filter_data = filter.data();
 
-        size_t size = filter.size();
+        const size_t size = filter.size();
         for (size_t i = 0; i < size; ++i) {
-            filter[i] = filter[i] && !null_map[i];
+            filter_data[i] &= !null_map[i];
         }
         filter_block_internal(block, filter, column_to_keep);
     } else if (auto* const_column = check_and_get_column<ColumnConst>(*filter_column)) {
