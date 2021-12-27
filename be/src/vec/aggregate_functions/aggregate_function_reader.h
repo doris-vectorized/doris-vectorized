@@ -22,11 +22,14 @@
 #include "vec/aggregate_functions/aggregate_function_min_max.h"
 #include "vec/aggregate_functions/aggregate_function_simple_factory.h"
 #include "vec/aggregate_functions/aggregate_function_sum.h"
+#include "vec/aggregate_functions/aggregate_function_window.h"
 
 namespace doris::vectorized {
 
 static const std::string agg_reader_suffix = "_reader";
 
 void register_aggregate_function_reader(AggregateFunctionSimpleFactory& factory);
+
+void register_aggregate_function_reader_no_spread(AggregateFunctionSimpleFactory& factory);
 
 } // namespace doris::vectorized
