@@ -61,6 +61,7 @@
 #include "runtime/runtime_state.h"
 #include "util/debug_util.h"
 #include "util/runtime_profile.h"
+
 #include "vec/core/block.h"
 #include "vec/exec/join/vhash_join_node.h"
 #include "vec/exec/vaggregation_node.h"
@@ -75,6 +76,7 @@
 #include "vec/exec/vintersect_node.h"
 #include "vec/exec/vexcept_node.h"
 #include "vec/exec/vanalytic_eval_node.h"
+#include "vec/exec/vassert_num_rows_node.h"
 #include "vec/exprs/vexpr.h"
 #include "vec/exec/vempty_set_node.h"
 #include "vec/exec/vschema_scan_node.h"
@@ -369,6 +371,7 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
     if (state->enable_vectorized_exec()) {
         switch (tnode.node_type) {
         case TPlanNodeType::OLAP_SCAN_NODE:
+        case TPlanNodeType::ASSERT_NUM_ROWS_NODE:
         case TPlanNodeType::HASH_JOIN_NODE:
         case TPlanNodeType::AGGREGATION_NODE:
         case TPlanNodeType::UNION_NODE:
@@ -562,7 +565,11 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         return Status::OK();
 
     case TPlanNodeType::ASSERT_NUM_ROWS_NODE:
-        *node = pool->add(new AssertNumRowsNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new vectorized::VAssertNumRowsNode(pool, tnode, descs));
+        } else {
+            *node = pool->add(new AssertNumRowsNode(pool, tnode, descs));
+        }
         return Status::OK();
 
     default:
