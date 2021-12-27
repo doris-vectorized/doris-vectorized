@@ -30,6 +30,7 @@
 #include "vec/data_types/data_type_nothing.h"
 #include "vec/data_types/data_type_nullable.h"
 #include "vec/functions/function_helpers.h"
+#include "vec/utils/util.hpp"
 
 namespace doris::vectorized {
 
@@ -72,9 +73,7 @@ ColumnPtr wrap_in_nullable(const ColumnPtr& src, const Block& block, const Colum
                 const NullMap& src_null_map =
                         assert_cast<const ColumnUInt8&>(*null_map_column).get_data();
 
-                for (size_t i = 0, size = result_null_map.size(); i < size; ++i)
-                    if (src_null_map[i]) result_null_map[i] = 1;
-
+                VectorizedUtils::update_null_map(result_null_map, src_null_map);
                 result_null_map_column = std::move(mutable_result_null_map_column);
             }
         }
