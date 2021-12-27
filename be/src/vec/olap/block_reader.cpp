@@ -120,8 +120,25 @@ void BlockReader::_init_agg_state() {
 OLAPStatus BlockReader::init(const ReaderParams& read_params) {
     Reader::init(read_params);
     _direct_mode = read_params.direct_mode;
-
     _batch_size = read_params.runtime_state->batch_size();
+
+    auto return_column_size =
+            read_params.origin_return_columns->size() - (_sequence_col_idx != -1 ? 1 : 0);
+    _return_columns_loc.resize(read_params.return_columns.size());
+    for (int i = 0; i < return_column_size; ++i) {
+        auto cid = read_params.origin_return_columns->at(i);
+        for (int j = 0; j < read_params.return_columns.size(); ++j) {
+            if (read_params.return_columns[j] == cid) {
+                if (j < _tablet->num_key_columns() || _tablet->keys_type() != AGG_KEYS) {
+                    _normal_columns_idx.emplace_back(j);
+                } else {
+                    _agg_columns_idx.emplace_back(j);
+                }
+                _return_columns_loc[j] = i;
+                break;
+            }
+        }
+    }
 
     std::vector<RowsetReaderSharedPtr> rs_readers;
     auto status = _init_collect_iter(read_params, &rs_readers);
@@ -167,29 +184,6 @@ OLAPStatus BlockReader::_direct_agg_key_next_block(Block* block, MemPool* mem_po
     return OLAP_SUCCESS;
 }
 
-void BlockReader::_get_block_link(const Block* input, const Block* output, bool is_agg) {
-    int normal_num = is_agg ? tablet()->num_key_columns() : input->columns();
-
-    _return_columns_loc.resize(input->columns());
-
-    for (int i = 0; i < input->columns(); i++) {
-        for (int j = 0; j < output->columns(); j++) {
-            if (input->get_by_position(i).name == output->get_by_position(j).name) {
-                if (i < normal_num) {
-                    _normal_columns_idx.push_back(i);
-                } else {
-                    _agg_columns_idx.push_back(i);
-                }
-                _return_columns_loc[i] = j;
-            }
-        }
-    }
-
-    if (is_agg) {
-        _init_agg_state();
-    }
-}
-
 OLAPStatus BlockReader::_agg_key_next_block(Block* block, MemPool* mem_pool, ObjectPool* agg_pool,
                                             bool* eof) {
     if (UNLIKELY(_eof)) {
@@ -197,9 +191,9 @@ OLAPStatus BlockReader::_agg_key_next_block(Block* block, MemPool* mem_pool, Obj
         return OLAP_SUCCESS;
     }
 
-    if (!_linked_inited) {
-        _linked_inited = true;
-        _get_block_link(_next_row.block, block, true);
+    if (!_agg_inited) {
+        _init_agg_state();
+        _agg_inited = true;
     }
 
     auto target_block_row = 0;
@@ -246,11 +240,6 @@ OLAPStatus BlockReader::_unique_key_next_block(Block* block, MemPool* mem_pool,
     if (UNLIKELY(_eof)) {
         *eof = true;
         return OLAP_SUCCESS;
-    }
-
-    if (!_linked_inited) {
-        _linked_inited = true;
-        _get_block_link(_next_row.block, block, false);
     }
 
     auto target_block_row = 0;

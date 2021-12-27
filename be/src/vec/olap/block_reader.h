@@ -75,8 +75,6 @@ private:
     OLAPStatus _init_collect_iter(const ReaderParams& read_params,
                                   std::vector<RowsetReaderSharedPtr>* valid_rs_readers);
 
-    void _get_block_link(const Block* input, const Block* output, bool is_agg);
-
     void _init_agg_state();
 
     void _insert_data_normal(MutableColumns& columns);
@@ -112,7 +110,7 @@ private:
     std::vector<bool> _stored_has_string_tag;
 
     bool _eof = false;
-    bool _linked_inited = false;
+    bool _agg_inited = false;
     bool _direct_mode;
 
     OLAPStatus (BlockReader::*_next_block_func)(Block* block, MemPool* mem_pool,
