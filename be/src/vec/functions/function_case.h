@@ -140,8 +140,9 @@ public:
         int rows_count = column_holder.rows_count;
 
         // `then` data index corresponding to each row of results, 0 represents `else`.
-        uint8_t __restrict then_idx[rows_count];
-        memset(then_idx, 0, sizeof(then_idx));
+        uint8_t then_idx[rows_count];
+        uint8_t* __restrict then_idx_ptr = &then_idx[0];
+        memset(then_idx_ptr, 0, sizeof(then_idx));
 
         auto case_column_ptr = column_holder.when_ptrs[0].value_or(nullptr);
 
@@ -150,17 +151,17 @@ public:
             if constexpr (has_case) {
                 // TODO: need simd
                 for (int row_idx = 0; row_idx < rows_count; row_idx++) {
-                    if (!then_idx[row_idx] &&
+                    if (!then_idx_ptr[row_idx] &&
                         case_column_ptr->compare_at(row_idx, row_idx, *when_column_ptr, -1) == 0) {
-                        then_idx[row_idx] = i;
+                        then_idx_ptr[row_idx] = i;
                     }
                 }
             } else {
                 if constexpr (when_null) {
                     // TODO: need simd
                     for (int row_idx = 0; row_idx < rows_count; row_idx++) {
-                        if (!then_idx[row_idx] && when_column_ptr->get_bool(row_idx)) {
-                            then_idx[row_idx] = i;
+                        if (!then_idx_ptr[row_idx] && when_column_ptr->get_bool(row_idx)) {
+                            then_idx_ptr[row_idx] = i;
                         }
                     }
                 } else {
@@ -171,7 +172,7 @@ public:
 
                     // simd automatically
                     for (int row_idx = 0; row_idx < rows_count; row_idx++) {
-                        then_idx[row_idx] |= (!then_idx[row_idx]) * cond_raw_data[row_idx] * i;
+                        then_idx_ptr[row_idx] |= (!then_idx_ptr[row_idx]) * cond_raw_data[row_idx] * i;
                     }
                 }
             }
