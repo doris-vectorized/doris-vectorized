@@ -56,7 +56,7 @@ private:
         return value;
     }
 
-    void insert_date_to_res_column(const uint16_t* sel, size_t sel_size, vectorized::ColumnVector<Int128>* res_ptr) {
+    void insert_date_to_res_column(const uint16_t* sel, size_t sel_size, vectorized::ColumnVector<Int64>* res_ptr) {
         for (size_t i = 0; i < sel_size; i++) {
             VecDateTimeValue date;
             date.from_olap_date(get_date_at(sel[i]));
@@ -300,7 +300,7 @@ public:
     
     ColumnPtr filter_date_by_selector(const uint16_t* sel, size_t sel_size, ColumnPtr* ptr = nullptr) {
         if (ptr == nullptr) {
-            auto res = vectorized::ColumnVector<Int128>::create();
+            auto res = vectorized::ColumnVector<Int64>::create();
             if (sel_size == 0) {
                 return res;
             }
@@ -309,7 +309,7 @@ public:
         } else {
             if (sel_size != 0) {
                 MutableColumnPtr res_ptr = (*std::move(*ptr)).assume_mutable();
-                insert_date_to_res_column(sel, sel_size, reinterpret_cast<vectorized::ColumnVector<Int128>*>(res_ptr.get()));
+                insert_date_to_res_column(sel, sel_size, reinterpret_cast<vectorized::ColumnVector<Int64>*>(res_ptr.get()));
             }
             return *ptr;
         }
