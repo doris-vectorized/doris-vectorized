@@ -97,6 +97,26 @@ private:
         }
     }
 
+    template <typename Y>
+    ColumnPtr filter_default_type_by_selector(const uint16_t* sel, size_t sel_size, ColumnPtr* ptr = nullptr) {
+        static_assert(std::is_same_v<T, Y>);
+        // todo(wb) the operation which create a new column maybe should move to other place
+        if (ptr == nullptr) {
+            auto res = vectorized::ColumnVector<Y>::create();
+            if (sel_size == 0) {
+                return res;
+            }
+            insert_default_value_res_column(sel, sel_size, res.get());
+            return res;
+        } else {
+            if (sel_size != 0) {
+                MutableColumnPtr ptr_res = (*std::move(*ptr)).assume_mutable();
+                insert_default_value_res_column(sel, sel_size, reinterpret_cast<vectorized::ColumnVector<Y>*>(ptr_res.get()));
+            }
+            return *ptr;
+        }
+    }
+
 public:
     using Self = PredicateColumnType;
     using value_type = T;
@@ -351,26 +371,7 @@ public:
         return *ptr;
     }
 
-    template <typename Y>
-    ColumnPtr filter_default_type_by_selector(const uint16_t* sel, size_t sel_size, ColumnPtr* ptr = nullptr) {
-        // todo(wb) the operation which create a new column maybe should move to other place
-        if (ptr == nullptr) {
-            auto res = vectorized::ColumnVector<Y>::create();
-            if (sel_size == 0) {
-                return res;
-            }
-            insert_default_value_res_column(sel, sel_size, res.get());
-            return res;
-        } else {
-            if (sel_size != 0) {
-                MutableColumnPtr ptr_res = (*std::move(*ptr)).assume_mutable();
-                insert_default_value_res_column(sel, sel_size, reinterpret_cast<vectorized::ColumnVector<Y>*>(ptr_res.get()));
-            }
-            return *ptr;
-        }
-    }
-
-
+    //todo(wb) need refactor this method, using return status to check unexpect args instead of LOG(FATAL)
     ColumnPtr filter_by_selector(const uint16_t* sel, size_t sel_size, ColumnPtr* ptr = nullptr) override {
         if constexpr (std::is_same_v<T, StringValue>) {
             return filter_string_value_by_selector(sel, sel_size, ptr);
@@ -394,8 +395,10 @@ public:
             return filter_date_by_selector(sel, sel_size, ptr);
         } else if constexpr (std::is_same_v<T, doris::vectorized::Int128>) {
             return filter_default_type_by_selector<doris::vectorized::Int128>(sel, sel_size, ptr);
+        } else if (std::is_same_v<T, bool>) {
+            LOG(FATAL) << "bool will be support later";
         } else {
-            return filter_default_type_by_selector<T>(sel, sel_size, ptr);
+            LOG(FATAL) << "unexpected type in predicate column";
         }
     }
 
