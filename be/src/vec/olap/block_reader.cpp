@@ -31,7 +31,8 @@ using std::vector;
 
 namespace doris::vectorized {
 
-BlockReader::BlockReader() : _collect_iter(new VCollectIterator()), _next_row{nullptr, -1, false} {}
+BlockReader::BlockReader()
+        : _collect_iter(new VCollectIterator()), _next_row {nullptr, -1, false} {}
 
 BlockReader::~BlockReader() {
     for (int i = 0; i < _agg_functions.size(); ++i) {
@@ -43,8 +44,7 @@ BlockReader::~BlockReader() {
 }
 
 OLAPStatus BlockReader::_init_collect_iter(const ReaderParams& read_params,
-                                           std::vector<RowsetReaderSharedPtr>* valid_rs_readers,
-                                           bool is_agg) {
+                                           std::vector<RowsetReaderSharedPtr>* valid_rs_readers) {
     _collect_iter->init(this);
     std::vector<RowsetReaderSharedPtr> rs_readers;
     auto res = _capture_rs_readers(read_params, &rs_readers);
@@ -73,10 +73,6 @@ OLAPStatus BlockReader::_init_collect_iter(const ReaderParams& read_params,
     if (_collect_iter->is_merge()) {
         auto status = _collect_iter->current_row(&_next_row);
         _eof = status == OLAP_ERR_DATA_EOF;
-
-        if (!_eof && is_agg) {
-            _init_agg_state();
-        }
     }
 
     return OLAP_SUCCESS;
@@ -86,7 +82,7 @@ void BlockReader::_init_agg_state() {
     _stored_data_block = _next_row.block->create_same_struct_block(_batch_size);
     _stored_data_columns = _stored_data_block->mutate_columns();
 
-    _stored_has_null_tag.resize(_agg_columns_idx.size());
+    _stored_has_null_tag.resize(_stored_data_columns.size());
     _stored_has_string_tag.resize(_stored_data_columns.size());
 
     for (auto idx : _agg_columns_idx) {
@@ -103,6 +99,7 @@ void BlockReader::_init_agg_state() {
         AggregateFunctionPtr function = AggregateFunctionSimpleFactory::instance().get(
                 agg_name, argument_types, params,
                 _next_row.block->get_data_types()[idx]->is_nullable());
+        DCHECK(function != nullptr);
         _agg_functions.push_back(function);
 
         // create aggregate data
@@ -122,10 +119,12 @@ void BlockReader::_init_agg_state() {
 
 OLAPStatus BlockReader::init(const ReaderParams& read_params) {
     Reader::init(read_params);
+    _direct_mode = read_params.direct_mode;
+    _batch_size = read_params.runtime_state->batch_size();
 
     auto return_column_size =
             read_params.origin_return_columns->size() - (_sequence_col_idx != -1 ? 1 : 0);
-    _return_columns_loc.resize(return_column_size);
+    _return_columns_loc.resize(read_params.return_columns.size());
     for (int i = 0; i < return_column_size; ++i) {
         auto cid = read_params.origin_return_columns->at(i);
         for (int j = 0; j < read_params.return_columns.size(); ++j) {
@@ -140,22 +139,19 @@ OLAPStatus BlockReader::init(const ReaderParams& read_params) {
             }
         }
     }
-    _batch_size = read_params.runtime_state->batch_size();
 
     std::vector<RowsetReaderSharedPtr> rs_readers;
-    auto status = _init_collect_iter(read_params, &rs_readers, _tablet->keys_type() == AGG_KEYS);
+    auto status = _init_collect_iter(read_params, &rs_readers);
     if (status != OLAP_SUCCESS) {
         return status;
     }
 
-    //  TODO: Support the logic in the future
-    //    if (_optimize_for_single_rowset(rs_readers)) {
-    //        _next_block_func = _tablet->keys_type() == AGG_KEYS ? &BlockReader::_direct_agg_key_next_block
-    //                                                          : &BlockReader::_direct_next_block;
-    //        return OLAP_SUCCESS;
-    //    }
+    if (_direct_mode) {
+        _next_block_func = &BlockReader::_direct_next_block;
+        return OLAP_SUCCESS;
+    }
 
-    switch (_tablet->keys_type()) {
+    switch (tablet()->keys_type()) {
     case KeysType::DUP_KEYS:
         _next_block_func = &BlockReader::_direct_next_block;
         break;
@@ -163,10 +159,10 @@ OLAPStatus BlockReader::init(const ReaderParams& read_params) {
         _next_block_func = &BlockReader::_unique_key_next_block;
         break;
     case KeysType::AGG_KEYS:
-        _next_block_func = _aggregation ? &BlockReader::_direct_next_block : &BlockReader::_agg_key_next_block;
+        _next_block_func = &BlockReader::_agg_key_next_block;
         break;
     default:
-        DCHECK(false) << "No next row function for type:" << _tablet->keys_type();
+        DCHECK(false) << "No next row function for type:" << tablet()->keys_type();
         break;
     }
 
@@ -193,6 +189,11 @@ OLAPStatus BlockReader::_agg_key_next_block(Block* block, MemPool* mem_pool, Obj
     if (UNLIKELY(_eof)) {
         *eof = true;
         return OLAP_SUCCESS;
+    }
+
+    if (!_agg_inited) {
+        _init_agg_state();
+        _agg_inited = true;
     }
 
     auto target_block_row = 0;
@@ -290,8 +291,8 @@ void BlockReader::_update_agg_data(MutableColumns& columns) {
     _copy_agg_data();
 
     // calculate has_null_tag
-    for (int i = 0; i < _agg_columns_idx.size(); i++) {
-        _stored_has_null_tag[i] = _stored_data_columns[_agg_columns_idx[i]]->has_null();
+    for (auto idx : _agg_columns_idx) {
+        _stored_has_null_tag[idx] = _stored_data_columns[idx]->has_null();
     }
 
     // calculate aggregate and insert
@@ -341,17 +342,19 @@ void BlockReader::_copy_agg_data() {
 
 void BlockReader::_update_agg_value(MutableColumns& columns, int begin, int end, bool is_close) {
     for (int i = 0; i < _agg_columns_idx.size(); i++) {
+        auto idx = _agg_columns_idx[i];
+
         AggregateFunctionPtr function = _agg_functions[i];
         AggregateDataPtr place = _agg_places[i];
-        auto column_ptr = _stored_data_columns[_agg_columns_idx[i]].get();
+        auto column_ptr = _stored_data_columns[idx].get();
 
         if (begin <= end) {
             function->add_batch_range(begin, end, place, const_cast<const IColumn**>(&column_ptr),
-                                      nullptr, _stored_has_null_tag[i]);
+                                      nullptr, _stored_has_null_tag[idx]);
         }
 
         if (is_close) {
-            function->insert_result_into(place, *columns[_return_columns_loc[_agg_columns_idx[i]]]);
+            function->insert_result_into(place, *columns[_return_columns_loc[idx]]);
             function->create(place); // reset aggregate data
         }
     }

@@ -73,8 +73,7 @@ private:
                                       bool* eof);
 
     OLAPStatus _init_collect_iter(const ReaderParams& read_params,
-                                  std::vector<RowsetReaderSharedPtr>* valid_rs_readers,
-                                  bool is_agg);
+                                  std::vector<RowsetReaderSharedPtr>* valid_rs_readers);
 
     void _init_agg_state();
 
@@ -111,6 +110,8 @@ private:
     std::vector<bool> _stored_has_string_tag;
 
     bool _eof = false;
+    bool _agg_inited = false;
+    bool _direct_mode;
 
     OLAPStatus (BlockReader::*_next_block_func)(Block* block, MemPool* mem_pool,
                                                 ObjectPool* agg_pool, bool* eof) = nullptr;
