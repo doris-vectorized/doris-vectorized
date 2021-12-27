@@ -101,12 +101,55 @@ struct MakeDateImpl {
     }
 };
 
+class FromDays : public IFunction {
+public:
+    static constexpr auto name = "from_days";
+
+    static FunctionPtr create() { return std::make_shared<FromDays>(); }
+
+    String get_name() const override { return name; }
+
+    bool use_default_implementation_for_constants() const override { return false; }
+
+    size_t get_number_of_arguments() const override { return 1; }
+
+    bool use_default_implementation_for_nulls() const override { return true; }
+
+    DataTypePtr get_return_type_impl(const DataTypes& arguments) const override {
+        return make_nullable(std::make_shared<DataTypeDate>());
+    }
+
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
+        auto null_map = ColumnUInt8::create(input_rows_count, 0);
+        auto res_column = ColumnInt64::create(input_rows_count);
+        auto& res_data = assert_cast<ColumnInt64&>(*res_column).get_data();
+        ColumnPtr argument_column = block.get_by_position(arguments[0]).column->convert_to_full_column_if_const();
+
+        auto data_col = assert_cast<const ColumnVector<Int32>*>(argument_column.get());
+        for (int i = 0; i < input_rows_count; i++) {
+            const auto& cur_data = data_col->get_data()[i];
+            auto& ts_value = *reinterpret_cast<VecDateTimeValue*>(&res_data[i]);
+            if (!ts_value.from_date_daynr(cur_data)) {
+                null_map->get_data()[i] = 1;
+                continue;
+            }
+            DateTimeVal ts_val;
+            ts_value.to_datetime_val(&ts_val);
+            ts_value = VecDateTimeValue::from_datetime_val(ts_val);
+        }
+        block.replace_by_position(result, ColumnNullable::create(std::move(res_column), std::move(null_map)));
+        return Status::OK();
+    }
+};
+
 using FunctionStrToDate = FunctionBinaryStringOperateToNullType<StrToDate>;
 using FunctionMakeDate = FunctionBinaryToNullType<DataTypeInt32, DataTypeInt32, MakeDateImpl, NameMakeDate>;
 
 void register_function_timestamp(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStrToDate>();
     factory.register_function<FunctionMakeDate>();
+    factory.register_function<FromDays>();
 }
 
 } // namespace doris::vectorized

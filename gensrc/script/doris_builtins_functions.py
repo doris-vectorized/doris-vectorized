@@ -172,7 +172,7 @@ visible_functions = [
 
     [['from_days'], 'DATE', ['INT'],
         '_ZN5doris18TimestampFunctions9from_daysEPN9doris_udf15FunctionContextERKNS1_6IntValE',
-        '', '', '', ''],
+        '', '', 'vec', 'ALWAYS_NULLABLE'],
     [['to_days'], 'INT', ['DATE'],
         '_ZN5doris18TimestampFunctions7to_daysEPN9doris_udf15FunctionContextERKNS1_11DateTimeValE',
         '', '', 'vec', ''],
