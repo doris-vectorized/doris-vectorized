@@ -35,6 +35,7 @@ void register_aggregate_function_combinator_distinct(AggregateFunctionSimpleFact
 void register_aggregate_function_bitmap(AggregateFunctionSimpleFactory& factory);
 void register_aggregate_function_window_rank(AggregateFunctionSimpleFactory& factory);
 void register_aggregate_function_window_lead_lag(AggregateFunctionSimpleFactory& factory);
+void register_aggregate_function_percentile_approx(AggregateFunctionSimpleFactory& factory);
 AggregateFunctionSimpleFactory& AggregateFunctionSimpleFactory::instance() {
     static std::once_flag oc;
     static AggregateFunctionSimpleFactory instance;
@@ -45,6 +46,7 @@ AggregateFunctionSimpleFactory& AggregateFunctionSimpleFactory::instance() {
         register_aggregate_function_count(instance);
         register_aggregate_function_uniq(instance);
         register_aggregate_function_bitmap(instance);
+        register_aggregate_function_percentile_approx(instance);
         register_aggregate_function_combinator_distinct(instance);
         register_aggregate_function_HLL_union_agg(instance);
         register_aggregate_function_reader(instance); // register aggregate function for agg reader
