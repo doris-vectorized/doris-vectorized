@@ -76,6 +76,7 @@ set(VEC_FILES
   exec/vunion_node.cpp
   exec/vintersect_node.cpp
   exec/vexcept_node.cpp
+  exec/vselect_node.cpp
   exec/vblocking_join_node.cpp
   exec/vcross_join_node.cpp
   exec/vodbc_scan_node.cpp

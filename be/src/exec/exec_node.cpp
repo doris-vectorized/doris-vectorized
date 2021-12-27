@@ -77,6 +77,7 @@
 #include "vec/exec/vexcept_node.h"
 #include "vec/exec/vanalytic_eval_node.h"
 #include "vec/exec/vassert_num_rows_node.h"
+#include "vec/exec/vselect_node.h"
 #include "vec/exprs/vexpr.h"
 #include "vec/exec/vempty_set_node.h"
 #include "vec/exec/vschema_scan_node.h"
@@ -386,6 +387,7 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         case TPlanNodeType::EMPTY_SET_NODE:
         case TPlanNodeType::SCHEMA_SCAN_NODE:
         case TPlanNodeType::ANALYTIC_EVAL_NODE:
+        case TPlanNodeType::SELECT_NODE:
             break;
         default: {
             const auto& i = _TPlanNodeType_VALUES_TO_NAMES.find(tnode.node_type);
@@ -501,7 +503,11 @@ Status ExecNode::create_node(RuntimeState* state, ObjectPool* pool, const TPlanN
         return Status::OK();
 
     case TPlanNodeType::SELECT_NODE:
-        *node = pool->add(new SelectNode(pool, tnode, descs));
+        if (state->enable_vectorized_exec()) {
+            *node = pool->add(new doris::vectorized::VSelectNode(pool, tnode, descs));
+        } else {
+            *node = pool->add(new SelectNode(pool, tnode, descs));
+        }
         return Status::OK();
 
     case TPlanNodeType::OLAP_REWRITE_NODE:
