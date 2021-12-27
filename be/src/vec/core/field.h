@@ -31,6 +31,7 @@
 #include "vec/common/strong_typedef.h"
 #include "vec/common/uint128.h"
 #include "vec/core/types.h"
+#include "util/types.h"
 
 namespace doris::vectorized {
 
@@ -192,6 +193,8 @@ public:
             Decimal64 = 20,
             Decimal128 = 21,
             AggregateFunctionState = 22,
+
+            PackedInt128 = 50,
         };
 
         static const int MIN_NON_POD = 16;
@@ -224,6 +227,8 @@ public:
                 return "Decimal128";
             case AggregateFunctionState:
                 return "AggregateFunctionState";
+            case PackedInt128:
+                return "PackedInt128";
             }
 
             LOG(FATAL) << "Bad type of Field";
@@ -358,6 +363,8 @@ public:
             return get<UInt64>() < rhs.get<UInt64>();
         case Types::UInt128:
             return get<UInt128>() < rhs.get<UInt128>();
+        case Types::PackedInt128:
+            return get<PackedInt128>() < rhs.get<PackedInt128>();
         case Types::Int64:
             return get<Int64>() < rhs.get<Int64>();
         case Types::Int128:
@@ -397,6 +404,8 @@ public:
             return get<UInt64>() <= rhs.get<UInt64>();
         case Types::UInt128:
             return get<UInt128>() <= rhs.get<UInt128>();
+        case Types::PackedInt128:
+            return get<PackedInt128>() <= rhs.get<PackedInt128>();
         case Types::Int64:
             return get<Int64>() <= rhs.get<Int64>();
         case Types::Int128:
@@ -442,6 +451,8 @@ public:
             return get<Tuple>() == rhs.get<Tuple>();
         case Types::UInt128:
             return get<UInt128>() == rhs.get<UInt128>();
+        case Types::PackedInt128:
+            return get<PackedInt128>() == rhs.get<PackedInt128>();
         case Types::Int128:
             return get<Int128>() == rhs.get<Int128>();
         case Types::Decimal32:
@@ -460,7 +471,7 @@ public:
     bool operator!=(const Field& rhs) const { return !(*this == rhs); }
 
 private:
-    std::aligned_union_t<DBMS_MIN_FIELD_SIZE - sizeof(Types::Which), Null, UInt64, UInt128, Int64,
+    std::aligned_union_t<DBMS_MIN_FIELD_SIZE - sizeof(Types::Which), Null, UInt64, UInt128, PackedInt128, Int64,
                          Int128, Float64, String, Array, Tuple, DecimalField<Decimal32>,
                          DecimalField<Decimal64>, DecimalField<Decimal128>,
                          AggregateFunctionStateData>
@@ -510,6 +521,9 @@ private:
             return;
         case Types::UInt128:
             f(field.template get<UInt128>());
+            return;
+        case Types::PackedInt128:
+            f(field.template get<PackedInt128>());
             return;
         case Types::Int64:
             f(field.template get<Int64>());
@@ -618,6 +632,10 @@ struct Field::TypeToEnum<UInt128> {
     static const Types::Which value = Types::UInt128;
 };
 template <>
+struct Field::TypeToEnum<PackedInt128> {
+    static const Types::Which value = Types::PackedInt128;
+};
+template <>
 struct Field::TypeToEnum<Int64> {
     static const Types::Which value = Types::Int64;
 };
@@ -669,6 +687,10 @@ struct Field::EnumToType<Field::Types::UInt64> {
 template <>
 struct Field::EnumToType<Field::Types::UInt128> {
     using Type = UInt128;
+};
+template <>
+struct Field::EnumToType<Field::Types::PackedInt128> {
+    using Type = PackedInt128;
 };
 template <>
 struct Field::EnumToType<Field::Types::Int64> {
@@ -773,6 +795,12 @@ template <>
 struct NearestFieldTypeImpl<UInt128> {
     using Type = UInt128;
 };
+
+template <>
+struct NearestFieldTypeImpl<PackedInt128> {
+    using Type = PackedInt128;
+};
+
 //template <> struct NearestFieldTypeImpl<UUID> { using Type = UInt128; };
 template <>
 struct NearestFieldTypeImpl<Int16> {
