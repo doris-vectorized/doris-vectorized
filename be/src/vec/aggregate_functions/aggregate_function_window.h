@@ -157,78 +157,97 @@ public:
     const char* get_header_file_path() const override { return __FILE__; }
 };
 
+struct Value {
+public:
+    bool is_null() const { return _is_null; }
+    StringRef get_value() const { return _value; }
+
+    void set_null(bool is_null) { _is_null = is_null; }
+    void set_value(StringRef value) { _value = value; }
+    void reset() {
+        _is_null = false;
+        _value = {};
+    }
+private:
+    StringRef _value;
+    bool _is_null;
+};
+
 template <typename T, bool is_nullable, bool is_string>
 struct LeadAndLagData {
 public:
     bool has_init() const { return _is_init; }
 
     void reset() {
-        _value = {};
-        _default_value = {};
-        _is_null = false;
-        _defualt_is_null = false;
+        _data_value.reset();
+        _default_value.reset();
         _is_init = false;
         _has_value = false;
     }
 
     void insert_result_into(IColumn& to) const {
         if constexpr (is_nullable) {
-            if (_is_null) {
+            if (_data_value.is_null()) {
                 auto& col = assert_cast<ColumnNullable&>(to);
                 col.insert_default();
             } else {
                 auto& col = assert_cast<ColumnNullable&>(to);
-                if constexpr (is_string)
-                    col.insert_data(_value.data, _value.size);
-                else
-                    col.insert_data(_value.data, 0);
+                if constexpr (is_string) {
+                    StringRef value = _data_value.get_value();
+                    col.insert_data(value.data, value.size);
+                } else {
+                    StringRef value = _data_value.get_value();
+                    col.insert_data(value.data, 0);
+                }
             }
         } else {
             if constexpr (is_string) {
                 auto& col = assert_cast<ColumnString&>(to);
-                col.insert_data(_value.data, _value.size);
+                StringRef value = _data_value.get_value();
+                col.insert_data(value.data, value.size);
             } else {
                 auto& col = assert_cast<ColumnVector<T>&>(to);
-                col.insert_data(_value.data, 0);
+                StringRef value = _data_value.get_value();
+                col.insert_data(value.data, 0);
             }
         }
     }
 
-    void get_result(const IColumn** columns, int64_t pos) {
+    void get_value(const IColumn** columns, int64_t pos) {
         if constexpr (is_nullable) {
             const auto* nullable_column = check_and_get_column<ColumnNullable>(columns[0]);
             if (nullable_column && nullable_column->is_null_at(pos)) {
-                _is_null = true;
+                _data_value.set_null(true);
                 _has_value = true;
                 return;
             }
             if constexpr (is_string) {
                 const auto* sources = check_and_get_column<ColumnString>(
                         nullable_column->get_nested_column_ptr().get());
-                _value = sources->get_data_at(pos);
+                _data_value.set_value(sources->get_data_at(pos));
             } else {
                 const auto* sources = check_and_get_column<ColumnVector<T>>(
                         nullable_column->get_nested_column_ptr().get());
-                _value = sources->get_data_at(pos);
+                _data_value.set_value(sources->get_data_at(pos));
             }
         } else {
             if constexpr (is_string) {
                 const auto* sources = check_and_get_column<ColumnString>(columns[0]);
-                _value = sources->get_data_at(pos);
+                _data_value.set_value(sources->get_data_at(pos));
             } else {
                 const auto* sources = check_and_get_column<ColumnVector<T>>(columns[0]);
-                _value = sources->get_data_at(pos);
+                _data_value.set_value(sources->get_data_at(pos));
             }
         }
-        _is_null = false;
+        _data_value.set_null(false);
         _has_value = true;
     }
 
-    bool defualt_is_null() { return _defualt_is_null; }
+    bool defualt_is_null() { return _default_value.is_null(); }
 
-    void set_is_null() { _is_null = true; }
+    void set_is_null() { _data_value.set_null(true); }
 
-    void set_value() { _value = _default_value; }
+    void set_value_from_default() { _data_value.set_value(_default_value.get_value()); }
 
     bool has_set_value() { return _has_value; }
 
@@ -237,15 +256,15 @@ public:
             if (is_column_nullable(*column)) {
                 const auto* nullable_column = check_and_get_column<ColumnNullable>(column);
                 if (nullable_column->is_null_at(0)) {
-                    _defualt_is_null = true;
+                    _default_value.set_null(true);
                 }
             } else {
                 if constexpr (is_string) {
                     const auto& col = static_cast<const ColumnString&>(*column);
-                    _default_value = col.get_data_at(0);
+                    _default_value.set_value(col.get_data_at(0));
                 } else {
                     const auto& col = static_cast<const ColumnVector<T>&>(*column);
-                    _default_value = col.get_data_at(0);
+                    _default_value.set_value(col.get_data_at(0));
                 }
             }
             _is_init = true;
@@ -253,12 +272,10 @@ public:
     }
 
 private:
-    StringRef _value;
-    StringRef _default_value;
-    bool _is_init = false;
-    bool _is_null = false;
-    bool _defualt_is_null = false;
+    Value _data_value;
+    Value _default_value;
     bool _has_value = false;
+    bool _is_init = false;
 };
 
 template <typename Data>
@@ -270,11 +287,11 @@ struct WindowFunctionLeadData : Data {
             if (this->defualt_is_null()) {
                 this->set_is_null();
             } else {
-                this->set_value();
+                this->set_value_from_default();
             }
             return;
         }
-        this->get_result(columns, frame_end - 1);
+        this->get_value(columns, frame_end - 1);
     }
     static const char* name() { return "lead"; }
 };
@@ -288,11 +305,11 @@ struct WindowFunctionLagData : Data {
             if (this->defualt_is_null()) {  // win start is beyond partition
                 this->set_is_null();
             } else {
-                this->set_value();
+                this->set_value_from_default();
             }
             return;
         }
-        this->get_result(columns, frame_end - 1);
+        this->get_value(columns, frame_end - 1);
     }
     static const char* name() { return "lag"; }
 };
@@ -309,7 +326,7 @@ struct WindowFunctionFirstData : Data {
             return;
         }
         frame_start = std::max<int64_t>(frame_start, partition_start);
-        this->get_result(columns, frame_start);
+        this->get_value(columns, frame_start);
     }
     static const char* name() { return "first_value"; }
 };
@@ -324,7 +341,7 @@ struct WindowFunctionLastData : Data {
             return;
         }
         frame_end = std::min<int64_t>(frame_end, partition_end);
-        this->get_result(columns, frame_end - 1);
+        this->get_value(columns, frame_end - 1);
     }
     static const char* name() { return "last_value"; }
 };
