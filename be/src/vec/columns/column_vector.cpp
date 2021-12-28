@@ -316,7 +316,7 @@ ColumnPtr ColumnVector<T>::replicate(const IColumn::Offsets& offsets) const {
     }
 
     for (size_t i = 0; i < size; ++i) {
-        res_data.add_num_element(data[i], counts[i]);
+        res_data.add_num_element_without_reserve(data[i], counts[i]);
     }
 
     return res;

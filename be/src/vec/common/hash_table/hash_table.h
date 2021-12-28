@@ -385,6 +385,17 @@ protected:
         return place_value;
     }
 
+    std::pair<bool, size_t> ALWAYS_INLINE find_cell_opt(const Key& x, size_t hash_value, size_t place_value) const {
+        bool is_zero = false;
+        do {
+            is_zero = buf[place_value].is_zero(*this);
+            if (is_zero || buf[place_value].key_equals(x, hash_value, *this)) break;
+            place_value = grower.next(place_value);
+        } while (true);
+
+        return {is_zero, place_value};
+    }
+
     /// Find an empty cell, starting with the specified position and further along the collision resolution chain.
     size_t ALWAYS_INLINE find_empty_cell(size_t place_value) const {
         while (!buf[place_value].is_zero(*this)) {
@@ -791,8 +802,8 @@ public:
         if (Cell::is_zero(x, *this)) return this->get_has_zero() ? this->zero_value() : nullptr;
 
         size_t hash_value = hash(x);
-        size_t place_value = find_cell(x, hash_value, grower.place(hash_value));
-        return !buf[place_value].is_zero(*this) ? &buf[place_value] : nullptr;
+        auto [is_zero, place_value] = find_cell_opt(x, hash_value, grower.place(hash_value));
+        return !is_zero ? &buf[place_value] : nullptr;
     }
 
     ConstLookupResult ALWAYS_INLINE find(Key x) const {

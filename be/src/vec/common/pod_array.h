@@ -373,6 +373,20 @@ public:
         }
     }
 
+    template <typename U, typename... TAllocatorParams>
+    void add_num_element_without_reserve(U&& x, uint32_t num, TAllocatorParams&&... allocator_params) {
+//        if (num != 0) {
+//            const auto new_end = this->c_end + this->byte_size(num);
+//            if (UNLIKELY( new_end > this->c_end_of_storage)) {
+//                this->reserve(this->size() + num);
+//            }
+            std::fill(t_end(), t_end() + num, x);
+            this->c_end += sizeof(T) * num;
+//            std::fill(t_end(), t_end() + num, x);
+//            this->c_end = new_end;
+//        }
+    }
+
     /**
      * you must make sure to reserve podarray before calling this method
      * remove branch if can improve performance

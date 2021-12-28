@@ -199,6 +199,9 @@ struct ProcessHashTableProbe {
                                                            _arena)) {nullptr, false}
                             : key_getter.find_key(hash_table_ctx.hash_table, _probe_index, _arena);
 
+            if (_probe_index + 4 < _probe_rows)
+                key_getter.prefetch(hash_table_ctx.hash_table, _probe_index + 2, _arena);
+
             if (find_result.is_found()) {
                 // left semi join only need one match, do not need insert the data of right table
                 if (_join_node->_join_op == TJoinOp::LEFT_SEMI_JOIN) {

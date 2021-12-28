@@ -119,7 +119,6 @@ void BlockReader::_init_agg_state() {
 
 OLAPStatus BlockReader::init(const ReaderParams& read_params) {
     Reader::init(read_params);
-    _direct_mode = read_params.direct_mode;
     _batch_size = read_params.runtime_state->batch_size();
 
     auto return_column_size =
