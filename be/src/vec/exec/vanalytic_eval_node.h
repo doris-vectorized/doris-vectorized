@@ -56,12 +56,8 @@ private:
     Status _get_next_for_range(RuntimeState* state, Block* block, bool* eos);
     Status _get_next_for_partition(RuntimeState* state, Block* block, bool* eos);
 
-    void _execute_for_no_column(BlockRowPos partition_start, BlockRowPos partition_end,
-                                BlockRowPos frame_start, BlockRowPos frame_end);
-    void _execute_for_one_column(BlockRowPos partition_start, BlockRowPos partition_end,
-                                 BlockRowPos frame_start, BlockRowPos frame_end);
-    void _execute_for_three_column(BlockRowPos partition_start, BlockRowPos partition_end,
-                                   BlockRowPos frame_start, BlockRowPos frame_end);
+    void _execute_for_win_func(BlockRowPos partition_start, BlockRowPos partition_end,
+                               BlockRowPos frame_start, BlockRowPos frame_end);
 
     Status _reset_agg_status();
     Status _init_result_columns();

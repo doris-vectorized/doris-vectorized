@@ -112,7 +112,6 @@ Status VAnalyticEvalNode::init(const TPlanNode& tnode, RuntimeState* state) {
 
     for (int i = 0; i < agg_size; ++i) {
         const TExpr& desc = analytic_node.analytic_functions[i];
-        const TFunction& fn = desc.nodes[0].fn;
         int node_idx = 0;
         _agg_intput_columns[i].resize(desc.nodes[0].num_children);
         for (int j = 0; j < desc.nodes[0].num_children; ++j) {
@@ -122,22 +121,6 @@ Status VAnalyticEvalNode::init(const TPlanNode& tnode, RuntimeState* state) {
             RETURN_IF_ERROR(VExpr::create_tree_from_thrift(_pool, desc.nodes, nullptr, &node_idx,
                                                            &expr, &ctx));
             _agg_expr_ctxs[i].emplace_back(ctx);
-        }
-        //as the functions have difference column parameters, so according to columns execute calculate
-        if (fn.name.function_name == "row_number" || fn.name.function_name == "rank" ||
-            fn.name.function_name == "dense_rank") {
-            _executor.execute = std::bind<void>(&VAnalyticEvalNode::_execute_for_no_column, this,
-                                                std::placeholders::_1, std::placeholders::_2,
-                                                std::placeholders::_3, std::placeholders::_4);
-
-        } else if (fn.name.function_name == "lead" || fn.name.function_name == "lag") {
-            _executor.execute = std::bind<void>(&VAnalyticEvalNode::_execute_for_three_column, this,
-                                                std::placeholders::_1, std::placeholders::_2,
-                                                std::placeholders::_3, std::placeholders::_4);
-        } else {
-            _executor.execute = std::bind<void>(&VAnalyticEvalNode::_execute_for_one_column, this,
-                                                std::placeholders::_1, std::placeholders::_2,
-                                                std::placeholders::_3, std::placeholders::_4);
         }
 
         AggFnEvaluator* evaluator = nullptr;
@@ -199,6 +182,9 @@ Status VAnalyticEvalNode::prepare(RuntimeState* state) {
     _create_agg_status();
     _executor.insert_result =
             std::bind<void>(&VAnalyticEvalNode::_insert_result_info, this, std::placeholders::_1);
+    _executor.execute =
+            std::bind<void>(&VAnalyticEvalNode::_execute_for_win_func, this, std::placeholders::_1,
+                            std::placeholders::_2, std::placeholders::_3, std::placeholders::_4);
 
     for (const auto& ctx : _agg_expr_ctxs) {
         VExpr::prepare(ctx, state, child(0)->row_desc(), expr_mem_tracker());
@@ -564,21 +550,11 @@ Status VAnalyticEvalNode::_output_current_block(Block* block) {
     return Status::OK();
 }
 
-////now only for row_number/rank/dense_rank functions
-void VAnalyticEvalNode::_execute_for_no_column(BlockRowPos partition_start,
-                                               BlockRowPos partition_end, BlockRowPos frame_start,
-                                               BlockRowPos frame_end) {
-    for (size_t i = 0; i < _agg_functions_size; ++i) {
-        _agg_functions[i]->function()->add_range_single_place(
-                partition_start.pos, partition_end.pos, frame_start.pos, frame_end.pos,
-                _fn_place_ptr + _offsets_of_aggregate_states[i], nullptr, nullptr);
-    }
-}
-
-//now only for lead/lag functions
-void VAnalyticEvalNode::_execute_for_three_column(BlockRowPos partition_start,
-                                                  BlockRowPos partition_end,
-                                                  BlockRowPos frame_start, BlockRowPos frame_end) {
+//now is execute for lead/lag row_number/rank/dense_rank functions
+//sum min max count avg first_value last_value functions
+void VAnalyticEvalNode::_execute_for_win_func(BlockRowPos partition_start,
+                                              BlockRowPos partition_end, BlockRowPos frame_start,
+                                              BlockRowPos frame_end) {
     for (size_t i = 0; i < _agg_functions_size; ++i) {
         std::vector<const IColumn*> _agg_columns;
         for (int j = 0; j < _agg_intput_columns[i].size(); ++j) {
@@ -587,18 +563,6 @@ void VAnalyticEvalNode::_execute_for_three_column(BlockRowPos partition_start,
         _agg_functions[i]->function()->add_range_single_place(
                 partition_start.pos, partition_end.pos, frame_start.pos, frame_end.pos,
                 _fn_place_ptr + _offsets_of_aggregate_states[i], _agg_columns.data(), nullptr);
-    }
-}
-
-//now only for agg functions, sum min max count avg first_value last_value
-void VAnalyticEvalNode::_execute_for_one_column(BlockRowPos partition_start,
-                                                BlockRowPos partition_end, BlockRowPos frame_start,
-                                                BlockRowPos frame_end) {
-    for (size_t i = 0; i < _agg_functions_size; ++i) {
-        const IColumn* agg_column = _agg_intput_columns[i][0].get();
-        _agg_functions[i]->function()->add_range_single_place(
-                partition_start.pos, partition_end.pos, frame_start.pos, frame_end.pos,
-                _fn_place_ptr + _offsets_of_aggregate_states[i], &agg_column, nullptr);
     }
 }
 
