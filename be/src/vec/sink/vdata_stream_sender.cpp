@@ -434,20 +434,17 @@ Status VDataStreamSender::send(RuntimeState* state, Block* block) {
         // for each row, we have a hash_val
         std::vector<size_t> hash_vals(rows);
 
-        std::vector<bool> column_null_map(result.size());
-        for (int j = 0; j < result.size(); ++j) {
-            column_null_map[j] = block->get_by_position(result[j]).column->get_data_at(0) == nullptr;
-        }
         // result[j] means column index, i means rows index
         for (int j = 0; j < result.size(); ++j) {
             for (int i = 0; i < rows; ++i) {
-                if (column_null_map[j]) {
+                auto val = block->get_by_position(result[j]).column->get_data_at(i);
+
+                if (val.data == nullptr) {
                     // nullptr is treat as 0 when hash
                     static const int INT_VALUE = 0;
                     static const TypeDescriptor INT_TYPE(TYPE_INT);
                     hash_vals[i] = RawValue::zlib_crc32(&INT_VALUE, INT_TYPE, hash_vals[i]);
                 } else {
-                    auto val = block->get_by_position(result[j]).column->get_data_at(i);
                     hash_vals[i] = RawValue::zlib_crc32(val.data, val.size,
                                                         _partition_expr_ctxs[j]->root()->type(),
                                                         hash_vals[i]);
