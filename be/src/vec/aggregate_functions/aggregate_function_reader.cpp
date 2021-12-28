@@ -19,7 +19,9 @@
 
 namespace doris::vectorized {
 
+// auto spread at nullable condition, null value do not participate aggregate
 void register_aggregate_function_reader(AggregateFunctionSimpleFactory& factory) {
+    // add a suffix to the function name here to distinguish special functions of agg reader
     auto register_function_reader = [&](const std::string& name,
                                         const AggregateFunctionCreator& creator,
                                         bool nullable = false) {
@@ -29,10 +31,20 @@ void register_aggregate_function_reader(AggregateFunctionSimpleFactory& factory)
     register_function_reader("sum", create_aggregate_function_sum_reader);
     register_function_reader("max", create_aggregate_function_max);
     register_function_reader("min", create_aggregate_function_min);
-    //TODO register_function_reader("replace", );
-    //TODO register_function_reader("replace_if_not_null", );
+    register_function_reader("replace_if_not_null", create_aggregate_function_replace_if_not_null);
     register_function_reader("bitmap_union", create_aggregate_function_bitmap_union);
     register_function_reader("hll_union", create_aggregate_function_HLL_union);
+}
+
+void register_aggregate_function_reader_no_spread(AggregateFunctionSimpleFactory& factory) {
+    auto register_function_reader = [&](const std::string& name,
+                                        const AggregateFunctionCreator& creator,
+                                        bool nullable = false) {
+        factory.register_function(name + agg_reader_suffix, creator, nullable);
+    };
+
+    register_function_reader("replace", create_aggregate_function_replace, false);
+    register_function_reader("replace", create_aggregate_function_replace_nullable, true);
 }
 
 } // namespace doris::vectorized

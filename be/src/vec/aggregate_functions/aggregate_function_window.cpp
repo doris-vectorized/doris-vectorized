@@ -53,10 +53,13 @@ AggregateFunctionPtr create_aggregate_function_row_number(const std::string& nam
     return std::make_shared<WindowFunctionRowNumber>(argument_types);
 }
 
-template <template <typename> class AggregateFunctionTemplate, template <typename> class Data, bool is_nullable>
+template <template <typename> class AggregateFunctionTemplate, template <typename> class Data,
+          bool is_nullable, bool is_copy = false>
 static IAggregateFunction* create_function_single_value(const String& name,
                                                         const DataTypes& argument_types,
                                                         const Array& parameters) {
+    using StoreType = std::conditional_t<is_copy, CopiedValue, Value>;
+
     assert_arity_at_most<3>(name, argument_types);
 
     auto type = argument_types[0].get();
@@ -65,20 +68,24 @@ static IAggregateFunction* create_function_single_value(const String& name,
     }
     WhichDataType which(*type);
 
-#define DISPATCH(TYPE)                                                                        \
-    if (which.idx == TypeIndex::TYPE)                                                         \
-        return new AggregateFunctionTemplate<Data<LeadAndLagData<TYPE, is_nullable, false>>>( \
-                argument_types);
+#define DISPATCH(TYPE)                        \
+    if (which.idx == TypeIndex::TYPE)         \
+        return new AggregateFunctionTemplate< \
+                Data<LeadAndLagData<TYPE, is_nullable, false, StoreType>>>(argument_types);
     FOR_NUMERIC_TYPES(DISPATCH)
 #undef DISPATCH
+
     if (which.is_decimal()) {
-        return new AggregateFunctionTemplate<Data<LeadAndLagData<Int128, is_nullable, false>>>(argument_types);
+        return new AggregateFunctionTemplate<
+                Data<LeadAndLagData<Int128, is_nullable, false, StoreType>>>(argument_types);
     }
     if (which.is_date_or_datetime()) {
-        return new AggregateFunctionTemplate<Data<LeadAndLagData<Int64, is_nullable, false>>>(argument_types);
+        return new AggregateFunctionTemplate<
+                Data<LeadAndLagData<Int64, is_nullable, false, StoreType>>>(argument_types);
     }
     if (which.is_string_or_fixed_string())
-         return new AggregateFunctionTemplate<Data<LeadAndLagData<StringRef, is_nullable, true>>>(argument_types);
+        return new AggregateFunctionTemplate<
+                Data<LeadAndLagData<StringRef, is_nullable, true, StoreType>>>(argument_types);
     DCHECK(false) << "with unknowed type, failed in  create_aggregate_function_leadlag";
     return nullptr;
 }
@@ -105,9 +112,9 @@ AggregateFunctionPtr create_aggregate_function_lead(const std::string& name,
 
 template <bool is_nullable>
 AggregateFunctionPtr create_aggregate_function_first(const std::string& name,
-                                                    const DataTypes& argument_types,
-                                                    const Array& parameters,
-                                                    const bool result_is_nullable) {
+                                                     const DataTypes& argument_types,
+                                                     const Array& parameters,
+                                                     const bool result_is_nullable) {
     return AggregateFunctionPtr(
             create_function_single_value<WindowFunctionData, WindowFunctionFirstData, is_nullable>(
                     name, argument_types, parameters));
@@ -120,6 +127,33 @@ AggregateFunctionPtr create_aggregate_function_last(const std::string& name,
                                                     const bool result_is_nullable) {
     return AggregateFunctionPtr(
             create_function_single_value<WindowFunctionData, WindowFunctionLastData, is_nullable>(
+                    name, argument_types, parameters));
+}
+
+AggregateFunctionPtr create_aggregate_function_replace_if_not_null(const std::string& name,
+                                                                   const DataTypes& argument_types,
+                                                                   const Array& parameters,
+                                                                   const bool result_is_nullable) {
+    return AggregateFunctionPtr(
+            create_function_single_value<WindowFunctionData, WindowFunctionFirstData, false, true>(
+                    name, argument_types, parameters));
+}
+
+AggregateFunctionPtr create_aggregate_function_replace(const std::string& name,
+                                                       const DataTypes& argument_types,
+                                                       const Array& parameters,
+                                                       const bool result_is_nullable) {
+    return AggregateFunctionPtr(
+            create_function_single_value<WindowFunctionData, WindowFunctionFirstData, false, true>(
+                    name, argument_types, parameters));
+}
+
+AggregateFunctionPtr create_aggregate_function_replace_nullable(const std::string& name,
+                                                                const DataTypes& argument_types,
+                                                                const Array& parameters,
+                                                                const bool result_is_nullable) {
+    return AggregateFunctionPtr(
+            create_function_single_value<WindowFunctionData, WindowFunctionFirstData, true, true>(
                     name, argument_types, parameters));
 }
 

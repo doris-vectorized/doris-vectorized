@@ -168,12 +168,24 @@ public:
         _is_null = false;
         _value = {};
     }
-private:
+
+protected:
     StringRef _value;
     bool _is_null;
 };
 
-template <typename T, bool is_nullable, bool is_string>
+struct CopiedValue : public Value {
+public:
+    void set_value(StringRef value) {
+        _copied_value = value.to_string();
+        _value = StringRef(_copied_value);
+    }
+
+private:
+    std::string _copied_value;
+};
+
+template <typename T, bool is_nullable, bool is_string, typename StoreType = Value>
 struct LeadAndLagData {
 public:
     bool has_init() const { return _is_init; }
@@ -272,8 +284,8 @@ public:
     }
 
 private:
-    Value _data_value;
-    Value _default_value;
+    StoreType _data_value;
+    StoreType _default_value;
     bool _has_value = false;
     bool _is_init = false;
 };
@@ -293,6 +305,9 @@ struct WindowFunctionLeadData : Data {
         }
         this->set_value(columns, frame_end - 1);
     }
+    void add(int64_t row, const IColumn** columns) {
+        LOG(FATAL) << "WindowFunctionLeadData do not support add";
+    }
     static const char* name() { return "lead"; }
 };
 
@@ -311,6 +326,9 @@ struct WindowFunctionLagData : Data {
         }
         this->set_value(columns, frame_end - 1);
     }
+    void add(int64_t row, const IColumn** columns) {
+        LOG(FATAL) << "WindowFunctionLagData do not support add";
+    }
     static const char* name() { return "lag"; }
 };
 
@@ -321,12 +339,19 @@ struct WindowFunctionFirstData : Data {
         if (this->has_set_value()) {
             return;
         }
-        if (frame_start < frame_end && frame_end <= partition_start) { //rewrite last_value when under partition
+        if (frame_start < frame_end &&
+            frame_end <= partition_start) { //rewrite last_value when under partition
             this->set_is_null();            //so no need more judge
             return;
         }
         frame_start = std::max<int64_t>(frame_start, partition_start);
         this->set_value(columns, frame_start);
+    }
+    void add(int64_t row, const IColumn** columns) {
+        if (this->has_set_value()) {
+            return;
+        }
+        this->set_value(columns, row);
     }
     static const char* name() { return "first_value"; }
 };
@@ -336,12 +361,19 @@ struct WindowFunctionLastData : Data {
     void add_range_single_place(int64_t partition_start, int64_t partition_end, int64_t frame_start,
                                 int64_t frame_end, const IColumn** columns) {
         if ((frame_start < frame_end) &&
-            ((frame_end <= partition_start) || (frame_start >= partition_end))) { //beyond or under partition, set null
+            ((frame_end <= partition_start) ||
+             (frame_start >= partition_end))) { //beyond or under partition, set null
             this->set_is_null();
             return;
         }
         frame_end = std::min<int64_t>(frame_end, partition_end);
         this->set_value(columns, frame_end - 1);
+    }
+    void add(int64_t row, const IColumn** columns) {
+        if (this->has_set_value()) {
+            return;
+        }
+        this->set_value(columns, row);
     }
     static const char* name() { return "last_value"; }
 };
@@ -370,14 +402,38 @@ public:
         this->data(place).insert_result_into(to);
     }
 
-    void add(AggregateDataPtr place, const IColumn** columns, size_t row_num, Arena*) const override {}
-    void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {}
-    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {}
-    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {}
+    void add(AggregateDataPtr place, const IColumn** columns, size_t row_num,
+             Arena* arena) const override {
+        this->data(place).add(row_num, columns);
+    }
+    void merge(AggregateDataPtr place, ConstAggregateDataPtr rhs, Arena*) const override {
+        LOG(FATAL) << "WindowFunctionData do not support merge";
+    }
+    void serialize(ConstAggregateDataPtr place, BufferWritable& buf) const override {
+        LOG(FATAL) << "WindowFunctionData do not support serialize";
+    }
+    void deserialize(AggregateDataPtr place, BufferReadable& buf, Arena*) const override {
+        LOG(FATAL) << "WindowFunctionData do not support deserialize";
+    }
     const char* get_header_file_path() const override { return __FILE__; }
 
 private:
     DataTypePtr _argument_type;
 };
+
+AggregateFunctionPtr create_aggregate_function_replace_if_not_null(const std::string& name,
+                                                                   const DataTypes& argument_types,
+                                                                   const Array& parameters,
+                                                                   const bool result_is_nullable);
+
+AggregateFunctionPtr create_aggregate_function_replace(const std::string& name,
+                                                       const DataTypes& argument_types,
+                                                       const Array& parameters,
+                                                       const bool result_is_nullable);
+
+AggregateFunctionPtr create_aggregate_function_replace_nullable(const std::string& name,
+                                                                const DataTypes& argument_types,
+                                                                const Array& parameters,
+                                                                const bool result_is_nullable);
 
 } // namespace doris::vectorized
