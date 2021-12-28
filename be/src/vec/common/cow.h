@@ -23,7 +23,6 @@
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 #include <initializer_list>
-#include <type_traits>
 
 
 /** Copy-on-write shared ptr.
