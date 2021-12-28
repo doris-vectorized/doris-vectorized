@@ -849,11 +849,6 @@ static bool ignore_cast(SlotDescriptor* slot, Expr* expr) {
 
 bool OlapScanNode::should_push_down_in_predicate(doris::SlotDescriptor* slot,
                                                  doris::InPredicate* pred) {
-    if (pred->is_not_in()) {
-        // can not push down NOT IN predicate to storage engine
-        return false;
-    }
-
     if (Expr::type_without_cast(pred->get_child(0)) != TExprNodeType::SLOT_REF) {
         // not a slot ref(column)
         return false;

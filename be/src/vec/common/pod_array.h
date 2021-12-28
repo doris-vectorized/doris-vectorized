@@ -373,6 +373,12 @@ public:
         }
     }
 
+    template <typename U, typename... TAllocatorParams>
+    void add_num_element_without_reserve(U&& x, uint32_t num, TAllocatorParams&&... allocator_params) {
+            std::fill(t_end(), t_end() + num, x);
+            this->c_end += sizeof(T) * num;
+    }
+
     /**
      * you must make sure to reserve podarray before calling this method
      * remove branch if can improve performance

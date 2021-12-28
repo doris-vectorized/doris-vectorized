@@ -454,7 +454,7 @@ Status VDataStreamSender::send(RuntimeState* state, Block* block) {
 
         for (int i = 0; i < rows; i++) {
             auto target_channel_id = hash_vals[i] % num_channels;
-            RETURN_IF_ERROR(_channels[target_channel_id]->add_row(&send_block, i));
+            RETURN_IF_ERROR(_channel_shared_ptrs[target_channel_id]->add_row(&send_block, i));
         }
 
     } else {

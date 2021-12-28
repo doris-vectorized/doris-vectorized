@@ -111,7 +111,6 @@ private:
 
     bool _eof = false;
     bool _agg_inited = false;
-    bool _direct_mode;
 
     OLAPStatus (BlockReader::*_next_block_func)(Block* block, MemPool* mem_pool,
                                                 ObjectPool* agg_pool, bool* eof) = nullptr;

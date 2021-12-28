@@ -32,10 +32,10 @@
 namespace doris::vectorized {
 
 struct InState {
-    bool use_set;
+    bool use_set = true;
 
     // only use in null in set
-    bool null_in_set;
+    bool null_in_set = false;
     std::unique_ptr<HybridSetBase> hybrid_set;
 };
 
@@ -115,6 +115,8 @@ public:
                     vec_res[i] = negative ^ in_state->hybrid_set->find((void *) ref_data.data, ref_data.size);
                     if (in_state->null_in_set) {
                         vec_null_map_to[i] = negative == vec_res[i];
+                    } else {
+                        vec_null_map_to[i] = false;
                     }
                 } else {
                     vec_null_map_to[i] = true;
@@ -147,6 +149,8 @@ public:
                 vec_res[i] = negative ^ hybrid_set->find((void *) ref_data.data, ref_data.size);
                 if (null_in_set) {
                     vec_null_map_to[i] = negative == vec_res[i];
+                } else {
+                    vec_null_map_to[i] = false;
                 }
             }
         }
