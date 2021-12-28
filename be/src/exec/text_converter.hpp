@@ -169,7 +169,6 @@ inline bool TextConverter::write_slot(const SlotDescriptor* slot_desc, Tuple* tu
 inline bool TextConverter::write_column(const SlotDescriptor* slot_desc,
                                         vectorized::MutableColumnPtr* column_ptr, const char* data,
                                         size_t len, bool copy_string, bool need_escape) {
-    vectorized::MutableColumnPtr* col_ptr = column_ptr;
     // \N means it's NULL
     if (true == slot_desc->is_nullable()) {
         auto* nullable_column = reinterpret_cast<vectorized::ColumnNullable*>(column_ptr->get());
@@ -178,12 +177,13 @@ inline bool TextConverter::write_column(const SlotDescriptor* slot_desc,
             return true;
         } else {
             nullable_column->get_null_map_data().push_back(0);
-            col_ptr = reinterpret_cast<vectorized::MutableColumnPtr*>(
+            column_ptr = reinterpret_cast<vectorized::MutableColumnPtr*>(
                     &nullable_column->get_nested_column());
         }
     }
     StringParser::ParseResult parse_result = StringParser::PARSE_SUCCESS;
 
+    auto col_ptr = column_ptr->get();
     // Parse the raw-text data. Translate the text string to internal format.
     switch (slot_desc->type().type) {
     case TYPE_HLL:
