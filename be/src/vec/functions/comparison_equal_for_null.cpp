@@ -107,7 +107,12 @@ public:
             auto& null_map = res_nullable_column->get_null_map_data();
             auto& res_map = assert_cast<ColumnVector<UInt8>&>(res_nullable_column->get_nested_column()).get_data();
 
-            VectorizedUtils::update_null_map(res_map, null_map);
+            auto* __restrict res = res_map.data();
+            auto* __restrict l = null_map.data();
+            for (int i = 0; i < input_rows_count; ++i) {
+                res[i] &= (l[i] != 1);
+            }
+
             block.get_by_position(result).column = res_nullable_column->get_nested_column_ptr();
         }
         return Status::OK();

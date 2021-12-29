@@ -105,6 +105,8 @@ Status VMysqlScanNode::get_next(RuntimeState* state, vectorized::Block* block, b
         }
         VLOG_ROW << "VMYSQLScanNode output rows: " << block->rows();
     } while (block->rows() == 0 && !(*eos));
+
+    reached_limit(block, eos);
     return Status::OK();
 }
 

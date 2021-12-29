@@ -43,20 +43,21 @@ Status VSelectNode::get_next(RuntimeState* state, RowBatch* row_batch, bool* eos
 }
 
 Status VSelectNode::get_next(RuntimeState* state, vectorized::Block* block, bool* eos) {
+    SCOPED_TIMER(_runtime_profile->total_time_counter());
     RETURN_IF_ERROR(exec_debug_action(TExecNodePhase::GETNEXT));
     RETURN_IF_CANCELLED(state);
-    while (true) {
+    do {
         RETURN_IF_CANCELLED(state);
         RETURN_IF_ERROR(_children[0]->get_next(state, block, &_child_eos));
-        if (reached_limit() || _child_eos) {
+        if (_child_eos) {
             *eos = true;
             break;
         }
-        if (block->rows() == state->batch_size()) {
-            break;
-        }
-    }
+    } while (block->rows() == 0);
+
     RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, block, block->columns()));
+    reached_limit(block, eos);
+
     return Status::OK();
 }
 

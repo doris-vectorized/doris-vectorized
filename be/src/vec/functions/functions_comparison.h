@@ -414,15 +414,16 @@ public:
         if (left_type->equals(*right_type) && !left_type->is_nullable() &&
             col_left_untyped == col_right_untyped) {
             /// Always true: =, <=, >=
+            // TODO: Return const column in the future
             if constexpr (std::is_same_v<Op<int, int>, EqualsOp<int, int>> ||
                           std::is_same_v<Op<int, int>, LessOrEqualsOp<int, int>> ||
                           std::is_same_v<Op<int, int>, GreaterOrEqualsOp<int, int>>) {
                 block.get_by_position(result).column =
-                        DataTypeUInt8().create_column_const(input_rows_count, 1u);
+                        DataTypeUInt8().create_column_const(input_rows_count, 1u)->convert_to_full_column_if_const();
                 return Status::OK();
             } else {
                 block.get_by_position(result).column =
-                        DataTypeUInt8().create_column_const(input_rows_count, 0u);
+                        DataTypeUInt8().create_column_const(input_rows_count, 0u)->convert_to_full_column_if_const();
                 return Status::OK();
             }
         }

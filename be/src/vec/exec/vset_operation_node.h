@@ -223,9 +223,6 @@ struct HashTableProbe {
             _mutable_cols.clear();
         }
 
-        int64_t m = output_block->rows();
-        COUNTER_UPDATE(_rows_returned_counter, m);
-        _num_rows_returned += m;
         return Status::OK();
     }
 

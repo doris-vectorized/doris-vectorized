@@ -56,6 +56,8 @@ Status VSchemaScanNode::prepare(RuntimeState* state) {
 }
 
 Status VSchemaScanNode::get_next(RuntimeState* state, vectorized::Block* block, bool* eos) {
+    SCOPED_TIMER(_runtime_profile->total_time_counter());
+
     VLOG_CRITICAL << "VSchemaScanNode::GetNext";
     if (state == NULL || block == NULL || eos == NULL)
         return Status::InternalError("input is NULL pointer");
@@ -126,11 +128,11 @@ Status VSchemaScanNode::get_next(RuntimeState* state, vectorized::Block* block, 
                 columns.clear();
             }
             RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, block, _dest_tuple_desc->slots().size()));
-            _num_rows_returned += block->rows();
-            COUNTER_SET(_rows_returned_counter, _num_rows_returned);
             VLOG_ROW << "VSchemaScanNode output rows: " << block->rows();
         }
     } while (block->rows() == 0 && !(*eos));
+
+    reached_limit(block, eos);
     return Status::OK();
 }
 
