@@ -151,7 +151,7 @@ public:
             if constexpr (has_case) {
                 // TODO: need simd
                 for (int row_idx = 0; row_idx < rows_count; row_idx++) {
-                    if (!then_idx_ptr[row_idx] &&
+                    if (!then_idx_ptr[row_idx] && !case_column_ptr->is_null_at(row_idx) &&
                         case_column_ptr->compare_at(row_idx, row_idx, *when_column_ptr, -1) == 0) {
                         then_idx_ptr[row_idx] = i;
                     }
@@ -172,7 +172,8 @@ public:
 
                     // simd automatically
                     for (int row_idx = 0; row_idx < rows_count; row_idx++) {
-                        then_idx_ptr[row_idx] |= (!then_idx_ptr[row_idx]) * cond_raw_data[row_idx] * i;
+                        then_idx_ptr[row_idx] |=
+                                (!then_idx_ptr[row_idx]) * cond_raw_data[row_idx] * i;
                     }
                 }
             }
