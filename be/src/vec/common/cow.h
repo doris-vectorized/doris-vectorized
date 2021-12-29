@@ -318,8 +318,8 @@ public:
     }
 
 public:
-    Ptr get_ptr() const { return static_cast<Ptr>(derived()); }
-    MutablePtr get_ptr() { return static_cast<MutablePtr>(derived()); }
+    Ptr get_ptr() const { return Ptr(derived()); }
+    MutablePtr get_ptr() { return MutablePtr(derived()); }
 
 protected:
     MutablePtr shallow_mutate() const {
