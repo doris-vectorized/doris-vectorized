@@ -115,7 +115,7 @@ protected:
 
     void release_ref() {
         if (--ref_counter == 0) {
-            delete this;
+            delete static_cast<const Derived*>(this);
         }
     }
 
@@ -129,28 +129,20 @@ protected:
         intrusive_ptr() : t(nullptr) {}
 
         intrusive_ptr(T* t, bool add_ref=true) : t(t) {
-            if (t && add_ref) {
-                ((std::remove_const_t<T>*)t)->add_ref();
-            }
+            if (t && add_ref) ((std::remove_const_t<T>*)t)->add_ref();
         }
 
         template <typename U>
         intrusive_ptr(intrusive_ptr<U> const& rhs) : t(rhs.get()) {
-            if (t) {
-                ((std::remove_const_t<T>*)t)->add_ref();
-            }
+            if (t) ((std::remove_const_t<T>*)t)->add_ref();
         }
 
         intrusive_ptr(intrusive_ptr const& rhs) : t(rhs.get()) {
-            if (t) {
-                ((std::remove_const_t<T>*)t)->add_ref();
-            }
+            if (t) ((std::remove_const_t<T>*)t)->add_ref();
         }
 
         ~intrusive_ptr() {
-            if (t) {
-                ((std::remove_const_t<T>*)t)->release_ref();
-            }
+            if (t) ((std::remove_const_t<T>*)t)->release_ref();
         }
 
         template <typename U>
@@ -199,7 +191,7 @@ protected:
             intrusive_ptr(rhs).swap(*this);
         }
 
-        void reset(T * rhs, bool add_ref) {
+        void reset(T* rhs, bool add_ref) {
             intrusive_ptr(rhs, add_ref).swap(*this);
         }
 
@@ -326,8 +318,8 @@ public:
     }
 
 public:
-    Ptr get_ptr() const { return Ptr(derived()); }
-    MutablePtr get_ptr() { return MutablePtr(derived()); }
+    Ptr get_ptr() const { return static_cast<Ptr>(derived()); }
+    MutablePtr get_ptr() { return static_cast<MutablePtr>(derived()); }
 
 protected:
     MutablePtr shallow_mutate() const {
