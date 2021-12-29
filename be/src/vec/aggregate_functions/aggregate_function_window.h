@@ -218,9 +218,8 @@ public:
                 StringRef value = _data_value.get_value();
                 col.insert_data(value.data, value.size);
             } else {
-                auto& col = assert_cast<ColumnVector<T>&>(to);
                 StringRef value = _data_value.get_value();
-                col.insert_data(value.data, 0);
+                to.insert_data(value.data, 0);
             }
         }
     }
@@ -234,21 +233,18 @@ public:
                 return;
             }
             if constexpr (is_string) {
-                const auto* sources = check_and_get_column<ColumnString>(
+                const auto *sources = check_and_get_column<ColumnString>(
                         nullable_column->get_nested_column_ptr().get());
                 _data_value.set_value(sources->get_data_at(pos));
             } else {
-                const auto* sources = check_and_get_column<ColumnVector<T>>(
-                        nullable_column->get_nested_column_ptr().get());
-                _data_value.set_value(sources->get_data_at(pos));
+                _data_value.set_value(nullable_column->get_nested_column_ptr()->get_data_at(pos));
             }
         } else {
             if constexpr (is_string) {
                 const auto* sources = check_and_get_column<ColumnString>(columns[0]);
                 _data_value.set_value(sources->get_data_at(pos));
             } else {
-                const auto* sources = check_and_get_column<ColumnVector<T>>(columns[0]);
-                _data_value.set_value(sources->get_data_at(pos));
+                _data_value.set_value(columns[0]->get_data_at(pos));
             }
         }
         _data_value.set_null(false);
@@ -275,8 +271,7 @@ public:
                     const auto& col = static_cast<const ColumnString&>(*column);
                     _default_value.set_value(col.get_data_at(0));
                 } else {
-                    const auto& col = static_cast<const ColumnVector<T>&>(*column);
-                    _default_value.set_value(col.get_data_at(0));
+                    _default_value.set_value(column->get_data_at(0));
                 }
             }
             _is_init = true;

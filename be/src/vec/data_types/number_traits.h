@@ -171,7 +171,7 @@ struct ResultOfIntegerDivision {
 template <typename A, typename B>
 struct ResultOfModulo {
     using Type =
-            typename Construct<std::is_signed_v<A> || std::is_signed_v<B>, false, max(sizeof(A), sizeof(B))>::Type;
+            typename Construct<std::is_signed_v<A> || std::is_signed_v<B>, std::is_floating_point_v<A>, max(sizeof(A), sizeof(B))>::Type;
 };
 
 template <typename A>

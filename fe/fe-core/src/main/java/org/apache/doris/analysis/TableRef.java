@@ -464,7 +464,7 @@ public class TableRef implements ParseNode, Writable {
         // register the tuple ids of the TableRefs on the nullable side of an outer join
         if (joinOp == JoinOperator.LEFT_OUTER_JOIN
                 || joinOp == JoinOperator.FULL_OUTER_JOIN) {
-            analyzer.registerOuterJoinedTids(getId().asList(), this);
+            analyzer.registerOuterJoinedTids(getMaterializedTupleIds(), this);
         }
         if (joinOp == JoinOperator.RIGHT_OUTER_JOIN
                 || joinOp == JoinOperator.FULL_OUTER_JOIN) {
@@ -473,7 +473,7 @@ public class TableRef implements ParseNode, Writable {
         // register the tuple ids of a full outer join
         if (joinOp == JoinOperator.FULL_OUTER_JOIN) {
             analyzer.registerFullOuterJoinedTids(leftTblRef.getAllTableRefIds(), this);
-            analyzer.registerFullOuterJoinedTids(getId().asList(), this);
+            analyzer.registerFullOuterJoinedTids(getMaterializedTupleIds(), this);
         }
 
         // register the tuple id of the rhs of a left semi join
