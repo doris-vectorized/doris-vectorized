@@ -464,17 +464,10 @@ Status VOlapScanNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         // get scanner's block memory
         block->swap(*materialized_block);
         VLOG_ROW << "VOlapScanNode output rows: " << block->rows();
-        _num_rows_returned += block->rows();
-        COUNTER_SET(_rows_returned_counter, _num_rows_returned);
+        reached_limit(block, eos);
 
         // reach scan node limit
-        if (reached_limit()) {
-            int num_rows_over = _num_rows_returned - _limit;
-            block->set_num_rows(block->rows() - num_rows_over);
-
-            _num_rows_returned -= num_rows_over;
-            COUNTER_SET(_rows_returned_counter, _num_rows_returned);
-
+        if (*eos) {
             {
                 std::unique_lock<std::mutex> l(_blocks_lock);
                 _transfer_done = true;

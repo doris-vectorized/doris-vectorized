@@ -397,6 +397,20 @@ void Block::set_num_rows(size_t length) {
     }
 }
 
+void Block::skip_num_rows(int64_t& length) {
+    auto origin_rows = rows();
+    if (origin_rows <= length) {
+        clear();
+        length -= origin_rows;
+    } else {
+        for (auto& elem : data) {
+            if (elem.column) {
+                elem.column = elem.column->cut(length, origin_rows - length);
+            }
+        }
+    }
+}
+
 size_t Block::bytes() const {
     size_t res = 0;
     for (const auto& elem : data) {

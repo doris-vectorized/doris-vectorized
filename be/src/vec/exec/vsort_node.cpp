@@ -80,17 +80,15 @@ Status VSortNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     if (_sorted_blocks.empty()) {
         *eos = true;
     } else if (_sorted_blocks.size() == 1) {
+        if (_offset != 0) {
+            _sorted_blocks[0].skip_num_rows(_offset);
+        }
         block->swap(_sorted_blocks[0]);
-        _sorted_blocks.clear();
-        _num_rows_returned += block->rows();
     } else {
-        status = merge_sort_read(state, block, eos);
+        RETURN_IF_ERROR(merge_sort_read(state, block, eos));
     }
 
-    if (*eos) {
-        COUNTER_SET(_rows_returned_counter, _num_rows_returned);
-    }
-
+    reached_limit(block, eos);
     return status;
 }
 
@@ -224,15 +222,19 @@ Status VSortNode::merge_sort_read(doris::RuntimeState *state, doris::vectorized:
         auto current = _priority_queue.top();
         _priority_queue.pop();
 
-        for (size_t i = 0; i < num_columns; ++i)
-            merged_columns[i]->insert_from(*current->all_columns[i], current->pos);
+        if (_offset == 0) {
+            for (size_t i = 0; i < num_columns; ++i)
+                merged_columns[i]->insert_from(*current->all_columns[i], current->pos);
+            ++merged_rows;
+        } else {
+            _offset--;
+        }
 
         if (!current->isLast()) {
             current->next();
             _priority_queue.push(current);
         }
 
-        ++merged_rows;
         if (merged_rows == state->batch_size())
             break;
     }
@@ -242,16 +244,9 @@ Status VSortNode::merge_sort_read(doris::RuntimeState *state, doris::vectorized:
         return Status::OK();
     }
 
-    _num_rows_returned += merged_columns[0]->size();
-
     if (!mem_reuse) {
         Block merge_block = _sorted_blocks[0].clone_with_columns(std::move(merged_columns));
         merge_block.swap(*block);
-    }
-
-    if (reached_limit()) {
-        block->set_num_rows(block->rows() - (_num_rows_returned - _limit));
-        *eos = true;
     }
 
     return Status::OK();

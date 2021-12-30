@@ -237,12 +237,14 @@ Status VAnalyticEvalNode::get_next(RuntimeState* state, vectorized::Block* block
     RETURN_IF_ERROR(exec_debug_action(TExecNodePhase::GETNEXT));
     RETURN_IF_CANCELLED(state);
 
-    if (reached_limit() || (_input_eos && _output_block_index == _input_blocks.size())) {
+    if (_input_eos && _output_block_index == _input_blocks.size()) {
         *eos = true;
         return Status::OK();
     }
-
     RETURN_IF_ERROR(_executor.get_next(state, block, eos));
+
+    RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, block, block->columns()));
+    reached_limit(block, eos);
     return Status::OK();
 }
 
@@ -537,16 +539,9 @@ Status VAnalyticEvalNode::_output_current_block(Block* block) {
         block->insert({std::move(_result_window_columns[i]), _agg_functions[i]->data_type(), ""});
     }
 
-    _num_rows_returned += block->rows();
-    if (reached_limit()) {
-        int64_t num_rows_over = _num_rows_returned - _limit;
-        block->set_num_rows(block->rows() - num_rows_over);
-        COUNTER_SET(_rows_returned_counter, _limit);
-    } else {
-        COUNTER_SET(_rows_returned_counter, _num_rows_returned);
-        _output_block_index++;
-        _window_end_position = 0;
-    }
+    _output_block_index++;
+    _window_end_position = 0;
+
     return Status::OK();
 }
 

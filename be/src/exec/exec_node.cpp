@@ -743,6 +743,17 @@ void ExecNode::release_block_memory(vectorized::Block& block, uint16_t child_idx
     DCHECK(child_idx < _children.size());
     block.clear_column_data(child(child_idx)->row_desc().num_materialized_slots());
 }
+
+void ExecNode::reached_limit(vectorized::Block* block, bool* eos) {
+    if (_limit != -1 and _num_rows_returned + block->rows() >= _limit) {
+        block->set_num_rows(_limit - _num_rows_returned);
+        *eos = true;
+    }
+
+    _num_rows_returned += block->rows();
+    if (*eos) COUNTER_SET(_rows_returned_counter, _num_rows_returned);
+}
+
 /*
 Status ExecNode::enable_deny_reservation_debug_action() {
   DCHECK_EQ(debug_action_, TDebugAction::SET_DENY_RESERVATION_PROBABILITY);

@@ -136,6 +136,9 @@ public:
     // Cut the rows in block, use in LIMIT operation
     void set_num_rows(size_t length);
 
+    // Skip the rows in block, use in OFFSET, LIMIT operation
+    void skip_num_rows(int64_t & offset);
+
     size_t columns() const { return data.size(); }
 
     /// Checks that every column in block is not nullptr and has same number of elements.

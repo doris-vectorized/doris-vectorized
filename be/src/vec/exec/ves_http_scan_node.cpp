@@ -84,18 +84,12 @@ Status VEsHttpScanNode::get_next(RuntimeState* state, vectorized::Block* block, 
     // notify one scanner
     _queue_writer_cond.notify_one();
 
-    *block = *(scanner_block.get());
-    _num_rows_returned += block->rows();
-    COUNTER_SET(_rows_returned_counter, _num_rows_returned);
+    reached_limit(scanner_block.get(), eos);
+    *block = *scanner_block;
 
     // This is first time reach limit.
     // Only valid when query 'select * from table1 limit 20'
-    if (reached_limit()) {
-        int num_rows_over = _num_rows_returned - _limit;
-        block->set_num_rows(block->rows() - num_rows_over);
-        _num_rows_returned -= num_rows_over;
-        COUNTER_SET(_rows_returned_counter, _num_rows_returned);
-
+    if (*eos) {
         _scan_finished.store(true);
         _queue_writer_cond.notify_all();
         LOG(INFO) << "VEsHttpScanNode ReachedLimit.";

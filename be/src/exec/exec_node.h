@@ -226,6 +226,10 @@ protected:
     // 2. delete and release the column which create by function all and other reason
     void release_block_memory(vectorized::Block& block, uint16_t child_idx = 0);
 
+    /// Only use in vectorized exec engine to check whether reach limit and cut num row for block
+    // and add block rows for profile
+    void reached_limit(vectorized::Block* block, bool* eos);
+
     /// Enable the increase reservation denial probability on 'buffer_pool_client_' based on
     /// the 'debug_action_' set on this node. Returns an error if 'debug_action_param_' is
     /// invalid.

@@ -92,7 +92,7 @@ Status VCrossJoinNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     *eos = false;
     SCOPED_TIMER(_runtime_profile->total_time_counter());
 
-    if (reached_limit() || _eos) {
+    if (_eos) {
         *eos = true;
         return Status::OK();
     }
@@ -138,18 +138,7 @@ Status VCrossJoinNode::get_next(RuntimeState* state, Block* block, bool* eos) {
 
     RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, block, block->columns()));
 
-    if (_limit != -1 && _limit - _num_rows_returned < block->rows()) {
-        block->set_num_rows(_limit - _num_rows_returned);
-    }
-
-    _num_rows_returned += block->rows();
-    COUNTER_SET(_rows_returned_counter, _num_rows_returned);
-
-    if (_limit != -1) {
-        _eos = reached_limit();
-        *eos = _eos;
-    }
-
+    reached_limit(block, eos);
     return Status::OK();
 }
 

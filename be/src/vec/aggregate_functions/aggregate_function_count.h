@@ -78,15 +78,6 @@ class AggregateFunctionCountNotNullUnary final
         : public IAggregateFunctionDataHelper<AggregateFunctionCountData,
                                               AggregateFunctionCountNotNullUnary> {
 public:
-    AggregateFunctionCountNotNullUnary(const DataTypePtr& argument, const Array& params)
-            : IAggregateFunctionDataHelper<AggregateFunctionCountData,
-                                           AggregateFunctionCountNotNullUnary>({argument}, params) {
-        if (!argument->is_nullable()) {
-            LOG(FATAL) << "Logical error: not Nullable data type passed to "
-                          "AggregateFunctionCountNotNullUnary";
-        }
-    }
-
     AggregateFunctionCountNotNullUnary(const DataTypes& argument_types_)
             : IAggregateFunctionDataHelper(argument_types_, {}) {}
 
@@ -116,7 +107,13 @@ public:
     }
 
     void insert_result_into(ConstAggregateDataPtr __restrict place, IColumn& to) const override {
-        assert_cast<ColumnInt64&>(to).get_data().push_back(data(place).count);
+        if (to.is_nullable()) {
+            auto& null_column = assert_cast<ColumnNullable &>(to);
+            null_column.get_null_map_data().push_back(0);
+            assert_cast<ColumnInt64 &>(null_column.get_nested_column()).get_data().push_back(data(place).count);
+        } else {
+            assert_cast<ColumnInt64 &>(to).get_data().push_back(data(place).count);
+        }
     }
 
     const char* get_header_file_path() const override { return __FILE__; }

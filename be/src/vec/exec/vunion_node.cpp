@@ -213,8 +213,6 @@ Status VUnionNode::get_next(RuntimeState* state, Block* block, bool* eos) {
 
     // Save the number of rows in case get_next() is called with a non-empty batch, which can
     // happen in a subplan.
-    int num_rows_before = block->rows();
-
     if (has_more_passthrough()) {
         RETURN_IF_ERROR(get_next_pass_through(state, block));
     } else if (has_more_materialized()) {
@@ -223,20 +221,9 @@ Status VUnionNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         RETURN_IF_ERROR(get_next_const(state, block));
     }
 
-    int num_rows_added = block->rows() - num_rows_before;
-    DCHECK_GE(num_rows_added, 0);
-    if (_limit != -1 && _num_rows_returned + num_rows_added > _limit) {
-        // Truncate the row batch if we went over the limit.
-        num_rows_added = _limit - _num_rows_returned;
-        block->set_num_rows(num_rows_before + num_rows_added);
-        DCHECK_GE(num_rows_added, 0);
-    }
-    _num_rows_returned += num_rows_added;
+    *eos = (!has_more_passthrough() && !has_more_materialized() && !has_more_const(state));
+    reached_limit(block, eos);
 
-    *eos = reached_limit() ||
-           (!has_more_passthrough() && !has_more_materialized() && !has_more_const(state));
-
-    COUNTER_SET(_rows_returned_counter, _num_rows_returned);
     return Status::OK();
 }
 

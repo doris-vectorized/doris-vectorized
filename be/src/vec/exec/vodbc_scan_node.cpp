@@ -41,11 +41,6 @@ Status VOdbcScanNode::get_next(RuntimeState* state, Block* block, bool* eos) {
     RETURN_IF_ERROR(exec_debug_action(TExecNodePhase::GETNEXT));
     RETURN_IF_CANCELLED(state);
 
-    if (reached_limit()) {
-        *eos = true;
-        return Status::OK();
-    }
-
     auto odbc_scanner = get_odbc_scanner();
     auto tuple_desc = get_tuple_desc();
     auto text_converter = get_text_converter();
@@ -73,8 +68,7 @@ Status VOdbcScanNode::get_next(RuntimeState* state, Block* block, bool* eos) {
 
         for (int row_index = 0; true; row_index++) {
             // block is full, break
-            if (reached_limit() || state->batch_size() <= columns[0]->size()) {
-                *eos = reached_limit();
+            if (state->batch_size() <= columns[0]->size()) {
                 break;
             }
 
@@ -124,6 +118,10 @@ Status VOdbcScanNode::get_next(RuntimeState* state, Block* block, bool* eos) {
         }
         VLOG_ROW << "VOdbcScanNode output rows: " << block->rows();
     } while (block->rows() == 0 && !(*eos));
+
+
+    RETURN_IF_ERROR(VExprContext::filter_block(_vconjunct_ctx_ptr, block, block->columns()));
+    reached_limit(block, eos);
 
     return Status::OK();
 }

@@ -161,7 +161,6 @@ struct ProcessHashTableProbe {
               _probe_rows(probe_rows),
               _probe_block(join_node->_probe_block),
               _probe_index(join_node->_probe_index),
-              _num_rows_returned(join_node->_num_rows_returned),
               _probe_raw_ptrs(join_node->_probe_columns),
               _arena(join_node->_arena),
               _rows_returned_counter(join_node->_rows_returned_counter) {}
@@ -515,7 +514,6 @@ private:
     const size_t _probe_rows;
     const Block& _probe_block;
     int& _probe_index;
-    int64_t& _num_rows_returned;
     ColumnRawPtrs& _probe_raw_ptrs;
     Arena& _arena;
 
@@ -780,10 +778,7 @@ Status HashJoinNode::get_next(RuntimeState* state, Block* output_block, bool* eo
 
     RETURN_IF_ERROR(
             VExprContext::filter_block(_vconjunct_ctx_ptr, output_block, output_block->columns()));
-
-    int64_t m = output_block->rows();
-    COUNTER_UPDATE(_rows_returned_counter, m);
-    _num_rows_returned += m;
+    reached_limit(output_block, eos);
 
     return st;
 }
