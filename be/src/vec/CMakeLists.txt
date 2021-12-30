@@ -32,6 +32,7 @@ set(VEC_FILES
   aggregate_functions/aggregate_function_reader.cpp
   aggregate_functions/aggregate_function_window.cpp
   aggregate_functions/aggregate_function_simple_factory.cpp
+  aggregate_functions/aggregate_function_percentile_approx.cpp
   columns/collator.cpp
   columns/column.cpp
   columns/column_const.cpp
