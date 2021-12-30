@@ -35,7 +35,6 @@ using FunctionToDays = FunctionDateOrDateTimeToSomething<DataTypeInt32, ToDaysIm
 using FunctionToDate = FunctionDateOrDateTimeToSomething<DataTypeDateTime, ToDateImpl>;
 using FunctionDate = FunctionDateOrDateTimeToSomething<DataTypeDateTime, DateImpl>;
 using FunctionTimeStamp = FunctionDateOrDateTimeToSomething<DataTypeDateTime, TimeStampImpl>;
-using FunctionUnixTimeStamp = FunctionDateOrDateTimeToSomething<DataTypeInt32, UnixTimeStampImpl>;
 
 void register_function_to_time_fuction(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionSecond>();
@@ -50,7 +49,6 @@ void register_function_to_time_fuction(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionToDate>();
     factory.register_function<FunctionDate>();
     factory.register_function<FunctionTimeStamp>();
-    factory.register_function<FunctionUnixTimeStamp>();
 }
 
 } // namespace doris::vectorized

@@ -66,16 +66,14 @@ void register_function_random(SimpleFunctionFactory& factory);
 class SimpleFunctionFactory {
     using Creator = std::function<FunctionBuilderPtr()>;
     using FunctionCreators = std::unordered_map<std::string, Creator>;
-    using FunctionIsVariadic = std::unordered_map<std::string, bool>;
+    using FunctionIsVariadic = std::unordered_set<std::string>;
 
 public:
     void register_function(const std::string& name, Creator ptr) {
         DataTypes types = ptr()->get_variadic_argument_types();
         // types.empty() means function is not variadic
-        if (types.empty()) {
-            function_variadic_map[name] = false;
-        } else {
-            function_variadic_map[name] = true;
+        if (!types.empty()) {
+            function_variadic_set.insert(name);
         }
 
         std::string key_str = name;
@@ -103,10 +101,13 @@ public:
                                  const DataTypePtr& return_type) {
         std::string key_str = name;
         // if function is variadic, added types_str as key
-        if (function_variadic_map.count(name) && function_variadic_map[name]) {
+        if (function_variadic_set.count(name)) {
             for (auto& arg : arguments) {
-                key_str.append(arg.type->is_nullable() ?
-                reinterpret_cast<const DataTypeNullable*>(arg.type.get())->get_nested_type()->get_name() : arg.type->get_name());
+                key_str.append(arg.type->is_nullable()
+                                       ? reinterpret_cast<const DataTypeNullable*>(arg.type.get())
+                                                 ->get_nested_type()
+                                                 ->get_name()
+                                       : arg.type->get_name());
             }
         }
 
@@ -120,7 +121,7 @@ public:
 
 private:
     FunctionCreators function_creators;
-    FunctionIsVariadic function_variadic_map;
+    FunctionIsVariadic function_variadic_set;
 
     template <typename Function>
     static FunctionBuilderPtr createDefaultFunction() {
