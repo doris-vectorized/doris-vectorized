@@ -79,21 +79,6 @@ struct TimeStampImpl {
     static inline auto execute(const Int64& t, bool& is_null) { return t; }
 };
 
-struct UnixTimeStampImpl {
-    static constexpr auto name = "unix_timestamp";
-    static inline int execute(const Int64& t, bool& is_null) {
-        // TODO: use default time zone, slowly and incorrect, just for test use
-        static cctz::time_zone time_zone = cctz::fixed_time_zone(cctz::seconds(8 * 60 * 60));
-
-        const auto& dt = (doris::vectorized::VecDateTimeValue&)(t);
-        is_null = !dt.is_valid_date();
-        int64_t timestamp = 0;
-        dt.unix_timestamp(&timestamp, time_zone);
-
-        return (timestamp < 0 || timestamp > INT_MAX) ? 0 : timestamp;
-    }
-};
-
 struct DayNameImpl {
     static constexpr auto name = "dayname";
     static constexpr auto max_size = MAX_DAY_NAME_LEN;

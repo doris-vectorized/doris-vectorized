@@ -16,6 +16,8 @@
 // under the License.
 
 #include "runtime/datetime_value.h"
+#include "runtime/runtime_state.h"
+#include "udf/udf_internal.h"
 #include "vec/columns/column_nullable.h"
 #include "vec/columns/column_string.h"
 #include "vec/columns/column_vector.h"
@@ -24,6 +26,7 @@
 #include "vec/functions/function_totype.h"
 #include "vec/functions/simple_function_factory.h"
 #include "vec/runtime/vdatetime_value.h"
+
 namespace doris::vectorized {
 
 struct StrToDate {
@@ -81,7 +84,7 @@ struct MakeDateImpl {
 
             auto& res_val = *reinterpret_cast<VecDateTimeValue*>(&res[i]);
 
-            VecDateTimeValue ts_value{l * 10000000000 + 101000000};
+            VecDateTimeValue ts_value {l * 10000000000 + 101000000};
             ts_value.set_type(TIME_DATE);
             DateTimeVal ts_val;
             ts_value.to_datetime_val(&ts_val);
@@ -124,7 +127,8 @@ public:
         auto null_map = ColumnUInt8::create(input_rows_count, 0);
         auto res_column = ColumnInt64::create(input_rows_count);
         auto& res_data = assert_cast<ColumnInt64&>(*res_column).get_data();
-        ColumnPtr argument_column = block.get_by_position(arguments[0]).column->convert_to_full_column_if_const();
+        ColumnPtr argument_column =
+                block.get_by_position(arguments[0]).column->convert_to_full_column_if_const();
 
         auto data_col = assert_cast<const ColumnVector<Int32>*>(argument_column.get());
         for (int i = 0; i < input_rows_count; i++) {
@@ -138,18 +142,189 @@ public:
             ts_value.to_datetime_val(&ts_val);
             ts_value = VecDateTimeValue::from_datetime_val(ts_val);
         }
-        block.replace_by_position(result, ColumnNullable::create(std::move(res_column), std::move(null_map)));
+        block.replace_by_position(
+                result, ColumnNullable::create(std::move(res_column), std::move(null_map)));
         return Status::OK();
     }
 };
 
 using FunctionStrToDate = FunctionBinaryStringOperateToNullType<StrToDate>;
-using FunctionMakeDate = FunctionBinaryToNullType<DataTypeInt32, DataTypeInt32, MakeDateImpl, NameMakeDate>;
+using FunctionMakeDate =
+        FunctionBinaryToNullType<DataTypeInt32, DataTypeInt32, MakeDateImpl, NameMakeDate>;
+
+struct UnixTimeStampImpl {
+    static Int32 trim_timestamp(Int64 timestamp) {
+        if (timestamp < 0 || timestamp > INT_MAX) {
+            timestamp = 0;
+        }
+        return (Int32)timestamp;
+    }
+
+    static DataTypes get_variadic_argument_types() { return {}; }
+
+    static DataTypePtr get_return_type_impl(const ColumnsWithTypeAndName& arguments) {
+        return std::make_shared<DataTypeInt32>();
+    }
+
+    static Status execute_impl(FunctionContext* context, Block& block,
+                               const ColumnNumbers& arguments, size_t result,
+                               size_t input_rows_count) {
+        auto col_result = ColumnVector<Int32>::create();
+        col_result->insert(context->impl()->state()->timestamp_ms() / 1000);
+        block.replace_by_position(result, std::move(col_result));
+        return Status::OK();
+    }
+};
+
+struct UnixTimeStampDateImpl {
+    static DataTypes get_variadic_argument_types() {
+        return {std::make_shared<vectorized::DataTypeDate>()};
+    }
+
+    static DataTypePtr get_return_type_impl(const ColumnsWithTypeAndName& arguments) {
+        return make_nullable(std::make_shared<DataTypeInt32>());
+    }
+
+    static Status execute_impl(FunctionContext* context, Block& block,
+                               const ColumnNumbers& arguments, size_t result,
+                               size_t input_rows_count) {
+        const ColumnPtr col_source = block.get_by_position(arguments[0]).column;
+
+        auto col_result = ColumnVector<Int32>::create();
+        auto null_map = ColumnVector<UInt8>::create();
+
+        col_result->resize(input_rows_count);
+        null_map->resize(input_rows_count);
+
+        auto& col_result_data = col_result->get_data();
+        auto& null_map_data = null_map->get_data();
+
+        for (int i = 0; i < input_rows_count; i++) {
+            if (col_source->is_null_at(i)) {
+                null_map_data[i] = true;
+                continue;
+            }
+
+            StringRef source = col_source->get_data_at(i);
+            const VecDateTimeValue& ts_value =
+                    reinterpret_cast<const VecDateTimeValue&>(*source.data);
+            int64_t timestamp;
+            if (!ts_value.unix_timestamp(&timestamp, context->impl()->state()->timezone_obj())) {
+                null_map_data[i] = true;
+            } else {
+                null_map_data[i] = false;
+                col_result_data[i] = UnixTimeStampImpl::trim_timestamp(timestamp);
+            }
+        }
+
+        block.replace_by_position(
+                result, ColumnNullable::create(std::move(col_result), std::move(null_map)));
+
+        return Status::OK();
+    }
+};
+
+struct UnixTimeStampDatetimeImpl : public UnixTimeStampDateImpl {
+    static DataTypes get_variadic_argument_types() {
+        return {std::make_shared<vectorized::DataTypeDateTime>()};
+    }
+};
+
+struct UnixTimeStampStrImpl {
+    static DataTypes get_variadic_argument_types() {
+        return {std::make_shared<vectorized::DataTypeString>(),
+                std::make_shared<vectorized::DataTypeString>()};
+    }
+
+    static DataTypePtr get_return_type_impl(const ColumnsWithTypeAndName& arguments) {
+        return make_nullable(std::make_shared<DataTypeInt32>());
+    }
+
+    static Status execute_impl(FunctionContext* context, Block& block,
+                               const ColumnNumbers& arguments, size_t result,
+                               size_t input_rows_count) {
+        const ColumnPtr col_source = block.get_by_position(arguments[0]).column;
+        const ColumnPtr col_format = block.get_by_position(arguments[1]).column;
+
+        auto col_result = ColumnVector<Int32>::create();
+        auto null_map = ColumnVector<UInt8>::create();
+
+        col_result->resize(input_rows_count);
+        null_map->resize(input_rows_count);
+
+        auto& col_result_data = col_result->get_data();
+        auto& null_map_data = null_map->get_data();
+
+        for (int i = 0; i < input_rows_count; i++) {
+            if (col_source->is_null_at(i) || col_format->is_null_at(i)) {
+                null_map_data[i] = true;
+                continue;
+            }
+
+            StringRef source = col_source->get_data_at(i);
+            StringRef fmt = col_format->get_data_at(i);
+
+            VecDateTimeValue ts_value;
+            if (!ts_value.from_date_format_str(fmt.data, fmt.size, source.data, source.size)) {
+                null_map_data[i] = true;
+                continue;
+            }
+
+            int64_t timestamp;
+            if (!ts_value.unix_timestamp(&timestamp, context->impl()->state()->timezone_obj())) {
+                null_map_data[i] = true;
+            } else {
+                null_map_data[i] = false;
+                col_result_data[i] = UnixTimeStampImpl::trim_timestamp(timestamp);
+            }
+        }
+
+        block.replace_by_position(
+                result, ColumnNullable::create(std::move(col_result), std::move(null_map)));
+
+        return Status::OK();
+    }
+};
+
+template <typename Impl>
+class FunctionUnixTimestamp : public IFunction {
+public:
+    static constexpr auto name = "unix_timestamp";
+    static FunctionPtr create() { return std::make_shared<FunctionUnixTimestamp<Impl>>(); }
+
+    String get_name() const override { return name; }
+
+    bool is_variadic() const override { return true; }
+
+    bool use_default_implementation_for_nulls() const override { return false; }
+
+    size_t get_number_of_arguments() const override {
+        return get_variadic_argument_types_impl().size();
+    }
+
+    DataTypePtr get_return_type_impl(const ColumnsWithTypeAndName& arguments) const override {
+        return Impl::get_return_type_impl(arguments);
+    }
+
+    DataTypes get_variadic_argument_types_impl() const override {
+        return Impl::get_variadic_argument_types();
+    }
+
+    Status execute_impl(FunctionContext* context, Block& block, const ColumnNumbers& arguments,
+                        size_t result, size_t input_rows_count) override {
+        return Impl::execute_impl(context, block, arguments, result, input_rows_count);
+    }
+};
 
 void register_function_timestamp(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStrToDate>();
     factory.register_function<FunctionMakeDate>();
     factory.register_function<FromDays>();
+
+    factory.register_function<FunctionUnixTimestamp<UnixTimeStampImpl>>();
+    factory.register_function<FunctionUnixTimestamp<UnixTimeStampDateImpl>>();
+    factory.register_function<FunctionUnixTimestamp<UnixTimeStampDatetimeImpl>>();
+    factory.register_function<FunctionUnixTimestamp<UnixTimeStampStrImpl>>();
 }
 
 } // namespace doris::vectorized

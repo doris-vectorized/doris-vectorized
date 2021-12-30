@@ -14,7 +14,6 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-#pragma once
 
 #include "vec/columns/column_nullable.h"
 #include "vec/data_types/get_least_supertype.h"
