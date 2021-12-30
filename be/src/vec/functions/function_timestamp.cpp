@@ -196,8 +196,8 @@ struct UnixTimeStampDateImpl {
         col_result->resize(input_rows_count);
         null_map->resize(input_rows_count);
 
-        typename ColumnVector<Int32>::Container& col_result_data = col_result->get_data();
-        typename ColumnVector<UInt8>::Container& null_map_data = null_map->get_data();
+        auto& col_result_data = col_result->get_data();
+        auto& null_map_data = null_map->get_data();
 
         for (int i = 0; i < input_rows_count; i++) {
             if (col_source->is_null_at(i)) {
@@ -252,8 +252,8 @@ struct UnixTimeStampStrImpl {
         col_result->resize(input_rows_count);
         null_map->resize(input_rows_count);
 
-        typename ColumnVector<Int32>::Container& col_result_data = col_result->get_data();
-        typename ColumnVector<UInt8>::Container& null_map_data = null_map->get_data();
+        auto& col_result_data = col_result->get_data();
+        auto& null_map_data = null_map->get_data();
 
         for (int i = 0; i < input_rows_count; i++) {
             if (col_source->is_null_at(i) || col_format->is_null_at(i)) {
@@ -320,7 +320,7 @@ void register_function_timestamp(SimpleFunctionFactory& factory) {
     factory.register_function<FunctionStrToDate>();
     factory.register_function<FunctionMakeDate>();
     factory.register_function<FromDays>();
-    
+
     factory.register_function<FunctionUnixTimestamp<UnixTimeStampImpl>>();
     factory.register_function<FunctionUnixTimestamp<UnixTimeStampDateImpl>>();
     factory.register_function<FunctionUnixTimestamp<UnixTimeStampDatetimeImpl>>();
